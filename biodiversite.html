@@ -116,6 +116,7 @@
 let chartRichness = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadTranslations();
   initPage('biodiversite');
   applyI18n();
   await Promise.all([
@@ -354,7 +355,7 @@ async function loadSpeciesMatrix() {
       <thead><tr>
         <th class="sp-col">${t('species_name')}</th>
         ${months.map(m => `<th>${m}</th>`).join('')}
-        <th>Total</th>
+        <th>${t('bio_total')}</th>
       </tr></thead>
       <tbody>`;
 

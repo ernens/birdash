@@ -97,13 +97,6 @@
     }
     .species-select-wrap { flex: 1; min-width: 0; }
     .species-select-label { font-size: .72rem; color: var(--text-muted); margin-bottom: .4rem; }
-    .species-links-row { margin-top: .4rem; display: flex; flex-wrap: wrap; gap: .3rem; }
-    .sp-ext-link {
-      font-size: .7rem; padding: .15rem .45rem; border-radius: 12px;
-      border: 1px solid var(--border); color: var(--text-muted);
-      text-decoration: none; transition: all .15s;
-    }
-    .sp-ext-link:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Multi-picker ───────────────────────────────────────────── */
     .sp-picker { position: relative; }
@@ -398,7 +391,7 @@
         <div class="species-header">
           <div class="species-thumb-placeholder" id="sp-thumb-wrap">🐦</div>
           <div class="species-select-wrap">
-            <div class="species-select-label" id="sp-select-label">
+            <div class="species-select-label" id="sp-select-label" data-i18n="analyses_what_species">
               Quelle espèce explorer ?
             </div>
 
@@ -406,7 +399,7 @@
             <div class="sp-picker" id="sp-picker">
               <!-- Tags bar (trigger) -->
               <div class="sp-tags-bar" id="sp-tags-bar" onclick="togglePicker()">
-                <span class="sp-placeholder" id="sp-placeholder">— chargement… —</span>
+                <span class="sp-placeholder" id="sp-placeholder" data-i18n="analyses_loading_ph">— chargement… —</span>
                 <span class="sp-caret">▾</span>
               </div>
 
@@ -414,15 +407,16 @@
               <div class="sp-dropdown" id="sp-dropdown">
                 <!-- Top-N bar -->
                 <div class="sp-topn-bar">
-                  <label>Top</label>
+                  <label data-i18n="analyses_topn_label">Top</label>
                   <input type="number" class="sp-topn-input" id="sp-topn-n" value="10" min="1" max="100">
-                  <label>espèces</label>
-                  <button class="sp-topn-btn" onclick="selectTopN()">Sélectionner</button>
-                  <button class="sp-clear-btn" onclick="clearSelection()">✕ Tout désélectionner</button>
+                  <label data-i18n="analyses_topn_unit">espèces</label>
+                  <button class="sp-topn-btn" onclick="selectTopN()" data-i18n="analyses_topn_btn">Sélectionner</button>
+                  <button class="sp-clear-btn" onclick="clearSelection()" data-i18n="analyses_clear_btn">✕ Tout désélectionner</button>
                 </div>
                 <!-- Recherche -->
                 <div class="sp-search-wrap">
                   <input type="text" class="sp-search" id="sp-search"
+                         data-i18n-placeholder="analyses_search_ph"
                          placeholder="🔍  Filtrer les espèces…"
                          oninput="filterSpeciesList(this.value)">
                 </div>
@@ -436,7 +430,7 @@
               </div>
             </div>
 
-            <div class="species-links-row" id="sp-links"></div>
+            
           </div>
         </div>
 
@@ -502,6 +496,7 @@ let chartSeries = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadTranslations();   // ← charge lang/fr.json etc. avant tout
   initPage('analyses');
 
   // Set initial date inputs
@@ -614,7 +609,7 @@ async function loadSpeciesDropdown() {
   ).join('');
 
   document.getElementById('sp-footer-total').textContent =
-    `${rows.length} espèce${rows.length > 1 ? 's' : ''} au total`;
+    t('analyses_n_total', { n: rows.length });
 
   // Si aucune sélection active, prendre la première (top 1)
   if (state.selectedSpecies.length === 0 && rows.length > 0) {
@@ -696,7 +691,7 @@ function renderTags() {
 
   if (sel.length === 0) {
     ph.style.display = '';
-    ph.textContent = '— aucune espèce —';
+    ph.textContent = t('analyses_no_species');
     return;
   }
   ph.style.display = 'none';
@@ -734,14 +729,14 @@ function removeTag(e, name) {
 function updateFooterCount() {
   const n = state.selectedSpecies.length;
   document.getElementById('sp-footer-count').textContent =
-    `${n} espèce${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}`;
+    t('analyses_n_selected', { n });
 }
 
 // ── Update species header label ────────────────────────────────────────────
 function updateSpeciesLabel() {
   const from = fmtDate(state.from), to = fmtDate(state.to);
   document.getElementById('sp-select-label').textContent =
-    `Explorer pour la période ${from} → ${to}`;
+    t('analyses_period', { from, to });
 }
 
 // ── Load all per-species data ──────────────────────────────────────────────
@@ -757,24 +752,14 @@ async function loadSpeciesData() {
   ]);
 }
 
-// ── Species header: photo + links ──────────────────────────────────────────
+// ── Species header: photo uniquement (liens retirés de cette page) ────────
 function updateSpeciesHeader() {
   const sp = state.species;
   if (!sp) return;
-
-  // Links
-  const links = buildSpeciesLinks(sp, '');
-  document.getElementById('sp-links').innerHTML = Object.entries(links).map(([name, url]) =>
-    `<a href="${url}" target="_blank" class="sp-ext-link">${name}</a>`
-  ).join('');
-
-  // Photo async
   const thumbWrap = document.getElementById('sp-thumb-wrap');
   thumbWrap.innerHTML = '<span style="font-size:1.6rem;">🐦</span>';
   fetchSpeciesImage(sp).then(imgUrl => {
-    if (imgUrl) {
-      thumbWrap.innerHTML = `<img class="species-thumb" src="${imgUrl}" alt="${sp}">`;
-    }
+    if (imgUrl) thumbWrap.innerHTML = `<img class="species-thumb" src="${imgUrl}" alt="${sp}">`;
   }).catch(() => {});
 }
 
@@ -803,10 +788,10 @@ async function loadSpeciesKpis() {
     );
 
     const kpis = [
-      { val: r.total.toLocaleString(), label: 'Détections brutes',    cls: '' },
-      { val: sampled?.n?.toLocaleString() || '—', label: 'Après rééchantillonnage', cls: 'amber' },
-      { val: r.avg_conf + '%',         label: 'Confiance moyenne',    cls: 'blue' },
-      { val: r.days,                   label: 'Jours détectée',       cls: '' },
+      { val: r.total.toLocaleString(),              label: t('analyses_kpi_raw'),      cls: '' },
+      { val: sampled?.n?.toLocaleString() || '—',   label: t('analyses_kpi_resampled'),cls: 'amber' },
+      { val: r.avg_conf + '%',                      label: t('analyses_kpi_conf'),     cls: 'blue' },
+      { val: r.days,                                label: t('analyses_kpi_days'),     cls: '' },
     ];
     cont.innerHTML = kpis.map(k => `
       <div class="sp-kpi">
@@ -814,13 +799,16 @@ async function loadSpeciesKpis() {
         <div class="sp-kpi-label">${k.label}</div>
       </div>`).join('');
 
-    // Update polar title
+    // Update chart titles
+    const multiMode = state.selectedSpecies.length > 1;
     document.getElementById('title-polar').textContent =
-      `Activité horaire · ${state.species}`;
+      multiMode ? t('analyses_multi_polar', { species: state.species })
+                : t('analyses_polar_title', { species: state.species });
     document.getElementById('title-series').textContent =
-      `Détections dans le temps · ${state.species}`;
+      multiMode ? t('analyses_multi_series', { n: state.selectedSpecies.length })
+                : t('analyses_series_title', { species: state.species });
     document.getElementById('title-heatmap').textContent =
-      `Heatmap journalière · ${state.species}`;
+      t('analyses_heatmap_title', { species: state.species });
   } catch(e) { console.error('kpis:', e); }
 }
 
@@ -879,7 +867,7 @@ async function loadPolarChart() {
         textStyle: { color: '#c8e6c0', fontFamily: 'Lora, serif', fontSize: 13 },
         formatter: p => {
           const pct = totalDet ? Math.round(p.value / totalDet * 100) : 0;
-          return `<b>${p.name}</b><br>${p.value.toLocaleString()} détections<br>${pct}% de la journée`;
+          return `<b>${p.name}</b><br>${t('analyses_tooltip_det', { n: p.value.toLocaleString(), pct })}`;
         }
       },
       angleAxis: {
@@ -951,8 +939,10 @@ async function loadPolarChart() {
     });
 
     actText.innerHTML = buildActivityNarrative(byHour, rowsMin, totalDet);
+    const multiMode = state.selectedSpecies.length > 1;
     document.getElementById('title-polar').textContent =
-      `Activité horaire · ${state.species} · ${totalDet.toLocaleString()} détections`;
+      multiMode ? t('analyses_multi_polar', { species: state.species })
+                : t('analyses_polar_title', { species: state.species });
 
   } catch(e) {
     console.error('polar:', e);
@@ -960,121 +950,100 @@ async function loadPolarChart() {
   }
 }
 
-// ── Construction du texte narratif ────────────────────────────────────────
+// ── Texte narratif — mono ou multi-espèces ────────────────────────────────
 function buildActivityNarrative(byHour, rowsMin, totalDet) {
-  if (!totalDet) return '<p style="color:var(--text-faint);">Aucune donnée pour cette période.</p>';
+  const multiMode = state.selectedSpecies.length > 1;
+  const sp        = state.species;
 
-  const sp   = state.species;
-  const maxVal = Math.max(...byHour);
-  const threshold = maxVal * 0.08; // 8% du max = "activité significative"
+  if (!totalDet) return `<p style="color:var(--text-faint);">${t('narr_no_data')}</p>`;
 
-  // Pic précis (tranche 15 min la plus chargée)
+  const maxVal    = Math.max(...byHour);
+  const threshold = maxVal * 0.08;
+
+  // ── Pic ────────────────────────────────────────────────────────────────
   let peakH = 0, peakM = 0;
-  if (rowsMin.length) {
-    peakH = rowsMin[0].h;
-    peakM = rowsMin[0].m;
-  } else {
-    peakH = byHour.indexOf(maxVal);
-    peakM = 0;
-  }
+  if (rowsMin.length) { peakH = rowsMin[0].h; peakM = rowsMin[0].m; }
+  else                { peakH = byHour.indexOf(maxVal); }
   const peakLabel = `${String(peakH).padStart(2,'0')}h${peakM > 0 ? String(peakM).padStart(2,'0') : ''}`;
 
-  // Heure de début (premier créneau > seuil)
-  let startH = -1;
-  for (let h = 0; h < 24; h++) {
-    if (byHour[h] >= threshold) { startH = h; break; }
-  }
-  // Heure de fin (dernier créneau > seuil)
-  let endH = -1;
-  for (let h = 23; h >= 0; h--) {
-    if (byHour[h] >= threshold) { endH = h; break; }
-  }
+  // ── Plage horaire ──────────────────────────────────────────────────────
+  let startH = -1, endH = -1;
+  for (let h = 0;  h < 24; h++) { if (byHour[h] >= threshold) { startH = h; break; } }
+  for (let h = 23; h >= 0; h--) { if (byHour[h] >= threshold) { endH   = h; break; } }
 
-  // Minutes estimées pour start/end via rowsMin
   let startLabel = startH >= 0 ? `${String(startH).padStart(2,'0')}h` : '—';
-  let endLabel   = endH   >= 0 ? `${String(endH).padStart(2,'0')}h` : '—';
-
+  let endLabel   = endH   >= 0 ? `${String(endH).padStart(2,'0')}h`   : '—';
   if (rowsMin.length) {
-    const slotsForStart = rowsMin.filter(r => r.h === startH).sort((a,b) => a.m - b.m);
-    const slotsForEnd   = rowsMin.filter(r => r.h === endH).sort((a,b) => b.m - a.m);
-    if (slotsForStart.length) {
-      const m = slotsForStart[0].m;
-      startLabel = `${String(startH).padStart(2,'0')}h${m > 0 ? String(m).padStart(2,'0') : ''}`;
-    }
-    if (slotsForEnd.length) {
-      const m = slotsForEnd[0].m;
-      endLabel = `${String(endH).padStart(2,'0')}h${m > 0 ? String(m).padStart(2,'0') : ''}`;
-    }
+    const ss = rowsMin.filter(r => r.h === startH).sort((a,b) => a.m - b.m);
+    const es = rowsMin.filter(r => r.h === endH).sort((a,b) => b.m - a.m);
+    if (ss.length) startLabel = `${String(startH).padStart(2,'0')}h${ss[0].m > 0 ? String(ss[0].m).padStart(2,'0') : ''}`;
+    if (es.length) endLabel   = `${String(endH).padStart(2,'0')}h${es[0].m > 0 ? String(es[0].m).padStart(2,'0') : ''}`;
   }
+  const durationH   = endH - startH;
+  const durationKey = durationH > 0 ? 'narr_duration' : 'narr_duration_short';
+  const durLabel    = t(durationKey, { n: durationH });
 
-  // Durée d'activité
-  const durationH = endH - startH;
-  const durationLabel = durationH > 0 ? `${durationH}h d'activité` : 'activité concentrée';
+  // ── Habitude ───────────────────────────────────────────────────────────
+  let habitKey;
+  if      (peakH >= 5  && peakH <= 9)  habitKey = 'narr_habit_morning';
+  else if (peakH >= 10 && peakH <= 14) habitKey = 'narr_habit_midday';
+  else if (peakH >= 15 && peakH <= 19) habitKey = 'narr_habit_afternoon';
+  else if (peakH >= 20 || peakH <= 4)  habitKey = 'narr_habit_night';
+  else                                  habitKey = 'narr_habit_day';
 
-  // Caractérisation diurne/crépusculaire/nocturne
-  let habitude;
-  if (peakH >= 5 && peakH <= 9)       habitude = 'matinal';
-  else if (peakH >= 10 && peakH <= 14) habitude = 'actif en milieu de journée';
-  else if (peakH >= 15 && peakH <= 19) habitude = 'actif en fin d\'après-midi';
-  else if (peakH >= 20 || peakH <= 4)  habitude = 'nocturne ou crépusculaire';
-  else                                  habitude = 'actif dans la journée';
-
-  // Heure secondaire (2e pic si notable)
-  const sorted = byHour
-    .map((v, h) => ({ h, v }))
+  // ── Pic secondaire ─────────────────────────────────────────────────────
+  const sorted2 = byHour.map((v,h) => ({h,v}))
     .filter(x => x.h !== peakH && x.v >= maxVal * 0.40)
-    .sort((a, b) => b.v - a.v);
-  const secondaryLabel = sorted.length
-    ? `${String(sorted[0].h).padStart(2,'0')}h` : null;
+    .sort((a,b) => b.v - a.v);
+  const secondaryLabel = sorted2.length ? `${String(sorted2[0].h).padStart(2,'0')}h` : null;
 
-  // Proportion du pic
-  const peakPct = Math.round(byHour[peakH] / totalDet * 100);
-
-  // % nuit (21h-5h)
-  const nightDet = byHour.slice(21).concat(byHour.slice(0, 5)).reduce((a,b) => a+b, 0);
+  const peakPct  = Math.round(byHour[peakH] / totalDet * 100);
+  const nightDet = byHour.slice(21).concat(byHour.slice(0,5)).reduce((a,b)=>a+b,0);
   const nightPct = Math.round(nightDet / totalDet * 100);
 
-  // Texte période
-  const fromLabel = fmtDate(state.from);
-  const toLabel   = fmtDate(state.to);
+  const chip  = (v, cls='') => `<span class="stat-chip ${cls}">${v}</span>`;
+  const from  = fmtDate(state.from), to = fmtDate(state.to);
 
   let html = '';
 
-  // Phrase 1 : synthèse principale
+  // ── Bandeau multi-espèces ──────────────────────────────────────────────
+  if (multiMode) {
+    html += `<p style="margin-bottom:.5rem;padding:.4rem .65rem;
+      background:var(--bg-card2);border-radius:var(--radius);
+      font-size:.8rem;color:var(--text-muted);border-left:3px solid var(--accent-dim);">
+      ${t('narr_multi_intro', { n: state.selectedSpecies.length, species: `<strong>${sp}</strong>` })}
+      <br><span style="font-size:.75rem;opacity:.8;">${t('narr_multi_hint', { species: sp })}</span>
+    </p>`;
+  }
+
+  // ── Phrase 1 : synthèse principale ────────────────────────────────────
   html += `<p>
-    Sur la période <span class="stat-chip amber">${fromLabel}</span> →
-    <span class="stat-chip amber">${toLabel}</span>,
-    <strong>${sp}</strong> est <em>${habitude}</em>.
-    Son pic d'activité se situe à <span class="stat-chip">${peakLabel}</span>,
-    représentant <span class="stat-chip">${peakPct}%</span> des détections de la journée.
+    ${t('narr_period', { from: chip(from,'amber'), to: chip(to,'amber') })}
+    <strong>${sp}</strong> ${t('narr_is')} <em>${t(habitKey)}</em>.
+    ${t('narr_peak_at', { time: chip(peakLabel), pct: chip(peakPct+'%') })}
   </p>`;
 
-  // Phrase 2 : plage horaire
+  // ── Phrase 2 : plage horaire ───────────────────────────────────────────
   if (startH >= 0 && endH >= 0) {
     html += `<p>
-      L'activité démarre vers <span class="stat-chip">${startLabel}</span>
-      et se termine vers <span class="stat-chip">${endLabel}</span>,
-      soit environ <span class="stat-chip blue">${durationLabel}</span>.
+      ${t('narr_activity_range', {
+        start:    chip(startLabel),
+        end:      chip(endLabel),
+        duration: chip(durLabel, 'blue'),
+      })}
     </p>`;
   }
 
-  // Phrase 3 : pic secondaire ou nuit
+  // ── Phrase 3 : pic secondaire ou nuit ─────────────────────────────────
   if (secondaryLabel) {
-    html += `<p>
-      Un second pic notable apparaît vers
-      <span class="stat-chip">${secondaryLabel}</span>.
-    </p>`;
+    html += `<p>${t('narr_second_peak', { time: chip(secondaryLabel) })}</p>`;
   } else if (nightPct > 10) {
-    html += `<p>
-      <span class="stat-chip amber">${nightPct}%</span> des détections
-      se produisent entre 21h et 5h du matin.
-    </p>`;
+    html += `<p>${t('narr_night_pct', { pct: chip(nightPct+'%','amber') })}</p>`;
   }
 
-  // Phrase 4 : total
-  html += `<p style="margin-top:.3rem; font-size:.78rem; color:var(--text-muted);">
-    Total : <strong>${totalDet.toLocaleString()}</strong> détections
-    sur <strong>${countActiveDays(byHour)}</strong> heures actives.
+  // ── Total ──────────────────────────────────────────────────────────────
+  html += `<p style="margin-top:.3rem;font-size:.78rem;color:var(--text-muted);">
+    ${t('narr_total', { n: `<strong>${totalDet.toLocaleString()}</strong>`, h: `<strong>${countActiveDays(byHour)}</strong>` })}
   </p>`;
 
   return html;
@@ -1244,7 +1213,7 @@ async function loadDailyHeatmap() {
 
     if (!rows.length) {
       cont.innerHTML = `<p style="color:var(--text-faint); font-size:.8rem; padding:.5rem;">
-        Aucune donnée pour cette période.</p>`;
+        ${t('analyses_no_data_period')}</p>`;
       return;
     }
 

@@ -182,10 +182,11 @@ function renderLangSwitcher() {
   const el = document.getElementById('lang-switcher');
   if (!el) return;
   const current = getLang();
-  el.innerHTML = ['fr','en','nl'].map(lang =>
-    `<button class="lang-btn ${lang === current ? 'active' : ''}"
-             data-lang="${lang}"
-             onclick="setLang('${lang}')">${lang.toUpperCase()}</button>`
+  el.innerHTML = getAvailableLangs().map(({ code, label, flag }) =>
+    `<button class="lang-btn ${code === current ? 'active' : ''}"
+             data-lang="${code}"
+             title="${label}"
+             onclick="setLang('${code}')">${flag ? flag + ' ' : ''}${code.toUpperCase()}</button>`
   ).join('');
 }
 
@@ -228,33 +229,34 @@ function renderThemeSwitcher() {
 // ── Init commune ──────────────────────────────────────────────────────────────
 
 function initPage(pageId) {
-  // Applique le thème sauvegardé dès le départ
+  const NAV_KEYS = {
+    'index': 'nav_overview', 'detections': 'nav_detections',
+    'especes': 'nav_species', 'biodiversite': 'nav_biodiversity',
+    'rarites': 'nav_rarities', 'stats': 'nav_stats',
+    'systeme': 'nav_system', 'analyses': 'nav_analyses',
+  };
+
+  // Thème
   document.documentElement.setAttribute('data-theme', getTheme());
+
+  // Render composants header
   renderNav(pageId);
   renderLangSwitcher();
   renderThemeSwitcher();
-  // Titre de la page dans le header
+
+  // Initialiser tous les data-i18n du DOM
+  initI18nDOM();
+
+  // Titre de la page
   const titleEl = document.getElementById('page-title');
-  if (titleEl) {
-    const navKeys = {
-      'index': 'nav_overview', 'detections': 'nav_detections',
-      'especes': 'nav_species', 'biodiversite': 'nav_biodiversity',
-      'rarites': 'nav_rarities', 'stats': 'nav_stats', 'systeme': 'nav_system', 'analyses': 'nav_analyses',
-    };
-    titleEl.textContent = t(navKeys[pageId] || pageId);
-  }
-  // Ré-init au changement de langue
+  if (titleEl) titleEl.textContent = t(NAV_KEYS[pageId] || pageId);
+
+  // Ré-render sur changement de langue
   document.addEventListener('langchange', () => {
     renderNav(pageId);
     renderLangSwitcher();
-    if (titleEl) {
-      const navKeys = {
-        'index': 'nav_overview', 'detections': 'nav_detections',
-        'especes': 'nav_species', 'biodiversite': 'nav_biodiversity',
-        'rarites': 'nav_rarities', 'stats': 'nav_stats', 'systeme': 'nav_system', 'analyses': 'nav_analyses',
-      };
-      titleEl.textContent = t(navKeys[pageId] || pageId);
-    }
+    initI18nDOM();
+    if (titleEl) titleEl.textContent = t(NAV_KEYS[pageId] || pageId);
   });
 }
 

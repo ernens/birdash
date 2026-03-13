@@ -34,7 +34,7 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>Seuil rarité (max détections)</label>
+        <label data-i18n="rarity_threshold_label">Seuil rarité (max détections)</label>
         <select class="bird-select" id="f-rarity">
           <option value="5">≤ 5</option>
           <option value="10" selected>≤ 10</option>
@@ -55,7 +55,7 @@
 
       <!-- Espèces vues une seule fois -->
       <div class="card">
-        <div class="card-title">💎 Vues une seule fois</div>
+        <div class="card-title" data-i18n="rarity_seen_once">💎 Vues une seule fois</div>
         <div id="once-list">
           <div class="spinner"><div></div><div></div><div></div></div>
         </div>
@@ -63,7 +63,7 @@
 
       <!-- Détections récentes d'espèces rares -->
       <div class="card">
-        <div class="card-title">🕐 Dernières détections rares</div>
+        <div class="card-title" data-i18n="rarity_last_rare">🕐 Dernières détections rares</div>
         <div id="recent-rare">
           <div class="spinner"><div></div><div></div><div></div></div>
         </div>
@@ -249,7 +249,7 @@ async function loadRareTable(conf, maxDet) {
       <table class="bird-table">
         <thead><tr>
           <th>${t('species_name')}</th>
-          <th style="font-style:italic;">Nom latin</th>
+          <th style="font-style:italic;">${t('latin_name')}</th>
           <th>${t('detections_count')}</th>
           <th>${t('first_seen')}</th>
           <th>${t('last_seen')}</th>

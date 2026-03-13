@@ -65,7 +65,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🏆 Records journaliers</div>
+        <div class="card-title" data-i18n="stats_daily_records">🏆 Records journaliers</div>
         <div id="daily-records">
           <div class="spinner"><div></div><div></div><div></div></div>
         </div>
@@ -74,7 +74,7 @@
 
     <!-- Activité par année -->
     <div class="card">
-      <div class="card-title">📅 Évolution annuelle</div>
+      <div class="card-title" data-i18n="stats_annual_evolution">📅 Évolution annuelle</div>
       <div class="chart-wrap">
         <canvas id="chart-yearly"></canvas>
       </div>
@@ -90,6 +90,7 @@
 let chartMonthly = null, chartConf = null, chartYearly = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadTranslations();
   initPage('stats');
   applyI18n();
   await Promise.all([
@@ -329,7 +330,7 @@ async function loadDailyRecords() {
         <div class="det-item">
           <div style="font-size:1.5rem;">📊</div>
           <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">Jour avec le + de détections</div>
+            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_most_det')}</div>
             <div><strong>${maxDet ? fmtDate(maxDet.Date) : '—'}</strong></div>
           </div>
           <div class="kpi-value" style="font-size:1.4rem;">${maxDet ? maxDet.n.toLocaleString() : '—'}</div>
@@ -337,7 +338,7 @@ async function loadDailyRecords() {
         <div class="det-item">
           <div style="font-size:1.5rem;">🦜</div>
           <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">Jour avec le + d'espèces</div>
+            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_most_sp')}</div>
             <div><strong>${maxSp ? fmtDate(maxSp.Date) : '—'}</strong></div>
           </div>
           <div class="kpi-value amber" style="font-size:1.4rem;">${maxSp ? maxSp.n : '—'}</div>
@@ -345,7 +346,7 @@ async function loadDailyRecords() {
         <div class="det-item">
           <div style="font-size:1.5rem;">🎯</div>
           <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">Confiance maximale</div>
+            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_max_conf')}</div>
             <div style="font-size:.85rem;"><strong>${maxConf ? maxConf.Com_Name : '—'}</strong></div>
             <div style="font-size:.75rem; color:var(--text-muted);">${maxConf ? fmtDate(maxConf.Date) : ''}</div>
           </div>

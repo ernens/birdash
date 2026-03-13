@@ -84,7 +84,7 @@
 
       <!-- Gaps de données -->
       <div class="card">
-        <div class="card-title">⚠️ Jours sans données (> 1 jour de gap)</div>
+        <div class="card-title" data-i18n="sys_gaps_title">⚠️ Jours sans données (> 1 jour de gap)</div>
         <div id="gaps-info">
           <div class="spinner"><div></div><div></div><div></div></div>
         </div>
@@ -94,7 +94,7 @@
 
     <!-- Activité 30 jours (détections par jour) -->
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title">📈 Activité quotidienne — 30 derniers jours</div>
+      <div class="card-title" data-i18n="sys_activity_30d">📈 Activité quotidienne — 30 derniers jours</div>
       <div class="chart-wrap">
         <canvas id="chart-activity"></canvas>
       </div>
@@ -102,7 +102,7 @@
 
     <!-- Détections par heure (global) -->
     <div class="card">
-      <div class="card-title">🕐 Distribution horaire globale</div>
+      <div class="card-title" data-i18n="sys_hourly_distrib">🕐 Distribution horaire globale</div>
       <div class="chart-wrap">
         <canvas id="chart-hourly-global"></canvas>
       </div>
@@ -118,6 +118,7 @@
 let chartActivity = null, chartHourly = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadTranslations();
   initPage('systeme');
   applyI18n();
   await Promise.all([
@@ -148,13 +149,13 @@ async function checkApiStatus() {
     const ms = Date.now() - t0;
     cont.innerHTML = `
       <div class="sys-row">
-        <span class="sys-label">API bird-server</span>
+        <span class="sys-label">${t('sys_api_label')}</span>
         <span class="sys-value" style="display:flex;align-items:center;">
           <span class="status-dot dot-ok"></span> ${t('api_ok')}
         </span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Latence</span>
+        <span class="sys-label">${t('sys_latency')}</span>
         <span class="sys-value">${ms} ms</span>
       </div>
       <div class="sys-row">
@@ -162,13 +163,13 @@ async function checkApiStatus() {
         <span class="sys-value">${data.total_detections ? data.total_detections.toLocaleString() : '—'}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Port</span>
+        <span class="sys-label">${t('sys_port')}</span>
         <span class="sys-value">7474</span>
       </div>`;
   } catch(e) {
     cont.innerHTML = `
       <div class="sys-row">
-        <span class="sys-label">API bird-server</span>
+        <span class="sys-label">${t('sys_api_label')}</span>
         <span class="sys-value" style="display:flex;align-items:center;">
           <span class="status-dot dot-err"></span> ${t('api_error')}
         </span>
@@ -201,11 +202,11 @@ async function loadDbInfo() {
         <span class="sys-value">${stats.total.toLocaleString()}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Espèces distinctes</span>
+        <span class="sys-label">${t('sys_species_distinct')}</span>
         <span class="sys-value">${stats.species}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Jours enregistrés</span>
+        <span class="sys-label">${t('sys_days_recorded')}</span>
         <span class="sys-value">${stats.days}</span>
       </div>
       <div class="sys-row">
@@ -217,7 +218,7 @@ async function loadDbInfo() {
         <span class="sys-value">${fmtDate(stats.last)}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Confiance moy. / min / max</span>
+        <span class="sys-label">${t('sys_conf_range')}</span>
         <span class="sys-value">${conf.avg_conf}% / ${conf.min_conf}% / ${conf.max_conf}%</span>
       </div>`;
   } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
@@ -250,25 +251,25 @@ async function loadFreshness() {
 
     cont.innerHTML = `
       <div class="sys-row">
-        <span class="sys-label">Dernière détection</span>
+        <span class="sys-label">${t('sys_last_det')}</span>
         <span class="sys-value" style="display:flex;align-items:center;gap:.4rem;">
           ${freshIcon} ${last ? last.Com_Name : '—'}
         </span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Date / Heure</span>
+        <span class="sys-label">${t('sys_date_time')}</span>
         <span class="sys-value">${last ? fmtDate(last.Date) + ' ' + fmtTime(last.Time) : '—'}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Fraîcheur</span>
+        <span class="sys-label">${t('data_freshness')}</span>
         <span class="sys-value">${freshText}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Détections aujourd'hui</span>
+        <span class="sys-label">${t('sys_det_today')}</span>
         <span class="sys-value" style="color:var(--accent);">${today ? today.n.toLocaleString() : '0'}</span>
       </div>
       <div class="sys-row">
-        <span class="sys-label">Détections hier</span>
+        <span class="sys-label">${t('sys_det_yesterday')}</span>
         <span class="sys-value">${yesterday ? yesterday.n.toLocaleString() : '0'}</span>
       </div>`;
   } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
@@ -281,7 +282,7 @@ async function loadGaps() {
     const rows = await birdQuery(
       `SELECT Date FROM detections GROUP BY Date ORDER BY Date ASC`
     );
-    if (rows.length < 2) { cont.innerHTML = `<p style="color:var(--accent); font-size:.85rem;">✓ Aucun gap détecté</p>`; return; }
+    if (rows.length < 2) { cont.innerHTML = `<p style="color:var(--accent); font-size:.85rem;">${t('sys_no_gap')}</p>`; return; }
 
     const gaps = [];
     for (let i = 1; i < rows.length; i++) {
@@ -294,7 +295,7 @@ async function loadGaps() {
     }
 
     if (!gaps.length) {
-      cont.innerHTML = `<p style="color:var(--accent); font-size:.85rem; padding:.5rem 0;">✓ Aucun gap — données continues</p>`;
+      cont.innerHTML = `<p style="color:var(--accent); font-size:.85rem; padding:.5rem 0;">${t('sys_no_gap_full')}</p>`;
       return;
     }
 
@@ -304,12 +305,12 @@ async function loadGaps() {
 
     cont.innerHTML = `
       <p style="font-size:.75rem; color:var(--text-muted); margin-bottom:.5rem;">
-        ${gaps.length} gap(s) détecté(s) au total
+        ${t('sys_gaps_found', { n: gaps.length })}
       </p>
       ${top.map(g => `
         <div class="gap-item">
           <span class="gap-date">${fmtDate(g.from)} → ${fmtDate(g.to)}</span>
-          <span class="gap-days"> — ${g.days} jour(s) manquant(s)</span>
+          <span class="gap-days"> — ${t('sys_gap_missing', { n: g.days })}</span>
         </div>`).join('')}`;
   } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
 }
