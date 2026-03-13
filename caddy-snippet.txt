@@ -1,20 +1,21 @@
-# Ajouter dans le bloc de ton Caddyfile existant (biloute.local)
-# --- PIBIRD ---
+# BirdBoard — Extrait de configuration Caddy
+# A ajouter dans votre Caddyfile existant, dans le bloc de votre site.
+# Remplacez {USER} par votre nom d'utilisateur systeme.
 
 handle /birds/api/* {
-    # Strip le préfixe /birds avant de transmettre à Express
+    # Proxy vers le backend Node.js
     uri strip_prefix /birds
     reverse_proxy 127.0.0.1:7474
 }
 
 handle /birds/audio/* {
     uri strip_prefix /birds/audio
-    root * /home/pi/BirdSongs/Extracted
+    root * /home/{USER}/BirdSongs/Extracted
     file_server
 }
 
 handle /birds* {
-    root * /home/pi/pibird
+    root * /home/{USER}/pibird
     file_server
     try_files {path} /birds/index.html
 }

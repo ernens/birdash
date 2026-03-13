@@ -81,14 +81,13 @@
       padding: .85rem 1rem;
       margin-bottom: 1rem;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 1rem;
     }
     .species-thumb {
       width: 56px; height: 56px; border-radius: var(--radius);
       object-fit: cover; flex-shrink: 0;
-      background: var(--bg-card2);
-      border: 1px solid var(--border);
+      background: var(--bg-card2); border: 1px solid var(--border);
     }
     .species-thumb-placeholder {
       width: 56px; height: 56px; border-radius: var(--radius);
@@ -97,12 +96,7 @@
       font-size: 1.6rem; flex-shrink: 0;
     }
     .species-select-wrap { flex: 1; min-width: 0; }
-    .species-select-label { font-size: .72rem; color: var(--text-muted); margin-bottom: .3rem; }
-    #sp-select {
-      width: 100%; background: var(--bg-deep); border: 1px solid var(--border);
-      color: var(--text-main); border-radius: 4px; padding: .45rem .6rem;
-      font-size: .9rem; font-family: var(--font-body);
-    }
+    .species-select-label { font-size: .72rem; color: var(--text-muted); margin-bottom: .4rem; }
     .species-links-row { margin-top: .4rem; display: flex; flex-wrap: wrap; gap: .3rem; }
     .sp-ext-link {
       font-size: .7rem; padding: .15rem .45rem; border-radius: 12px;
@@ -110,6 +104,106 @@
       text-decoration: none; transition: all .15s;
     }
     .sp-ext-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Multi-picker ───────────────────────────────────────────── */
+    .sp-picker { position: relative; }
+
+    /* Zone des tags sélectionnés + trigger */
+    .sp-tags-bar {
+      display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
+      min-height: 34px; padding: .3rem .5rem;
+      background: var(--bg-deep); border: 1px solid var(--border);
+      border-radius: var(--radius); cursor: pointer;
+      transition: border-color .2s;
+    }
+    .sp-tags-bar:hover, .sp-tags-bar.open { border-color: var(--accent-dim); }
+
+    .sp-tag {
+      display: inline-flex; align-items: center; gap: .25rem;
+      background: var(--accent-glow); border: 1px solid var(--accent-dim);
+      border-radius: 12px; padding: .1rem .5rem;
+      font-size: .78rem; color: var(--accent); white-space: nowrap;
+    }
+    .sp-tag-x {
+      cursor: pointer; font-size: .65rem; opacity: .7;
+      background: none; border: none; color: inherit; padding: 0; line-height: 1;
+    }
+    .sp-tag-x:hover { opacity: 1; }
+    .sp-placeholder { font-size: .85rem; color: var(--text-faint); padding: .1rem .2rem; }
+    .sp-caret { margin-left: auto; font-size: .65rem; color: var(--text-muted); padding-left: .4rem; flex-shrink: 0; }
+
+    /* Dropdown panel */
+    .sp-dropdown {
+      display: none; position: absolute; z-index: 200;
+      top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--bg-card); border: 1px solid var(--border-light);
+      border-radius: var(--radius); box-shadow: 0 6px 24px rgba(0,0,0,.5);
+      overflow: hidden;
+    }
+    .sp-dropdown.open { display: block; }
+
+    /* Top-N toolbar */
+    .sp-topn-bar {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .5rem .6rem; border-bottom: 1px solid var(--border);
+      background: var(--bg-card2); flex-wrap: wrap;
+    }
+    .sp-topn-bar label { font-size: .72rem; color: var(--text-muted); }
+    .sp-topn-input {
+      width: 48px; padding: .2rem .35rem; font-size: .8rem;
+      background: var(--bg-input); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: var(--radius);
+      font-family: var(--font-body); text-align: center;
+    }
+    .sp-topn-btn {
+      padding: .2rem .55rem; font-size: .78rem; border-radius: var(--radius);
+      background: var(--accent-glow); border: 1px solid var(--accent-dim);
+      color: var(--accent); cursor: pointer; transition: all .15s;
+      font-family: var(--font-body);
+    }
+    .sp-topn-btn:hover { background: var(--accent-dim); color: #fff; }
+    .sp-clear-btn {
+      padding: .2rem .55rem; font-size: .78rem; border-radius: var(--radius);
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer; transition: all .15s;
+      font-family: var(--font-body); margin-left: auto;
+    }
+    .sp-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* Recherche */
+    .sp-search-wrap { padding: .4rem .6rem; border-bottom: 1px solid var(--border); }
+    .sp-search {
+      width: 100%; padding: .3rem .5rem; font-size: .83rem;
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-main);
+      font-family: var(--font-body);
+    }
+    .sp-search:focus { outline: none; border-color: var(--accent-dim); }
+    .sp-search::placeholder { color: var(--text-faint); }
+
+    /* Liste des espèces */
+    .sp-list {
+      max-height: 240px; overflow-y: auto;
+      padding: .3rem 0;
+    }
+    .sp-item {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .32rem .65rem; cursor: pointer; transition: background .1s;
+      font-size: .84rem;
+    }
+    .sp-item:hover { background: var(--bg-hover); }
+    .sp-item.checked { background: var(--accent-glow); }
+    .sp-item input[type=checkbox] { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .sp-item-name { flex: 1; }
+    .sp-item-count { font-size: .72rem; color: var(--text-faint); }
+    .sp-item.hidden { display: none; }
+
+    /* Résumé sélection */
+    .sp-footer {
+      padding: .35rem .65rem; border-top: 1px solid var(--border);
+      font-size: .72rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: space-between;
+    }
 
     /* KPIs espèce */
     .sp-kpis {
@@ -307,9 +401,41 @@
             <div class="species-select-label" id="sp-select-label">
               Quelle espèce explorer ?
             </div>
-            <select id="sp-select" onchange="onSpeciesChange()">
-              <option>— chargement… —</option>
-            </select>
+
+            <!-- Multi-picker -->
+            <div class="sp-picker" id="sp-picker">
+              <!-- Tags bar (trigger) -->
+              <div class="sp-tags-bar" id="sp-tags-bar" onclick="togglePicker()">
+                <span class="sp-placeholder" id="sp-placeholder">— chargement… —</span>
+                <span class="sp-caret">▾</span>
+              </div>
+
+              <!-- Dropdown -->
+              <div class="sp-dropdown" id="sp-dropdown">
+                <!-- Top-N bar -->
+                <div class="sp-topn-bar">
+                  <label>Top</label>
+                  <input type="number" class="sp-topn-input" id="sp-topn-n" value="10" min="1" max="100">
+                  <label>espèces</label>
+                  <button class="sp-topn-btn" onclick="selectTopN()">Sélectionner</button>
+                  <button class="sp-clear-btn" onclick="clearSelection()">✕ Tout désélectionner</button>
+                </div>
+                <!-- Recherche -->
+                <div class="sp-search-wrap">
+                  <input type="text" class="sp-search" id="sp-search"
+                         placeholder="🔍  Filtrer les espèces…"
+                         oninput="filterSpeciesList(this.value)">
+                </div>
+                <!-- Liste -->
+                <div class="sp-list" id="sp-list"></div>
+                <!-- Footer -->
+                <div class="sp-footer">
+                  <span id="sp-footer-count">0 sélectionnée(s)</span>
+                  <span id="sp-footer-total"></span>
+                </div>
+              </div>
+            </div>
+
             <div class="species-links-row" id="sp-links"></div>
           </div>
         </div>
@@ -366,8 +492,9 @@ let state = {
   resample: '15min',
   n: 10,
   conf: 0.70,
-  species: null,     // currently selected
-  speciesList: [],   // full list for date range
+  species: null,           // espèce principale (polar, heatmap, narratif)
+  selectedSpecies: [],     // toutes les espèces sélectionnées (série temporelle)
+  speciesList: [],         // liste complète [{Com_Name, n}] pour la plage
 };
 
 let chartPolar  = null;  // instance ECharts
@@ -440,35 +567,174 @@ async function applyFilters() {
   await loadSpeciesData();
 }
 
-// ── Popule le sélecteur d'espèces ─────────────────────────────────────────
+// ── Ferme le picker au clic extérieur ─────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!document.getElementById('sp-picker').contains(e.target)) closePicker();
+});
+
+function togglePicker() {
+  const dd = document.getElementById('sp-dropdown');
+  const bar = document.getElementById('sp-tags-bar');
+  const isOpen = dd.classList.contains('open');
+  if (isOpen) { closePicker(); } else {
+    dd.classList.add('open');
+    bar.classList.add('open');
+    document.getElementById('sp-search').focus();
+  }
+}
+
+function closePicker() {
+  document.getElementById('sp-dropdown').classList.remove('open');
+  document.getElementById('sp-tags-bar').classList.remove('open');
+  document.getElementById('sp-search').value = '';
+  filterSpeciesList('');
+}
+
+// ── Popule le picker d'espèces ─────────────────────────────────────────────
 async function loadSpeciesDropdown() {
   const expr = resampleExpr(state.resample);
   const rows = await birdQuery(
-    `SELECT Com_Name, ${expr}
+    `SELECT Com_Name, COUNT(*) as n
      FROM detections
      WHERE Date >= ? AND Date <= ? AND Confidence >= ?
-     GROUP BY Com_Name ORDER BY n DESC LIMIT 50`,
+     GROUP BY Com_Name ORDER BY n DESC`,
     [state.from, state.to, state.conf]
   );
 
-  state.speciesList = rows.map(r => r.Com_Name);
+  state.speciesList = rows;   // [{Com_Name, n}]
 
-  const sel  = document.getElementById('sp-select');
-  const prev = state.species;
-  sel.innerHTML = rows.map(r =>
-    `<option value="${r.Com_Name}" ${r.Com_Name === prev ? 'selected' : ''}>${r.Com_Name} (${r.n.toLocaleString()})</option>`
+  // Construire la liste de checkboxes
+  const list = document.getElementById('sp-list');
+  list.innerHTML = rows.map((r, idx) =>
+    `<label class="sp-item" data-name="${r.Com_Name}" data-idx="${idx}">
+       <input type="checkbox" value="${r.Com_Name}" onchange="onCheckChange(this)">
+       <span class="sp-item-name">${r.Com_Name}</span>
+       <span class="sp-item-count">${r.n.toLocaleString()}</span>
+     </label>`
   ).join('');
 
-  if (!state.species || !rows.find(r => r.Com_Name === state.species)) {
-    state.species = rows[0]?.Com_Name || null;
+  document.getElementById('sp-footer-total').textContent =
+    `${rows.length} espèce${rows.length > 1 ? 's' : ''} au total`;
+
+  // Si aucune sélection active, prendre la première (top 1)
+  if (state.selectedSpecies.length === 0 && rows.length > 0) {
+    setSelection([rows[0].Com_Name]);
+  } else {
+    // Restaurer la sélection précédente (filtrée aux espèces disponibles)
+    const available = new Set(rows.map(r => r.Com_Name));
+    const valid = state.selectedSpecies.filter(s => available.has(s));
+    setSelection(valid.length ? valid : (rows[0] ? [rows[0].Com_Name] : []));
   }
   updateSpeciesLabel();
 }
 
-// ── Species selector change ────────────────────────────────────────────────
-function onSpeciesChange() {
-  state.species = document.getElementById('sp-select').value;
+// ── Applique une sélection ─────────────────────────────────────────────────
+function setSelection(names) {
+  state.selectedSpecies = names;
+  state.species = names[0] || null;
+
+  // Sync checkboxes
+  document.querySelectorAll('#sp-list input[type=checkbox]').forEach(cb => {
+    cb.checked = names.includes(cb.value);
+    cb.closest('.sp-item').classList.toggle('checked', cb.checked);
+  });
+  renderTags();
+  updateFooterCount();
+}
+
+// ── Checkbox change ────────────────────────────────────────────────────────
+function onCheckChange(cb) {
+  const name = cb.value;
+  if (cb.checked) {
+    if (!state.selectedSpecies.includes(name)) state.selectedSpecies.push(name);
+  } else {
+    state.selectedSpecies = state.selectedSpecies.filter(s => s !== name);
+  }
+  cb.closest('.sp-item').classList.toggle('checked', cb.checked);
+  // Espèce principale = première sélectionnée dans l'ordre de la liste
+  const ordered = Array.from(document.querySelectorAll('#sp-list input:checked')).map(c => c.value);
+  state.selectedSpecies = ordered;
+  state.species = ordered[0] || null;
+  renderTags();
+  updateFooterCount();
   loadSpeciesData();
+}
+
+// ── Top N ──────────────────────────────────────────────────────────────────
+function selectTopN() {
+  const n = parseInt(document.getElementById('sp-topn-n').value) || 10;
+  const top = state.speciesList.slice(0, n).map(r => r.Com_Name);
+  setSelection(top);
+  loadSpeciesData();
+}
+
+function clearSelection() {
+  setSelection([]);
+  // On garde quand même la première pour avoir du contenu
+  if (state.speciesList.length) {
+    setSelection([state.speciesList[0].Com_Name]);
+    loadSpeciesData();
+  }
+}
+
+// ── Filtre la liste ────────────────────────────────────────────────────────
+function filterSpeciesList(q) {
+  const lq = q.toLowerCase();
+  document.querySelectorAll('#sp-list .sp-item').forEach(el => {
+    el.classList.toggle('hidden', q && !el.dataset.name.toLowerCase().includes(lq));
+  });
+}
+
+// ── Rend les tags ──────────────────────────────────────────────────────────
+function renderTags() {
+  const bar = document.getElementById('sp-tags-bar');
+  const ph  = document.getElementById('sp-placeholder');
+  const sel = state.selectedSpecies;
+
+  // Supprimer les anciens tags (garder caret et placeholder)
+  bar.querySelectorAll('.sp-tag').forEach(t => t.remove());
+
+  if (sel.length === 0) {
+    ph.style.display = '';
+    ph.textContent = '— aucune espèce —';
+    return;
+  }
+  ph.style.display = 'none';
+
+  // Afficher max 3 tags + "+N autres"
+  const MAX_TAGS = 3;
+  const caret = bar.querySelector('.sp-caret');
+  sel.slice(0, MAX_TAGS).forEach(name => {
+    const tag = document.createElement('span');
+    tag.className = 'sp-tag';
+    tag.innerHTML = `${name}<button class="sp-tag-x" onclick="removeTag(event,'${name.replace(/'/g,"\\'")}')">✕</button>`;
+    bar.insertBefore(tag, caret);
+  });
+  if (sel.length > MAX_TAGS) {
+    const more = document.createElement('span');
+    more.className = 'sp-tag';
+    more.style.cssText = 'background:var(--bg-card2);border-color:var(--border);color:var(--text-muted)';
+    more.textContent = `+${sel.length - MAX_TAGS}`;
+    bar.insertBefore(more, caret);
+  }
+}
+
+function removeTag(e, name) {
+  e.stopPropagation();
+  state.selectedSpecies = state.selectedSpecies.filter(s => s !== name);
+  state.species = state.selectedSpecies[0] || null;
+  // Uncheck
+  const cb = document.querySelector(`#sp-list input[value="${CSS.escape(name)}"]`);
+  if (cb) { cb.checked = false; cb.closest('.sp-item').classList.remove('checked'); }
+  renderTags();
+  updateFooterCount();
+  loadSpeciesData();
+}
+
+function updateFooterCount() {
+  const n = state.selectedSpecies.length;
+  document.getElementById('sp-footer-count').textContent =
+    `${n} espèce${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}`;
 }
 
 // ── Update species header label ────────────────────────────────────────────
@@ -818,75 +1084,126 @@ function countActiveDays(byHour) {
   return byHour.filter(v => v > 0).length;
 }
 
-// ── Série temporelle ───────────────────────────────────────────────────────
+// ── Série temporelle — multi-espèces ──────────────────────────────────────
 async function loadSeriesChart() {
-  try {
-    // Granularité adaptative selon la plage
-    const daysDiff = (new Date(state.to) - new Date(state.from)) / 86400000;
+  const species = state.selectedSpecies;
+  if (!species.length) return;
 
-    let rows, labels, data;
-    if (state.resample === 'daily' || daysDiff <= 90) {
-      // Par jour
-      rows = await birdQuery(
-        `SELECT Date, COUNT(*) as n FROM detections
-         WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
-         GROUP BY Date ORDER BY Date ASC`,
-        [state.species, state.from, state.to, state.conf]
-      );
-      // Fill gaps
-      const map = {};
-      rows.forEach(r => { map[r.Date] = r.n; });
-      labels = []; data = [];
-      const cur = new Date(state.from);
-      const end = new Date(state.to);
+  try {
+    const daysDiff = (new Date(state.to) - new Date(state.from)) / 86400000;
+    const byMonth  = state.resample === 'daily' ? false : daysDiff > 90;
+
+    // Palette de couleurs pour les espèces
+    const PALETTE = [
+      '#4a8ab5','#5a9e3a','#c8a84b','#e06c4a','#9a5eb5',
+      '#2ab8c8','#d45a8a','#7a9e3a','#d4a040','#5a7ad4',
+    ];
+
+    // Construire les labels communs (axe X)
+    let labels = [];
+    if (!byMonth) {
+      const cur = new Date(state.from), end = new Date(state.to);
       while (cur <= end) {
-        const d = cur.toISOString().slice(0, 10);
         const mo = t('months_short')[cur.getMonth()];
         labels.push(`${cur.getDate()} ${mo} ${cur.getFullYear().toString().slice(2)}`);
-        data.push(map[d] || 0);
         cur.setDate(cur.getDate() + 1);
       }
-    } else {
-      // Par mois
-      rows = await birdQuery(
-        `SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections
-         WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
-         GROUP BY ym ORDER BY ym ASC`,
-        [state.species, state.from, state.to, state.conf]
-      );
-      labels = rows.map(r => {
-        const [y, m] = r.ym.split('-');
-        return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`;
-      });
-      data = rows.map(r => r.n);
     }
+
+    // Requête parallèle pour chaque espèce
+    const datasets = await Promise.all(species.map(async (sp, idx) => {
+      const color = PALETTE[idx % PALETTE.length];
+      let data;
+
+      if (!byMonth) {
+        const rows = await birdQuery(
+          `SELECT Date, COUNT(*) as n FROM detections
+           WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+           GROUP BY Date ORDER BY Date ASC`,
+          [sp, state.from, state.to, state.conf]
+        );
+        const map = {};
+        rows.forEach(r => { map[r.Date] = r.n; });
+        // Rebuild labels si premier dataset
+        if (idx === 0) {
+          labels = [];
+          const cur = new Date(state.from), end = new Date(state.to);
+          while (cur <= end) {
+            const d = cur.toISOString().slice(0,10);
+            const mo = t('months_short')[cur.getMonth()];
+            labels.push(`${cur.getDate()} ${mo} ${cur.getFullYear().toString().slice(2)}`);
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+        // Aligner data sur les labels
+        const cur2 = new Date(state.from), end2 = new Date(state.to);
+        data = [];
+        while (cur2 <= end2) {
+          data.push(map[cur2.toISOString().slice(0,10)] || 0);
+          cur2.setDate(cur2.getDate() + 1);
+        }
+      } else {
+        const rows = await birdQuery(
+          `SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections
+           WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+           GROUP BY ym ORDER BY ym ASC`,
+          [sp, state.from, state.to, state.conf]
+        );
+        if (idx === 0) {
+          labels = rows.map(r => {
+            const [y, m] = r.ym.split('-');
+            return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`;
+          });
+        }
+        data = rows.map(r => r.n);
+      }
+
+      const isSingle = species.length === 1;
+      return {
+        label: sp,
+        data,
+        backgroundColor: isSingle
+          ? `rgba(74,138,181,.40)`
+          : color.replace('#','rgba(').replace(/(..)(..)(..)/, (_,r,g,b) =>
+              `${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)}`) + ',.35)',
+        borderColor: color,
+        borderWidth: isSingle && !byMonth ? 1 : 1.5,
+        borderRadius: !byMonth ? 2 : 0,
+        fill: byMonth && isSingle,
+        pointRadius: !byMonth ? 0 : (isSingle ? 2 : 1.5),
+        tension: 0.3,
+      };
+    }));
+
+    // Correction backgroundColor pour multi (regex complexe ci-dessus, on le refait proprement)
+    datasets.forEach((ds, idx) => {
+      const hex = PALETTE[idx % PALETTE.length];
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      ds.backgroundColor = species.length === 1 && !byMonth
+        ? `rgba(74,138,181,.40)`
+        : `rgba(${r},${g},${b},.35)`;
+      ds.borderColor = hex;
+    });
 
     const ctx = document.getElementById('chart-series').getContext('2d');
     if (chartSeries) chartSeries.destroy();
 
     chartSeries = new Chart(ctx, {
-      type: daysDiff <= 90 ? 'bar' : 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Détections',
-          data,
-          backgroundColor: 'rgba(74,138,181,.45)',
-          borderColor: '#4a8ab5',
-          borderWidth: daysDiff <= 90 ? 1 : 1.5,
-          borderRadius: daysDiff <= 90 ? 2 : 0,
-          fill: daysDiff > 90,
-          pointRadius: daysDiff <= 90 ? 0 : 2,
-          tension: 0.3,
-        }]
-      },
+      type: byMonth ? 'line' : (species.length > 1 ? 'line' : 'bar'),
+      data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: species.length > 1,
+            labels: { color: 'var(--text-muted)', font: { family: 'Lora', size: 11 }, boxWidth: 12 }
+          },
           tooltip: {
-            callbacks: { label: c => ` ${c.raw.toLocaleString()} détections` }
+            callbacks: { label: c => ` ${c.dataset.label} : ${c.raw.toLocaleString()} déts` }
           }
         },
         scales: {

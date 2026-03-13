@@ -15,11 +15,11 @@ const BIRD_CONFIG = {
   rarityThreshold:   10,      // < N détections = espèce rare
   pageSize:          50,      // détections par page
 
-  // Localisation (Bruxelles)
+  // Localisation — adapter selon votre emplacement
   location: {
     lat:  50.85,
     lon:  4.35,
-    name: 'Bruxelles'
+    name: 'My Location'
   },
 
   // Langue par défaut ('fr' | 'en' | 'nl')
