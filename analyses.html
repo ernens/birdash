@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PIBIRD — Analyses espèces</title>
+  <link rel="stylesheet" href="bird-styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    /* ── Layout deux colonnes ────────────────────────────────────── */
+    .analyses-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .analyses-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── Panneau gauche ──────────────────────────────────────────── */
+    .ctrl-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .85rem;
+      position: sticky;
+      top: 1rem;
+    }
+    .ctrl-section { margin-bottom: 1rem; }
+    .ctrl-label {
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-muted); margin-bottom: .45rem; display: block;
+    }
+    .ctrl-panel input[type=date] {
+      background: var(--bg-deep); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 4px;
+      padding: .3rem .45rem; font-size: .8rem; width: 100%;
+      margin-bottom: .35rem;
+    }
+    .quick-btns { display: flex; flex-wrap: wrap; gap: .3rem; }
+    .quick-btn {
+      font-size: .72rem; padding: .2rem .5rem; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--bg-card2);
+      color: var(--text-muted); cursor: pointer; transition: all .15s;
+    }
+    .quick-btn:hover, .quick-btn.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+
+    /* Radio custom */
+    .radio-group { display: flex; flex-direction: column; gap: .35rem; }
+    .radio-row { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+    .radio-row input[type=radio] { accent-color: var(--accent); }
+    .radio-row label { font-size: .82rem; color: var(--text-main); cursor: pointer; }
+
+    /* Range slider */
+    .range-wrap { padding: 0 .1rem; }
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 4px;
+      background: var(--bg-deep); border-radius: 2px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+    .range-labels {
+      display: flex; justify-content: space-between;
+      font-size: .7rem; color: var(--text-faint); margin-top: .2rem;
+    }
+
+    /* ── Contenu principal ───────────────────────────────────────── */
+    .main-content {}
+
+    /* Sélecteur espèce */
+    .species-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .species-thumb {
+      width: 56px; height: 56px; border-radius: var(--radius);
+      object-fit: cover; flex-shrink: 0;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+    }
+    .species-thumb-placeholder {
+      width: 56px; height: 56px; border-radius: var(--radius);
+      background: var(--bg-card2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; flex-shrink: 0;
+    }
+    .species-select-wrap { flex: 1; min-width: 0; }
+    .species-select-label { font-size: .72rem; color: var(--text-muted); margin-bottom: .3rem; }
+    #sp-select {
+      width: 100%; background: var(--bg-deep); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 4px; padding: .45rem .6rem;
+      font-size: .9rem; font-family: var(--font-body);
+    }
+    .species-links-row { margin-top: .4rem; display: flex; flex-wrap: wrap; gap: .3rem; }
+    .sp-ext-link {
+      font-size: .7rem; padding: .15rem .45rem; border-radius: 12px;
+      border: 1px solid var(--border); color: var(--text-muted);
+      text-decoration: none; transition: all .15s;
+    }
+    .sp-ext-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* KPIs espèce */
+    .sp-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .6rem;
+      margin-bottom: 1rem;
+    }
+    @media (max-width: 700px) { .sp-kpis { grid-template-columns: repeat(2, 1fr); } }
+    .sp-kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .6rem .75rem;
+    }
+    .sp-kpi-val { font-family: var(--font-head); font-size: 1.3rem; color: var(--accent); }
+    .sp-kpi-val.amber { color: var(--amber); }
+    .sp-kpi-val.blue  { color: var(--blue); }
+    .sp-kpi-label { font-size: .68rem; color: var(--text-muted); text-transform: uppercase;
+                    letter-spacing: .05em; margin-top: .1rem; }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .chart-card-title {
+      font-size: .75rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-muted); margin-bottom: .65rem;
+    }
+
+    /* Polar chart: grille 2 colonnes internes (rose + texte) */
+    .polar-inner {
+      display: grid;
+      grid-template-columns: 490px 1fr;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    @media (max-width: 950px) { .polar-inner { grid-template-columns: 1fr; } }
+
+    /* Polar chart wrap — ECharts gère lui-même le sizing */
+    .polar-wrap {
+      width: 490px;
+      height: 490px;
+      display: block;
+    }
+
+    /* Texte narratif activité */
+    .activity-narrative {
+      font-size: .88rem;
+      line-height: 1.65;
+      color: var(--text-main);
+    }
+    .activity-narrative .stat-chip {
+      display: inline-block;
+      background: rgba(90,158,58,.18);
+      border: 1px solid rgba(90,158,58,.35);
+      border-radius: 4px;
+      padding: .05rem .4rem;
+      font-family: var(--font-head);
+      font-size: .9rem;
+      color: var(--accent);
+      margin: 0 .1rem;
+    }
+    .activity-narrative .stat-chip.amber {
+      background: rgba(200,168,75,.18);
+      border-color: rgba(200,168,75,.35);
+      color: var(--amber);
+    }
+    .activity-narrative .stat-chip.blue {
+      background: rgba(74,138,181,.18);
+      border-color: rgba(74,138,181,.35);
+      color: var(--blue);
+    }
+    .activity-narrative p { margin: 0 0 .55rem; }
+    .activity-narrative p:last-child { margin-bottom: 0; }
+
+    /* Bar chart : hauteur calculée dynamiquement via style inline */
+    .bar-wrap { overflow: hidden; }
+
+    /* Heatmap journalier */
+    .daily-heatmap-wrap { overflow-x: auto; }
+    .dhm-table { border-collapse: collapse; font-size: .65rem; }
+    .dhm-table th {
+      padding: .2rem .35rem; color: var(--text-faint);
+      font-weight: 400; text-align: center; white-space: nowrap;
+    }
+    .dhm-table td {
+      width: 14px; height: 14px; border-radius: 2px;
+      border: 1px solid var(--bg-deep);
+    }
+    .dhm-0 { background: var(--bg-card2); }
+    .dhm-1 { background: rgba(90,158,58,.15); }
+    .dhm-2 { background: rgba(90,158,58,.35); }
+    .dhm-3 { background: rgba(90,158,58,.58); }
+    .dhm-4 { background: rgba(90,158,58,.80); }
+    .dhm-5 { background: #5a9e3a; }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute; inset: 0; background: rgba(10,20,12,.7);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius); z-index: 10;
+    }
+    .main-content { position: relative; }
+
+    /* Apply button */
+    .btn-apply {
+      width: 100%; padding: .5rem; margin-top: .5rem;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius); font-size: .85rem; cursor: pointer;
+      font-family: var(--font-body); font-weight: 500; transition: opacity .15s;
+    }
+    .btn-apply:hover { opacity: .85; }
+    .btn-apply:active { opacity: .7; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-name">🐦 PIBIRD</span>
+      <span class="brand-sub">Bruxelles</span>
+    </div>
+    <div class="header-right"><div id="theme-switcher"></div>
+        <div id="lang-switcher"></div></div>
+  </header>
+
+  <nav class="app-nav"><div id="main-nav"></div></nav>
+
+  <main class="app-main">
+    <div class="analyses-layout">
+
+      <!-- ══ PANNEAU GAUCHE ══════════════════════════════════════════ -->
+      <aside class="ctrl-panel">
+
+        <div class="ctrl-section">
+          <span class="ctrl-label">Plage de dates</span>
+          <input type="date" id="f-from">
+          <input type="date" id="f-to">
+          <div class="quick-btns" style="margin-top:.4rem;">
+            <button class="quick-btn" onclick="setRange(7)">7j</button>
+            <button class="quick-btn" onclick="setRange(30)">30j</button>
+            <button class="quick-btn" onclick="setRange(90)">90j</button>
+            <button class="quick-btn" onclick="setRange(365)">1an</button>
+            <button class="quick-btn" id="btn-all" onclick="setAll()">Tout</button>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <span class="ctrl-label">Résolution</span>
+          <div class="radio-group">
+            <label class="radio-row">
+              <input type="radio" name="resample" value="raw">
+              <span>Brut</span>
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="resample" value="15min" checked>
+              <span>15 minutes</span>
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="resample" value="hourly">
+              <span>Horaire</span>
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="resample" value="daily">
+              <span>Journalier</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <span class="ctrl-label">Confiance min — <span id="lbl-conf">70</span>%</span>
+          <div class="range-wrap">
+            <input type="range" id="f-conf" min="50" max="95" step="5" value="70"
+                   oninput="document.getElementById('lbl-conf').textContent=this.value">
+            <div class="range-labels"><span>50%</span><span>95%</span></div>
+          </div>
+        </div>
+
+        <button class="btn-apply" onclick="applyFilters()">▶ Appliquer</button>
+
+      </aside>
+
+      <!-- ══ CONTENU PRINCIPAL ════════════════════════════════════════ -->
+      <div class="main-content" id="main-content">
+
+        <!-- Sélecteur espèce + photo + liens -->
+        <div class="species-header">
+          <div class="species-thumb-placeholder" id="sp-thumb-wrap">🐦</div>
+          <div class="species-select-wrap">
+            <div class="species-select-label" id="sp-select-label">
+              Quelle espèce explorer ?
+            </div>
+            <select id="sp-select" onchange="onSpeciesChange()">
+              <option>— chargement… —</option>
+            </select>
+            <div class="species-links-row" id="sp-links"></div>
+          </div>
+        </div>
+
+        <!-- KPIs espèce sélectionnée -->
+        <div class="sp-kpis" id="sp-kpis"></div>
+
+        <!-- Polar chart + texte narratif (pleine largeur, en haut) -->
+        <div class="chart-card">
+          <div class="chart-card-title" id="title-polar">Activité par heure</div>
+          <div class="polar-inner">
+            <div class="polar-wrap">
+              <div id="chart-polar" style="width:100%;height:100%;"></div>
+            </div>
+            <div class="activity-narrative" id="activity-text">
+              <div class="spinner"><div></div><div></div><div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Série temporelle -->
+        <div class="chart-card">
+          <div class="chart-card-title" id="title-series">Détections dans le temps</div>
+          <div style="position:relative; height:160px;">
+            <canvas id="chart-series"></canvas>
+          </div>
+        </div>
+
+        <!-- Heatmap journalière -->
+        <div class="chart-card">
+          <div class="chart-card-title" id="title-heatmap">
+            Heatmap journalière — 15 min intervals
+          </div>
+          <div class="daily-heatmap-wrap">
+            <div id="heatmap-daily">
+              <div class="spinner" style="padding:1.5rem;"><div></div><div></div><div></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /main-content -->
+    </div><!-- /analyses-layout -->
+  </main>
+</div>
+
+<script src="bird-config.js"></script>
+<script src="bird-i18n.js"></script>
+<script src="bird-core.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let state = {
+  from: daysAgo(364),
+  to:   localDateStr(),
+  resample: '15min',
+  n: 10,
+  conf: 0.70,
+  species: null,     // currently selected
+  speciesList: [],   // full list for date range
+};
+
+let chartPolar  = null;  // instance ECharts
+let chartSeries = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  initPage('analyses');
+
+  // Set initial date inputs
+  document.getElementById('f-from').value = state.from;
+  document.getElementById('f-to').value   = state.to;
+
+  // Set "Tout" range from DB
+  try {
+    const [r] = await birdQuery(`SELECT MIN(Date) as f, MAX(Date) as l FROM detections`);
+    if (r) {
+      document.getElementById('f-from').value = r.f;
+      state.from = r.f;
+    }
+  } catch(e) {}
+
+  await applyFilters();
+});
+
+// ── Quick date presets ─────────────────────────────────────────────────────
+function setRange(days) {
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  state.from = daysAgo(days - 1);
+  state.to   = localDateStr();
+  document.getElementById('f-from').value = state.from;
+  document.getElementById('f-to').value   = state.to;
+}
+async function setAll() {
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-all').classList.add('active');
+  try {
+    const [r] = await birdQuery(`SELECT MIN(Date) as f, MAX(Date) as l FROM detections`);
+    if (r) {
+      state.from = r.f; state.to = r.l;
+      document.getElementById('f-from').value = r.f;
+      document.getElementById('f-to').value   = r.l;
+    }
+  } catch(e) {}
+}
+
+// ── Resample helpers ───────────────────────────────────────────────────────
+function resampleExpr(resample) {
+  // Returns a SQLite expression that counts distinct time windows
+  switch (resample) {
+    case 'raw':    return 'COUNT(*) as n';
+    case 'hourly': return "COUNT(DISTINCT Date || SUBSTR(Time,1,2)) as n";
+    case 'daily':  return "COUNT(DISTINCT Date) as n";
+    case '15min':
+    default:
+      // Floor minute to 15-min bucket
+      return "COUNT(DISTINCT Date || SUBSTR(Time,1,2) || CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)) as n";
+  }
+}
+
+// ── Apply all filters → reload everything ─────────────────────────────────
+async function applyFilters() {
+  state.from    = document.getElementById('f-from').value;
+  state.to      = document.getElementById('f-to').value;
+  state.resample = document.querySelector('input[name=resample]:checked').value;
+
+  state.conf    = parseInt(document.getElementById('f-conf').value) / 100;
+
+  await loadSpeciesDropdown();
+  await loadSpeciesData();
+}
+
+// ── Popule le sélecteur d'espèces ─────────────────────────────────────────
+async function loadSpeciesDropdown() {
+  const expr = resampleExpr(state.resample);
+  const rows = await birdQuery(
+    `SELECT Com_Name, ${expr}
+     FROM detections
+     WHERE Date >= ? AND Date <= ? AND Confidence >= ?
+     GROUP BY Com_Name ORDER BY n DESC LIMIT 50`,
+    [state.from, state.to, state.conf]
+  );
+
+  state.speciesList = rows.map(r => r.Com_Name);
+
+  const sel  = document.getElementById('sp-select');
+  const prev = state.species;
+  sel.innerHTML = rows.map(r =>
+    `<option value="${r.Com_Name}" ${r.Com_Name === prev ? 'selected' : ''}>${r.Com_Name} (${r.n.toLocaleString()})</option>`
+  ).join('');
+
+  if (!state.species || !rows.find(r => r.Com_Name === state.species)) {
+    state.species = rows[0]?.Com_Name || null;
+  }
+  updateSpeciesLabel();
+}
+
+// ── Species selector change ────────────────────────────────────────────────
+function onSpeciesChange() {
+  state.species = document.getElementById('sp-select').value;
+  loadSpeciesData();
+}
+
+// ── Update species header label ────────────────────────────────────────────
+function updateSpeciesLabel() {
+  const from = fmtDate(state.from), to = fmtDate(state.to);
+  document.getElementById('sp-select-label').textContent =
+    `Explorer pour la période ${from} → ${to}`;
+}
+
+// ── Load all per-species data ──────────────────────────────────────────────
+async function loadSpeciesData() {
+  if (!state.species) return;
+
+  updateSpeciesHeader();
+  await Promise.all([
+    loadSpeciesKpis(),
+    loadPolarChart(),
+    loadSeriesChart(),
+    loadDailyHeatmap(),
+  ]);
+}
+
+// ── Species header: photo + links ──────────────────────────────────────────
+function updateSpeciesHeader() {
+  const sp = state.species;
+  if (!sp) return;
+
+  // Links
+  const links = buildSpeciesLinks(sp, '');
+  document.getElementById('sp-links').innerHTML = Object.entries(links).map(([name, url]) =>
+    `<a href="${url}" target="_blank" class="sp-ext-link">${name}</a>`
+  ).join('');
+
+  // Photo async
+  const thumbWrap = document.getElementById('sp-thumb-wrap');
+  thumbWrap.innerHTML = '<span style="font-size:1.6rem;">🐦</span>';
+  fetchSpeciesImage(sp).then(imgUrl => {
+    if (imgUrl) {
+      thumbWrap.innerHTML = `<img class="species-thumb" src="${imgUrl}" alt="${sp}">`;
+    }
+  }).catch(() => {});
+}
+
+// ── KPIs pour l'espèce + période ──────────────────────────────────────────
+async function loadSpeciesKpis() {
+  const cont = document.getElementById('sp-kpis');
+  cont.innerHTML = '';
+  try {
+    const [r] = await birdQuery(
+      `SELECT COUNT(*) as total,
+              ROUND(AVG(Confidence)*100,1) as avg_conf,
+              ROUND(MAX(Confidence)*100,1) as max_conf,
+              MIN(Date) as first, MAX(Date) as last,
+              COUNT(DISTINCT Date) as days
+       FROM detections
+       WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?`,
+      [state.species, state.from, state.to, state.conf]
+    );
+    if (!r) return;
+
+    const expr = resampleExpr(state.resample);
+    const [sampled] = await birdQuery(
+      `SELECT ${expr} FROM detections
+       WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?`,
+      [state.species, state.from, state.to, state.conf]
+    );
+
+    const kpis = [
+      { val: r.total.toLocaleString(), label: 'Détections brutes',    cls: '' },
+      { val: sampled?.n?.toLocaleString() || '—', label: 'Après rééchantillonnage', cls: 'amber' },
+      { val: r.avg_conf + '%',         label: 'Confiance moyenne',    cls: 'blue' },
+      { val: r.days,                   label: 'Jours détectée',       cls: '' },
+    ];
+    cont.innerHTML = kpis.map(k => `
+      <div class="sp-kpi">
+        <div class="sp-kpi-val ${k.cls}">${k.val}</div>
+        <div class="sp-kpi-label">${k.label}</div>
+      </div>`).join('');
+
+    // Update polar title
+    document.getElementById('title-polar').textContent =
+      `Activité horaire · ${state.species}`;
+    document.getElementById('title-series').textContent =
+      `Détections dans le temps · ${state.species}`;
+    document.getElementById('title-heatmap').textContent =
+      `Heatmap journalière · ${state.species}`;
+  } catch(e) { console.error('kpis:', e); }
+}
+
+// ── Rose chart 24h — ECharts nightingale ─────────────────────────────────
+async function loadPolarChart() {
+  const actText = document.getElementById('activity-text');
+  actText.innerHTML = '<div class="spinner"><div></div><div></div><div></div></div>';
+
+  try {
+    const rows = await birdQuery(
+      `SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n
+       FROM detections
+       WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+       GROUP BY h ORDER BY h ASC`,
+      [state.species, state.from, state.to, state.conf]
+    );
+    const rowsMin = await birdQuery(
+      `SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h,
+              CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)*15 as m,
+              COUNT(*) as n
+       FROM detections
+       WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+       GROUP BY h, m ORDER BY n DESC`,
+      [state.species, state.from, state.to, state.conf]
+    );
+
+    const byHour = Array(24).fill(0);
+    rows.forEach(r => { byHour[r.h] = r.n; });
+    const totalDet = byHour.reduce((a, b) => a + b, 0);
+    const maxVal   = Math.max(...byHour) || 1;
+    const peakH    = rowsMin.length ? rowsMin[0].h : byHour.indexOf(maxVal);
+
+    // ── ECharts nightingale ───────────────────────────────────────
+    const el = document.getElementById('chart-polar');
+    if (chartPolar) { chartPolar.dispose(); }
+    chartPolar = echarts.init(el, null, { renderer: 'canvas' });
+
+    // Couleur de chaque secteur selon heure
+    const sectorColors = byHour.map((v, i) => {
+      const p = v / maxVal;
+      if (i === peakH)                                return `rgba(200,168,75,0.92)`;
+      if (i === 5 || i === 6 || i === 20 || i === 21) return `rgba(200,168,75,${0.30 + p*0.55})`;
+      if (i >= 6 && i <= 20)                          return `rgba(90,158,58,${0.28 + p*0.60})`;
+      return `rgba(74,138,181,${0.22 + p*0.60})`;
+    });
+
+    const hourLabels = Array.from({length: 24}, (_, i) => `${i}h`);
+
+    chartPolar.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(10,20,12,0.92)',
+        borderColor: 'rgba(90,158,58,.4)',
+        borderWidth: 1,
+        textStyle: { color: '#c8e6c0', fontFamily: 'Lora, serif', fontSize: 13 },
+        formatter: p => {
+          const pct = totalDet ? Math.round(p.value / totalDet * 100) : 0;
+          return `<b>${p.name}</b><br>${p.value.toLocaleString()} détections<br>${pct}% de la journée`;
+        }
+      },
+      angleAxis: {
+        type: 'category',
+        data: hourLabels,
+        startAngle: 90,      // 0h en haut
+        clockwise: true,
+        boundaryGap: false,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          color: (val, idx) => {
+            if (idx === peakH)   return '#c8a84b';
+            if (idx % 6 === 0)   return '#e8f5e8';
+            if (idx % 2 === 0)   return '#9abf9a';
+            return 'transparent';
+          },
+          fontSize: (val, idx) => idx % 6 === 0 ? 11 : 9,
+          fontWeight: (val, idx) => idx === peakH ? 'bold' : 'normal',
+          margin: 8,
+        },
+        splitLine: {
+          show: true,
+          lineStyle: { color: 'rgba(255,255,255,.06)', width: 1 }
+        },
+      },
+      radiusAxis: {
+        min: 0,
+        axisLabel: {
+          color: 'rgba(255,255,255,.25)',
+          fontSize: 8,
+          formatter: v => v >= 1000 ? Math.round(v/1000)+'k' : v,
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: {
+          lineStyle: { color: 'rgba(255,255,255,.07)', type: 'dashed' }
+        },
+        splitNumber: 4,
+      },
+      polar: {
+        center: ['50%', '50%'],
+        radius: ['0%', '72%'],
+      },
+      series: [{
+        type: 'bar',
+        data: byHour.map((v, i) => ({
+          value: v,
+          name: hourLabels[i],
+          itemStyle: {
+            color: sectorColors[i],
+            borderColor: i === peakH ? 'rgba(200,168,75,.7)' : 'rgba(255,255,255,.08)',
+            borderWidth: i === peakH ? 1.5 : 0.5,
+          }
+        })),
+        coordinateSystem: 'polar',
+        roundCap: false,
+        barMaxWidth: '100%',
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(200,168,75,.4)',
+          }
+        },
+        animation: true,
+        animationDuration: 600,
+        animationEasing: 'cubicOut',
+      }]
+    });
+
+    actText.innerHTML = buildActivityNarrative(byHour, rowsMin, totalDet);
+    document.getElementById('title-polar').textContent =
+      `Activité horaire · ${state.species} · ${totalDet.toLocaleString()} détections`;
+
+  } catch(e) {
+    console.error('polar:', e);
+    actText.innerHTML = `<p style="color:var(--danger);">⚠ ${e.message}</p>`;
+  }
+}
+
+// ── Construction du texte narratif ────────────────────────────────────────
+function buildActivityNarrative(byHour, rowsMin, totalDet) {
+  if (!totalDet) return '<p style="color:var(--text-faint);">Aucune donnée pour cette période.</p>';
+
+  const sp   = state.species;
+  const maxVal = Math.max(...byHour);
+  const threshold = maxVal * 0.08; // 8% du max = "activité significative"
+
+  // Pic précis (tranche 15 min la plus chargée)
+  let peakH = 0, peakM = 0;
+  if (rowsMin.length) {
+    peakH = rowsMin[0].h;
+    peakM = rowsMin[0].m;
+  } else {
+    peakH = byHour.indexOf(maxVal);
+    peakM = 0;
+  }
+  const peakLabel = `${String(peakH).padStart(2,'0')}h${peakM > 0 ? String(peakM).padStart(2,'0') : ''}`;
+
+  // Heure de début (premier créneau > seuil)
+  let startH = -1;
+  for (let h = 0; h < 24; h++) {
+    if (byHour[h] >= threshold) { startH = h; break; }
+  }
+  // Heure de fin (dernier créneau > seuil)
+  let endH = -1;
+  for (let h = 23; h >= 0; h--) {
+    if (byHour[h] >= threshold) { endH = h; break; }
+  }
+
+  // Minutes estimées pour start/end via rowsMin
+  let startLabel = startH >= 0 ? `${String(startH).padStart(2,'0')}h` : '—';
+  let endLabel   = endH   >= 0 ? `${String(endH).padStart(2,'0')}h` : '—';
+
+  if (rowsMin.length) {
+    const slotsForStart = rowsMin.filter(r => r.h === startH).sort((a,b) => a.m - b.m);
+    const slotsForEnd   = rowsMin.filter(r => r.h === endH).sort((a,b) => b.m - a.m);
+    if (slotsForStart.length) {
+      const m = slotsForStart[0].m;
+      startLabel = `${String(startH).padStart(2,'0')}h${m > 0 ? String(m).padStart(2,'0') : ''}`;
+    }
+    if (slotsForEnd.length) {
+      const m = slotsForEnd[0].m;
+      endLabel = `${String(endH).padStart(2,'0')}h${m > 0 ? String(m).padStart(2,'0') : ''}`;
+    }
+  }
+
+  // Durée d'activité
+  const durationH = endH - startH;
+  const durationLabel = durationH > 0 ? `${durationH}h d'activité` : 'activité concentrée';
+
+  // Caractérisation diurne/crépusculaire/nocturne
+  let habitude;
+  if (peakH >= 5 && peakH <= 9)       habitude = 'matinal';
+  else if (peakH >= 10 && peakH <= 14) habitude = 'actif en milieu de journée';
+  else if (peakH >= 15 && peakH <= 19) habitude = 'actif en fin d\'après-midi';
+  else if (peakH >= 20 || peakH <= 4)  habitude = 'nocturne ou crépusculaire';
+  else                                  habitude = 'actif dans la journée';
+
+  // Heure secondaire (2e pic si notable)
+  const sorted = byHour
+    .map((v, h) => ({ h, v }))
+    .filter(x => x.h !== peakH && x.v >= maxVal * 0.40)
+    .sort((a, b) => b.v - a.v);
+  const secondaryLabel = sorted.length
+    ? `${String(sorted[0].h).padStart(2,'0')}h` : null;
+
+  // Proportion du pic
+  const peakPct = Math.round(byHour[peakH] / totalDet * 100);
+
+  // % nuit (21h-5h)
+  const nightDet = byHour.slice(21).concat(byHour.slice(0, 5)).reduce((a,b) => a+b, 0);
+  const nightPct = Math.round(nightDet / totalDet * 100);
+
+  // Texte période
+  const fromLabel = fmtDate(state.from);
+  const toLabel   = fmtDate(state.to);
+
+  let html = '';
+
+  // Phrase 1 : synthèse principale
+  html += `<p>
+    Sur la période <span class="stat-chip amber">${fromLabel}</span> →
+    <span class="stat-chip amber">${toLabel}</span>,
+    <strong>${sp}</strong> est <em>${habitude}</em>.
+    Son pic d'activité se situe à <span class="stat-chip">${peakLabel}</span>,
+    représentant <span class="stat-chip">${peakPct}%</span> des détections de la journée.
+  </p>`;
+
+  // Phrase 2 : plage horaire
+  if (startH >= 0 && endH >= 0) {
+    html += `<p>
+      L'activité démarre vers <span class="stat-chip">${startLabel}</span>
+      et se termine vers <span class="stat-chip">${endLabel}</span>,
+      soit environ <span class="stat-chip blue">${durationLabel}</span>.
+    </p>`;
+  }
+
+  // Phrase 3 : pic secondaire ou nuit
+  if (secondaryLabel) {
+    html += `<p>
+      Un second pic notable apparaît vers
+      <span class="stat-chip">${secondaryLabel}</span>.
+    </p>`;
+  } else if (nightPct > 10) {
+    html += `<p>
+      <span class="stat-chip amber">${nightPct}%</span> des détections
+      se produisent entre 21h et 5h du matin.
+    </p>`;
+  }
+
+  // Phrase 4 : total
+  html += `<p style="margin-top:.3rem; font-size:.78rem; color:var(--text-muted);">
+    Total : <strong>${totalDet.toLocaleString()}</strong> détections
+    sur <strong>${countActiveDays(byHour)}</strong> heures actives.
+  </p>`;
+
+  return html;
+}
+
+function countActiveDays(byHour) {
+  return byHour.filter(v => v > 0).length;
+}
+
+// ── Série temporelle ───────────────────────────────────────────────────────
+async function loadSeriesChart() {
+  try {
+    // Granularité adaptative selon la plage
+    const daysDiff = (new Date(state.to) - new Date(state.from)) / 86400000;
+
+    let rows, labels, data;
+    if (state.resample === 'daily' || daysDiff <= 90) {
+      // Par jour
+      rows = await birdQuery(
+        `SELECT Date, COUNT(*) as n FROM detections
+         WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+         GROUP BY Date ORDER BY Date ASC`,
+        [state.species, state.from, state.to, state.conf]
+      );
+      // Fill gaps
+      const map = {};
+      rows.forEach(r => { map[r.Date] = r.n; });
+      labels = []; data = [];
+      const cur = new Date(state.from);
+      const end = new Date(state.to);
+      while (cur <= end) {
+        const d = cur.toISOString().slice(0, 10);
+        const mo = t('months_short')[cur.getMonth()];
+        labels.push(`${cur.getDate()} ${mo} ${cur.getFullYear().toString().slice(2)}`);
+        data.push(map[d] || 0);
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else {
+      // Par mois
+      rows = await birdQuery(
+        `SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections
+         WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+         GROUP BY ym ORDER BY ym ASC`,
+        [state.species, state.from, state.to, state.conf]
+      );
+      labels = rows.map(r => {
+        const [y, m] = r.ym.split('-');
+        return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`;
+      });
+      data = rows.map(r => r.n);
+    }
+
+    const ctx = document.getElementById('chart-series').getContext('2d');
+    if (chartSeries) chartSeries.destroy();
+
+    chartSeries = new Chart(ctx, {
+      type: daysDiff <= 90 ? 'bar' : 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Détections',
+          data,
+          backgroundColor: 'rgba(74,138,181,.45)',
+          borderColor: '#4a8ab5',
+          borderWidth: daysDiff <= 90 ? 1 : 1.5,
+          borderRadius: daysDiff <= 90 ? 2 : 0,
+          fill: daysDiff > 90,
+          pointRadius: daysDiff <= 90 ? 0 : 2,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: c => ` ${c.raw.toLocaleString()} détections` }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { maxTicksLimit: 18, color: '#7a9a7a', font: { size: 9 } },
+            grid: { color: 'rgba(255,255,255,.03)' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#7a9a7a', font: { size: 9 } },
+            grid: { color: 'rgba(255,255,255,.04)' }
+          }
+        }
+      }
+    });
+  } catch(e) { console.error('series:', e); }
+}
+
+// ── Heatmap journalière : heure × date (clone "Daily Charts" Streamlit) ─────
+async function loadDailyHeatmap() {
+  const cont = document.getElementById('heatmap-daily');
+  try {
+    // Limit to last 90 days (perf) or full range if <= 90d
+    const daysDiff = (new Date(state.to) - new Date(state.from)) / 86400000;
+    const from = daysDiff > 120 ? daysAgo(89) : state.from;
+
+    // Compte par (date, 15-min slot) pour l'espèce
+    const rows = await birdQuery(
+      `SELECT Date,
+              CAST(SUBSTR(Time,1,2) AS INTEGER) * 4 + CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER) as slot,
+              COUNT(*) as n
+       FROM detections
+       WHERE Com_Name = ? AND Date >= ? AND Date <= ? AND Confidence >= ?
+       GROUP BY Date, slot
+       ORDER BY Date ASC, slot ASC`,
+      [state.species, from, state.to, state.conf]
+    );
+
+    if (!rows.length) {
+      cont.innerHTML = `<p style="color:var(--text-faint); font-size:.8rem; padding:.5rem;">
+        Aucune donnée pour cette période.</p>`;
+      return;
+    }
+
+    // Construire la liste de dates
+    const datesSet = new Set(rows.map(r => r.Date));
+    const dates = Array.from(datesSet).sort();
+
+    // Pivot : date → slot → n
+    const grid = {};
+    rows.forEach(r => {
+      if (!grid[r.Date]) grid[r.Date] = {};
+      grid[r.Date][r.slot] = r.n;
+    });
+
+    const maxVal = Math.max(...rows.map(r => r.n));
+    function heatClass(v) {
+      if (!v) return 'dhm-0';
+      const p = v / maxVal;
+      if (p < .15) return 'dhm-1';
+      if (p < .35) return 'dhm-2';
+      if (p < .60) return 'dhm-3';
+      if (p < .85) return 'dhm-4';
+      return 'dhm-5';
+    }
+
+    // Slots = 96 (0..95), affichons par tranches de 4 = 24 colonnes horaires
+    // Pour la lisibilité : colonnes = heures (0-23), lignes = dates
+    const SLOTS_PER_HOUR = 4;
+
+    // Limiter le nb de dates affichées (max 60 pour lisibilité)
+    const displayDates = dates.slice(-60);
+
+    let html = `<table class="dhm-table"><thead><tr>
+      <th style="text-align:left; min-width:70px;">Date</th>`;
+    for (let h = 0; h < 24; h++) {
+      html += `<th style="${h % 3 === 0 ? '' : 'color:transparent;'}">${
+        h === 0 ? '12a' : h < 12 ? h+'a' : h === 12 ? '12p' : (h-12)+'p'
+      }</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    displayDates.forEach(date => {
+      const d = new Date(date);
+      const mo = t('months_short')[d.getMonth()];
+      html += `<tr><th style="text-align:left; color:var(--text-muted); font-weight:400;
+               padding-right:.4rem;">${d.getDate()} ${mo}</th>`;
+
+      for (let h = 0; h < 24; h++) {
+        // Aggregate 4 slots of 15min into one hour cell
+        let total = 0;
+        for (let s = 0; s < SLOTS_PER_HOUR; s++) {
+          total += grid[date]?.[h * SLOTS_PER_HOUR + s] || 0;
+        }
+        const cls = heatClass(total);
+        const title = total ? `${date} ${String(h).padStart(2,'0')}h : ${total}` : '';
+        html += `<td class="${cls}" title="${title}"></td>`;
+      }
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    if (dates.length > 60) {
+      html = `<p style="font-size:.72rem; color:var(--text-faint); margin-bottom:.3rem;">
+        Affichage des 60 derniers jours de la période (${dates.length} jours au total)
+      </p>` + html;
+    }
+    cont.innerHTML = html;
+  } catch(e) {
+    cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>

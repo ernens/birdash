@@ -1,0 +1,16 @@
+[Unit]
+Description=PIBIRD API Server (SQLite bridge for birds.db)
+After=network.target
+
+[Service]
+Type=simple
+User=bjorn
+WorkingDirectory=/home/bjorn/pibird
+ExecStart=/usr/bin/node /home/bjorn/pibird/bird-server.js
+Restart=on-failure
+RestartSec=5
+Environment=PIBIRD_PORT=7474
+Environment=PIBIRD_DB=/home/bjorn/BirdNET-Pi/scripts/birds.db
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PIBIRD — Vue d'ensemble</title>
+  <link rel="stylesheet" href="bird-styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-name">🐦 PIBIRD</span>
+      <span class="brand-sub" id="brand-location">Bruxelles</span>
+    </div>
+    <div class="header-right">
+      <div id="theme-switcher"></div>
+        <div id="lang-switcher"></div>
+    </div>
+  </header>
+
+  <!-- ── Navigation ─────────────────────────────────────────────────────── -->
+  <nav class="app-nav">
+    <div id="main-nav"></div>
+  </nav>
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main class="app-main">
+
+    <!-- KPIs aujourd'hui -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpi-det-today">—</div>
+        <div class="kpi-label" data-i18n="detections"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value amber" id="kpi-sp-today">—</div>
+        <div class="kpi-label" data-i18n="species"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value blue" id="kpi-conf-today">—</div>
+        <div class="kpi-label" data-i18n="avg_confidence"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value muted" id="kpi-det-total">—</div>
+        <div class="kpi-label" data-i18n="all_time"></div>
+      </div>
+    </div>
+
+    <!-- Ligne 1 : Dernière détection + Activité 7j -->
+    <div class="grid-2">
+
+      <!-- Dernière détection -->
+      <div class="card">
+        <div class="card-title" data-i18n="last_detection"></div>
+        <div id="last-detection-container">
+          <div id="spinner-last" class="spinner"><div></div><div></div><div></div></div>
+        </div>
+      </div>
+
+      <!-- Activité 7 derniers jours -->
+      <div class="card">
+        <div class="card-title" data-i18n="activity_7d"></div>
+        <div class="chart-wrap">
+          <canvas id="chart-7d"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ligne 2 : Top espèces + Détections récentes -->
+    <div class="grid-2">
+
+      <!-- Top espèces (7 jours) -->
+      <div class="card">
+        <div class="card-title" data-i18n="top_species"></div>
+        <div class="chart-wrap chart-wrap-tall">
+          <canvas id="chart-top-species"></canvas>
+        </div>
+      </div>
+
+      <!-- Feed dernières détections -->
+      <div class="card">
+        <div class="card-title" data-i18n="recent_detections"></div>
+        <div id="recent-feed">
+          <div class="spinner"><div></div><div></div><div></div></div>
+        </div>
+        <div style="text-align:right; margin-top:.75rem;">
+          <a href="detections.html" class="btn btn-secondary" id="link-all-det">Voir tout →</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ligne 3 : Distribution horaire du jour -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title" id="hourly-title"></div>
+      <div class="chart-wrap">
+        <canvas id="chart-hourly"></canvas>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="bird-config.js"></script>
+<script src="bird-i18n.js"></script>
+<script src="bird-core.js"></script>
+<script>
+// ── Init ────────────────────────────────────────────────────────────────────
+
+const TODAY = localDateStr();
+let chart7d = null, chartTop = null, chartHourly = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  initPage('index');
+  updateI18nNodes();
+  await Promise.all([
+    loadKPIs(),
+    loadLastDetection(),
+    load7DayChart(),
+    loadTopSpecies(),
+    loadRecentFeed(),
+    loadHourlyChart(),
+  ]);
+});
+
+// Re-render au changement de langue
+document.addEventListener('langchange', () => {
+  updateI18nNodes();
+  // Met à jour le titre du chart horaire
+  const hourlyTitle = document.getElementById('hourly-title');
+  if (hourlyTitle) hourlyTitle.textContent = t('activity_7d') + ' — ' + fmtDate(TODAY);
+});
+
+function updateI18nNodes() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  const hourlyTitle = document.getElementById('hourly-title');
+  if (hourlyTitle) hourlyTitle.textContent = t('detections') + ' ' + t('today') + ' — ' + fmtDate(TODAY);
+  const linkAll = document.getElementById('link-all-det');
+  if (linkAll) linkAll.textContent = t('nav_detections') + ' →';
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────────────
+
+async function loadKPIs() {
+  try {
+    // Aujourd'hui
+    const [today] = await birdQuery(
+      `SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp,
+              ROUND(AVG(Confidence)*100,1) as conf
+       FROM detections WHERE Date = ?`, [TODAY]
+    );
+    document.getElementById('kpi-det-today').textContent =
+      today ? today.det.toLocaleString() : '0';
+    document.getElementById('kpi-sp-today').textContent =
+      today ? today.sp : '0';
+    document.getElementById('kpi-conf-today').textContent =
+      today && today.conf ? today.conf + '%' : '—';
+
+    // Total DB
+    const [total] = await birdQuery(`SELECT COUNT(*) as n FROM detections`);
+    document.getElementById('kpi-det-total').textContent =
+      total ? total.n.toLocaleString() : '0';
+  } catch (e) {
+    console.error('KPI error:', e);
+  }
+}
+
+// ── Dernière détection ────────────────────────────────────────────────────────
+
+async function loadLastDetection() {
+  const cont = document.getElementById('last-detection-container');
+  try {
+    const rows = await birdQuery(
+      `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
+       FROM detections ORDER BY Date DESC, Time DESC LIMIT 1`
+    );
+    if (!rows.length) {
+      cont.innerHTML = `<p class="error-msg">${t('no_data')}</p>`;
+      return;
+    }
+    const d = rows[0];
+    const conf = parseFloat(d.Confidence);
+    const confClass = conf >= 0.8 ? 'conf-high' : conf >= 0.6 ? 'conf-mid' : 'conf-low';
+    const audioBtn = d.File_Name
+      ? `<button class="play-btn" onclick="toggleAudio('${d.File_Name}', this)" title="${t('play')}">▶</button>`
+      : '';
+
+    cont.innerHTML = `
+      <div style="display:flex; align-items:center; gap:1rem;">
+        ${audioBtn}
+        <div style="flex:1;">
+          <div style="font-size:1.1rem; font-family:var(--font-display); font-weight:600;">
+            <a class="species-link"
+               onclick="navigateTo('especes.html',{species:'${encodeURIComponent(d.Com_Name)}'})">
+              ${d.Com_Name}
+            </a>
+          </div>
+          <div style="font-size:.82rem; color:var(--text-muted); font-style:italic;">${d.Sci_Name || ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="conf-badge ${confClass}">${fmtConf(d.Confidence)}</div>
+          <div style="font-size:.75rem; color:var(--text-muted); margin-top:.25rem;">
+            ${fmtDate(d.Date)} · ${fmtTime(d.Time)}
+          </div>
+        </div>
+      </div>
+      <div style="font-size:.72rem; color:var(--text-faint); margin-top:.6rem; font-style:italic;">
+        ${freshnessLabel(d.Date, d.Time)}
+      </div>`;
+  } catch (e) {
+    cont.innerHTML = `<p class="error-msg">⚠ ${e.message}</p>`;
+  }
+}
+
+// ── Graphique 7 jours ─────────────────────────────────────────────────────────
+
+async function load7DayChart() {
+  try {
+    const rows = await birdQuery(
+      `SELECT Date, COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp
+       FROM detections
+       WHERE Date >= ? AND Date <= ?
+       GROUP BY Date ORDER BY Date ASC`,
+      [daysAgo(6), TODAY]
+    );
+
+    // Rempli les jours manquants
+    const map = {};
+    rows.forEach(r => { map[r.Date] = r; });
+    const labels = [], dets = [], sps = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = daysAgo(i);
+      const m = t('months_short')[new Date(d).getMonth()];
+      const day = new Date(d).getDate();
+      labels.push(`${day} ${m}`);
+      dets.push(map[d] ? map[d].n : 0);
+      sps.push(map[d] ? map[d].sp : 0);
+    }
+
+    if (chart7d) chart7d.destroy();
+    const ctx = document.getElementById('chart-7d').getContext('2d');
+    const base = chartDefaults();
+    chart7d = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: t('detections'),
+            data: dets,
+            backgroundColor: 'rgba(90,158,58,.6)',
+            borderColor: '#5a9e3a',
+            borderWidth: 1,
+            borderRadius: 3,
+          },
+          {
+            label: t('species'),
+            data: sps,
+            type: 'line',
+            borderColor: '#c8a84b',
+            backgroundColor: 'rgba(200,168,75,.1)',
+            pointBackgroundColor: '#c8a84b',
+            pointRadius: 3,
+            tension: 0.3,
+            yAxisID: 'y2',
+          }
+        ]
+      },
+      options: {
+        ...base,
+        scales: {
+          ...base.scales,
+          y:  { ...base.scales.y, beginAtZero: true, title: { display: false } },
+          y2: { position: 'right', ticks: { color: '#c8a84b' },
+                grid: { drawOnChartArea: false }, beginAtZero: true },
+        }
+      }
+    });
+  } catch (e) { console.error('7d chart error:', e); }
+}
+
+// ── Top espèces ───────────────────────────────────────────────────────────────
+
+async function loadTopSpecies() {
+  try {
+    const rows = await birdQuery(
+      `SELECT Com_Name, COUNT(*) as n
+       FROM detections
+       WHERE Date >= ? AND Confidence >= ?
+       GROUP BY Com_Name ORDER BY n DESC LIMIT ?`,
+      [daysAgo(6), BIRD_CONFIG.defaultConfidence, BIRD_CONFIG.topSpeciesCount]
+    );
+
+    if (chartTop) chartTop.destroy();
+    const ctx = document.getElementById('chart-top-species').getContext('2d');
+    const base = chartDefaults();
+
+    chartTop = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: rows.map(r => r.Com_Name),
+        datasets: [{
+          label: t('detections'),
+          data:  rows.map(r => r.n),
+          backgroundColor: BIRD_CONFIG.chartColors.map(c => c + 'cc'),
+          borderColor:     BIRD_CONFIG.chartColors,
+          borderWidth:     1,
+          borderRadius:    4,
+        }]
+      },
+      options: {
+        ...base,
+        indexAxis: 'y',
+        onClick: (evt, elements) => {
+          if (elements.length) {
+            const idx = elements[0].index;
+            navigateTo('especes.html', { species: rows[idx].Com_Name });
+          }
+        },
+        plugins: {
+          ...base.plugins,
+          legend: { display: false },
+          tooltip: {
+            ...base.plugins.tooltip,
+            callbacks: {
+              title: items => items[0].label,
+              label: item  => ` ${item.raw} ${t('detections')}`,
+            }
+          }
+        },
+        scales: {
+          x: { ...base.scales.x, beginAtZero: true },
+          y: { ...base.scales.y, ticks: { color: '#ddeadd', font: { size: 11 } } },
+        }
+      }
+    });
+  } catch (e) { console.error('top species error:', e); }
+}
+
+// ── Feed récent ───────────────────────────────────────────────────────────────
+
+async function loadRecentFeed() {
+  const feed = document.getElementById('recent-feed');
+  try {
+    const rows = await birdQuery(
+      `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
+       FROM detections ORDER BY Date DESC, Time DESC LIMIT 15`
+    );
+    if (!rows.length) {
+      feed.innerHTML = `<p class="error-msg">${t('no_data')}</p>`;
+      return;
+    }
+    feed.innerHTML = rows.map(d => {
+      const conf = parseFloat(d.Confidence);
+      const confClass = conf >= 0.8 ? 'conf-high' : conf >= 0.6 ? 'conf-mid' : 'conf-low';
+      const audioBtn = d.File_Name
+        ? `<button class="play-btn" style="width:22px;height:22px;font-size:.6rem;"
+                   onclick="toggleAudio('${d.File_Name}', this)">▶</button>`
+        : '<span style="width:22px;display:inline-block;"></span>';
+      return `
+        <div class="det-item">
+          ${audioBtn}
+          <div class="det-time">${fmtTime(d.Time)}</div>
+          <div class="det-species">
+            <a class="species-link"
+               onclick="navigateTo('especes.html',{species:'${encodeURIComponent(d.Com_Name)}'})">
+              ${d.Com_Name}
+            </a>
+            <div class="det-sci">${d.Sci_Name || ''}</div>
+          </div>
+          <span class="conf-badge ${confClass}">${fmtConf(d.Confidence)}</span>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    feed.innerHTML = `<p class="error-msg">⚠ ${e.message}</p>`;
+  }
+}
+
+// ── Distribution horaire aujourd'hui ─────────────────────────────────────────
+
+async function loadHourlyChart() {
+  const titleEl = document.getElementById('hourly-title');
+  if (titleEl) titleEl.textContent = t('detections') + ' ' + t('today') + ' — ' + fmtDate(TODAY);
+  try {
+    const rows = await birdQuery(
+      `SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n
+       FROM detections WHERE Date = ?
+       GROUP BY h ORDER BY h ASC`,
+      [TODAY]
+    );
+    const byHour = Array(24).fill(0);
+    rows.forEach(r => { byHour[r.h] = r.n; });
+
+    if (chartHourly) chartHourly.destroy();
+    const ctx = document.getElementById('chart-hourly').getContext('2d');
+    const base = chartDefaults();
+    chartHourly = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}h`),
+        datasets: [{
+          label: t('detections'),
+          data: byHour,
+          backgroundColor: byHour.map(v => v > 0 ? 'rgba(90,158,58,.65)' : 'rgba(90,158,58,.1)'),
+          borderColor: '#5a9e3a',
+          borderWidth: 1,
+          borderRadius: 2,
+        }]
+      },
+      options: {
+        ...base,
+        plugins: { ...base.plugins, legend: { display: false } },
+        scales: {
+          x: { ...base.scales.x, ticks: { font: { size: 10 } } },
+          y: { ...base.scales.y, beginAtZero: true, ticks: { stepSize: 1 } },
+        }
+      }
+    });
+  } catch (e) { console.error('hourly chart error:', e); }
+}
+</script>
+</body>
+</html>
