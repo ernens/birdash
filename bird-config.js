@@ -1,46 +1,64 @@
 /**
  * bird-config.js — Configuration centrale PIBIRD
  * Modifier ce fichier selon ton installation
+ * Les surcharges locales vont dans pibird-local.js (non versionné)
  */
+
+// Charger la config locale si elle existe (pibird-local.js)
+const _local = (function() {
+  try {
+    if (typeof require !== 'undefined') {
+      // Node.js (bird-server.js)
+      return require('./pibird-local.js');
+    }
+  } catch(e) {}
+  // Browser : PIBIRD_LOCAL doit être chargé avant bird-config.js
+  return (typeof PIBIRD_LOCAL !== 'undefined') ? PIBIRD_LOCAL : {};
+})();
 
 const BIRD_CONFIG = {
   // URLs API (relatives — proxifiées par Caddy)
   apiUrl:   '/birds/api',
   audioUrl: '/birds/audio',
 
-  // Paramètres analyse
-  defaultConfidence: 0.7,    // seuil affiché par défaut (0–1)
-  topSpeciesCount:   10,      // nb espèces dans les classements
-  recentDays:        30,      // fenêtre "récent" en jours
-  rarityThreshold:   10,      // < N détections = espèce rare
-  pageSize:          50,      // détections par page
+  // Paramètres analyse (surchargeables via pibird-local.js)
+  defaultConfidence: _local.defaultConfidence ?? 0.7,
+  topSpeciesCount:   10,
+  recentDays:        30,
+  rarityThreshold:   _local.rarityThreshold ?? 10,
+  pageSize:          50,
 
-  // Localisation (Bruxelles)
+  // Localisation (surchargeables via pibird-local.js)
   location: {
-    lat:  50.85,
-    lon:  4.35,
-    name: 'Bruxelles'
+    lat:     (_local.location && _local.location.lat)     ?? 50.85,
+    lon:     (_local.location && _local.location.lon)     ?? 4.35,
+    name:    (_local.location && _local.location.name)    ?? 'Bruxelles',
+    country: (_local.location && _local.location.country) ?? 'BE',
+    region:  (_local.location && _local.location.region)  ?? 'BE',
   },
 
-  // Langue par défaut ('fr' | 'en' | 'nl')
+  // Nom du site affiché dans le header
+  siteName: _local.siteName ?? (_local.location && _local.location.name) ?? 'Bruxelles',
+
+  // Langue par défaut
   defaultLang: 'fr',
 
-  // Navigation — ordre des pages dans le menu
+  // Navigation
   pages: [
     { id: 'index',        icon: '🦅', file: 'index.html'        },
-    { id: 'today',        icon: '🌅', file: 'today.html'        },
+    { id: 'recent',       icon: '📅', file: 'recent.html'       },
     { id: 'spectrogram',  icon: '📡', file: 'spectrogram.html'  },
     { id: 'recordings',   icon: '🏆', file: 'recordings.html'   },
     { id: 'detections',   icon: '🎧', file: 'detections.html'   },
     { id: 'species',      icon: '🦜', file: 'species.html'      },
     { id: 'biodiversity', icon: '🌿', file: 'biodiversity.html' },
-    { id: 'rarities',      icon: '💎', file: 'rarities.html'      },
+    { id: 'rarities',     icon: '💎', file: 'rarities.html'     },
     { id: 'stats',        icon: '📊', file: 'stats.html'        },
     { id: 'analyses',     icon: '🔬', file: 'analyses.html'     },
-    { id: 'system',      icon: '⚙️',  file: 'system.html'      },
+    { id: 'system',       icon: '⚙️',  file: 'system.html'      },
   ],
 
-  // Couleurs pour Chart.js (palette naturelle)
+  // Couleurs Chart.js
   chartColors: [
     '#5a9e3a', '#c8a84b', '#4a7eb5', '#a85c3a', '#7a5e9e',
     '#3a9e7a', '#9e3a5a', '#7a9e3a', '#c8664b', '#4ab5a8',

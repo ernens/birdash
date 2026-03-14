@@ -5,410 +5,365 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Statistiques</title>
   <link rel="stylesheet" href="bird-styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="bird-config.js"></script>
+  <script src="bird-vue-core.js"></script>
 </head>
 <body>
-<div class="app-shell">
+<div id="app" class="app-shell">
 
   <header class="app-header">
     <div class="header-brand">
       <span class="brand-name">🐦 PIBIRD</span>
       <span class="brand-sub">Bruxelles</span>
     </div>
-    <div class="header-right"><div id="theme-switcher"></div>
-        <div id="lang-switcher"></div></div>
+    <div class="header-right">
+      <div class="theme-switcher-wrap">
+        <button v-for="th in themes" :key="th.id" class="theme-btn"
+                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
+                @click="setTheme(th.id)"></button>
+      </div>
+      <div class="lang-switcher-wrap">
+        <button v-for="l in langs" :key="l.code" class="lang-btn"
+                :class="{active:lang===l.code}" :title="l.label"
+                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
+      </div>
+    </div>
   </header>
 
-  <nav class="app-nav"><div id="main-nav"></div></nav>
+  <nav class="app-nav"><div id="main-nav">
+    <a v-for="p in navItems" :key="p.id" :href="p.file"
+       class="nav-link" :class="{active:p.active}">
+      <span class="nav-icon">{{p.icon}}</span>
+      <span class="nav-label">{{p.label}}</span>
+    </a>
+  </div></nav>
 
   <main class="app-main">
 
+    <!-- Barre de filtres stats -->
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;padding:.65rem .85rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+      <!-- Période -->
+      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Période</span>
+      <div style="display:flex;flex-wrap:nowrap;gap:.25rem;">
+        <button v-for="q in quickDates" :key="q.label"
+                style="font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap;"
+                :style="activePeriod===q.label?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
+                @click="setPeriod(q)">{{q.label}}</button>
+      </div>
+      <div style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></div>
+      <!-- Confiance -->
+      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Confiance min.</span>
+      <div style="display:flex;align-items:center;gap:.4rem;">
+        <input type="range" min="0" max="1" step="0.05" v-model.number="fConf"
+               style="width:90px;-webkit-appearance:none;height:4px;border-radius:2px;outline:none;"
+               :style="'background:linear-gradient(to right,var(--accent) '+fConf*100+'%,var(--bg-card2) '+fConf*100+'%)'">
+        <span v-if="!confEditing"
+              style="font-size:.8rem;font-family:monospace;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline dotted;min-width:36px;"
+              @click="startConfEdit">{{Math.round(fConf*100)}}%</span>
+        <input v-else ref="confInput" type="number" min="0" max="100" step="1"
+               v-model.number="confEditVal"
+               @keydown.enter="commitConfEdit" @blur="commitConfEdit" @keydown.escape="confEditing=false"
+               style="width:52px;font-size:.8rem;font-family:monospace;font-weight:600;color:var(--accent);background:var(--bg-deep);border:1px solid var(--accent);border-radius:4px;padding:.1rem .3rem;text-align:right;">
+      </div>
+      <button class="btn btn-primary" style="padding:.25rem .7rem;font-size:.78rem;" @click="loadAll">{{t('apply_filter')}}</button>
+    </div>
+
     <!-- KPIs globaux -->
-    <div class="kpi-grid" id="global-kpis" style="margin-bottom:1rem;">
-      <div class="spinner" style="grid-column:1/-1;"><div></div><div></div><div></div></div>
+    <div class="kpi-grid" style="margin-bottom:1rem;">
+      <div v-if="kpis.loading" class="spinner" style="grid-column:1/-1;"><div></div><div></div><div></div></div>
+      <template v-else>
+        <div class="kpi-card"><div class="kpi-value">{{kpis.total}}</div><div class="kpi-label">{{t('all_time')}} ({{t('detections')}})</div></div>
+        <div class="kpi-card"><div class="kpi-value amber">{{kpis.sp}}</div><div class="kpi-label">{{t('sys_species_distinct')}}</div></div>
+        <div class="kpi-card"><div class="kpi-value blue">{{kpis.avgConf}}%</div><div class="kpi-label">{{t('avg_confidence')}}</div></div>
+        <div class="kpi-card"><div class="kpi-value">{{kpis.perDay}}</div><div class="kpi-label">{{t('detections')}} / jour (moy.)</div></div>
+        <div class="kpi-card"><div class="kpi-value">{{kpis.days}}</div><div class="kpi-label">{{t('sys_days_recorded')}}</div></div>
+        <div class="kpi-card"><div class="kpi-value amber">{{kpis.maxConf}}%</div><div class="kpi-label">{{t('max_confidence')}}</div></div>
+      </template>
     </div>
 
     <!-- Totaux mensuels -->
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-title" data-i18n="monthly_totals"></div>
-      <div class="chart-wrap chart-wrap-tall">
-        <canvas id="chart-monthly"></canvas>
-      </div>
+      <div class="card-title">{{t('monthly_totals')}}</div>
+      <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasMonthly"></canvas></div>
     </div>
 
-    <!-- Classements côte à côte -->
-    <div class="grid-2" style="margin-bottom:1rem;">
-
-      <div class="card">
-        <div class="card-title" data-i18n="top_by_count"></div>
-        <div id="top-count">
-          <div class="spinner"><div></div><div></div><div></div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title" data-i18n="top_by_confidence"></div>
-        <div id="top-conf">
-          <div class="spinner"><div></div><div></div><div></div></div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Distribution de confiance -->
+    <!-- Classements -->
     <div class="grid-2" style="margin-bottom:1rem;">
       <div class="card">
-        <div class="card-title" data-i18n="confidence_distrib"></div>
-        <div class="chart-wrap">
-          <canvas id="chart-conf-dist"></canvas>
+        <div class="card-title">{{t('top_by_count')}}</div>
+        <div v-if="topCount.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else>
+          <div v-for="(r,i) in topCount.rows" :key="r.Com_Name"
+               style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;cursor:pointer;"
+               @click="navigateTo('species.html',{species:r.Com_Name})">
+            <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{r.Com_Name}}</span>
+                <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.n.toLocaleString()}}</span>
+              </div>
+              <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
+                <div :style="{height:'100%',width:Math.round(r.n/topCount.rows[0].n*100)+'%',background:chartColor(i),borderRadius:'2px'}"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title" data-i18n="stats_daily_records">🏆 Records journaliers</div>
-        <div id="daily-records">
-          <div class="spinner"><div></div><div></div><div></div></div>
+        <div class="card-title">{{t('top_by_confidence')}}</div>
+        <div v-if="topConf.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else>
+          <div v-for="(r,i) in topConf.rows" :key="r.Com_Name"
+               style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;cursor:pointer;"
+               @click="navigateTo('species.html',{species:r.Com_Name})">
+            <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{r.Com_Name}}</span>
+                <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.avg_conf}}%</span>
+              </div>
+              <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
+                <div :style="{height:'100%',width:Math.round(r.avg_conf/topConf.rows[0].avg_conf*100)+'%',background:chartColor(i),borderRadius:'2px'}"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Activité par année -->
+    <!-- Conf distrib + Records -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <div class="card">
+        <div class="card-title">{{t('confidence_distrib')}}</div>
+        <div class="chart-wrap"><canvas ref="canvasConf"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">{{t('stats_daily_records')}}</div>
+        <div v-if="records.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else style="display:flex;flex-direction:column;gap:.75rem;padding:.25rem 0;">
+          <div class="det-item">
+            <div style="font-size:1.5rem;">📊</div>
+            <div style="flex:1;">
+              <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_most_det')}}</div>
+              <div><strong>{{records.maxDet ? fmtDate(records.maxDet.Date) : '—'}}</strong></div>
+            </div>
+            <div class="kpi-value" style="font-size:1.4rem;">{{records.maxDet ? records.maxDet.n.toLocaleString() : '—'}}</div>
+          </div>
+          <div class="det-item">
+            <div style="font-size:1.5rem;">🦜</div>
+            <div style="flex:1;">
+              <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_most_sp')}}</div>
+              <div><strong>{{records.maxSp ? fmtDate(records.maxSp.Date) : '—'}}</strong></div>
+            </div>
+            <div class="kpi-value amber" style="font-size:1.4rem;">{{records.maxSp ? records.maxSp.n : '—'}}</div>
+          </div>
+          <div class="det-item">
+            <div style="font-size:1.5rem;">🎯</div>
+            <div style="flex:1;">
+              <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_max_conf')}}</div>
+              <div style="font-size:.85rem;"><strong>{{records.maxConf ? records.maxConf.Com_Name : '—'}}</strong></div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{records.maxConf ? fmtDate(records.maxConf.Date) : ''}}</div>
+            </div>
+            <div class="conf-badge conf-high" style="font-size:.9rem;">{{records.maxConf ? records.maxConf.conf+'%' : '—'}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annuel -->
     <div class="card">
-      <div class="card-title" data-i18n="stats_annual_evolution">📅 Évolution annuelle</div>
-      <div class="chart-wrap">
-        <canvas id="chart-yearly"></canvas>
-      </div>
+      <div class="card-title">{{t('stats_annual_evolution')}}</div>
+      <div class="chart-wrap"><canvas ref="canvasYearly"></canvas></div>
     </div>
 
   </main>
 </div>
 
-<script src="bird-config.js"></script>
-<script src="bird-i18n.js"></script>
-<script src="bird-core.js"></script>
 <script>
-let chartMonthly = null, chartConf = null, chartYearly = null;
+const { createApp, ref, watch, onMounted, nextTick } = Vue;
+const { useI18n, useTheme, useNav, useChart,
+        birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo } = PIBIRD;
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadTranslations();
-  initPage('stats');
-  applyI18n();
-  await Promise.all([
-    loadGlobalKpis(),
-    loadMonthlyChart(),
-    loadTopByCount(),
-    loadTopByConf(),
-    loadConfDistrib(),
-    loadDailyRecords(),
-    loadYearlyChart(),
-  ]);
-});
+createApp({
+  setup() {
+    const { lang, t, setLang, langs } = useI18n();
+    const { theme, themes, setTheme } = useTheme();
+    const { navItems }                = useNav('stats');
+    const { mountChart: mountMonthly }= useChart();
+    const { mountChart: mountConf }   = useChart();
+    const { mountChart: mountYearly } = useChart();
 
-document.addEventListener('langchange', applyI18n);
+    const canvasMonthly = ref(null);
+    const canvasConf    = ref(null);
+    const canvasYearly  = ref(null);
 
-function applyI18n() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    el.textContent = t(el.dataset.i18n);
-  });
-}
+    // ── Filtres ────────────────────────────────────────────────────
+    const fConf       = ref(BIRD_CONFIG.defaultConfidence);
+    const fDateFrom   = ref('');
+    const fDateTo     = ref('');
+    const activePeriod= ref('Tout');
+    const confEditing = ref(false);
+    const confEditVal = ref(70);
+    const confInput   = ref(null);
 
-// ── KPIs globaux ──────────────────────────────────────────────────────────────
-async function loadGlobalKpis() {
-  const cont = document.getElementById('global-kpis');
-  try {
-    const [g] = await birdQuery(
-      `SELECT COUNT(*) as total,
-              COUNT(DISTINCT Com_Name) as sp,
-              ROUND(AVG(Confidence)*100,1) as avg_conf,
-              ROUND(MAX(Confidence)*100,1) as max_conf,
-              MIN(Date) as first, MAX(Date) as last
-       FROM detections WHERE Confidence >= ?`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-    const [perDay] = await birdQuery(
-      `SELECT ROUND(AVG(n),0) as avg FROM (
-         SELECT COUNT(*) as n FROM detections
-         WHERE Confidence >= ? GROUP BY Date
-       )`, [BIRD_CONFIG.defaultConfidence]
-    );
+    function startConfEdit() { confEditVal.value=Math.round(fConf.value*100); confEditing.value=true; nextTick(()=>confInput.value?.select()); }
+    function commitConfEdit() { fConf.value=Math.max(0,Math.min(100,Math.round(confEditVal.value||0)))/100; confEditing.value=false; }
 
-    const days = Math.round((new Date(g.last) - new Date(g.first)) / 86400000) + 1;
+    const quickDates = [
+      { label:'7j',   from:()=>daysAgo(6),   to:()=>localDateStr() },
+      { label:'30j',  from:()=>daysAgo(29),  to:()=>localDateStr() },
+      { label:'1an',  from:()=>daysAgo(364), to:()=>localDateStr() },
+      { label:'Tout', from:()=>'',           to:()=>''             },
+    ];
+    function setPeriod(q) { fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=q.label; loadAll(); }
 
-    cont.innerHTML = [
-      { val: g.total.toLocaleString(),  label: t('all_time') + ' (' + t('detections') + ')', cls: '' },
-      { val: g.sp,                       label: 'Espèces distinctes', cls: 'amber' },
-      { val: g.avg_conf + '%',           label: t('avg_confidence'), cls: 'blue' },
-      { val: Math.round(perDay.avg || 0).toLocaleString(), label: 'Détections / jour (moy.)', cls: '' },
-      { val: days.toLocaleString(),      label: 'Jours de monitoring', cls: '' },
-      { val: g.max_conf + '%',           label: t('max_confidence'), cls: 'amber' },
-    ].map(k => `
-      <div class="kpi-card">
-        <div class="kpi-value ${k.cls}">${k.val}</div>
-        <div class="kpi-label">${k.label}</div>
-      </div>`).join('');
-  } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
-}
+    function buildWhere() {
+      const parts = [`Confidence>=?`];
+      if (fDateFrom.value) parts.push(`Date>='${fDateFrom.value}'`);
+      if (fDateTo.value)   parts.push(`Date<='${fDateTo.value}'`);
+      return parts.join(' AND ');
+    }
 
-// ── Totaux mensuels (toute la DB) ─────────────────────────────────────────────
-async function loadMonthlyChart() {
-  try {
-    const rows = await birdQuery(
-      `SELECT SUBSTR(Date,1,7) as ym,
-              COUNT(*) as det,
-              COUNT(DISTINCT Com_Name) as sp
-       FROM detections WHERE Confidence >= ?
-       GROUP BY ym ORDER BY ym ASC`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
+    const kpis     = ref({ loading:true });
+    const topCount = ref({ loading:true, rows:[] });
+    const topConf  = ref({ loading:true, rows:[] });
+    const records  = ref({ loading:true, maxDet:null, maxSp:null, maxConf:null });
+    const monthlyData = ref(null);
+    const confData    = ref(null);
+    const yearlyData  = ref(null);
 
-    const labels = rows.map(r => {
-      const [y, m] = r.ym.split('-');
-      return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`;
+    const chartColor = i => BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length];
+
+    async function loadAll() {
+      await Promise.all([
+        loadKpis(), loadMonthlyData(), loadTopCount(),
+        loadTopConf(), loadConfData(), loadRecords(), loadYearlyData()
+      ]);
+    }
+
+    async function loadKpis() {
+      kpis.value.loading = true;
+      try {
+        const where = buildWhere();
+        const [g]  = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last FROM detections WHERE ${where}`,[fConf.value]);
+        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date)`,[fConf.value]);
+        const days = Math.round((new Date(g.last)-new Date(g.first))/86400000)+1;
+        kpis.value = { loading:false, total:g.total.toLocaleString(), sp:g.sp, avgConf:g.avg_conf, maxConf:g.max_conf, perDay:Math.round(pd.avg||0).toLocaleString(), days:days.toLocaleString() };
+      } catch(e) { kpis.value = { loading:false }; }
+    }
+
+    async function loadMonthlyData() {
+      try {
+        const where = buildWhere();
+        const rows = await birdQuery(`SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY ym ORDER BY ym ASC`,[fConf.value]);
+        monthlyData.value = rows;
+      } catch(e) {}
+    }
+
+    async function loadTopCount() {
+      topCount.value.loading = true;
+      try {
+        const where = buildWhere();
+        const rows = await birdQuery(`SELECT Com_Name, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Com_Name ORDER BY n DESC LIMIT 15`,[fConf.value]);
+        topCount.value = { loading:false, rows };
+      } catch(e) { topCount.value = { loading:false, rows:[] }; }
+    }
+
+    async function loadTopConf() {
+      topConf.value.loading = true;
+      try {
+        const where = buildWhere();
+        const rows = await birdQuery(`SELECT Com_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${where} GROUP BY Com_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,[fConf.value]);
+        topConf.value = { loading:false, rows };
+      } catch(e) { topConf.value = { loading:false, rows:[] }; }
+    }
+
+    async function loadConfData() {
+      try {
+        const rows = await birdQuery(`SELECT CAST(CAST(Confidence*10 AS INT) AS TEXT)||'0%' as bucket, CAST(CAST(Confidence*10 AS INT)*10 AS INTEGER) as pct, COUNT(*) as n FROM detections GROUP BY CAST(Confidence*10 AS INT) ORDER BY pct ASC`);
+        confData.value = rows;
+      } catch(e) {}
+    }
+
+    async function loadRecords() {
+      records.value.loading = true;
+      try {
+        const where = buildWhere();
+        const [maxDet]  = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fConf.value]);
+        const [maxSp]   = await birdQuery(`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fConf.value]);
+        const [maxConf] = await birdQuery(`SELECT Date, Com_Name, ROUND(Confidence*100,1) as conf FROM detections ORDER BY Confidence DESC LIMIT 1`);
+        records.value = { loading:false, maxDet, maxSp, maxConf };
+      } catch(e) { records.value = { loading:false, maxDet:null, maxSp:null, maxConf:null }; }
+    }
+
+    async function loadYearlyData() {
+      try {
+        const where = buildWhere();
+        const rows = await birdQuery(`SELECT SUBSTR(Date,1,4) as year, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY year ORDER BY year ASC`,[fConf.value]);
+        yearlyData.value = rows;
+      } catch(e) {}
+    }
+
+    // Charts — reconstruits si données OU langue change
+    watch([monthlyData, lang], async () => {
+      await nextTick();
+      const d = monthlyData.value;
+      if (!d || !canvasMonthly.value) return;
+      const labels = d.map(r => { const [y,m]=r.ym.split('-'); return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`; });
+      const base = chartDefaults();
+      mountMonthly(canvasMonthly, ()=>({
+        type:'bar',
+        data:{ labels, datasets:[
+          { label:t('detections'), data:d.map(r=>r.det), backgroundColor:'rgba(90,158,58,.65)', borderColor:'#5a9e3a', borderWidth:1, borderRadius:2 },
+          { label:t('species'), data:d.map(r=>r.sp), type:'line', borderColor:'#c8a84b', backgroundColor:'transparent', pointRadius:2, tension:0.3, yAxisID:'y2' }
+        ]},
+        options:{ ...base, scales:{ ...base.scales, x:{...base.scales.x,ticks:{maxTicksLimit:18,font:{size:9}}}, y:{...base.scales.y,beginAtZero:true}, y2:{position:'right',beginAtZero:true,ticks:{color:'#c8a84b'},grid:{drawOnChartArea:false}} } }
+      }));
     });
 
-    if (chartMonthly) chartMonthly.destroy();
-    const base = chartDefaults();
-    chartMonthly = new Chart(
-      document.getElementById('chart-monthly').getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: t('detections'),
-            data: rows.map(r => r.det),
-            backgroundColor: 'rgba(90,158,58,.65)',
-            borderColor: '#5a9e3a',
-            borderWidth: 1,
-            borderRadius: 2,
-          },
-          {
-            label: t('species'),
-            data: rows.map(r => r.sp),
-            type: 'line',
-            borderColor: '#c8a84b',
-            backgroundColor: 'transparent',
-            pointRadius: 2,
-            tension: 0.3,
-            yAxisID: 'y2',
-          }
-        ]
-      },
-      options: {
-        ...base,
-        scales: {
-          ...base.scales,
-          x: { ...base.scales.x, ticks: { maxTicksLimit: 18, font: { size: 9 } } },
-          y:  { ...base.scales.y, beginAtZero: true },
-          y2: { position: 'right', beginAtZero: true,
-                ticks: { color: '#c8a84b' }, grid: { drawOnChartArea: false } },
-        }
-      }
+    watch([confData, lang], async () => {
+      await nextTick();
+      const d = confData.value;
+      if (!d || !canvasConf.value) return;
+      const base = chartDefaults();
+      mountConf(canvasConf, ()=>({
+        type:'bar',
+        data:{ labels:d.map(r=>r.bucket), datasets:[{ label:t('detections'), data:d.map(r=>r.n), backgroundColor:d.map(r=>r.pct>=80?'rgba(90,158,58,.75)':r.pct>=60?'rgba(200,168,75,.65)':'rgba(224,108,74,.5)'), borderWidth:1, borderRadius:2 }] },
+        options:{ ...base, plugins:{...base.plugins,legend:{display:false}}, scales:{...base.scales,y:{...base.scales.y,beginAtZero:true}} }
+      }));
     });
-  } catch(e) { console.error('monthly chart:', e); }
-}
 
-// ── Top 15 par nombre ─────────────────────────────────────────────────────────
-async function loadTopByCount() {
-  const cont = document.getElementById('top-count');
-  try {
-    const rows = await birdQuery(
-      `SELECT Com_Name, COUNT(*) as n
-       FROM detections WHERE Confidence >= ?
-       GROUP BY Com_Name ORDER BY n DESC LIMIT 15`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-    renderRanking(cont, rows, 'n', r => r.n.toLocaleString(), 'det.');
-  } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
-}
-
-// ── Top 15 par confiance moyenne ──────────────────────────────────────────────
-async function loadTopByConf() {
-  const cont = document.getElementById('top-conf');
-  try {
-    const rows = await birdQuery(
-      `SELECT Com_Name, ROUND(AVG(Confidence)*100,1) as avg_conf, COUNT(*) as n
-       FROM detections WHERE Confidence >= ?
-       GROUP BY Com_Name HAVING n >= 10
-       ORDER BY avg_conf DESC LIMIT 15`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-    renderRanking(cont, rows, 'avg_conf', r => r.avg_conf + '%', 'conf.');
-  } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
-}
-
-function renderRanking(cont, rows, valKey, valFn, unit) {
-  if (!rows.length) { cont.innerHTML = `<p class="error-msg">${t('no_data')}</p>`; return; }
-  const max = parseFloat(rows[0][valKey]);
-  cont.innerHTML = rows.map((r, i) => `
-    <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.45rem; cursor:pointer;"
-         onclick="navigateTo('especes.html',{species:'${encodeURIComponent(r.Com_Name)}'})">
-      <div style="font-size:.7rem; color:var(--text-faint); min-width:18px; text-align:right;
-           font-family:monospace;">${i+1}</div>
-      <div style="flex:1; min-width:0;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span style="font-size:.82rem; white-space:nowrap; overflow:hidden;
-                text-overflow:ellipsis;">${r.Com_Name}</span>
-          <span style="font-size:.78rem; color:var(--accent); margin-left:.5rem; flex-shrink:0;">
-            ${valFn(r)}
-          </span>
-        </div>
-        <div style="height:3px; background:var(--bg-card2); border-radius:2px; margin-top:3px;">
-          <div style="height:100%; width:${Math.round(parseFloat(r[valKey])/max*100)}%;
-               background:${BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length]};
-               border-radius:2px;"></div>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-// ── Distribution confiance ────────────────────────────────────────────────────
-async function loadConfDistrib() {
-  try {
-    const rows = await birdQuery(
-      `SELECT
-         CAST(CAST(Confidence*10 AS INT) AS TEXT) || '0%' as bucket,
-         CAST(CAST(Confidence*10 AS INT)*10 AS INTEGER) as pct,
-         COUNT(*) as n
-       FROM detections
-       GROUP BY CAST(Confidence*10 AS INT)
-       ORDER BY pct ASC`
-    );
-
-    if (chartConf) chartConf.destroy();
-    const base = chartDefaults();
-    chartConf = new Chart(
-      document.getElementById('chart-conf-dist').getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: rows.map(r => r.bucket),
-        datasets: [{
-          label: t('detections'),
-          data: rows.map(r => r.n),
-          backgroundColor: rows.map(r =>
-            r.pct >= 80 ? 'rgba(90,158,58,.75)' :
-            r.pct >= 60 ? 'rgba(200,168,75,.65)' :
-                          'rgba(224,108,74,.5)'
-          ),
-          borderWidth: 1,
-          borderRadius: 2,
-        }]
-      },
-      options: {
-        ...base,
-        plugins: { ...base.plugins, legend: { display: false } },
-        scales: {
-          ...base.scales,
-          y: { ...base.scales.y, beginAtZero: true },
-        }
-      }
+    watch([yearlyData, lang], async () => {
+      await nextTick();
+      const d = yearlyData.value;
+      if (!d || !canvasYearly.value) return;
+      const base = chartDefaults();
+      mountYearly(canvasYearly, ()=>({
+        type:'bar',
+        data:{ labels:d.map(r=>r.year), datasets:[
+          { label:t('detections'), data:d.map(r=>r.det), backgroundColor:'rgba(90,158,58,.65)', borderColor:'#5a9e3a', borderWidth:1, borderRadius:4 },
+          { label:t('species'), data:d.map(r=>r.sp), type:'line', borderColor:'#c8a84b', backgroundColor:'rgba(200,168,75,.1)', pointRadius:5, pointBackgroundColor:'#c8a84b', tension:0.2, yAxisID:'y2' }
+        ]},
+        options:{ ...base, scales:{ ...base.scales, y:{...base.scales.y,beginAtZero:true}, y2:{position:'right',beginAtZero:true,ticks:{color:'#c8a84b'},grid:{drawOnChartArea:false}} } }
+      }));
     });
-  } catch(e) { console.error('conf distrib:', e); }
-}
 
-// ── Records journaliers ───────────────────────────────────────────────────────
-async function loadDailyRecords() {
-  const cont = document.getElementById('daily-records');
-  try {
-    const [maxDet] = await birdQuery(
-      `SELECT Date, COUNT(*) as n FROM detections
-       WHERE Confidence >= ? GROUP BY Date ORDER BY n DESC LIMIT 1`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-    const [maxSp] = await birdQuery(
-      `SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections
-       WHERE Confidence >= ? GROUP BY Date ORDER BY n DESC LIMIT 1`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-    const [maxConf] = await birdQuery(
-      `SELECT Date, Com_Name, ROUND(Confidence*100,1) as conf
-       FROM detections ORDER BY Confidence DESC LIMIT 1`
-    );
+    onMounted(() => loadAll());
 
-    cont.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:.75rem; padding:.25rem 0;">
-        <div class="det-item">
-          <div style="font-size:1.5rem;">📊</div>
-          <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_most_det')}</div>
-            <div><strong>${maxDet ? fmtDate(maxDet.Date) : '—'}</strong></div>
-          </div>
-          <div class="kpi-value" style="font-size:1.4rem;">${maxDet ? maxDet.n.toLocaleString() : '—'}</div>
-        </div>
-        <div class="det-item">
-          <div style="font-size:1.5rem;">🦜</div>
-          <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_most_sp')}</div>
-            <div><strong>${maxSp ? fmtDate(maxSp.Date) : '—'}</strong></div>
-          </div>
-          <div class="kpi-value amber" style="font-size:1.4rem;">${maxSp ? maxSp.n : '—'}</div>
-        </div>
-        <div class="det-item">
-          <div style="font-size:1.5rem;">🎯</div>
-          <div style="flex:1;">
-            <div style="font-size:.82rem; color:var(--text-muted);">${t('stats_record_max_conf')}</div>
-            <div style="font-size:.85rem;"><strong>${maxConf ? maxConf.Com_Name : '—'}</strong></div>
-            <div style="font-size:.75rem; color:var(--text-muted);">${maxConf ? fmtDate(maxConf.Date) : ''}</div>
-          </div>
-          <div class="conf-badge conf-high" style="font-size:.9rem;">${maxConf ? maxConf.conf + '%' : '—'}</div>
-        </div>
-      </div>`;
-  } catch(e) { cont.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`; }
-}
-
-// ── Évolution annuelle ────────────────────────────────────────────────────────
-async function loadYearlyChart() {
-  try {
-    const rows = await birdQuery(
-      `SELECT SUBSTR(Date,1,4) as year,
-              COUNT(*) as det,
-              COUNT(DISTINCT Com_Name) as sp
-       FROM detections WHERE Confidence >= ?
-       GROUP BY year ORDER BY year ASC`,
-      [BIRD_CONFIG.defaultConfidence]
-    );
-
-    if (chartYearly) chartYearly.destroy();
-    const base = chartDefaults();
-    chartYearly = new Chart(
-      document.getElementById('chart-yearly').getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: rows.map(r => r.year),
-        datasets: [
-          {
-            label: t('detections'),
-            data: rows.map(r => r.det),
-            backgroundColor: 'rgba(90,158,58,.65)',
-            borderColor: '#5a9e3a',
-            borderWidth: 1,
-            borderRadius: 4,
-          },
-          {
-            label: t('species'),
-            data: rows.map(r => r.sp),
-            type: 'line',
-            borderColor: '#c8a84b',
-            backgroundColor: 'rgba(200,168,75,.1)',
-            pointRadius: 5,
-            pointBackgroundColor: '#c8a84b',
-            tension: 0.2,
-            yAxisID: 'y2',
-          }
-        ]
-      },
-      options: {
-        ...base,
-        scales: {
-          ...base.scales,
-          y:  { ...base.scales.y, beginAtZero: true },
-          y2: { position: 'right', beginAtZero: true,
-                ticks: { color: '#c8a84b' }, grid: { drawOnChartArea: false } },
-        }
-      }
-    });
-  } catch(e) { console.error('yearly chart:', e); }
-}
+    return {
+      lang, t, setLang, langs, theme, themes, setTheme, navItems,
+      fConf, fDateFrom, fDateTo, activePeriod, quickDates, setPeriod,
+      confEditing, confEditVal, confInput, startConfEdit, commitConfEdit,
+      kpis, topCount, topConf, records,
+      canvasMonthly, canvasConf, canvasYearly,
+      fmtDate, navigateTo, chartColor, loadAll,
+    };
+  }
+}).mount('#app');
 </script>
 </body>
 </html>

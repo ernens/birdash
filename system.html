@@ -10,6 +10,9 @@
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
   <style>
+    .fp-quick-btns { display:flex;flex-wrap:nowrap;gap:.25rem; }
+    .fp-quick-btn { font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap; }
+    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
     .status-dot {
       display:inline-block;width:10px;height:10px;
       border-radius:50%;margin-right:.4rem;flex-shrink:0;
@@ -202,9 +205,193 @@
       <div class="chart-wrap"><canvas ref="canvasActivity"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom:1rem;">
       <div class="card-title">{{t('sys_hourly_distrib')}}</div>
       <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
+    </div>
+
+    <!-- ── Alertes raretés locales ──────────────────────────────── -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;">
+        <div class="card-title" style="margin:0;">💎 Raretés locales récentes</div>
+        <span style="font-size:.72rem;color:var(--text-faint);">≤5 détections total</span>
+      </div>
+      <div v-if="rareLocal.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="!rareLocal.rows.length" class="error-msg">Aucune rareté détectée récemment</div>
+      <div v-else>
+        <div v-for="r in rareLocal.rows" :key="r.Com_Name" class="det-item"
+             style="cursor:pointer;gap:.5rem;border-left:2px solid var(--danger);padding-left:.5rem;"
+             @click="navigateTo('rarities.html')">
+          <div style="font-size:1.1rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.85rem;font-weight:600;color:var(--text-main);">{{r.Com_Name}}</div>
+            <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{r.sci}}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <span class="conf-badge conf-high" style="font-size:.7rem;">{{r.n}}×</span>
+            <div style="font-size:.68rem;color:var(--text-faint);margin-top:.15rem;">{{fmtDate(r.last_date)}}</div>
+          </div>
+        </div>
+        <div style="text-align:right;margin-top:.5rem;">
+          <a href="rarities.html" class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;">
+            Toutes les rarités →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── eBird notable — Belgique ─────────────────────────────── -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem;">
+        <div class="card-title" style="margin:0;">🌍 eBird — Observations notables Belgique</div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span v-if="ebird.fetchedAt" style="font-size:.68rem;color:var(--text-faint);">
+            Mis à jour {{ebird.fetchedAt}}
+          </span>
+          <span v-if="!ebird.hasKey"
+                style="font-size:.72rem;color:var(--warning);background:color-mix(in srgb,var(--warning) 10%,transparent);
+                       padding:.15rem .45rem;border-radius:6px;border:1px solid color-mix(in srgb,var(--warning) 30%,transparent);">
+            ⚠ Clé API manquante
+          </span>
+        </div>
+      </div>
+
+      <!-- Pas de clé API -->
+      <div v-if="!ebird.hasKey" style="font-size:.82rem;color:var(--text-muted);line-height:1.6;">
+        Pour activer cette section, obtenez une clé gratuite sur
+        <a href="https://ebird.org/api/keygen" target="_blank" style="color:var(--accent);">ebird.org/api/keygen</a>
+        puis configurez-la sur le Pi :<br>
+        <code style="background:var(--bg-deep);padding:.2rem .5rem;border-radius:4px;font-size:.78rem;display:inline-block;margin-top:.4rem;">
+          sudo systemctl edit pibird-api --force
+        </code><br>
+        <span style="font-size:.75rem;color:var(--text-faint);">Ajouter : <code>Environment=EBIRD_API_KEY=votre_cle</code></span>
+      </div>
+
+      <!-- Chargement -->
+      <div v-else-if="ebird.loading" class="spinner"><div></div><div></div><div></div></div>
+
+      <!-- Erreur -->
+      <div v-else-if="ebird.error" class="error-msg">{{ebird.error}}</div>
+
+      <!-- Résultats -->
+      <div v-else-if="!ebird.obs.length" class="error-msg">
+        Aucune observation notable ces 7 derniers jours en Belgique.
+      </div>
+      <div v-else>
+        <div v-for="obs in ebird.obs" :key="obs.subId" class="det-item"
+             style="gap:.5rem;cursor:pointer;" @click="openUrl(obs.obsUrl)">
+          <!-- Croix si aussi détecté localement -->
+          <div style="font-size:1rem;flex-shrink:0;" :title="obs.localMatch?'Également détecté localement':'Pas détecté localement'">
+            {{obs.localMatch ? '✅' : '👁'}}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.85rem;font-weight:600;color:var(--text-main);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{obs.comName}}
+            </div>
+            <div style="font-size:.72rem;color:var(--text-muted);">
+              📍 {{obs.locName}}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:.78rem;color:var(--text-muted);">×{{obs.howMany}}</div>
+            <div style="font-size:.68rem;color:var(--text-faint);">{{obs.obsDt}}</div>
+          </div>
+        </div>
+        <div style="text-align:right;margin-top:.5rem;">
+          <a href="https://ebird.org/region/BE/recent-notable" target="_blank"
+             class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;">
+            Voir sur eBird →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BirdWeather ─────────────────────────────────────────────── -->
+    <div class="card" style="margin-top:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <img src="https://app.birdweather.com/favicon.ico" style="width:20px;height:20px;border-radius:4px;" alt="">
+          <div class="card-title" style="margin:0;">BirdWeather — Station #{{bw.stationId||'?'}}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div class="fp-quick-btns" v-if="bw.hasStation">
+            <button v-for="p in bwPeriods" :key="p.val"
+                    class="fp-quick-btn" :class="{active:bwPeriod===p.val}"
+                    @click="bwPeriod=p.val;loadBirdWeather()">{{p.label}}</button>
+          </div>
+          <a v-if="bw.stationId" :href="'https://app.birdweather.com/stations/'+bw.stationId"
+             target="_blank" class="btn btn-secondary"
+             style="font-size:.72rem;padding:.22rem .55rem;">Voir sur BirdWeather ↗</a>
+        </div>
+      </div>
+
+      <!-- Pas configuré -->
+      <div v-if="!bw.hasStation" style="font-size:.82rem;color:var(--text-muted);line-height:1.6;">
+        Ajouter dans <code style="background:var(--bg-deep);padding:.1rem .35rem;border-radius:3px;">pibird-local.js</code> :
+        <code style="display:block;background:var(--bg-deep);padding:.4rem .65rem;border-radius:5px;margin-top:.4rem;font-size:.78rem;">
+          birdweatherStationId: 'XXXX',
+        </code>
+        <div style="font-size:.72rem;color:var(--text-faint);margin-top:.3rem;">
+          L'ID est visible dans l'URL : app.birdweather.com/stations/<strong>XXXX</strong>
+        </div>
+      </div>
+
+      <!-- Chargement -->
+      <div v-else-if="bw.loading" class="spinner"><div></div><div></div><div></div></div>
+
+      <!-- Erreur -->
+      <div v-else-if="bw.error" class="error-msg">{{bw.error}}</div>
+
+      <!-- Données -->
+      <div v-else>
+        <!-- KPIs BirdWeather -->
+        <div class="kpi-grid" style="margin-bottom:1rem;">
+          <div class="kpi-card">
+            <div class="kpi-value">{{bw.stats.detections?.toLocaleString() || '—'}}</div>
+            <div class="kpi-label">Détections</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value amber">{{bw.stats.species_count || '—'}}</div>
+            <div class="kpi-label">Espèces</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value blue">{{bw.species.length || '—'}}</div>
+            <div class="kpi-label">Top espèces</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value" style="font-size:.85rem;">{{bw.stats.top_species?.commonName || '—'}}</div>
+            <div class="kpi-label">Espèce dominante</div>
+          </div>
+        </div>
+
+        <!-- Top espèces BirdWeather -->
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
+          Top espèces détectées
+        </div>
+        <div v-if="!bw.species.length" class="error-msg" style="font-size:.8rem;">Aucune donnée</div>
+        <div v-else>
+          <div v-for="(sp, i) in bw.species.slice(0,10)" :key="sp.id || i"
+               style="display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;">
+            <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
+            <img v-if="sp.thumbnailUrl" :src="sp.thumbnailUrl"
+                 style="width:28px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0;"
+                 :alt="sp.commonName" @error="sp.thumbnailUrl=null">
+            <div v-else style="width:28px;height:28px;border-radius:4px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;">🐦</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {{sp.commonName || '—'}}
+              </div>
+              <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
+                <div :style="{height:'100%',width:Math.round((sp.detections?.total||0)/bw.species[0].detections?.total*100)+'%',background:'var(--accent)',borderRadius:'2px',transition:'width .4s'}"></div>
+              </div>
+            </div>
+            <div style="font-size:.78rem;color:var(--accent);min-width:36px;text-align:right;font-family:monospace;">
+              {{sp.detections?.total || 0}}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -214,7 +401,7 @@
 const { createApp, ref, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart,
         birdQuery, fmtDate, fmtTime, freshnessLabel,
-        localDateStr, daysAgo, chartDefaults } = PIBIRD;
+        localDateStr, daysAgo, chartDefaults, navigateTo } = PIBIRD;
 
 createApp({
   setup() {
@@ -233,8 +420,22 @@ createApp({
     const fresh = ref({ loading:true, error:null, icon:'🟢', species:null,
                         date:null, time:null, datetime:'—', today:0, yesterday:0 });
     const gaps  = ref({ loading:true, error:null, total:0, list:[] });
-    const actData = ref({ labels:[], values:[], colors:[], borderColors:[] });
+    const actData  = ref({ labels:[], values:[], colors:[], borderColors:[] });
     const hrlyData = ref({ values:[] });
+
+    // Alertes raretés locales
+    const rareLocal = ref({ loading:true, rows:[] });
+    // eBird notable
+    const ebird = ref({ loading:false, error:null, hasKey:true, obs:[], fetchedAt:'' });
+    // BirdWeather
+    const bwPeriod  = ref('day');
+    const bwPeriods = [
+      { label:'Auj.',  val:'day'   },
+      { label:'7j',    val:'week'  },
+      { label:'30j',   val:'month' },
+      { label:'Tout',  val:'all'   },
+    ];
+    const bw = ref({ loading:false, error:null, hasStation:false, stationId:'', stats:{}, species:[] });
 
     async function loadApi() {
       api.value.loading = true;
@@ -363,16 +564,101 @@ createApp({
       }));
     });
 
+    async function loadRareLocal() {
+      rareLocal.value.loading = true;
+      try {
+        const rows = await birdQuery(
+          `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n, MAX(Date) as last_date
+           FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING n<=5
+           ORDER BY last_date DESC LIMIT 10`,
+          [BIRD_CONFIG.defaultConfidence]
+        );
+        rareLocal.value = { loading:false, rows };
+      } catch(e) { rareLocal.value = { loading:false, rows:[] }; }
+    }
+
+    async function loadEbird() {
+      ebird.value.loading = true;
+      try {
+        const res  = await fetch(`${BIRD_CONFIG.apiUrl}/ebird-notable?days=7&maxResults=25`);
+        const data = await res.json();
+
+        if (data.error === 'no_key') {
+          ebird.value = { loading:false, error:null, hasKey:false, obs:[], fetchedAt:'' };
+          return;
+        }
+        if (data.error) {
+          ebird.value = { loading:false, error:data.message || data.error, hasKey:true, obs:[], fetchedAt:'' };
+          return;
+        }
+
+        // Croiser avec les espèces locales
+        const localSpecies = new Set(
+          (await birdQuery(`SELECT DISTINCT Com_Name FROM detections`)).map(r => r.Com_Name)
+        );
+
+        const obs = (data.obs || []).map(o => ({
+          ...o,
+          localMatch: localSpecies.has(o.comName),
+        }));
+
+        const ts = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString('fr-BE', {hour:'2-digit',minute:'2-digit'}) : '';
+        ebird.value = { loading:false, error:null, hasKey:true, obs, fetchedAt: ts };
+      } catch(e) {
+        ebird.value = { loading:false, error:'Erreur réseau : '+e.message, hasKey:true, obs:[], fetchedAt:'' };
+      }
+    }
+
+    async function loadBirdWeather() {
+      bw.value.loading = true;
+      try {
+        const statsRes  = await fetch(`${BIRD_CONFIG.apiUrl}/birdweather?endpoint=stats&period=${bwPeriod.value}`);
+        const statsData = await statsRes.json();
+
+        if (statsData.error === 'no_station') {
+          bw.value = { loading:false, error:null, hasStation:false, stationId:'', stats:{}, species:[] };
+          return;
+        }
+        if (statsData.error) {
+          bw.value = { ...bw.value, loading:false, error:statsData.message || statsData.error };
+          return;
+        }
+
+        const spRes  = await fetch(`${BIRD_CONFIG.apiUrl}/birdweather?endpoint=species&period=${bwPeriod.value}&limit=10&locale=fr`);
+        const spData = await spRes.json();
+        const species = spData.species || [];
+
+        bw.value = {
+          loading:    false,
+          error:      null,
+          hasStation: true,
+          stationId:  statsData.stationId || '',
+          stats: {
+            detections:    statsData.detections   || 0,
+            species_count: statsData.species      || 0,
+            top_species:   species[0]             || null,
+          },
+          species,
+        };
+      } catch(e) {
+        bw.value = { ...bw.value, loading:false, error:'Erreur : '+e.message };
+      }
+    }
+
     onMounted(async () => {
-      await Promise.all([loadApi(), loadDb(), loadFresh(), loadGaps(), loadActData(), loadHrlyData()]);
+      await Promise.all([loadApi(), loadDb(), loadFresh(), loadGaps(), loadActData(), loadHrlyData(), loadRareLocal(), loadEbird(), loadBirdWeather()]);
     });
+
+    function openUrl(url) { window.open(url, '_blank'); }
 
     return {
       lang, t, setLang, langs,
       theme, themes, setTheme,
       navItems,
       api, db, fresh, gaps,
-      fmtDate, fmtTime, freshnessLabel,
+      rareLocal, ebird,
+      bw, bwPeriod, bwPeriods, loadBirdWeather,
+      fmtDate, fmtTime, freshnessLabel, navigateTo, openUrl,
       canvasActivity, canvasHourly,
     };
   },

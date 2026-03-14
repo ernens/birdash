@@ -247,6 +247,31 @@
                @input="setVolume">
       </div>
 
+      <div class="toolbar-sep"></div>
+
+      <!-- Nettoyage audio -->
+      <div class="toolbar-group" style="gap:.45rem;">
+        <button @click="cleanMode=!cleanMode" :disabled="processingClean"
+                style="white-space:nowrap;padding:.22rem .7rem;border-radius:var(--radius);
+                       font-size:.75rem;font-weight:600;border:1px solid;cursor:pointer;
+                       transition:background .15s,color .15s;"
+                :style="cleanMode
+                  ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
+                  : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+          <span v-if="processingClean">⏳</span>
+          <span v-else-if="cleanMode">✨ Clean</span>
+          <span v-else>🎛 Nettoyer</span>
+        </button>
+        <template v-if="cleanMode">
+          <input type="range" min="0.2" max="1.0" step="0.05"
+                 v-model.number="cleanStrength"
+                 style="width:65px;accent-color:var(--accent);">
+          <span style="font-size:.7rem;font-family:monospace;color:var(--accent);min-width:30px;">
+            {{Math.round(cleanStrength*100)}}%
+          </span>
+        </template>
+      </div>
+
       <!-- Poll détections -->
       <div class="toolbar-group">
         <label>Détections</label>
@@ -379,6 +404,78 @@ function colorFor(name) {
 const FFT_SIZE = 2048;
 const COL_W    = 2;   // pixels par frame FFT
 
+// ── DSP Pipeline nettoyage ────────────────────────────────────────────────────
+function _fftForDsp(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1;
+    const wc = Math.cos(-Math.PI/half), ws = Math.sin(-Math.PI/half);
+    for (let i = 0; i < n; i += len) {
+      let wR = 1, wI = 0;
+      for (let k = 0; k < half; k++) {
+        const uR=re[i+k],uI=im[i+k],vR=re[i+k+half]*wR-im[i+k+half]*wI,vI=re[i+k+half]*wI+im[i+k+half]*wR;
+        re[i+k]=uR+vR; im[i+k]=uI+vI; re[i+k+half]=uR-vR; im[i+k+half]=uI-vI;
+        const nwR=wR*wc-wI*ws; wI=wR*ws+wI*wc; wR=nwR;
+      }
+    }
+  }
+}
+function _highpassIIR(pcm, sr, cutHz = 850) {
+  const alpha = 1 / (1 + 2 * Math.PI * cutHz / sr);
+  const out = new Float32Array(pcm.length);
+  out[0] = pcm[0];
+  for (let i = 1; i < pcm.length; i++) out[i] = alpha * (out[i-1] + pcm[i] - pcm[i-1]);
+  return out;
+}
+function _spectralSubtract(pcm, strength = 0.8) {
+  const FFT = 512, HOP = 128, HALF = FFT / 2;
+  const hann = new Float32Array(FFT);
+  for (let i = 0; i < FFT; i++) hann[i] = 0.5 - 0.5 * Math.cos(2*Math.PI*i/(FFT-1));
+  const frames = [];
+  for (let off = 0; off + FFT <= pcm.length; off += HOP) {
+    const re = new Float32Array(FFT), im = new Float32Array(FFT);
+    let energy = 0;
+    for (let i = 0; i < FFT; i++) { re[i] = pcm[off+i] * hann[i]; energy += re[i]*re[i]; }
+    _fftForDsp(re, im);
+    frames.push({ re, im, energy, off });
+  }
+  const byEnergy = [...frames].sort((a,b) => a.energy - b.energy);
+  const nCount   = Math.max(2, Math.floor(frames.length * 0.15));
+  const noiseMag = new Float32Array(HALF);
+  for (let fi = 0; fi < nCount; fi++) {
+    const { re, im } = byEnergy[fi];
+    for (let k = 0; k < HALF; k++) noiseMag[k] += Math.sqrt(re[k]*re[k]+im[k]*im[k]);
+  }
+  for (let k = 0; k < HALF; k++) noiseMag[k] /= nCount;
+  const out = new Float32Array(pcm.length), norm = new Float32Array(pcm.length);
+  for (const { re, im, off } of frames) {
+    for (let k = 0; k < HALF; k++) {
+      const mag = Math.sqrt(re[k]*re[k]+im[k]*im[k]);
+      const scale = mag > 1e-12 ? Math.max(mag - strength * noiseMag[k], 0.05 * mag) / mag : 0;
+      re[k] *= scale; im[k] *= scale;
+    }
+    for (let k = 1; k < HALF; k++) { re[FFT-k] = re[k]; im[FFT-k] = -im[k]; }
+    re[HALF] = 0; im[HALF] = 0;
+    for (let k = 0; k < FFT; k++) im[k] = -im[k];
+    _fftForDsp(re, im);
+    for (let i = 0; i < FFT; i++) {
+      const n = off + i;
+      if (n < out.length) { const w=hann[i]; out[n]+=(re[i]/FFT)*w; norm[n]+=w*w; }
+    }
+  }
+  for (let i = 0; i < out.length; i++) if (norm[i] > 1e-10) out[i] /= norm[i];
+  return out;
+}
+function cleanAudioPipeline(pcm, sr, strength) {
+  return _spectralSubtract(_highpassIIR(pcm, sr, 850), strength);
+}
+
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, birdQuery, fmtConf, localDateStr, buildAudioUrl } = PIBIRD;
@@ -411,6 +508,16 @@ createApp({
     let _analyser   = null;
     let _gainNode   = null;
     let _source     = null;   // BufferSourceNode en cours
+
+    // Clean audio (non réactif — PCM courant)
+    let _currentPcm     = null;
+    let _currentSr      = 22050;
+    let _currentAudioBuf= null;   // buffer original (avant clean)
+
+    // Clean audio (réactif)
+    const cleanMode      = ref(false);
+    const cleanStrength  = ref(0.75);
+    const processingClean= ref(false);
 
     // Rendu canvas (non réactif)
     let _W = 800, _H = 400;
@@ -662,47 +769,77 @@ createApp({
           continue;
         }
 
-        // Jouer les fichiers en attente dans l'ordre
-        for (const det of pending) {
+        // ── Pipeline prefetch : fetch + decode + clean de N+1
+        //    pendant que N joue → zéro silence même avec clean actif
+        async function fetchAndPrepare(det) {
+          const url = buildAudioUrl(det.File_Name);
+          if (!url) return null;
+          try {
+            const resp = await fetch(url);
+            if (!resp.ok) { console.warn('[playback] 404:', url); return null; }
+            const arrayBuf = await resp.arrayBuffer();
+            const audioBuf = await _audioCtx.decodeAudioData(arrayBuf);
+
+            // Stocker le PCM brut (pour ré-application clean si slider change)
+            _currentPcm      = audioBuf.getChannelData(0).slice();
+            _currentSr       = audioBuf.sampleRate;
+            _currentAudioBuf = audioBuf;
+
+            // Appliquer le clean ICI — pendant que le fichier précédent joue
+            if (cleanMode.value) {
+              const cleaned = cleanAudioPipeline(_currentPcm, _currentSr, cleanStrength.value);
+              const cleanBuf = _audioCtx.createBuffer(1, cleaned.length, _currentSr);
+              cleanBuf.copyToChannel(cleaned, 0);
+              return cleanBuf;
+            }
+            return audioBuf;
+          } catch(e) {
+            if (!_playbackStopped) console.error('[playback] décodage:', det.File_Name, e.message);
+            return null;
+          }
+        }
+
+        // Pré-charger le premier fichier
+        if (cleanMode.value) processingClean.value = true;
+        let prefetchedBuf   = await fetchAndPrepare(pending[0]);
+        processingClean.value = false;
+        let prefetchedDet   = pending[0];
+        let prefetchPromise = null;
+
+        for (let i = 0; i < pending.length; i++) {
+          if (_playbackStopped) break;
+
+          const det      = pending[i];
+          let   audioBuf = (det === prefetchedDet) ? prefetchedBuf : await fetchAndPrepare(det);
+
+          // Lancer le prefetch du fichier suivant EN PARALLÈLE dès maintenant
+          if (i + 1 < pending.length) {
+            prefetchedDet = pending[i + 1];
+            prefetchPromise = fetchAndPrepare(prefetchedDet).then(b => { prefetchedBuf = b; });
+          }
+
+          if (!audioBuf) continue;
           if (_playbackStopped) break;
           _playedFiles.add(det.File_Name);
 
-          const url = buildAudioUrl(det.File_Name);
-          if (!url) { console.warn('[playback] URL introuvable:', det.File_Name); continue; }
+          // bufToPlay est déjà clean si cleanMode était actif dans fetchAndPrepare
+          const bufToPlay = audioBuf;
 
+          // ── Lecture imminente — insérer label maintenant ──────────
           const color   = colorFor(det.Com_Name);
           const labelId = det.Date + det.Time + det.Com_Name + Math.random();
 
-          // Fetch + decode EN AVANCE — sans toucher au canvas ni aux labels
-          let audioBuf;
-          try {
-            const resp = await fetch(url);
-            if (!resp.ok) { console.warn('[playback] 404:', url); continue; }
-            const arrayBuf = await resp.arrayBuffer();
-            audioBuf       = await _audioCtx.decodeAudioData(arrayBuf);
-          } catch(e) {
-            if (_playbackStopped) break;
-            console.error('[playback] erreur décodage:', det.File_Name, e.message);
-            continue;
-          }
-
-          if (_playbackStopped) break;
-
-          // ── À partir d'ici : lecture imminente ──────────────────
-          // Insérer le label AU MOMENT du start() — position canvas correcte
           _source = _audioCtx.createBufferSource();
-          _source.buffer = audioBuf;
+          _source.buffer = bufToPlay;
           _source.connect(_analyser);
 
-          // Toolbar
           nowPlaying.value = {
             name:  det.Com_Name,
             conf:  fmtConf(det.Confidence),
-            time:  det.Time.substring(0,5),
+            time:  det.Time.substring(0, 5),
             color,
           };
 
-          // Label sur le spectrogramme — synchronisé avec le signal audio
           detLabels.value = [{
             id:            labelId,
             name:          det.Com_Name,
@@ -711,17 +848,19 @@ createApp({
             insertedAtCol: _colsDrawn,
           }, ...detLabels.value].slice(0, 30);
 
-          // Feed
           feedDets.value = [{
             ...det, id: labelId, color, confStr: fmtConf(det.Confidence),
           }, ...feedDets.value].slice(0, 6);
 
           _source.start();
 
-          // Attendre la fin de la lecture
-          await new Promise(resolve => { _source.onended = resolve; });
+          // Attendre la fin de la lecture ET que le prefetch soit terminé
+          await Promise.all([
+            new Promise(resolve => { _source.onended = resolve; }),
+            prefetchPromise || Promise.resolve(),
+          ]);
           _source = null;
-        }   // fin for (det of pending)
+        }   // fin for
       }     // fin while
 
       nowPlaying.value = null;
@@ -755,6 +894,7 @@ createApp({
       mainCanvas, canvasWrap, colorbarCanvas,
       recentDets, feedDets, lastPollAge,
       detLabels, visibleDetLabels, freqLabels, timeLabels,
+      cleanMode, cleanStrength, processingClean,
       startLive, stopLive, setVolume,
     };
   }

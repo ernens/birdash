@@ -26,7 +26,7 @@
   const _TRANSLATIONS = {
     fr: {
       _meta: { lang:'fr', label:'Français', flag:'🇫🇷' },
-      nav_overview:'Vue d\'ensemble', nav_today:'Aujourd\'hui',
+      nav_overview:'Vue d\'ensemble', nav_today:'Aujourd\'hui', nav_recent:'Récent',
       nav_detections:'Détections', nav_species:'Espèces',
       nav_biodiversity:'Biodiversité', nav_rarities:'Rarités', nav_stats:'Statistiques',
       nav_system:'Système', nav_analyses:'Analyses', nav_spectrogram:'Spectrogramme', nav_recordings:'Enregistrements',
@@ -114,7 +114,7 @@
 
     en: {
       _meta: { lang:'en', label:'English', flag:'🇬🇧' },
-      nav_overview:'Overview', nav_today:'Today',
+      nav_overview:'Overview', nav_today:'Today', nav_recent:'Recent',
       nav_detections:'Detections', nav_species:'Species',
       nav_biodiversity:'Biodiversity', nav_rarities:'Rarities', nav_stats:'Statistics',
       nav_system:'System', nav_analyses:'Analysis', nav_spectrogram:'Spectrogram', nav_recordings:'Recordings',
@@ -202,7 +202,7 @@
 
     nl: {
       _meta: { lang:'nl', label:'Nederlands', flag:'🇳🇱' },
-      nav_overview:'Overzicht', nav_today:'Vandaag',
+      nav_overview:'Overzicht', nav_today:'Vandaag', nav_recent:'Recent',
       nav_detections:'Detecties', nav_species:'Soorten',
       nav_biodiversity:'Biodiversiteit', nav_rarities:'Zeldzaamheden',
       nav_stats:'Statistieken', nav_system:'Systeem', nav_analyses:'Analyse', nav_spectrogram:'Spectrogram', nav_recordings:'Opnames',
@@ -358,6 +358,7 @@
   const NAV_KEYS = {
     index:        'nav_overview',
     today:        'nav_today',
+    recent:       'nav_recent',
     detections:   'nav_detections',
     species:      'nav_species',
     biodiversity: 'nav_biodiversity',
@@ -537,6 +538,74 @@
     return { playingFile, toggleAudio };
   }
 
+  // ── fetchCachedPhoto — cache localStorage + /api/photo + fallbacks ───────────
+  // Utilisable depuis toutes les pages. TTL 30 jours.
+  const PHOTO_TTL = 30 * 24 * 3600 * 1000;
+  const PHOTO_LS_PREFIX = 'pibird_photo_';
+
+  async function fetchCachedPhoto(sciName) {
+    if (!sciName) return null;
+
+    // 1. localStorage — vérifier TTL
+    const lsKey = PHOTO_LS_PREFIX + sciName.replace(/[^a-zA-Z0-9]/g, '_');
+    try {
+      const cached = JSON.parse(localStorage.getItem(lsKey));
+      if (cached && cached.url && (Date.now() - cached.ts < PHOTO_TTL)) {
+        return cached.url;
+      }
+    } catch(e) {}
+
+    let url = null;
+
+    // 2. /api/photo (cache disque serveur)
+    try {
+      const apiUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
+      const res = await fetch(apiUrl);
+      if (res.ok) url = apiUrl;
+    } catch(e) {}
+
+    // 3. iNaturalist direct (si serveur indisponible)
+    if (!url) {
+      try {
+        const tn  = encodeURIComponent(sciName);
+        const res = await fetch(
+          `https://api.inaturalist.org/v1/taxa?taxon_name=${tn}&rank=species&per_page=3`
+        );
+        if (res.ok) {
+          const data  = await res.json();
+          const taxon = data.results?.find(t =>
+            t.name.toLowerCase() === sciName.toLowerCase()
+          );
+          url = taxon?.default_photo?.medium_url
+             || taxon?.default_photo?.square_url
+             || taxon?.default_photo?.url
+             || null;
+        }
+      } catch(e) {}
+    }
+
+    // 4. Wikipedia direct
+    if (!url) {
+      try {
+        const title = sciName.replace(/ /g, '_');
+        const res   = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          url = data.thumbnail?.source || null;
+        }
+      } catch(e) {}
+    }
+
+    // Stocker en localStorage (même null → évite de re-fetcher inutilement)
+    try {
+      localStorage.setItem(lsKey, JSON.stringify({ url, ts: Date.now() }));
+    } catch(e) {}
+
+    return url;
+  }
+
   // ── Chart.js defaults ─────────────────────────────────────────────────────
   function chartDefaults() {
     return {
@@ -564,7 +633,7 @@
     birdQuery,
     fmtDate, fmtTime, fmtConf,
     localDateStr, daysAgo, freshnessLabel,
-    buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage,
+    buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage, fetchCachedPhoto,
     getUrlParam, navigateTo,
     chartDefaults,
     // Accès direct aux traductions (pour les pages qui en auraient besoin)

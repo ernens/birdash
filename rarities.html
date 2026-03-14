@@ -8,189 +8,209 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
+  <style>
+    .rar-layout { display:grid; grid-template-columns:240px 1fr; gap:1rem; align-items:start; }
+    @media(max-width:860px){ .rar-layout{grid-template-columns:1fr;} }
+    .filter-panel { position:sticky; top:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; display:flex; flex-direction:column; gap:.85rem; }
+    .fp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.35rem; display:block; }
+    .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
+    .fp-quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
+    .fp-quick-btn { font-size:.68rem; padding:.18rem .42rem; border-radius:20px; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; transition:all .12s; white-space:nowrap; flex-shrink:0; }
+    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .fp-slider-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
+    .fp-slider-val { font-size:.8rem; font-family:monospace; color:var(--accent); font-weight:600; cursor:pointer; text-decoration:underline dotted; }
+    input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:var(--bg-deep); border-radius:2px; outline:none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--accent); cursor:pointer; }
+    .fp-slider-marks { display:flex; justify-content:space-between; font-size:.65rem; color:var(--text-faint); margin-top:.2rem; }
+    /* Miniatures */
+    .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; flex-shrink:0; }
+    .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+    /* Download */
+    .dl-btn { font-size:.75rem; padding:.22rem .5rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
+    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
+    /* Threshold select */
+    .fp-select { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.35rem .5rem; font-size:.8rem; }
+  </style>
 </head>
 <body>
 <div id="app" class="app-shell">
-
   <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
+    <div class="header-brand"><span class="brand-name">🐦 PIBIRD</span><span class="brand-sub">Bruxelles</span></div>
     <div class="header-right">
       <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn"
-                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
-                @click="setTheme(th.id)"></button>
+        <button v-for="th in themes" :key="th.id" class="theme-btn" :class="{active:theme===th.id}" :data-t="th.id" :title="th.label" @click="setTheme(th.id)"></button>
       </div>
       <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
+        <button v-for="l in langs" :key="l.code" class="lang-btn" :class="{active:lang===l.code}" :title="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
       </div>
     </div>
   </header>
-
   <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file"
-       class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span>
-      <span class="nav-label">{{p.label}}</span>
+    <a v-for="p in navItems" :key="p.id" :href="p.file" class="nav-link" :class="{active:p.active}">
+      <span class="nav-icon">{{p.icon}}</span><span class="nav-label">{{p.label}}</span>
     </a>
   </div></nav>
-
   <main class="app-main">
+    <div class="rar-layout">
 
-    <!-- Filtres -->
-    <div class="filter-bar" style="margin-bottom:1rem;">
-      <div class="filter-group">
-        <label>{{t('filter_confidence')}}</label>
-        <select class="bird-select" v-model="fConf">
-          <option value="0">0%</option>
-          <option value="0.5">50%</option>
-          <option value="0.7">70%</option>
-          <option value="0.8">80%</option>
-        </select>
+      <!-- ── Panneau filtres ──────────────────────────────────────── -->
+      <div class="filter-panel">
+        <!-- Confiance slider -->
+        <div>
+          <div class="fp-slider-row">
+            <span class="fp-label" style="margin:0;">{{t('filter_confidence')}}</span>
+            <span v-if="!confEditing" class="fp-slider-val" @click="startConfEdit" :title="'Cliquer pour saisir'">{{Math.round(fConf*100)}}%</span>
+            <input v-else ref="confInput" type="number" min="0" max="100" step="1"
+                   v-model.number="confEditVal"
+                   @keydown.enter="commitConfEdit" @blur="commitConfEdit" @keydown.escape="confEditing=false"
+                   style="width:52px;font-size:.8rem;font-family:monospace;font-weight:600;color:var(--accent);background:var(--bg-deep);border:1px solid var(--accent);border-radius:4px;padding:.1rem .3rem;text-align:right;">
+          </div>
+          <input type="range" min="0" max="1" step="0.01" v-model.number="fConf"
+                 :style="'background:linear-gradient(to right,var(--accent) '+fConf*100+'%,var(--bg-deep) '+fConf*100+'%)'">
+          <div class="fp-slider-marks"><span>0%</span><span>50%</span><span>100%</span></div>
+        </div>
+
+        <!-- Seuil de rareté -->
+        <div>
+          <span class="fp-label">{{t('rarity_threshold_label')}}</span>
+          <select class="fp-select" v-model.number="fMaxDet">
+            <option :value="1">= 1 (jamais vu)</option>
+            <option :value="5">≤ 5</option>
+            <option :value="10">≤ 10</option>
+            <option :value="25">≤ 25</option>
+            <option :value="50">≤ 50</option>
+          </select>
+        </div>
+
+        <!-- Plage de dates -->
+        <div>
+          <span class="fp-label">Plage de dates</span>
+          <input type="date" class="fp-date-input" v-model="fDateFrom">
+          <input type="date" class="fp-date-input" v-model="fDateTo" style="margin-bottom:.4rem;">
+          <div class="fp-quick-btns">
+            <button v-for="q in quickDates" :key="q.label" class="fp-quick-btn"
+                    :class="{active:activeQuick===q.label}" @click="applyQuick(q)">{{q.label}}</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;" @click="load">{{t('apply_filter')}}</button>
+        <button class="btn btn-secondary" style="width:100%;margin-top:-.4rem;" @click="resetFilters">{{t('reset_filter')}}</button>
       </div>
-      <div class="filter-group">
-        <label>{{t('rarity_threshold_label')}}</label>
-        <select class="bird-select" v-model="fMaxDet">
-          <option value="5">≤ 5</option>
-          <option value="10">≤ 10</option>
-          <option value="25">≤ 25</option>
-          <option value="50">≤ 50</option>
-        </select>
-      </div>
-      <div class="filter-group" style="flex-direction:row;align-self:flex-end;gap:.4rem;">
-        <button class="btn btn-primary" @click="load">{{t('apply_filter')}}</button>
-      </div>
-    </div>
 
-    <!-- KPIs -->
-    <div class="kpi-grid" style="margin-bottom:1rem;">
-      <div v-if="kpis.loading" class="spinner" style="grid-column:1/-1;"><div></div><div></div><div></div></div>
-      <template v-else>
-        <div class="kpi-card">
-          <div class="kpi-value">{{kpis.total}}</div>
-          <div class="kpi-label">{{t('species')}}</div>
+      <!-- ── Contenu ─────────────────────────────────────────────── -->
+      <div>
+        <!-- KPIs -->
+        <div class="kpi-grid" style="margin-bottom:1rem;">
+          <div v-if="kpis.loading" class="spinner" style="grid-column:1/-1;"><div></div><div></div><div></div></div>
+          <template v-else>
+            <div class="kpi-card"><div class="kpi-value">{{kpis.total}}</div><div class="kpi-label">{{t('species')}}</div></div>
+            <div class="kpi-card"><div class="kpi-value amber">{{kpis.rare}}</div><div class="kpi-label">{{t('rare_species')}} (≤{{fMaxDet}})</div></div>
+            <div class="kpi-card"><div class="kpi-value blue">{{kpis.once}}</div><div class="kpi-label">{{t('rarity_seen_once').replace('💎 ','')}}</div></div>
+            <div class="kpi-card"><div class="kpi-value">{{kpis.newThisYear}}</div><div class="kpi-label">{{t('first_seen')}} {{thisYear}}</div></div>
+          </template>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-value amber">{{kpis.rare}}</div>
-          <div class="kpi-label">{{t('rare_species')}} (≤{{fMaxDet}})</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-value blue">{{kpis.once}}</div>
-          <div class="kpi-label">{{t('rarity_seen_once').replace('💎 ','')}}</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-value">{{kpis.newThisYear}}</div>
-          <div class="kpi-label">{{t('first_seen')}} {{thisYear}}</div>
-        </div>
-      </template>
-    </div>
 
-    <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="grid-2" style="margin-bottom:1rem;">
 
-      <!-- Vues une seule fois -->
-      <div class="card">
-        <div class="card-title">{{t('rarity_seen_once')}}</div>
-        <div v-if="once.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!once.rows.length" class="error-msg">{{t('no_data')}}</div>
-        <div v-else>
-          <div v-for="r in once.rows" :key="r.Com_Name" class="det-item"
-               style="cursor:pointer;"
-               @click="navigateTo('species.html',{species:r.Com_Name})">
-            <div style="font-size:.9rem;flex:1;">
-              <span style="color:var(--danger);">💎</span>
-              <strong style="color:var(--text-main);">{{r.Com_Name}}</strong>
-              <div style="font-size:.74rem;color:var(--text-muted);font-style:italic;">{{r.sci}}</div>
+          <!-- Vues une seule fois -->
+          <div class="card">
+            <div class="card-title">{{t('rarity_seen_once')}}</div>
+            <div v-if="once.loading" class="spinner"><div></div><div></div><div></div></div>
+            <div v-else-if="!once.rows.length" class="error-msg">{{t('no_data')}}</div>
+            <div v-else>
+              <div v-for="r in once.rows" :key="r.Com_Name" class="det-item"
+                   style="cursor:pointer;gap:.5rem;" @click="navigateTo('species.html',{species:r.Com_Name})">
+                <!-- Miniature -->
+                <img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
+                <div v-else class="det-thumb-ph">🐦</div>
+                <div style="font-size:.85rem;flex:1;min-width:0;">
+                  <span style="color:var(--danger);margin-right:.25rem;">💎</span>
+                  <strong style="color:var(--text-main);">{{r.Com_Name}}</strong>
+                  <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{r.sci}}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                  <span :class="'conf-badge '+(parseFloat(r.max_conf)>=0.8?'conf-high':'conf-mid')">{{fmtConf(r.max_conf)}}</span>
+                  <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">{{fmtDate(r.last_date)}}</div>
+                </div>
+              </div>
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <span :class="'conf-badge '+(parseFloat(r.max_conf)>=0.8?'conf-high':'conf-mid')">
-                {{fmtConf(r.max_conf)}}
-              </span>
-              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">
-                {{fmtDate(r.last_date)}}
+          </div>
+
+          <!-- Dernières détections rares avec player + download -->
+          <div class="card">
+            <div class="card-title">{{t('rarity_last_rare')}}</div>
+            <div v-if="recent.loading" class="spinner"><div></div><div></div><div></div></div>
+            <div v-else-if="!recent.rows.length" class="error-msg">{{t('no_data')}}</div>
+            <div v-else>
+              <div v-for="d in recent.rows" :key="d.Date+d.Time+d.Com_Name"
+                   class="det-item" style="gap:.5rem;cursor:pointer;"
+                   @click="navigateTo('species.html',{species:d.Com_Name})">
+                <!-- Miniature -->
+                <img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
+                <div v-else class="det-thumb-ph">🐦</div>
+                <!-- Play -->
+                <button v-if="d.File_Name" class="play-btn"
+                        style="width:24px;height:24px;font-size:.65rem;"
+                        :class="{playing:playingFile===d.File_Name}"
+                        @click.stop="toggleAudio(d.File_Name)">▶</button>
+                <!-- Download -->
+                <a v-if="d.File_Name" :href="buildAudioUrl(d.File_Name)"
+                   :download="d.Com_Name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+d.Date+'.mp3'"
+                   class="dl-btn" title="Télécharger" @click.stop>⬇</a>
+                <div class="det-time">{{fmtDate(d.Date)}}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{d.Com_Name}}</div>
+                  <div class="det-sci">{{d.Sci_Name}}</div>
+                </div>
+                <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':'conf-mid')">{{fmtConf(d.Confidence)}}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Dernières détections rares -->
-      <div class="card">
-        <div class="card-title">{{t('rarity_last_rare')}}</div>
-        <div v-if="recent.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!recent.rows.length" class="error-msg">{{t('no_data')}}</div>
-        <div v-else>
-          <div v-for="d in recent.rows" :key="d.Date+d.Time+d.Com_Name" class="det-item"
-               style="cursor:pointer;"
-               @click="navigateTo('species.html',{species:d.Com_Name})">
-            <button v-if="d.File_Name" class="play-btn"
-                    style="width:22px;height:22px;font-size:.6rem;"
-                    :class="{playing:playingFile===d.File_Name}"
-                    @click.stop="toggleAudio(d.File_Name)">▶</button>
-            <div class="det-time">{{fmtDate(d.Date)}}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                {{d.Com_Name}}
-              </div>
-              <div class="det-sci">{{d.Sci_Name}}</div>
-            </div>
-            <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':'conf-mid')">
-              {{fmtConf(d.Confidence)}}
-            </span>
+        <!-- Table complète -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);">
+            <div class="card-title" style="margin-bottom:0;">{{t('rare_desc',{n:fMaxDet})}}</div>
           </div>
+          <div v-if="table.loading" class="spinner" style="padding:2rem;"><div></div><div></div><div></div></div>
+          <div v-else-if="!table.rows.length" class="error-msg" style="padding:1rem;">{{t('no_data')}}</div>
+          <table v-else class="bird-table">
+            <thead><tr>
+              <th style="width:44px;"></th>
+              <th>{{t('species_name')}}</th>
+              <th style="font-style:italic;" class="hide-sm">{{t('latin_name')}}</th>
+              <th>{{t('detections_count')}}</th>
+              <th>{{t('first_seen')}}</th>
+              <th>{{t('last_seen')}}</th>
+              <th>{{t('max_confidence')}}</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="r in table.rows" :key="r.Com_Name" style="cursor:pointer;" @click="navigateTo('species.html',{species:r.Com_Name})">
+                <td style="padding:.3rem .4rem;">
+                  <img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
+                  <div v-else class="det-thumb-ph">🐦</div>
+                </td>
+                <td><span style="margin-right:.3rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</span><strong>{{r.Com_Name}}</strong></td>
+                <td style="font-style:italic;color:var(--text-muted);font-size:.8rem;" class="hide-sm">{{r.sci}}</td>
+                <td style="text-align:center;"><span :class="'conf-badge '+(r.n===1?'conf-low':r.n<=5?'conf-mid':'conf-high')">{{r.n}}</span></td>
+                <td style="font-size:.8rem;">{{fmtDate(r.first_date)}}</td>
+                <td style="font-size:.8rem;">{{fmtDate(r.last_date)}}</td>
+                <td><span class="conf-badge conf-high">{{r.max_conf}}%</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-
     </div>
-
-    <!-- Table complète -->
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);">
-        <div class="card-title" style="margin-bottom:0;">{{t('rare_desc',{n:fMaxDet})}}</div>
-      </div>
-      <div v-if="table.loading" class="spinner" style="padding:2rem;"><div></div><div></div><div></div></div>
-      <div v-else-if="!table.rows.length" class="error-msg" style="padding:1rem;">{{t('no_data')}}</div>
-      <table v-else class="bird-table">
-        <thead><tr>
-          <th>{{t('species_name')}}</th>
-          <th style="font-style:italic;">{{t('latin_name')}}</th>
-          <th>{{t('detections_count')}}</th>
-          <th>{{t('first_seen')}}</th>
-          <th>{{t('last_seen')}}</th>
-          <th>{{t('max_confidence')}}</th>
-        </tr></thead>
-        <tbody>
-          <tr v-for="r in table.rows" :key="r.Com_Name"
-              style="cursor:pointer;"
-              @click="navigateTo('species.html',{species:r.Com_Name})">
-            <td>
-              <span style="margin-right:.3rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</span>
-              <strong>{{r.Com_Name}}</strong>
-            </td>
-            <td style="font-style:italic;color:var(--text-muted);font-size:.8rem;">{{r.sci}}</td>
-            <td style="text-align:center;">
-              <span :class="'conf-badge '+(r.n===1?'conf-low':r.n<=5?'conf-mid':'conf-high')">
-                {{r.n}}
-              </span>
-            </td>
-            <td style="font-size:.8rem;">{{fmtDate(r.first_date)}}</td>
-            <td style="font-size:.8rem;">{{fmtDate(r.last_date)}}</td>
-            <td><span class="conf-badge conf-high">{{r.max_conf}}%</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
   </main>
 </div>
 
 <script>
-const { createApp, ref, watch, onMounted } = Vue;
+const { createApp, ref, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useAudio,
-        birdQuery, fmtDate, fmtConf, localDateStr, navigateTo } = PIBIRD;
+        birdQuery, fmtDate, fmtConf, localDateStr, daysAgo,
+        navigateTo, buildAudioUrl, fetchCachedPhoto } = PIBIRD;
 
 createApp({
   setup() {
@@ -199,83 +219,133 @@ createApp({
     const { navItems }                = useNav('rarities');
     const { playingFile, toggleAudio }= useAudio();
 
-    const fConf   = ref('0.7');
-    const fMaxDet = ref('10');
-    const thisYear = localDateStr().substring(0,4);
+    const thisYear   = localDateStr().substring(0,4);
+    const fConf      = ref(BIRD_CONFIG.defaultConfidence);
+    const fMaxDet    = ref(10);
+    const fDateFrom  = ref('');
+    const fDateTo    = ref('');
+    const activeQuick= ref('');
+
+    // Conf edit
+    const confEditing = ref(false);
+    const confEditVal = ref(70);
+    const confInput   = ref(null);
+    function startConfEdit() { confEditVal.value=Math.round(fConf.value*100); confEditing.value=true; nextTick(()=>confInput.value?.select()); }
+    function commitConfEdit() { fConf.value=Math.max(0,Math.min(100,Math.round(confEditVal.value||0)))/100; confEditing.value=false; }
+
+    const quickDates = [
+      { label:'1j',   from:()=>localDateStr(), to:()=>localDateStr() },
+      { label:'7j',   from:()=>daysAgo(6),    to:()=>localDateStr() },
+      { label:'30j',  from:()=>daysAgo(29),   to:()=>localDateStr() },
+      { label:'90j',  from:()=>daysAgo(89),   to:()=>localDateStr() },
+      { label:'1an',  from:()=>daysAgo(364),  to:()=>localDateStr() },
+      { label:'Tout', from:()=>'',            to:()=>''             },
+    ];
+    function applyQuick(q) { fDateFrom.value=q.from(); fDateTo.value=q.to(); activeQuick.value=q.label; load(); }
+    function resetFilters() { fConf.value=BIRD_CONFIG.defaultConfidence; fMaxDet.value=10; fDateFrom.value=''; fDateTo.value=''; activeQuick.value=''; load(); }
 
     const kpis   = ref({ loading:true, total:0, rare:0, once:0, newThisYear:0 });
     const once   = ref({ loading:true, rows:[] });
     const recent = ref({ loading:true, rows:[] });
     const table  = ref({ loading:true, rows:[] });
 
+    function buildDateWhere(alias) {
+      const p = alias ? alias+'.' : '';
+      const parts = [];
+      if (fDateFrom.value) parts.push(`${p}Date>='${fDateFrom.value}'`);
+      if (fDateTo.value)   parts.push(`${p}Date<='${fDateTo.value}'`);
+      return parts.length ? ' AND ' + parts.join(' AND ') : '';
+    }
+
     async function load() {
-      const conf   = parseFloat(fConf.value);
-      const maxDet = parseInt(fMaxDet.value);
+      const conf   = fConf.value;
+      const maxDet = fMaxDet.value;
+      const dw     = buildDateWhere('');
       await Promise.all([
-        loadKpis(conf, maxDet),
-        loadOnce(conf),
-        loadRecent(conf, maxDet),
-        loadTable(conf, maxDet),
+        loadKpis(conf, maxDet, dw),
+        loadOnce(conf, dw),
+        loadRecent(conf, maxDet, dw),
+        loadTable(conf, maxDet, dw),
       ]);
     }
 
-    async function loadKpis(conf, maxDet) {
+    async function loadKpis(conf, maxDet, dw) {
       kpis.value.loading = true;
       try {
-        const [tot]  = await birdQuery(`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?`,[conf]);
-        const [rare] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING COUNT(*)<=?)`,[conf,maxDet]);
-        const [once] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING COUNT(*)=1)`,[conf]);
+        const [tot]  = await birdQuery(`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?${dw}`,[conf]);
+        const [rare] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)<=?)`,[conf,maxDet]);
+        const [once] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)=1)`,[conf]);
         const [nw]   = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=? AND SUBSTR(Date,1,4)=? GROUP BY Com_Name HAVING MIN(Date)>=?||'-01-01')`,[conf,thisYear,thisYear]);
         kpis.value = { loading:false, total:tot.n, rare:rare.n, once:once.n, newThisYear:nw.n };
       } catch(e) { kpis.value = {...kpis.value, loading:false}; }
     }
 
-    async function loadOnce(conf) {
+    async function loadOnce(conf, dw) {
       once.value.loading = true;
       try {
         const rows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as sci, MAX(Date) as last_date, MAX(Confidence) as max_conf
-           FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING COUNT(*)=1
+           FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)=1
            ORDER BY last_date DESC LIMIT 20`,[conf]);
         once.value = { loading:false, rows };
+        loadPhotosFor(rows, 'sci');
       } catch(e) { once.value = { loading:false, rows:[] }; }
     }
 
-    async function loadRecent(conf, maxDet) {
+    async function loadRecent(conf, maxDet, dw) {
       recent.value.loading = true;
       try {
         const rows = await birdQuery(
           `SELECT d.Date,d.Time,d.Com_Name,d.Sci_Name,d.Confidence,d.File_Name
            FROM detections d
-           INNER JOIN (SELECT Com_Name FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING COUNT(*)<=?) rare
-           ON d.Com_Name=rare.Com_Name WHERE d.Confidence>=?
+           INNER JOIN (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)<=?) rare
+           ON d.Com_Name=rare.Com_Name WHERE d.Confidence>=?${dw}
            ORDER BY d.Date DESC,d.Time DESC LIMIT 15`,[conf,maxDet,conf]);
         recent.value = { loading:false, rows };
+        loadPhotosFor(rows);
       } catch(e) { recent.value = { loading:false, rows:[] }; }
     }
 
-    async function loadTable(conf, maxDet) {
+    async function loadTable(conf, maxDet, dw) {
       table.value.loading = true;
       try {
         const rows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n,
                   MIN(Date) as first_date, MAX(Date) as last_date,
                   ROUND(MAX(Confidence)*100,1) as max_conf
-           FROM detections WHERE Confidence>=? GROUP BY Com_Name HAVING n<=?
+           FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING n<=?
            ORDER BY last_date DESC, n ASC`,[conf,maxDet]);
         table.value = { loading:false, rows };
+        loadPhotosFor(rows, 'sci');
       } catch(e) { table.value = { loading:false, rows:[] }; }
     }
 
-    // Recharge les listes (labels traduits) si langue change
+    // Charge les photos pour un tableau de lignes (Sci_Name ou sci)
+    async function loadPhotosFor(rows, sciField='Sci_Name') {
+      const seen = new Set();
+      const tasks = rows.filter(r => {
+        const s = r[sciField]; if (!s || seen.has(s)) return false; seen.add(s); return true;
+      });
+      for (let i=0; i<tasks.length; i+=4) {
+        await Promise.all(tasks.slice(i,i+4).map(async r => {
+          const sci = r[sciField];
+          const url = await fetchCachedPhoto(sci);
+          rows.forEach(d => { if (d[sciField]===sci) d.photoUrl=url; });
+        }));
+      }
+    }
+
     watch(lang, () => load());
     onMounted(() => load());
 
     return {
-      lang, t, setLang, langs, theme, themes, setTheme, navItems,
-      fConf, fMaxDet, thisYear, kpis, once, recent, table,
-      playingFile, toggleAudio,
-      fmtDate, fmtConf, navigateTo, load,
+      lang,t,setLang,langs,theme,themes,setTheme,navItems,
+      fConf,fMaxDet,fDateFrom,fDateTo,activeQuick,quickDates,
+      confEditing,confEditVal,confInput,startConfEdit,commitConfEdit,
+      applyQuick,resetFilters,thisYear,
+      kpis,once,recent,table,
+      playingFile,toggleAudio,buildAudioUrl,
+      fmtDate,fmtConf,navigateTo,load,
     };
   }
 }).mount('#app');

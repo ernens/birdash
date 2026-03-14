@@ -5,312 +5,503 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Détections</title>
   <link rel="stylesheet" href="bird-styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <script src="bird-config.js"></script>
+  <script src="bird-vue-core.js"></script>
+  <style>
+    .det-layout { display:grid; grid-template-columns:240px 1fr; gap:1rem; align-items:start; }
+    @media(max-width:860px){ .det-layout{grid-template-columns:1fr;} }
+    @media(max-width:640px){ .hide-sm{display:none;} }
+    .filter-panel { position:sticky; top:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; display:flex; flex-direction:column; gap:.85rem; }
+    .fp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.35rem; display:block; }
+    .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
+    .fp-quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
+    .fp-quick-btn { font-size:.68rem; padding:.18rem .42rem; border-radius:20px; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; transition:all .12s; white-space:nowrap; flex-shrink:0; }
+    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .fp-slider-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
+    .fp-slider-val { font-size:.8rem; font-family:monospace; color:var(--accent); font-weight:600; }
+    input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:var(--bg-deep); border-radius:2px; outline:none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--accent); cursor:pointer; }
+    .fp-slider-marks { display:flex; justify-content:space-between; font-size:.65rem; color:var(--text-faint); margin-top:.2rem; }
+    .fp-species-select { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.35rem .5rem; font-size:.8rem; }
+    .fp-toggle-row { display:flex; align-items:center; justify-content:space-between; padding:.4rem .5rem; border-radius:6px; background:var(--bg-deep); cursor:pointer; user-select:none; }
+    .fp-toggle-row:hover { background:var(--bg-card2); }
+    .fp-toggle-label { font-size:.82rem; color:var(--text-main); }
+    .fp-toggle-sub { font-size:.68rem; color:var(--text-faint); }
+    .fp-toggle { width:36px; height:20px; border-radius:10px; background:var(--border); position:relative; transition:background .2s; flex-shrink:0; }
+    .fp-toggle.on { background:var(--accent); }
+    .fp-toggle::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s; }
+    .fp-toggle.on::after { left:19px; }
+    .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; }
+    .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; }
+    .det-count-badge { font-size:.65rem; font-family:monospace; font-weight:700; background:var(--bg-card2); color:var(--text-muted); padding:.1rem .35rem; border-radius:10px; margin-left:.4rem; }
+    .dl-btn { font-size:.75rem; padding:.2rem .45rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
+    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* ── Multi-select espèces ─────────────────────────────────────── */
+    .ms-wrap { position:relative; }
+    .ms-trigger {
+      width:100%; box-sizing:border-box; min-height:34px;
+      background:var(--bg-deep); border:1px solid var(--border);
+      border-radius:4px; padding:.3rem .5rem;
+      display:flex; align-items:center; flex-wrap:wrap; gap:.3rem;
+      cursor:pointer; user-select:none; transition:border-color .12s;
+    }
+    .ms-trigger:hover, .ms-trigger.open { border-color:var(--accent); }
+    .ms-placeholder { font-size:.8rem; color:var(--text-faint); }
+    .ms-tag {
+      display:inline-flex; align-items:center; gap:.2rem;
+      background:var(--accent); color:#fff;
+      padding:.1rem .4rem; border-radius:10px; font-size:.72rem; font-weight:500;
+    }
+    .ms-tag-x {
+      background:none; border:none; color:rgba(255,255,255,.8);
+      cursor:pointer; padding:0 .1rem; font-size:.8rem; line-height:1;
+    }
+    .ms-tag-x:hover { color:#fff; }
+    .ms-caret { margin-left:auto; font-size:.65rem; color:var(--text-faint); flex-shrink:0; padding-left:.3rem; }
+    .ms-dropdown {
+      position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.28);
+      display:flex; flex-direction:column; max-height:260px;
+    }
+    .ms-search-wrap { padding:.4rem .5rem; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .ms-search {
+      width:100%; box-sizing:border-box;
+      background:var(--bg-deep); border:1px solid var(--border);
+      color:var(--text-main); border-radius:4px;
+      padding:.28rem .5rem; font-size:.8rem;
+    }
+    .ms-search:focus { outline:none; border-color:var(--accent); }
+    .ms-actions {
+      display:flex; gap:.35rem; padding:.3rem .5rem;
+      border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .ms-action-btn {
+      font-size:.68rem; padding:.15rem .45rem; border-radius:10px;
+      border:1px solid var(--border); cursor:pointer; transition:all .1s;
+      background:transparent; color:var(--text-muted);
+    }
+    .ms-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .ms-list { overflow-y:auto; flex:1; }
+    .ms-item {
+      display:flex; align-items:center; gap:.5rem;
+      padding:.32rem .6rem; cursor:pointer; font-size:.81rem;
+      color:var(--text-main); transition:background .08s;
+    }
+    .ms-item:hover { background:var(--bg-card2); }
+    .ms-item.checked { color:var(--accent); }
+    .ms-item input[type=checkbox] { accent-color:var(--accent); flex-shrink:0; }
+  </style>
 </head>
 <body>
-<div class="app-shell">
-
+<div id="app" class="app-shell">
   <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
+    <div class="header-brand"><span class="brand-name">🐦 PIBIRD</span><span class="brand-sub">Bruxelles</span></div>
     <div class="header-right">
-      <div id="theme-switcher"></div>
-        <div id="lang-switcher"></div>
+      <div class="theme-switcher-wrap">
+        <button v-for="th in themes" :key="th.id" class="theme-btn" :class="{active:theme===th.id}" :data-t="th.id" :title="th.label" @click="setTheme(th.id)"></button>
+      </div>
+      <div class="lang-switcher-wrap">
+        <button v-for="l in langs" :key="l.code" class="lang-btn" :class="{active:lang===l.code}" :title="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
+      </div>
     </div>
   </header>
-
-  <nav class="app-nav"><div id="main-nav"></div></nav>
-
+  <nav class="app-nav"><div id="main-nav">
+    <a v-for="p in navItems" :key="p.id" :href="p.file" class="nav-link" :class="{active:p.active}">
+      <span class="nav-icon">{{p.icon}}</span><span class="nav-label">{{p.label}}</span>
+    </a>
+  </div></nav>
   <main class="app-main">
+    <div class="det-layout">
 
-    <!-- Filtres -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label data-i18n="filter_species"></label>
-        <select class="bird-select" id="f-species" style="min-width:200px;">
-          <option value="">— <span data-i18n="all_species"></span> —</option>
-        </select>
+      <!-- Panneau filtres -->
+      <div class="filter-panel">
+        <div>
+          <span class="fp-label">{{t('filter_species')}}</span>
+          <!-- Multi-select avec recherche -->
+          <div class="ms-wrap" v-click-outside="closeSpDropdown">
+            <!-- Trigger -->
+            <div class="ms-trigger" :class="{open:spDropdownOpen}"
+                 @click="spDropdownOpen=!spDropdownOpen">
+              <span v-if="!fSpecies.length" class="ms-placeholder">— Toutes espèces —</span>
+              <span v-for="s in fSpecies" :key="s" class="ms-tag">
+                {{s}}
+                <button class="ms-tag-x" @click.stop="removeSpecies(s)">×</button>
+              </span>
+              <span class="ms-caret">{{spDropdownOpen?'▲':'▼'}}</span>
+            </div>
+            <!-- Dropdown -->
+            <div v-if="spDropdownOpen" class="ms-dropdown">
+              <div class="ms-search-wrap">
+                <input class="ms-search" type="search"
+                       placeholder="🔍 Rechercher…"
+                       v-model="spSearch" @click.stop>
+              </div>
+              <div class="ms-actions">
+                <button class="ms-action-btn" @click.stop="fSpecies=[]">Tout effacer</button>
+                <button class="ms-action-btn"
+                        @click.stop="fSpecies=filteredSpeciesList.map(s=>s)">
+                  Tout sélect.
+                </button>
+              </div>
+              <div class="ms-list">
+                <label v-for="s in filteredSpeciesList" :key="s"
+                       class="ms-item" :class="{checked:fSpecies.includes(s)}"
+                       @click.stop>
+                  <input type="checkbox" :value="s" v-model="fSpecies">
+                  {{s}}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span class="fp-label">Plage de dates</span>
+          <input type="date" class="fp-date-input" v-model="fDateFrom">
+          <input type="date" class="fp-date-input" v-model="fDateTo" style="margin-bottom:.45rem;">
+          <div class="fp-quick-btns">
+            <button v-for="q in quickDates" :key="q.label" class="fp-quick-btn"
+                    :class="{active:activeQuick===q.label}" @click="applyQuick(q)">{{q.label}}</button>
+          </div>
+        </div>
+        <div>
+          <div class="fp-slider-row">
+            <span class="fp-label" style="margin:0;">{{t('filter_confidence')}}</span>
+            <!-- Valeur cliquable → input éditable -->
+            <span v-if="!confEditing" class="fp-slider-val"
+                  style="cursor:pointer;text-decoration:underline dotted;"
+                  :title="'Cliquer pour saisir une valeur'"
+                  @click="startConfEdit">{{Math.round(fConf*100)}}%</span>
+            <input v-else type="number" min="0" max="100" step="1"
+                   v-model.number="confEditVal"
+                   @keydown.enter="commitConfEdit"
+                   @blur="commitConfEdit"
+                   @keydown.escape="confEditing=false"
+                   style="width:52px;font-size:.8rem;font-family:monospace;font-weight:600;
+                          color:var(--accent);background:var(--bg-deep);
+                          border:1px solid var(--accent);border-radius:4px;
+                          padding:.1rem .3rem;text-align:right;"
+                   ref="confInput">
+          </div>
+          <input type="range" min="0" max="1" step="0.01" v-model.number="fConf"
+                 :style="'background:linear-gradient(to right,var(--accent) '+fConf*100+'%,var(--bg-deep) '+fConf*100+'%)'">
+          <div class="fp-slider-marks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+        </div>
+        <div>
+          <span class="fp-label">Mode</span>
+          <div class="fp-toggle-row" @click="uniqueMode=!uniqueMode">
+            <div>
+              <div class="fp-toggle-label">Unique</div>
+              <div class="fp-toggle-sub">Regroupe les séquences consécutives</div>
+            </div>
+            <div class="fp-toggle" :class="{on:uniqueMode}"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;" @click="applyFilters">{{t('apply_filter')}}</button>
+        <button class="btn btn-secondary" style="width:100%;margin-top:-.4rem;" @click="resetFilters">{{t('reset_filter')}}</button>
       </div>
-      <div class="filter-group">
-        <label data-i18n="filter_date_from"></label>
-        <input type="date" class="bird-input" id="f-date-from">
-      </div>
-      <div class="filter-group">
-        <label data-i18n="filter_date_to"></label>
-        <input type="date" class="bird-input" id="f-date-to">
-      </div>
-      <div class="filter-group">
-        <label data-i18n="filter_confidence"></label>
-        <select class="bird-select" id="f-conf">
-          <option value="0">0%</option>
-          <option value="0.5">50%</option>
-          <option value="0.7" selected>70%</option>
-          <option value="0.8">80%</option>
-          <option value="0.9">90%</option>
-        </select>
-      </div>
-      <div class="filter-group" style="justify-content:flex-end; flex-direction:row; gap:.4rem; align-self:flex-end;">
-        <button class="btn btn-primary" onclick="applyFilters()" data-i18n="apply_filter"></button>
-        <button class="btn btn-secondary" onclick="resetFilters()" data-i18n="reset_filter"></button>
+
+      <!-- Contenu -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:.82rem;color:var(--text-muted);">
+          <span>
+            {{displayTotal.toLocaleString()}} {{t('results')}}
+            <span v-if="uniqueMode" style="font-size:.72rem;color:var(--accent);margin-left:.4rem;">✦ Unique</span>
+          </span>
+          <span v-if="!uniqueMode">{{t('page')}} {{page}} {{t('of')}} {{totalPages}}</span>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div v-if="loading" class="spinner" style="padding:3rem;"><div></div><div></div><div></div></div>
+          <div v-else-if="!displayRows.length" class="error-msg" style="padding:2rem;">{{t('no_data')}}</div>
+          <table v-else class="bird-table">
+            <thead><tr>
+              <th style="width:44px;"></th>
+              <th style="width:36px;"></th>
+              <th style="width:28px;"></th>
+              <th style="width:100px;">{{t('date')}}</th>
+              <th style="width:70px;">{{t('time')}}</th>
+              <th>{{t('species_name')}}</th>
+              <th class="hide-sm">{{t('scientific_name')}}</th>
+              <th style="width:90px;">{{t('confidence')}}</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="d in displayRows" :key="d._key">
+                <td style="padding:.3rem .4rem;">
+                  <img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
+                  <div v-else class="det-thumb-ph">🐦</div>
+                </td>
+                <td>
+                  <button v-if="d.File_Name" class="play-btn" :class="{playing:playingFile===d.File_Name}"
+                          @click="toggleAudio(d.File_Name)" :title="t('play')">▶</button>
+                  <span v-else style="width:28px;display:inline-block;"></span>
+                </td>
+                <!-- Download -->
+                <td>
+                  <a v-if="d.File_Name"
+                     :href="buildAudioUrl(d.File_Name)"
+                     :download="d.Com_Name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+d.Date+'_'+d.Time.substring(0,5).replace(':','')+'.mp3'"
+                     class="dl-btn" title="Télécharger" @click.stop>⬇</a>
+                </td>
+                <td style="font-size:.8rem;color:var(--text-muted);">{{fmtDate(d.Date)}}</td>
+                <td style="font-family:monospace;font-size:.8rem;">{{fmtTime(d.Time)}}</td>
+                <td>
+                  <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">{{d.Com_Name}}</a>
+                  <span v-if="uniqueMode && d._count>1" class="det-count-badge">×{{d._count}}</span>
+                </td>
+                <td class="hide-sm" style="font-style:italic;font-size:.8rem;color:var(--text-muted);">{{d.Sci_Name}}</td>
+                <td>
+                  <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
+                    {{fmtConf(d.Confidence)}}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" v-if="!uniqueMode && totalPages>1">
+          <button class="btn btn-secondary" :disabled="page<=1" @click="goPage(page-1)">{{t('prev_page')}}</button>
+          <template v-for="p in paginationPages" :key="p">
+            <span v-if="p==='…'" style="color:var(--text-faint)">…</span>
+            <button v-else class="btn" :class="p===page?'btn-primary':'btn-secondary'" @click="goPage(p)">{{p}}</button>
+          </template>
+          <button class="btn btn-secondary" :disabled="page>=totalPages" @click="goPage(page+1)">{{t('next_page')}}</button>
+        </div>
       </div>
     </div>
-
-    <!-- Résumé résultats -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem; font-size:.82rem; color:var(--text-muted);">
-      <span id="result-summary"></span>
-      <span id="page-info"></span>
-    </div>
-
-    <!-- Table détections -->
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div id="det-table-wrap">
-        <div class="spinner" style="padding:3rem;"><div></div><div></div><div></div></div>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div class="pagination" id="pagination"></div>
-
   </main>
 </div>
 
-<script src="bird-config.js"></script>
-<script src="bird-i18n.js"></script>
-<script src="bird-core.js"></script>
 <script>
-// ── État ─────────────────────────────────────────────────────────────────────
-let state = {
-  species:  '',
-  dateFrom: '',
-  dateTo:   localDateStr(),
-  conf:     BIRD_CONFIG.defaultConfidence,
-  page:     1,
-  total:    0,
+const { createApp, ref, computed, watch, onMounted } = Vue;
+const { useI18n, useTheme, useNav, useAudio,
+        birdQuery, fmtDate, fmtTime, fmtConf,
+        localDateStr, daysAgo, getUrlParam, navigateTo,
+        fetchCachedPhoto, buildAudioUrl } = PIBIRD;
+
+// Directive v-click-outside pour fermer le dropdown
+const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutsideHandler = e => { if (!el.contains(e.target)) binding.value(e); };
+    document.addEventListener('click', el._clickOutsideHandler);
+  },
+  unmounted(el) { document.removeEventListener('click', el._clickOutsideHandler); },
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-  initPage('detections');
-  applyI18n();
+createApp({
+  directives: { 'click-outside': vClickOutside },
+  setup() {
+    const { lang, t, setLang, langs } = useI18n();
+    const { theme, themes, setTheme } = useTheme();
+    const { navItems }                = useNav('detections');
+    const { playingFile, toggleAudio }= useAudio();
 
-  // Pré-remplir depuis URL params
-  const sp = getUrlParam('species');
-  const dt = getUrlParam('date');
-  if (sp) state.species = sp;
-  if (dt) { state.dateFrom = dt; state.dateTo = dt; }
+    const PS = BIRD_CONFIG.pageSize;
 
-  // Date par défaut : 30 derniers jours
-  if (!state.dateFrom) state.dateFrom = daysAgo(BIRD_CONFIG.recentDays);
+    // fSpecies est maintenant un tableau (multi-select)
+    const fSpecies    = ref([]);
+    const fDateFrom   = ref(daysAgo(BIRD_CONFIG.recentDays));
+    const fDateTo     = ref(localDateStr());
+    const fConf       = ref(BIRD_CONFIG.defaultConfidence);
+    const uniqueMode  = ref(false);
+    const activeQuick = ref('');
+    const speciesList = ref([]);
 
-  document.getElementById('f-date-from').value = state.dateFrom;
-  document.getElementById('f-date-to').value   = state.dateTo;
-  document.getElementById('f-conf').value       = state.conf;
+    // Édition directe de la valeur de confiance
+    const confEditing  = ref(false);
+    const confEditVal  = ref(70);
+    const confInput    = ref(null);
 
-  await loadSpeciesList();
-  if (sp) document.getElementById('f-species').value = sp;
-
-  await loadDetections();
-});
-
-document.addEventListener('langchange', applyI18n);
-
-function applyI18n() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    el.textContent = t(el.dataset.i18n);
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    el.placeholder = t(el.dataset['i18n-placeholder']);
-  });
-}
-
-// ── Liste espèces pour le select ──────────────────────────────────────────────
-async function loadSpeciesList() {
-  try {
-    const rows = await birdQuery(
-      `SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`
-    );
-    const sel = document.getElementById('f-species');
-    sel.innerHTML = `<option value="">— ${t('all_species')} —</option>` +
-      rows.map(r => `<option value="${r.Com_Name}">${r.Com_Name}</option>`).join('');
-  } catch(e) { console.error('species list error:', e); }
-}
-
-// ── Chargement détections ─────────────────────────────────────────────────────
-async function loadDetections() {
-  const wrap = document.getElementById('det-table-wrap');
-  wrap.innerHTML = `<div class="spinner" style="padding:3rem;"><div></div><div></div><div></div></div>`;
-
-  try {
-    // WHERE clause dynamique
-    const wheres = ['1=1'];
-    const params = [];
-
-    if (state.species) {
-      wheres.push('Com_Name = ?');
-      params.push(state.species);
+    function startConfEdit() {
+      confEditVal.value = Math.round(fConf.value * 100);
+      confEditing.value = true;
+      Vue.nextTick(() => confInput.value?.select());
     }
-    if (state.dateFrom) {
-      wheres.push('Date >= ?');
-      params.push(state.dateFrom);
-    }
-    if (state.dateTo) {
-      wheres.push('Date <= ?');
-      params.push(state.dateTo);
-    }
-    if (state.conf > 0) {
-      wheres.push('Confidence >= ?');
-      params.push(state.conf);
+    function commitConfEdit() {
+      const v = Math.max(0, Math.min(100, Math.round(confEditVal.value || 0)));
+      fConf.value = v / 100;
+      confEditing.value = false;
     }
 
-    const where = wheres.join(' AND ');
-    const offset = (state.page - 1) * BIRD_CONFIG.pageSize;
+    // Multi-select state
+    const spSearch       = ref('');
+    const spDropdownOpen = ref(false);
+    function closeSpDropdown() { spDropdownOpen.value = false; }
+    function removeSpecies(s) { fSpecies.value = fSpecies.value.filter(x => x !== s); }
 
-    // Total
-    const [countRow] = await birdQuery(
-      `SELECT COUNT(*) as n FROM detections WHERE ${where}`, params
-    );
-    state.total = countRow ? countRow.n : 0;
+    const filteredSpeciesList = computed(() => {
+      const q = spSearch.value.toLowerCase();
+      if (!q) return speciesList.value;
+      return speciesList.value.filter(s => s.toLowerCase().includes(q));
+    });
 
-    // Données
-    const rows = await birdQuery(
-      `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
-       FROM detections WHERE ${where}
-       ORDER BY Date DESC, Time DESC
-       LIMIT ? OFFSET ?`,
-      [...params, BIRD_CONFIG.pageSize, offset]
-    );
+    const quickDates = [
+      { label:'1j',   from:()=>localDateStr(), to:()=>localDateStr() },
+      { label:'7j',   from:()=>daysAgo(6),   to:()=>localDateStr() },
+      { label:'30j',  from:()=>daysAgo(29),  to:()=>localDateStr() },
+      { label:'90j',  from:()=>daysAgo(89),  to:()=>localDateStr() },
+      { label:'1an',  from:()=>daysAgo(364), to:()=>localDateStr() },
+      { label:'Tout', from:()=>'',           to:()=>''             },
+    ];
 
-    renderTable(rows);
-    renderSummary();
-    renderPagination();
+    function applyQuick(q) {
+      fDateFrom.value = q.from();
+      fDateTo.value   = q.to();
+      activeQuick.value = q.label;
+      applyFilters();
+    }
 
-  } catch(e) {
-    wrap.innerHTML = `<div class="error-msg">⚠ ${e.message}</div>`;
+    const page    = ref(1);
+    const total   = ref(0);
+    const rows    = ref([]);
+    const loading = ref(true);
+    const allUniqueRows = ref([]);
+
+    const totalPages = computed(() => Math.ceil(total.value / PS));
+
+    const paginationPages = computed(() => {
+      const tp=totalPages.value, p=page.value;
+      const set=new Set([1,tp,p]);
+      for(let i=Math.max(1,p-2);i<=Math.min(tp,p+2);i++) set.add(i);
+      const sorted=[...set].sort((a,b)=>a-b);
+      const result=[]; let prev=0;
+      sorted.forEach(n=>{if(n-prev>1)result.push('…');result.push(n);prev=n;});
+      return result;
+    });
+
+    const uniqueRows = computed(() => {
+      const src = allUniqueRows.value;
+      if (!src.length) return [];
+      const out = [];
+      let cur = { ...src[0], _count:1, _key:src[0].Date+src[0].Time+src[0].Com_Name+'0' };
+      for (let i=1; i<src.length; i++) {
+        if (src[i].Com_Name === cur.Com_Name) {
+          cur._count++;
+          if (parseFloat(src[i].Confidence) > parseFloat(cur.Confidence)) {
+            cur.Confidence = src[i].Confidence;
+            cur.File_Name  = src[i].File_Name;
+          }
+        } else {
+          out.push(cur);
+          cur = { ...src[i], _count:1, _key:src[i].Date+src[i].Time+src[i].Com_Name+out.length };
+        }
+      }
+      out.push(cur);
+      return out;
+    });
+
+    const displayRows  = computed(() => uniqueMode.value ? uniqueRows.value : rows.value);
+    const displayTotal = computed(() => uniqueMode.value ? uniqueRows.value.length : total.value);
+
+    async function loadSpecies() {
+      try {
+        const r = await birdQuery(`SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`);
+        speciesList.value = r.map(x => x.Com_Name);
+      } catch(e) {}
+    }
+
+    function buildWhere() {
+      const wheres=['1=1'], params=[];
+      // Multi-select : IN (?,?,?) si plusieurs, = ? si une seule
+      if (fSpecies.value.length === 1) {
+        wheres.push('Com_Name=?'); params.push(fSpecies.value[0]);
+      } else if (fSpecies.value.length > 1) {
+        wheres.push(`Com_Name IN (${fSpecies.value.map(()=>'?').join(',')})`);
+        params.push(...fSpecies.value);
+      }
+      if (fDateFrom.value) { wheres.push('Date>=?');       params.push(fDateFrom.value); }
+      if (fDateTo.value)   { wheres.push('Date<=?');       params.push(fDateTo.value); }
+      if (fConf.value > 0) { wheres.push('Confidence>=?'); params.push(fConf.value); }
+      return { where:wheres.join(' AND '), params };
+    }
+
+    async function loadDetections() {
+      loading.value = true;
+      spDropdownOpen.value = false; // fermer dropdown à chaque chargement
+      try {
+        const { where, params } = buildWhere();
+        if (uniqueMode.value) {
+          const data = await birdQuery(
+            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name
+             FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT 5000`,
+            params
+          );
+          data.forEach((r,i) => { r._key=r.Date+r.Time+r.Com_Name+i; r._count=1; });
+          allUniqueRows.value = data;
+          total.value = data.length;
+          loadPhotos(data);
+        } else {
+          const [cnt] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE ${where}`, params);
+          total.value = cnt ? cnt.n : 0;
+          const data = await birdQuery(
+            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name
+             FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT ? OFFSET ?`,
+            [...params, PS, (page.value-1)*PS]
+          );
+          data.forEach(r => { r._key = r.Date+r.Time+(r.File_Name||r.Com_Name); });
+          rows.value = data;
+          loadPhotos(data);
+        }
+      } catch(e) { rows.value=[]; allUniqueRows.value=[]; }
+      loading.value = false;
+    }
+
+    async function loadPhotos(data) {
+      const seen=new Set();
+      const tasks=data.filter(r => {
+        if (!r.Sci_Name || seen.has(r.Sci_Name)) return false;
+        seen.add(r.Sci_Name); return true;
+      });
+      for (let i=0; i<tasks.length; i+=5) {
+        await Promise.all(tasks.slice(i,i+5).map(async r => {
+          const url = await fetchCachedPhoto(r.Sci_Name);
+          data.forEach(d => { if (d.Sci_Name===r.Sci_Name) d.photoUrl=url; });
+        }));
+        // Forcer Vue à recalculer uniqueRows (les spreads {...src[i]} ne voient pas
+        // les mutations postérieures sur les objets originaux)
+        if (uniqueMode.value) {
+          allUniqueRows.value = [...allUniqueRows.value];
+        }
+      }
+    }
+
+    function applyFilters() { page.value=1; loadDetections(); }
+    function resetFilters() {
+      fSpecies.value=[]; fDateFrom.value=daysAgo(BIRD_CONFIG.recentDays);
+      fDateTo.value=localDateStr(); fConf.value=BIRD_CONFIG.defaultConfidence;
+      uniqueMode.value=false; activeQuick.value=''; spSearch.value='';
+      page.value=1; loadDetections();
+    }
+    function goPage(p) { page.value=p; window.scrollTo(0,0); loadDetections(); }
+
+    watch(uniqueMode, () => { page.value=1; loadDetections(); });
+    watch(lang, () => loadDetections());
+
+    onMounted(async () => {
+      const sp=getUrlParam('species'), dt=getUrlParam('date');
+      // Navigation depuis une autre page → pré-sélectionner l'espèce
+      if (sp) fSpecies.value=[decodeURIComponent(sp)];
+      if (dt) { fDateFrom.value=dt; fDateTo.value=dt; }
+      await loadSpecies();
+      await loadDetections();
+    });
+
+    return {
+      lang,t,setLang,langs,theme,themes,setTheme,navItems,
+      fSpecies,fDateFrom,fDateTo,fConf,uniqueMode,
+      activeQuick,quickDates,applyQuick,speciesList,
+      spSearch,spDropdownOpen,filteredSpeciesList,
+      closeSpDropdown,removeSpecies,
+      confEditing,confEditVal,confInput,startConfEdit,commitConfEdit,
+      page,total,rows,loading,totalPages,paginationPages,
+      displayRows,displayTotal,
+      playingFile,toggleAudio, buildAudioUrl,
+      fmtDate,fmtTime,fmtConf,navigateTo,
+      applyFilters,resetFilters,goPage,
+    };
   }
-}
-
-// ── Rendu table ───────────────────────────────────────────────────────────────
-function renderTable(rows) {
-  const wrap = document.getElementById('det-table-wrap');
-
-  if (!rows.length) {
-    wrap.innerHTML = `<div class="error-msg" style="padding:2rem;">${t('no_data')}</div>`;
-    return;
-  }
-
-  wrap.innerHTML = `
-    <table class="bird-table">
-      <thead>
-        <tr>
-          <th style="width:36px;"></th>
-          <th data-i18n="date" style="width:100px;">${t('date')}</th>
-          <th data-i18n="time" style="width:70px;">${t('time')}</th>
-          <th data-i18n="species_name">${t('species_name')}</th>
-          <th data-i18n="scientific_name" class="hide-sm">${t('scientific_name')}</th>
-          <th data-i18n="confidence" style="width:90px;">${t('confidence')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(d => renderRow(d)).join('')}
-      </tbody>
-    </table>`;
-}
-
-function renderRow(d) {
-  const conf     = parseFloat(d.Confidence);
-  const confClass = conf >= 0.8 ? 'conf-high' : conf >= 0.6 ? 'conf-mid' : 'conf-low';
-  const audioUrl  = d.File_Name ? buildAudioUrl(d.File_Name) : null;
-  const safeFile  = d.File_Name ? d.File_Name.replace(/'/g,"&#39;") : '';
-
-  const playBtn = audioUrl
-    ? `<button class="play-btn"
-               onclick="toggleAudio('${safeFile}', this)"
-               title="${t('play')}">▶</button>`
-    : `<span style="width:28px;display:inline-block;"></span>`;
-
-  return `<tr>
-    <td>${playBtn}</td>
-    <td style="font-size:.8rem; color:var(--text-muted);">${fmtDate(d.Date)}</td>
-    <td style="font-family:monospace; font-size:.8rem;">${fmtTime(d.Time)}</td>
-    <td>
-      <a class="species-link"
-         onclick="navigateTo('especes.html',{species:'${encodeURIComponent(d.Com_Name)}'})">
-        ${d.Com_Name}
-      </a>
-    </td>
-    <td class="hide-sm" style="font-style:italic; font-size:.8rem; color:var(--text-muted);">
-      ${d.Sci_Name || ''}
-    </td>
-    <td><span class="conf-badge ${confClass}">${fmtConf(d.Confidence)}</span></td>
-  </tr>`;
-}
-
-// ── Résumé & pagination ────────────────────────────────────────────────────────
-function renderSummary() {
-  const totalPages = Math.ceil(state.total / BIRD_CONFIG.pageSize);
-  document.getElementById('result-summary').textContent =
-    `${state.total.toLocaleString()} ${t('results')}`;
-  document.getElementById('page-info').textContent =
-    `${t('page')} ${state.page} ${t('of')} ${totalPages}`;
-}
-
-function renderPagination() {
-  const totalPages = Math.ceil(state.total / BIRD_CONFIG.pageSize);
-  const pag = document.getElementById('pagination');
-
-  if (totalPages <= 1) { pag.innerHTML = ''; return; }
-
-  // Pages à afficher : ±2 autour de la page courante
-  const pages = new Set([1, totalPages, state.page]);
-  for (let i = Math.max(1, state.page-2); i <= Math.min(totalPages, state.page+2); i++) pages.add(i);
-  const sorted = [...pages].sort((a,b) => a-b);
-
-  let html = `<button class="btn btn-secondary" ${state.page<=1?'disabled':''} onclick="goPage(${state.page-1})">${t('prev_page')}</button>`;
-
-  let prev = 0;
-  sorted.forEach(p => {
-    if (p - prev > 1) html += `<span style="color:var(--text-faint)">…</span>`;
-    html += `<button class="btn ${p===state.page?'btn-primary':'btn-secondary'}" onclick="goPage(${p})">${p}</button>`;
-    prev = p;
-  });
-
-  html += `<button class="btn btn-secondary" ${state.page>=totalPages?'disabled':''} onclick="goPage(${state.page+1})">${t('next_page')}</button>`;
-
-  pag.innerHTML = html;
-}
-
-// ── Actions ───────────────────────────────────────────────────────────────────
-function applyFilters() {
-  state.species  = document.getElementById('f-species').value;
-  state.dateFrom = document.getElementById('f-date-from').value;
-  state.dateTo   = document.getElementById('f-date-to').value;
-  state.conf     = parseFloat(document.getElementById('f-conf').value);
-  state.page     = 1;
-  loadDetections();
-}
-
-function resetFilters() {
-  state.species  = '';
-  state.dateFrom = daysAgo(BIRD_CONFIG.recentDays);
-  state.dateTo   = localDateStr();
-  state.conf     = BIRD_CONFIG.defaultConfidence;
-  state.page     = 1;
-  document.getElementById('f-species').value   = '';
-  document.getElementById('f-date-from').value = state.dateFrom;
-  document.getElementById('f-date-to').value   = state.dateTo;
-  document.getElementById('f-conf').value      = state.conf;
-  loadDetections();
-}
-
-function goPage(p) {
-  state.page = p;
-  window.scrollTo(0, 0);
-  loadDetections();
-}
+}).mount('#app');
 </script>
-
-<style>
-@media (max-width: 640px) { .hide-sm { display: none; } }
-</style>
 </body>
 </html>

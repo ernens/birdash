@@ -1,0 +1,40 @@
+/**
+ * pibird-local.js — Configuration locale PIBIRD
+ * ─────────────────────────────────────────────
+ * Ce fichier contient les paramètres spécifiques à ton installation.
+ * Il N'est PAS versionné (ajouté à .gitignore).
+ *
+ * Copier ce fichier sur le Pi :
+ *   cp pibird-local.example.js pibird-local.js
+ * et remplir les valeurs ci-dessous.
+ */
+
+const PIBIRD_LOCAL = {
+
+  // ── Localisation ──────────────────────────────────────────────────
+  location: {
+    name: 'My Location',      // Affiché dans l'en-tête
+    lat:   48.8566,            // Latitude (ex: 48.8566 pour Paris)
+    lon:   2.3522,             // Longitude (ex: 2.3522 pour Paris)
+    country: 'FR',             // Code pays ISO 3166-1 alpha-2 (pour eBird)
+    region:  'FR',             // Code région eBird (ex: BE, BE-BRU, FR-75…)
+  },
+
+  // ── Clés API externes ─────────────────────────────────────────────
+  // eBird API — clé gratuite sur https://ebird.org/api/keygen
+  ebirdApiKey: 'YOUR_EBIRD_API_KEY',
+
+  // BirdWeather — ID de ta station (visible dans l'URL app.birdweather.com/stations/XXXX)
+  birdweatherStationId: '',
+
+  // ── Paramètres analyse ────────────────────────────────────────────
+  defaultConfidence: 0.7,   // Seuil de confiance par défaut (0–1)
+  rarityThreshold:   10,    // Espèce rare si < N détections au total
+
+  // ── Nom du site (affiché dans le header) ─────────────────────────
+  siteName: 'My Station',
+
+};
+
+// Ne pas modifier — chargé par bird-config.js et bird-server.js
+if (typeof module !== 'undefined') module.exports = PIBIRD_LOCAL;

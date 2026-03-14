@@ -63,6 +63,20 @@
 
   <main class="app-main">
 
+    <!-- Barre de période -->
+    <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Période</span>
+      <div style="display:flex;flex-wrap:nowrap;gap:.25rem;">
+        <button v-for="q in quickDates" :key="q.label"
+                style="font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap;"
+                :style="activePeriod===q.label?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
+                @click="setPeriod(q)">{{q.label}}</button>
+      </div>
+      <span style="font-size:.75rem;color:var(--text-faint);margin-left:.5rem;">
+        {{fDateFrom || '…'}} → {{fDateTo || t('today')}}
+      </span>
+    </div>
+
     <!-- Richesse journalière -->
     <div class="card" style="margin-bottom:1rem;">
       <div class="card-title">{{t('richness_per_day')}}</div>
@@ -133,6 +147,23 @@ createApp({
     const canvasRichness = ref(null);
     const CONF = BIRD_CONFIG.defaultConfidence;
 
+    // Période filtre
+    const fDateFrom   = ref(daysAgo(89));
+    const fDateTo     = ref(localDateStr());
+    const activePeriod= ref('90j');
+
+    const quickDates = [
+      { label:'7j',   from:()=>daysAgo(6),    to:()=>localDateStr(), days:7   },
+      { label:'30j',  from:()=>daysAgo(29),   to:()=>localDateStr(), days:30  },
+      { label:'90j',  from:()=>daysAgo(89),   to:()=>localDateStr(), days:90  },
+      { label:'1an',  from:()=>daysAgo(364),  to:()=>localDateStr(), days:365 },
+      { label:'Tout', from:()=>'',            to:()=>'',             days:0   },
+    ];
+    function setPeriod(q) {
+      fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=q.label;
+      loadAll();
+    }
+
     const richnessData = ref(null);
     const heatmap  = ref({ loading:true, error:null, html:'' });
     const monthly  = ref({ loading:true, rows:[] });
@@ -146,10 +177,11 @@ createApp({
 
     async function loadRichnessData() {
       try {
+        const from = fDateFrom.value || daysAgo(364);
         const rows = await birdQuery(
           `SELECT Date, COUNT(DISTINCT Com_Name) as sp, COUNT(*) as det
-           FROM detections WHERE Date>=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC`,
-          [daysAgo(89), CONF]);
+           FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC`,
+          [from, fDateTo.value || localDateStr(), CONF]);
         richnessData.value = rows;
       } catch(e) {}
     }
@@ -157,10 +189,11 @@ createApp({
     async function loadHeatmap() {
       heatmap.value.loading = true;
       try {
+        const from = fDateFrom.value || daysAgo(364);
         const rows = await birdQuery(
           `SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as hour, CAST(strftime('%w',Date) AS INTEGER) as dow, COUNT(*) as n
-           FROM detections WHERE Date>=? AND Confidence>=? GROUP BY hour,dow`,
-          [daysAgo(89), CONF]);
+           FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY hour,dow`,
+          [from, fDateTo.value || localDateStr(), CONF]);
         const grid = Array.from({length:7}, ()=>Array(24).fill(0));
         let maxVal = 0;
         rows.forEach(r => { grid[r.dow][r.hour]=r.n; if(r.n>maxVal) maxVal=r.n; });
@@ -224,13 +257,18 @@ createApp({
       if (!d || !canvasRichness.value) return;
       const map={};
       d.forEach(r=>{map[r.Date]=r;});
+      // Construire les labels sur la plage réelle
+      const from = new Date(fDateFrom.value || daysAgo(364));
+      const to   = new Date(fDateTo.value   || localDateStr());
+      const days = Math.round((to-from)/86400000);
       const labels=[],spData=[],detData=[];
-      for(let i=89;i>=0;i--) {
-        const date=PIBIRD.daysAgo(i);
-        const mo=t('months_short')[new Date(date).getMonth()];
-        labels.push(`${new Date(date).getDate()} ${mo}`);
-        spData.push(map[date]?map[date].sp:0);
-        detData.push(map[date]?map[date].det:0);
+      for(let i=days;i>=0;i--) {
+        const d2=new Date(to); d2.setDate(d2.getDate()-i);
+        const ds=d2.toISOString().split('T')[0];
+        const mo=t('months_short')[d2.getMonth()];
+        labels.push(`${d2.getDate()} ${mo}`);
+        spData.push(map[ds]?map[ds].sp:0);
+        detData.push(map[ds]?map[ds].det:0);
       }
       const base=chartDefaults();
       mountRichness(canvasRichness, ()=>({
@@ -256,6 +294,7 @@ createApp({
       lang, t, setLang, langs, theme, themes, setTheme, navItems,
       heatmap, monthly, matrix,
       canvasRichness,
+      fDateFrom, fDateTo, activePeriod, quickDates, setPeriod,
       chartColor, navigateTo,
     };
   }

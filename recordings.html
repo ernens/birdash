@@ -137,9 +137,10 @@
 
     /* Bouton spectrogramme */
     .rec-spectro-btn {
-      padding: .25rem .6rem; font-size: .72rem; border-radius: 5px;
+      padding: .25rem .5rem; font-size: .9rem; border-radius: 5px;
       border: 1px solid var(--border); background: transparent;
-      color: var(--text-muted); cursor: pointer; transition: all .1s; flex-shrink: 0;
+      color: var(--text-muted); cursor: pointer; transition: all .1s;
+      flex-shrink: 0; width: 32px; text-align: center;
     }
     .rec-spectro-btn:hover, .rec-spectro-btn.open { background: var(--bg-card2); color: var(--text-main); border-color: var(--accent); }
 
@@ -195,6 +196,8 @@
       color: var(--text-muted); text-decoration: none; transition: all .1s;
     }
     .rec-link:hover { border-color: var(--accent); background: var(--bg-card2); }
+    .dl-btn { font-size:.8rem; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:5px; border:1px solid var(--border); color:var(--text-muted); text-decoration:none; transition:all .1s; flex-shrink:0; }
+    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
     .rec-empty {
       grid-column: 1/-1; text-align: center; padding: 3rem;
       color: var(--text-faint); font-size: .9rem;
@@ -235,7 +238,7 @@
   <main class="app-main">
 
     <!-- ── Titre + tri global ────────────────────────────────────── -->
-    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
       <h2 style="margin:0;font-size:1.1rem;">🏆 Meilleurs enregistrements</h2>
       <div class="filter-sort" style="margin-left:auto;">
         <label>Trier par</label>
@@ -245,14 +248,12 @@
           <option value="species">Espèce A→Z</option>
         </select>
       </div>
-      <div class="filter-sort">
-        <label>Période</label>
-        <select class="bird-select" v-model="period" style="padding:.3rem .6rem;font-size:.78rem;">
-          <option value="today">Aujourd'hui</option>
-          <option value="7">7 derniers jours</option>
-          <option value="30">30 jours</option>
-          <option value="all">Tout</option>
-        </select>
+      <!-- Presets période uniforme -->
+      <div style="display:flex;flex-wrap:nowrap;gap:.25rem;">
+        <button v-for="q in recQuickDates" :key="q.label"
+                style="font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap;flex-shrink:0;"
+                :style="period===q.val ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''"
+                @click="period=q.val">{{q.label}}</button>
       </div>
       <span style="font-size:.78rem;color:var(--text-faint);">
         {{filteredRecs.length}} enregistrement{{filteredRecs.length!==1?'s':''}}
@@ -299,9 +300,8 @@
             <!-- Photo espèce -->
             <div class="rec-photo" style="position:relative;">
               <img v-if="rec.imgUrl" :src="rec.imgUrl" class="rec-photo-img"
-                   :alt="rec.Com_Name" @error="rec.imgUrl=null">
+                   :alt="rec.Com_Name" @error="onPhotoError(rec)">
               <div v-else class="rec-photo-placeholder">🐦</div>
-              <span v-if="rec.imgSrc" class="rec-photo-src">{{rec.imgSrc}}</span>
             </div>
 
             <!-- Noms + confiance -->
@@ -334,10 +334,15 @@
                      :style="{width: playingUid===rec.uid ? progress+'%' : '0%'}"></div>
               </div>
               <span class="rec-duration">{{rec.durationStr||''}}</span>
+              <a v-if="rec.File_Name"
+                 :href="dlUrl(rec)"
+                 :download="dlName(rec)"
+                 class="dl-btn" title="Télécharger l'audio">⬇</a>
               <button class="rec-spectro-btn"
                       :class="{open: spectroUid===rec.uid}"
+                      :title="spectroUid===rec.uid ? 'Fermer spectrogramme' : 'Afficher spectrogramme'"
                       @click="toggleSpectro(rec)">
-                📊 Spectro
+                📊
               </button>
             </div>
 
@@ -354,6 +359,47 @@
               <div v-if="spectroLoading===rec.uid" class="rec-spectro-loading">
                 ⏳ Analyse FFT…
               </div>
+              <!-- Badge CLEAN sur le spectrogramme -->
+              <div v-if="cleanState[rec.uid]?.mode"
+                   style="position:absolute;top:5px;right:36px;z-index:3;
+                          background:rgba(90,158,58,.9);color:#fff;font-size:.6rem;
+                          font-weight:700;padding:.12rem .4rem;border-radius:3px;
+                          letter-spacing:.06em;pointer-events:none;">
+                ✨ CLEAN
+              </div>
+            </div>
+
+            <!-- Contrôles nettoyage — visibles uniquement quand spectro ouvert + PCM chargé -->
+            <div v-if="spectroUid===rec.uid && cleanState[rec.uid]"
+                 style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+                        padding:.4rem .75rem;border-top:1px solid var(--border);
+                        background:var(--bg-deep);">
+              <button @click="toggleClean(rec)"
+                      :disabled="cleanState[rec.uid]?.processing"
+                      style="white-space:nowrap;padding:.22rem .7rem;border-radius:var(--radius);
+                             font-size:.74rem;font-weight:600;border:1px solid;cursor:pointer;
+                             transition:background .15s,color .15s;"
+                      :style="cleanState[rec.uid]?.mode
+                        ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
+                        : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+                <span v-if="cleanState[rec.uid]?.processing">⏳ Nettoyage…</span>
+                <span v-else-if="cleanState[rec.uid]?.mode">✨ Nettoyé</span>
+                <span v-else>🎛 Nettoyer le son</span>
+              </button>
+              <template v-if="cleanState[rec.uid]?.mode && !cleanState[rec.uid]?.processing">
+                <span style="font-size:.72rem;color:var(--text-muted);">Force</span>
+                <input type="range" min="0.2" max="1.0" step="0.05"
+                       :value="cleanState[rec.uid]?.strength ?? 0.75"
+                       @change="e => { cleanState[rec.uid].strength=parseFloat(e.target.value); reapplyClean(rec); }"
+                       style="flex:1;min-width:70px;accent-color:var(--accent);">
+                <span style="font-size:.72rem;font-family:monospace;color:var(--accent);min-width:32px;">
+                  {{Math.round((cleanState[rec.uid]?.strength ?? 0.75)*100)}}%
+                </span>
+              </template>
+              <span v-if="!cleanState[rec.uid]?.mode"
+                    style="font-size:.68rem;color:var(--text-faint);">
+                filtre passe-haut + soustraction spectrale
+              </span>
             </div>
 
             <!-- Pied de carte : bouton Détails + liens externes -->
@@ -440,7 +486,7 @@ async function fetchAndDraw(url, canvas) {
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const audioBuf = await audioCtx.decodeAudioData(arrBuf);
   await audioCtx.close();
-  const pcm = audioBuf.getChannelData(0);
+  const pcm = audioBuf.getChannelData(0).slice(); // copie — évite detach
   const sr  = audioBuf.sampleRate;
 
   const FFT = 512, HOP = 128, HALF = FFT/2;
@@ -482,42 +528,76 @@ async function fetchAndDraw(url, canvas) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  return audioBuf.duration;
+  return { duration: audioBuf.duration, pcm, sr };
 }
 
-// ── iNaturalist photo (+ Wikipedia fallback) ──────────────────────────────────
-// taxon_name= : correspondance exacte nom scientifique (pas de recherche textuelle)
-// iconic_taxon_name=Aves : contraint aux oiseaux
-async function fetchPhoto(sciName) {
-  if (!sciName) return { url: null, src: null };
-  // 1. iNaturalist — exact species match dans la classe Aves
-  try {
-    const tn  = encodeURIComponent(sciName);
-    const res = await fetch(
-      `https://api.inaturalist.org/v1/taxa?taxon_name=${tn}&rank=species&iconic_taxon_name=Aves&per_page=1`
-    );
-    if (res.ok) {
-      const data  = await res.json();
-      const taxon = data.results?.[0];
-      if (taxon && taxon.name.toLowerCase() === sciName.toLowerCase()) {
-        const url = taxon.default_photo?.medium_url || taxon.default_photo?.url;
-        if (url) return { url, src: 'iNaturalist' };
+// ── DSP Pipeline nettoyage ────────────────────────────────────────────────────
+function _fftR(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const half=len>>1, wc=Math.cos(-Math.PI/half), ws=Math.sin(-Math.PI/half);
+    for (let i = 0; i < n; i += len) {
+      let wR=1, wI=0;
+      for (let k = 0; k < half; k++) {
+        const uR=re[i+k],uI=im[i+k],vR=re[i+k+half]*wR-im[i+k+half]*wI,vI=re[i+k+half]*wI+im[i+k+half]*wR;
+        re[i+k]=uR+vR; im[i+k]=uI+vI; re[i+k+half]=uR-vR; im[i+k+half]=uI-vI;
+        const nwR=wR*wc-wI*ws; wI=wR*ws+wI*wc; wR=nwR;
       }
     }
-  } catch(e) {}
-  // 2. Wikipedia fallback
-  try {
-    const title = sciName.replace(/ /g,'_');
-    const res   = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const url  = data.thumbnail?.source;
-      if (url) return { url, src: 'Wikipedia' };
-    }
-  } catch(e) {}
-  return { url: null, src: null };
+  }
+}
+function _hpIIR(pcm, sr, cutHz=850) {
+  const alpha=1/(1+2*Math.PI*cutHz/sr), out=new Float32Array(pcm.length);
+  out[0]=pcm[0];
+  for (let i=1;i<pcm.length;i++) out[i]=alpha*(out[i-1]+pcm[i]-pcm[i-1]);
+  return out;
+}
+function _specSub(pcm, strength=0.8) {
+  const FFT=512, HOP=128, HALF=FFT/2;
+  const hann=new Float32Array(FFT);
+  for (let i=0;i<FFT;i++) hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(FFT-1));
+  const frames=[];
+  for (let off=0;off+FFT<=pcm.length;off+=HOP) {
+    const re=new Float32Array(FFT),im=new Float32Array(FFT); let energy=0;
+    for (let i=0;i<FFT;i++){re[i]=pcm[off+i]*hann[i];energy+=re[i]*re[i];}
+    _fftR(re,im); frames.push({re,im,energy,off});
+  }
+  const byE=[...frames].sort((a,b)=>a.energy-b.energy);
+  const nC=Math.max(2,Math.floor(frames.length*.15));
+  const nM=new Float32Array(HALF);
+  for (let fi=0;fi<nC;fi++){const{re,im}=byE[fi];for(let k=0;k<HALF;k++)nM[k]+=Math.sqrt(re[k]*re[k]+im[k]*im[k]);}
+  for (let k=0;k<HALF;k++) nM[k]/=nC;
+  const out=new Float32Array(pcm.length),norm=new Float32Array(pcm.length);
+  for (const {re,im,off} of frames) {
+    for (let k=0;k<HALF;k++){const mag=Math.sqrt(re[k]*re[k]+im[k]*im[k]);const sc=mag>1e-12?Math.max(mag-strength*nM[k],0.05*mag)/mag:0;re[k]*=sc;im[k]*=sc;}
+    for (let k=1;k<HALF;k++){re[FFT-k]=re[k];im[FFT-k]=-im[k];}
+    re[HALF]=0;im[HALF]=0;
+    for (let k=0;k<FFT;k++) im[k]=-im[k];
+    _fftR(re,im);
+    for (let i=0;i<FFT;i++){const n=off+i;if(n<out.length){const w=hann[i];out[n]+=(re[i]/FFT)*w;norm[n]+=w*w;}}
+  }
+  for (let i=0;i<out.length;i++) if(norm[i]>1e-10) out[i]/=norm[i];
+  return out;
+}
+function recCleanPipeline(pcm, sr, strength) {
+  return _specSub(_hpIIR(pcm, sr, 850), strength);
+}
+function encodeWavRec(pcm, sr) {
+  const ds=pcm.length*2, buf=new ArrayBuffer(44+ds), v=new DataView(buf);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');v.setUint32(4,36+ds,true);w(8,'WAVE');w(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);
+  w(36,'data');v.setUint32(40,ds,true);
+  for (let i=0;i<pcm.length;i++) v.setInt16(44+i*2,Math.max(-32768,Math.min(32767,Math.round(pcm[i]*32767))),true);
+  return new Blob([buf],{type:'audio/wav'});
 }
 
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
@@ -554,6 +634,11 @@ createApp({
     const spectroLoading  = ref(null);
     const spectroCanvases = {};   // uid → canvas element (non réactif)
     const activeUid       = ref(null);
+
+    // ── Clean audio ────────────────────────────────────────────────
+    const cleanState   = ref({});  // uid → { mode, strength, processing }
+    const _pcmStore    = {};       // uid → { pcm, sr }  (non réactif)
+    const _cleanBlobs  = {};       // uid → blobUrl
 
     // ── Computed ───────────────────────────────────────────────────
     const filteredSpeciesList = computed(() => {
@@ -620,6 +705,7 @@ createApp({
           imgSrc:      null,
           durationStr: null,
         }));
+        // Charger les données dans allRecs
         allRecs.value = enriched;
 
         // Liste espèces pour le filtre (avec compteur sur rows complet)
@@ -629,8 +715,13 @@ createApp({
           .map(([name, count]) => ({ name, count }))
           .sort((a,b) => a.name.localeCompare(b.name));
 
-        // Charger les photos de façon asynchrone (sans bloquer)
-        loadPhotos(enriched);
+        // Photos : URL directe vers /api/photo — le serveur gère le cache disque.
+        // Assignation synchrone → Vue rend immédiatement les img tags,
+        // le browser charge en parallèle (et met en cache HTTP côté navigateur).
+        for (const r of allRecs.value) {
+          r.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(r.Sci_Name);
+          r.imgSrc = null; // badge de source supprimé (géré côté serveur)
+        }
 
       } catch(e) {
         console.error('[recordings] load error', e);
@@ -638,19 +729,45 @@ createApp({
       loading.value = false;
     }
 
-    // Charge les photos par lots pour ne pas saturer iNaturalist
-    async function loadPhotos(recs) {
-      // Regrouper par Sci_Name pour ne fetch qu'une fois par espèce
-      const byScience = {};
-      for (const r of recs) {
-        if (!byScience[r.Sci_Name]) byScience[r.Sci_Name] = [];
-        byScience[r.Sci_Name].push(r);
-      }
-      for (const [sci, group] of Object.entries(byScience)) {
-        const { url, src } = await fetchPhoto(sci);
-        for (const r of group) { r.imgUrl = url; r.imgSrc = src; }
-        await new Promise(res => setTimeout(res, 80)); // petit délai entre espèces
-      }
+    // ── Fallback photo si /api/photo échoue ───────────────────────
+    // Tente iNaturalist puis Wikipedia directement depuis le navigateur
+    const _photoFailed = new Set(); // évite les boucles
+    async function onPhotoError(rec) {
+      if (_photoFailed.has(rec.Sci_Name)) { rec.imgUrl = null; return; }
+      _photoFailed.add(rec.Sci_Name);
+
+      // 1. iNaturalist direct
+      try {
+        const tn  = encodeURIComponent(rec.Sci_Name);
+        const res = await fetch(
+          `https://api.inaturalist.org/v1/taxa?taxon_name=${tn}&rank=species&per_page=3`
+        );
+        if (res.ok) {
+          const data  = await res.json();
+          const taxon = data.results?.find(t =>
+            t.name.toLowerCase() === rec.Sci_Name.toLowerCase()
+          );
+          const url = taxon?.default_photo?.medium_url
+                   || taxon?.default_photo?.square_url
+                   || taxon?.default_photo?.url;
+          if (url) { rec.imgUrl = url; return; }
+        }
+      } catch(e) {}
+
+      // 2. Wikipedia direct
+      try {
+        const title = rec.Sci_Name.replace(/ /g, '_');
+        const res   = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const url  = data.thumbnail?.source;
+          if (url) { rec.imgUrl = url; return; }
+        }
+      } catch(e) {}
+
+      rec.imgUrl = null; // placeholder
     }
 
     // ── Filtres ────────────────────────────────────────────────────
@@ -669,7 +786,11 @@ createApp({
         stopAudio(); return;
       }
       stopAudio();
-      const url = buildAudioUrl(rec.File_Name);
+      // Utiliser le blob clean si disponible et mode clean actif
+      const cs  = cleanState.value[rec.uid];
+      const url = (cs?.mode && _cleanBlobs[rec.uid])
+        ? _cleanBlobs[rec.uid]
+        : buildAudioUrl(rec.File_Name);
       if (!url) return;
 
       const audio = new Audio(url);
@@ -713,11 +834,10 @@ createApp({
       if (spectroUid.value === rec.uid) {
         spectroUid.value = null; return;
       }
-      spectroUid.value    = rec.uid;
-      spectroLoading.value= rec.uid;
-      activeUid.value     = rec.uid;
+      spectroUid.value     = rec.uid;
+      spectroLoading.value = rec.uid;
+      activeUid.value      = rec.uid;
 
-      // nextTick pour que le canvas soit dans le DOM (v-show)
       await Vue.nextTick();
 
       const canvas = spectroCanvases[rec.uid];
@@ -726,22 +846,164 @@ createApp({
       const url = buildAudioUrl(rec.File_Name);
       if (!url) { spectroLoading.value = null; return; }
 
+      // Initialiser l'état clean si absent
+      if (!cleanState.value[rec.uid]) {
+        cleanState.value = {
+          ...cleanState.value,
+          [rec.uid]: { mode: false, strength: 0.75, processing: false },
+        };
+      }
+
       try {
-        const dur = await fetchAndDraw(url, canvas);
-        if (!rec.durationStr) rec.durationStr = formatDuration(dur);
+        const { duration, pcm, sr } = await fetchAndDraw(url, canvas);
+        _pcmStore[rec.uid] = { pcm, sr };                          // stocker le PCM
+        if (!rec.durationStr) rec.durationStr = formatDuration(duration);
       } catch(e) {
         console.error('[spectro]', rec.File_Name, e.message);
       }
       spectroLoading.value = null;
     }
 
-    // ── Observers ──────────────────────────────────────────────────
-    watch([period], () => { page.value = 1; loadData(); });
+    // ── Clean audio par carte ──────────────────────────────────────
+    async function toggleClean(rec) {
+      const cs = cleanState.value[rec.uid];
+      if (!cs) return;
+      const pcmData = _pcmStore[rec.uid];
+      if (!pcmData) return;
+
+      const newMode = !cs.mode;
+      cleanState.value = { ...cleanState.value, [rec.uid]: { ...cs, mode: newMode, processing: true } };
+
+      // Arrêter lecture en cours si c'est cette carte
+      if (playingUid.value === rec.uid) stopAudio();
+
+      const canvas = spectroCanvases[rec.uid];
+
+      if (newMode) {
+        // Appliquer le clean
+        await new Promise(r => setTimeout(r, 20)); // cède le thread → spinner
+        try {
+          const cleaned = recCleanPipeline(pcmData.pcm, pcmData.sr, cs.strength);
+          if (canvas) {
+            // Redessiner spectrogramme nettoyé
+            drawCleanSpectro(cleaned, pcmData.sr, canvas);
+          }
+          // Créer blob WAV pour la lecture
+          if (_cleanBlobs[rec.uid]) URL.revokeObjectURL(_cleanBlobs[rec.uid]);
+          _cleanBlobs[rec.uid] = URL.createObjectURL(encodeWavRec(cleaned, pcmData.sr));
+        } catch(e) {
+          console.error('[clean]', e);
+          cleanState.value = { ...cleanState.value, [rec.uid]: { ...cs, mode: false, processing: false } };
+          return;
+        }
+      } else {
+        // Restaurer spectrogramme original
+        if (canvas && pcmData) drawCleanSpectro(pcmData.pcm, pcmData.sr, canvas);
+        if (_cleanBlobs[rec.uid]) { URL.revokeObjectURL(_cleanBlobs[rec.uid]); delete _cleanBlobs[rec.uid]; }
+      }
+
+      cleanState.value = { ...cleanState.value, [rec.uid]: { ...cs, mode: newMode, processing: false } };
+    }
+
+    async function reapplyClean(rec) {
+      const cs = cleanState.value[rec.uid];
+      if (!cs || !cs.mode) return;
+      const pcmData = _pcmStore[rec.uid];
+      if (!pcmData) return;
+
+      cleanState.value = { ...cleanState.value, [rec.uid]: { ...cs, processing: true } };
+      if (playingUid.value === rec.uid) stopAudio();
+
+      await new Promise(r => setTimeout(r, 20));
+      try {
+        const cleaned = recCleanPipeline(pcmData.pcm, pcmData.sr, cs.strength);
+        const canvas  = spectroCanvases[rec.uid];
+        if (canvas) drawCleanSpectro(cleaned, pcmData.sr, canvas);
+        if (_cleanBlobs[rec.uid]) URL.revokeObjectURL(_cleanBlobs[rec.uid]);
+        _cleanBlobs[rec.uid] = URL.createObjectURL(encodeWavRec(cleaned, pcmData.sr));
+      } catch(e) { console.error('[clean]', e); }
+
+      cleanState.value = { ...cleanState.value, [rec.uid]: { ...cs, processing: false } };
+    }
+
+    // Redessiner spectrogramme depuis PCM (copie de fetchAndDraw sans fetch)
+    function drawCleanSpectro(pcm, sr, canvas) {
+      const FFT=512, HOP=128, HALF=FFT/2;
+      const maxHz=12000, maxBin=Math.min(HALF,Math.floor(maxHz/sr*FFT));
+      const hann=new Float32Array(FFT);
+      for (let i=0;i<FFT;i++) hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(FFT-1));
+      const frames=[];
+      for (let off=0;off+FFT<=pcm.length;off+=HOP) {
+        const re=new Float32Array(FFT),im=new Float32Array(FFT);
+        for (let i=0;i<FFT;i++) re[i]=pcm[off+i]*hann[i];
+        _fftR(re,im);
+        const mag=new Float32Array(maxBin);
+        for (let i=1;i<maxBin;i++) mag[i]=20*Math.log10(Math.sqrt(re[i]*re[i]+im[i]*im[i])/HALF+1e-9);
+        frames.push(mag);
+      }
+      const all=[]; frames.forEach(f=>f.forEach(v=>all.push(v))); all.sort((a,b)=>a-b);
+      const lo=all[Math.floor(all.length*.05)]??-80;
+      const hi=all[Math.floor(all.length*.995)]??-10;
+      const rng=hi-lo||1;
+      const W=canvas.width, H=canvas.height;
+      canvas.width=W;
+      const ctx=canvas.getContext('2d');
+      const img=ctx.createImageData(W,H); const d=img.data;
+      for (let px=0;px<W;px++) {
+        const frame=frames[Math.min(Math.floor(px/W*frames.length),frames.length-1)];
+        for (let py=0;py<H;py++) {
+          const bin=Math.floor((H-1-py)/H*maxBin);
+          const v=Math.max(0,Math.min(1,(frame[bin]-lo)/rng));
+          const ci=Math.min(255,Math.floor(v*255))*3;
+          const pi=(py*W+px)*4;
+          d[pi]=COLOR_LUT[ci];d[pi+1]=COLOR_LUT[ci+1];d[pi+2]=COLOR_LUT[ci+2];d[pi+3]=255;
+        }
+      }
+      ctx.putImageData(img,0,0);
+    }
+
+    const recQuickDates = [
+      { label:'1j',  val:'today' },
+      { label:'7j',  val:'7'     },
+      { label:'30j', val:'30'    },
+      { label:'1an', val:'365'   },
+      { label:'Tout',val:'all'   },
+    ];
+
+    // ── Téléchargement audio ───────────────────────────────────────
+    function downloadAudio(rec) {
+      const url = buildAudioUrl(rec.File_Name);
+      if (!url) return;
+      const cs = cleanState.value[rec.uid];
+      const href = (cs && cs.mode && _cleanBlobs[rec.uid]) ? _cleanBlobs[rec.uid] : url;
+      const ext  = (cs && cs.mode && _cleanBlobs[rec.uid]) ? '.wav' : '.mp3';
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = (rec.Com_Name + '_' + rec.Date + ext).replace(/[^a-zA-Z0-9._-]/g, '_');
+      a.click();
+    }
+
+    // Templates helpers (évite les regex literals dans les bindings Vue)
+    function dlUrl(rec) {
+      const cs = cleanState.value[rec.uid];
+      return (cs && cs.mode && _cleanBlobs[rec.uid])
+        ? _cleanBlobs[rec.uid]
+        : buildAudioUrl(rec.File_Name);
+    }
+    function dlName(rec) {
+      const cs  = cleanState.value[rec.uid];
+      const ext = (cs && cs.mode && _cleanBlobs[rec.uid]) ? '.wav' : '.mp3';
+      return (rec.Com_Name + '_' + rec.Date + ext).replace(/[^a-zA-Z0-9._-]/g, '_');
+    }
+
     watch([sortBy], () => { page.value = 1; });
 
     // ── Lifecycle ──────────────────────────────────────────────────
     onMounted(loadData);
-    onUnmounted(stopAudio);
+    onUnmounted(() => {
+      stopAudio();
+      Object.values(_cleanBlobs).forEach(u => URL.revokeObjectURL(u));
+    });
 
     return {
       lang, t, setLang, langs, theme, themes, setTheme, navItems,
@@ -750,7 +1012,9 @@ createApp({
       spSearch, sortBy, period, page, PAGE_SIZE,
       playingUid, progress, activeUid,
       spectroUid, spectroLoading, spectroCanvases,
-      toggleSpecies, loadMore, togglePlay,
+      cleanState, _cleanBlobs,
+      onPhotoError, recQuickDates, downloadAudio, dlUrl, dlName,
+      toggleSpecies, loadMore, togglePlay, toggleClean, reapplyClean,
       toggleSpectro, buildSpeciesLinks,
     };
   }

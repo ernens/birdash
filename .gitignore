@@ -3,3 +3,6 @@ node_modules/
 *.bak
 *BAK
 .DS_Store
+pibird-local.js
+deploy.sh
+photo-cache/
