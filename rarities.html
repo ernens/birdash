@@ -2,55 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Rarités</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
-  <style>
-    .rar-layout { display:grid; grid-template-columns:240px 1fr; gap:1rem; align-items:start; }
-    @media(max-width:860px){ .rar-layout{grid-template-columns:1fr;} }
-    .filter-panel { position:sticky; top:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; display:flex; flex-direction:column; gap:.85rem; }
-    .fp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.35rem; display:block; }
-    .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
-    .fp-quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
-    .fp-quick-btn { font-size:.68rem; padding:.18rem .42rem; border-radius:20px; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; transition:all .12s; white-space:nowrap; flex-shrink:0; }
-    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .fp-slider-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
-    .fp-slider-val { font-size:.8rem; font-family:monospace; color:var(--accent); font-weight:600; cursor:pointer; text-decoration:underline dotted; }
-    input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:var(--bg-deep); border-radius:2px; outline:none; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--accent); cursor:pointer; }
-    .fp-slider-marks { display:flex; justify-content:space-between; font-size:.65rem; color:var(--text-faint); margin-top:.2rem; }
-    /* Miniatures */
-    .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; flex-shrink:0; }
-    .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
-    /* Download */
-    .dl-btn { font-size:.75rem; padding:.22rem .5rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
-    /* Threshold select */
-    .fp-select { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.35rem .5rem; font-size:.8rem; }
-  </style>
 </head>
 <body>
-<div id="app" class="app-shell">
-  <header class="app-header">
-    <div class="header-brand"><span class="brand-name">🐦 PIBIRD</span><span class="brand-sub">Bruxelles</span></div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn" :class="{active:theme===th.id}" :data-t="th.id" :title="th.label" @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn" :class="{active:lang===l.code}" :title="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file" class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span><span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="rarities">
     <div class="rar-layout">
 
       <!-- ── Panneau filtres ──────────────────────────────────────── -->
@@ -121,7 +84,7 @@
               <div v-for="r in once.rows" :key="r.Com_Name" class="det-item"
                    style="cursor:pointer;gap:.5rem;" @click="navigateTo('species.html',{species:r.Com_Name})">
                 <!-- Miniature -->
-                <img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
+                <img loading="lazy" v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
                 <div v-else class="det-thumb-ph">🐦</div>
                 <div style="font-size:.85rem;flex:1;min-width:0;">
                   <span style="color:var(--danger);margin-right:.25rem;">💎</span>
@@ -146,7 +109,7 @@
                    class="det-item" style="gap:.5rem;cursor:pointer;"
                    @click="navigateTo('species.html',{species:d.Com_Name})">
                 <!-- Miniature -->
-                <img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
+                <img loading="lazy" v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
                 <div v-else class="det-thumb-ph">🐦</div>
                 <!-- Play -->
                 <button v-if="d.File_Name" class="play-btn"
@@ -188,7 +151,7 @@
             <tbody>
               <tr v-for="r in table.rows" :key="r.Com_Name" style="cursor:pointer;" @click="navigateTo('species.html',{species:r.Com_Name})">
                 <td style="padding:.3rem .4rem;">
-                  <img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
+                  <img loading="lazy" v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
                   <div v-else class="det-thumb-ph">🐦</div>
                 </td>
                 <td><span style="margin-right:.3rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</span><strong>{{r.Com_Name}}</strong></td>
@@ -203,7 +166,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -212,11 +175,11 @@ const { useI18n, useTheme, useNav, useAudio,
         birdQuery, fmtDate, fmtConf, localDateStr, daysAgo,
         navigateTo, buildAudioUrl, fetchCachedPhoto } = PIBIRD;
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('rarities');
+    const { navItems, siteName } = useNav('rarities');
     const { playingFile, toggleAudio }= useAudio();
 
     const thisYear   = localDateStr().substring(0,4);
@@ -339,7 +302,7 @@ createApp({
     onMounted(() => load());
 
     return {
-      lang,t,setLang,langs,theme,themes,setTheme,navItems,
+      lang,t,
       fConf,fMaxDet,fDateFrom,fDateTo,activeQuick,quickDates,
       confEditing,confEditVal,confInput,startConfEdit,commitConfEdit,
       applyQuick,resetFilters,thisYear,
@@ -348,7 +311,8 @@ createApp({
       fmtDate,fmtConf,navigateTo,load,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

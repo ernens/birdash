@@ -11,6 +11,9 @@ Restart=on-failure
 RestartSec=5
 Environment=PIBIRD_PORT=7474
 Environment=PIBIRD_DB=/home/bjorn/BirdNET-Pi/scripts/birds.db
+# Clés API — remplir avec tes valeurs (ne pas committer !)
+# Environment=EBIRD_API_KEY=your_key_here
+# Environment=BW_STATION_ID=your_station_id
 
 [Install]
 WantedBy=multi-user.target

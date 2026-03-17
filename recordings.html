@@ -2,240 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Meilleurs enregistrements</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
-  <style>
-    /* ── Layout ────────────────────────────────────────────────────── */
-    .rec-layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 1.2rem;
-      align-items: start;
-    }
-    @media (max-width: 900px) { .rec-layout { grid-template-columns: 1fr; } }
-
-    /* ── Panneau filtre gauche ──────────────────────────────────────── */
-    .filter-panel { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: .75rem; }
-
-    .filter-search {
-      width: 100%; box-sizing: border-box;
-      padding: .45rem .7rem; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--bg-deep);
-      color: var(--text-main); font-size: .82rem;
-    }
-    .filter-search:focus { outline: none; border-color: var(--accent); }
-
-    .species-scroll {
-      max-height: calc(100vh - 280px); overflow-y: auto;
-      border: 1px solid var(--border); border-radius: 8px;
-      background: var(--bg-card);
-    }
-    .sp-filter-item {
-      display: flex; align-items: center; gap: .55rem;
-      padding: .45rem .75rem; cursor: pointer;
-      border-bottom: 1px solid var(--border); transition: background .1s;
-      user-select: none;
-    }
-    .sp-filter-item:last-child { border-bottom: none; }
-    .sp-filter-item:hover { background: var(--bg-card2); }
-    .sp-filter-item.selected { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-    .sp-filter-check {
-      width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0;
-      border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
-      font-size: .65rem; transition: all .1s;
-    }
-    .sp-filter-item.selected .sp-filter-check {
-      background: var(--accent); border-color: var(--accent); color: #fff;
-    }
-    .sp-filter-name { font-size: .8rem; color: var(--text-main); flex: 1;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sp-filter-count { font-size: .7rem; color: var(--text-faint); font-family: monospace; }
-
-    .filter-actions { display: flex; gap: .5rem; }
-    .filter-sort { display: flex; align-items: center; gap: .5rem; }
-    .filter-sort label { font-size: .78rem; color: var(--text-muted); white-space: nowrap; }
-
-    /* ── Grille enregistrements ─────────────────────────────────────── */
-    .rec-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1rem;
-    }
-
-    /* ── Carte enregistrement ───────────────────────────────────────── */
-    .rec-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; overflow: hidden;
-      display: flex; flex-direction: column;
-      transition: box-shadow .15s, transform .15s;
-    }
-    .rec-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.18); transform: translateY(-1px); }
-    .rec-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
-
-    /* Photo espèce */
-    .rec-photo {
-      width: 100%; aspect-ratio: 16/7; object-fit: cover;
-      background: var(--bg-deep); cursor: pointer; position: relative;
-    }
-    .rec-photo-img { width: 100%; height: 100%; object-fit: cover; }
-    .rec-photo-placeholder {
-      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-      font-size: 3rem; color: var(--text-faint);
-    }
-    .rec-photo-src {
-      position: absolute; bottom: 4px; right: 6px;
-      font-size: .58rem; color: rgba(255,255,255,.6);
-      background: rgba(0,0,0,.4); padding: 1px 4px; border-radius: 3px;
-    }
-
-    /* Header carte */
-    .rec-header {
-      padding: .6rem .75rem .4rem; display: flex; align-items: flex-start; gap: .6rem;
-    }
-    .rec-names { flex: 1; min-width: 0; }
-    .rec-com-name {
-      font-size: .9rem; font-weight: 700; color: var(--text-main);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .rec-sci-name {
-      font-size: .72rem; color: var(--text-muted); font-style: italic;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .rec-badges { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; flex-shrink: 0; }
-
-    /* Meta infos */
-    .rec-meta {
-      padding: 0 .75rem .5rem;
-      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-    }
-    .rec-meta-item { font-size: .72rem; color: var(--text-muted); display: flex; align-items: center; gap: .25rem; }
-
-    /* Contrôles audio */
-    .rec-controls {
-      padding: .4rem .75rem; display: flex; align-items: center; gap: .5rem;
-      border-top: 1px solid var(--border);
-    }
-    .rec-play-btn {
-      width: 34px; height: 34px; border-radius: 50%;
-      background: var(--accent); color: #fff; border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: .9rem; flex-shrink: 0; transition: background .1s;
-    }
-    .rec-play-btn:hover { background: var(--accent-hover, var(--accent)); filter: brightness(1.1); }
-    .rec-play-btn.playing { background: var(--danger); }
-    .rec-progress {
-      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-    }
-    .rec-progress-bar {
-      height: 100%; background: var(--accent); border-radius: 2px; transition: width .2s linear;
-    }
-    .rec-duration { font-size: .7rem; font-family: monospace; color: var(--text-faint); flex-shrink: 0; }
-
-    /* Bouton spectrogramme */
-    .rec-spectro-btn {
-      padding: .25rem .5rem; font-size: .9rem; border-radius: 5px;
-      border: 1px solid var(--border); background: transparent;
-      color: var(--text-muted); cursor: pointer; transition: all .1s;
-      flex-shrink: 0; width: 32px; text-align: center;
-    }
-    .rec-spectro-btn:hover, .rec-spectro-btn.open { background: var(--bg-card2); color: var(--text-main); border-color: var(--accent); }
-
-    /* Liens externes */
-    .rec-links {
-      padding: 0 .75rem .55rem; display: flex; gap: .4rem; flex-wrap: wrap;
-    }
-    .rec-link {
-      font-size: .68rem; padding: .15rem .45rem; border-radius: 4px;
-      border: 1px solid var(--border); color: var(--text-muted);
-      text-decoration: none; transition: all .1s;
-    }
-    .rec-link:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* ── Spectrogramme inline ───────────────────────────────────────── */
-    .rec-spectro {
-      border-top: 1px solid var(--border);
-      background: #03070a; position: relative;
-    }
-    .rec-spectro canvas {
-      display: block; width: 100%; height: 140px;
-    }
-    .rec-spectro-loading {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      font-size: .78rem; color: var(--text-faint); background: rgba(3,7,10,.7);
-    }
-    .rec-spectro-freqs {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 28px;
-      display: flex; flex-direction: column; justify-content: space-between;
-      padding: 3px 3px; pointer-events: none;
-      background: rgba(3,7,10,.55); border-right: 1px solid rgba(90,138,96,.2);
-    }
-    .rec-spectro-freq { font-size: .55rem; font-family: monospace; color: #5a8a60; }
-
-    /* ── Pied de carte ──────────────────────────────────────────────── */
-    .rec-footer {
-      padding: .45rem .75rem .6rem;
-      display: flex; align-items: center; gap: .6rem;
-      border-top: 1px solid var(--border);
-    }
-    .btn-details {
-      padding: .28rem .65rem; font-size: .73rem; border-radius: 5px;
-      background: var(--accent); color: #fff; text-decoration: none;
-      font-weight: 600; white-space: nowrap; flex-shrink: 0;
-      transition: filter .1s;
-    }
-    .btn-details:hover { filter: brightness(1.12); }
-    .rec-links { display: flex; gap: .35rem; flex-wrap: wrap; }
-    .rec-link {
-      font-size: .82rem; width: 26px; height: 26px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 5px; border: 1px solid var(--border);
-      color: var(--text-muted); text-decoration: none; transition: all .1s;
-    }
-    .rec-link:hover { border-color: var(--accent); background: var(--bg-card2); }
-    .dl-btn { font-size:.8rem; width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:5px; border:1px solid var(--border); color:var(--text-muted); text-decoration:none; transition:all .1s; flex-shrink:0; }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
-    .rec-empty {
-      grid-column: 1/-1; text-align: center; padding: 3rem;
-      color: var(--text-faint); font-size: .9rem;
-    }
-    .rec-load-more { grid-column: 1/-1; text-align: center; padding: 1rem; }
-  </style>
 </head>
 <body>
-<div id="app" class="app-shell">
-
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn"
-                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
-                @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file"
-       class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span>
-      <span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="recordings">
 
     <!-- ── Titre + tri global ────────────────────────────────────── -->
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
@@ -299,7 +77,7 @@
 
             <!-- Photo espèce -->
             <div class="rec-photo" style="position:relative;">
-              <img v-if="rec.imgUrl" :src="rec.imgUrl" class="rec-photo-img"
+              <img loading="lazy" v-if="rec.imgUrl" :src="rec.imgUrl" class="rec-photo-img"
                    :alt="rec.Com_Name" @error="onPhotoError(rec)">
               <div v-else class="rec-photo-placeholder">🐦</div>
             </div>
@@ -430,7 +208,7 @@
       </div>
 
     </div><!-- /rec-layout -->
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -607,11 +385,11 @@ const { useI18n, useTheme, useNav, birdQuery, fmtConf, localDateStr,
 
 const PAGE_SIZE = 12;
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('recordings');
+    const { navItems, siteName } = useNav('recordings');
 
     // ── Données ────────────────────────────────────────────────────
     const allRecs           = ref([]);   // toutes les détections best (1/espèce + top N)
@@ -1006,7 +784,7 @@ createApp({
     });
 
     return {
-      lang, t, setLang, langs, theme, themes, setTheme, navItems,
+      lang, t,
       allRecs, availableSpecies, filteredSpeciesList, selectedSpecies,
       filteredRecs, pagedRecs, hasMore, loading,
       spSearch, sortBy, period, page, PAGE_SIZE,
@@ -1018,7 +796,8 @@ createApp({
       toggleSpectro, buildSpeciesLinks,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

@@ -8,6 +8,7 @@
 const http = require('http');
 const path = require('path');
 const fs   = require('fs');
+const fsp  = fs.promises;
 const { spawn } = require('child_process');
 
 // --- Dépendance : better-sqlite3 (npm install better-sqlite3)
@@ -132,7 +133,7 @@ async function resolvePhotoUrl(sciName) {
 
 // ── Scan des MP3 récents ────────────────────────────────────────────────────
 // Retourne la liste des MP3 des dernières 48h, triés par mtime croissant
-function getRecentMp3s() {
+async function getRecentMp3s() {
   const files  = [];
   const cutoff = Date.now() - 48 * 3600 * 1000;
 
@@ -140,20 +141,18 @@ function getRecentMp3s() {
     const d = new Date(Date.now() - daysAgo * 86400000);
     const dateStr = d.toISOString().split('T')[0];
     const dayDir  = path.join(SONGS_DIR, dateStr);
-    if (!fs.existsSync(dayDir)) continue;
-
     let species;
-    try { species = fs.readdirSync(dayDir); } catch(e) { continue; }
+    try { species = await fsp.readdir(dayDir); } catch(e) { continue; }
 
     for (const sp of species) {
       const spDir = path.join(dayDir, sp);
       let entries;
-      try { entries = fs.readdirSync(spDir); } catch(e) { continue; }
+      try { entries = await fsp.readdir(spDir); } catch(e) { continue; }
       for (const f of entries) {
         if (!f.endsWith('.mp3')) continue;
         const fp = path.join(spDir, f);
         try {
-          const { mtimeMs } = fs.statSync(fp);
+          const { mtimeMs } = await fsp.stat(fp);
           if (mtimeMs >= cutoff) files.push({ path: fp, mtime: mtimeMs });
         } catch(e) {}
       }
@@ -176,26 +175,87 @@ console.log(`[PIBIRD] birds.db ouvert : ${DB_PATH}`);
 
 // --- Validation de sécurité
 const ALLOWED_START = /^\s*(SELECT|PRAGMA|WITH)\s/i;
-const FORBIDDEN     = /;\s*(DROP|DELETE|INSERT|UPDATE|CREATE|ALTER|ATTACH)/i;
+const FORBIDDEN     = /(DROP|DELETE|INSERT|UPDATE|CREATE|ALTER|ATTACH|DETACH|REINDEX|VACUUM)\s/i;
+const FORBIDDEN_CHARS = /;/; // Interdit les requêtes multiples
 
 function validateQuery(sql) {
   if (!sql || typeof sql !== 'string') return false;
+  if (sql.length > 4000)               return false;
   if (!ALLOWED_START.test(sql))        return false;
-  if (FORBIDDEN.test(sql))             return false;
-  if (sql.length > 8000)               return false;
+  // Retirer les string literals avant de vérifier les mots-clés dangereux
+  const stripped = sql.replace(/'[^']*'/g, '').replace(/"[^"]*"/g, '');
+  if (FORBIDDEN.test(stripped))        return false;
+  // Interdire les points-virgules (requêtes multiples)
+  if (FORBIDDEN_CHARS.test(stripped))  return false;
   return true;
+}
+
+// --- Origines autorisées pour CORS (configurable via env)
+const ALLOWED_ORIGINS = (process.env.PIBIRD_CORS_ORIGINS || '').split(',').filter(Boolean);
+
+function getCorsOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return null;
+  // Si aucune origine configurée, autoriser localhost uniquement
+  if (ALLOWED_ORIGINS.length === 0) {
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin;
+    return null;
+  }
+  // Vérifier si l'origine est dans la liste autorisée
+  if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*')) return origin;
+  return null;
+}
+
+// --- Rate limiter en mémoire (par IP, token bucket)
+const _rateBuckets = new Map();
+const RATE_WINDOW  = 60 * 1000; // 1 minute
+const RATE_MAX     = 120;       // max requêtes par minute par IP
+// Nettoyage périodique des buckets expirés
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, b] of _rateBuckets) {
+    if (now - b.ts > RATE_WINDOW * 2) _rateBuckets.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
+function rateLimit(req) {
+  const ip = req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  let bucket = _rateBuckets.get(ip);
+  if (!bucket || now - bucket.ts > RATE_WINDOW) {
+    bucket = { count: 0, ts: now };
+    _rateBuckets.set(ip, bucket);
+  }
+  bucket.count++;
+  return bucket.count > RATE_MAX;
 }
 
 // --- Handler HTTP
 const server = http.createServer((req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin',  '*');
+  // Headers de sécurité
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // CORS — restrictif par défaut
+  const allowedOrigin = getCorsOrigin(req);
+  if (allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // Rate limiting
+  if (rateLimit(req)) {
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+    res.end(JSON.stringify({ error: 'Too many requests' }));
     return;
   }
 
@@ -216,23 +276,25 @@ const server = http.createServer((req, res) => {
     const jpgPath  = path.join(PHOTO_CACHE_DIR, key + '.jpg');
     const metaPath = path.join(PHOTO_CACHE_DIR, key + '.json');
 
-    // ── Cas 1 : image en cache disque ────────────────────────────────
-    if (fs.existsSync(jpgPath)) {
-      const meta = fs.existsSync(metaPath)
-        ? JSON.parse(fs.readFileSync(metaPath, 'utf8'))
-        : { src: 'cache' };
-      res.writeHead(200, {
-        'Content-Type':  'image/jpeg',
-        'Cache-Control': 'public, max-age=2592000', // 30 jours
-        'X-Photo-Source': meta.src || 'cache',
-      });
-      fs.createReadStream(jpgPath).pipe(res);
-      return;
-    }
-
-    // ── Cas 2 : résoudre + télécharger + mettre en cache ─────────────
+    // Route photo entièrement async
     (async () => {
       try {
+        // ── Cas 1 : image en cache disque ────────────────────────────────
+        try {
+          await fsp.access(jpgPath);
+          // Le fichier existe
+          let meta = { src: 'cache' };
+          try { meta = JSON.parse(await fsp.readFile(metaPath, 'utf8')); } catch(e) {}
+          res.writeHead(200, {
+            'Content-Type':  'image/jpeg',
+            'Cache-Control': 'public, max-age=2592000',
+            'X-Photo-Source': meta.src || 'cache',
+          });
+          fs.createReadStream(jpgPath).pipe(res);
+          return;
+        } catch(e) { /* pas en cache, on résout */ }
+
+        // ── Cas 2 : résoudre + télécharger + mettre en cache ─────────────
         const resolved = await resolvePhotoUrl(sciName);
         if (!resolved) {
           res.writeHead(404); res.end('no photo found'); return;
@@ -243,9 +305,9 @@ const server = http.createServer((req, res) => {
           res.writeHead(502); res.end('image fetch failed'); return;
         }
 
-        // Sauvegarder sur disque
-        fs.writeFileSync(jpgPath, imgBuf);
-        fs.writeFileSync(metaPath, JSON.stringify({ src: resolved.src, original: resolved.url }));
+        // Sauvegarder sur disque (async)
+        await fsp.writeFile(jpgPath, imgBuf);
+        await fsp.writeFile(metaPath, JSON.stringify({ src: resolved.src, original: resolved.url }));
         console.log(`[photo-cache] ${sciName} → ${resolved.src} (${imgBuf.length} bytes)`);
 
         res.writeHead(200, {
@@ -265,13 +327,16 @@ const server = http.createServer((req, res) => {
 
   // ── Route : GET /api/photo-cache-stats ──────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/photo-cache-stats') {
-    try {
-      const files = fs.readdirSync(PHOTO_CACHE_DIR).filter(f => f.endsWith('.jpg'));
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ cached: files.length, dir: PHOTO_CACHE_DIR }));
-    } catch(e) {
-      res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
-    }
+    (async () => {
+      try {
+        const files = (await fsp.readdir(PHOTO_CACHE_DIR)).filter(f => f.endsWith('.jpg'));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ cached: files.length, dir: PHOTO_CACHE_DIR }));
+      } catch(e) {
+        console.error('[photo-cache-stats]', e.message);
+        res.writeHead(500); res.end(JSON.stringify({ error: 'cache_error' }));
+      }
+    })();
     return;
   }
 
@@ -285,10 +350,12 @@ const server = http.createServer((req, res) => {
       return;
     }
     const qp       = new URL(req.url, 'http://localhost').searchParams;
-    const endpoint = qp.get('endpoint') || 'stats';
-    const period   = qp.get('period')   || 'day';
-    const locale   = qp.get('locale')   || 'fr';
-    const limit    = Math.min(20, parseInt(qp.get('limit') || '10'));
+    const VALID_ENDPOINTS = ['stats', 'species', 'detections'];
+    const VALID_PERIODS   = ['day', 'week', 'month', 'all'];
+    const endpoint = VALID_ENDPOINTS.includes(qp.get('endpoint')) ? qp.get('endpoint') : 'stats';
+    const period   = VALID_PERIODS.includes(qp.get('period'))     ? qp.get('period')   : 'day';
+    const locale   = /^[a-z]{2}$/.test(qp.get('locale') || '')   ? qp.get('locale')   : 'fr';
+    const limit    = Math.min(20, Math.max(1, parseInt(qp.get('limit') || '10') || 10));
     const cacheKey = `${endpoint}_${period}`;
     if (_bwCache && _bwCache[cacheKey] && (Date.now() - _bwCacheTs) < BW_TTL) {
       res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
@@ -314,7 +381,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(data));
       } catch(e) {
         console.error('[BirdWeather]', e.message);
-        res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
+        res.writeHead(500); res.end(JSON.stringify({ error: 'birdweather_error' }));
       }
     })();
     return;
@@ -371,7 +438,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(_ebirdCache));
       } catch(e) {
         console.error('[eBird]', e.message);
-        res.writeHead(500); res.end(JSON.stringify({ error: e.message }));
+        res.writeHead(500); res.end(JSON.stringify({ error: 'ebird_error' }));
       }
     })();
     return;
@@ -406,14 +473,14 @@ const server = http.createServer((req, res) => {
       const startCutoff = Date.now() - 3 * 60 * 1000;
 
       // Marquer les fichiers trop anciens comme déjà "streamés"
-      const allFiles = getRecentMp3s();
+      const allFiles = await getRecentMp3s();
       for (const f of allFiles) {
         if (f.mtime < startCutoff) streamed.add(f.path);
       }
       console.log(`[audio-stream] démarrage — ${streamed.size} fichiers anciens ignorés`);
 
       while (!aborted) {
-        const pending = getRecentMp3s().filter(f => !streamed.has(f.path));
+        const pending = (await getRecentMp3s()).filter(f => !streamed.has(f.path));
 
         if (pending.length === 0) {
           // Aucun fichier nouveau — attendre 2s
@@ -485,7 +552,7 @@ const server = http.createServer((req, res) => {
       } catch (err) {
         console.error('[PIBIRD] Erreur SQL :', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        res.end(JSON.stringify({ error: 'Erreur interne lors de l\'exécution de la requête' }));
       }
     });
     return;
@@ -498,8 +565,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', total_detections: row.total }));
     } catch (err) {
+      console.error('[health]', err.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'error', message: err.message }));
+      res.end(JSON.stringify({ status: 'error' }));
     }
     return;
   }

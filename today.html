@@ -2,188 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Aujourd'hui</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
-  <style>
-    /* ── Layout 2 colonnes ──────────────────────────────────────────── */
-    .today-layout {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 1rem;
-      align-items: start;
-    }
-    @media (max-width: 860px) {
-      .today-layout { grid-template-columns: 1fr; }
-    }
-
-    /* ── Liste espèces ──────────────────────────────────────────────── */
-    .species-list { display: flex; flex-direction: column; gap: 0; }
-    .sp-item {
-      display: flex; align-items: center; gap: .7rem;
-      padding: .55rem .75rem; cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background .12s;
-    }
-    .sp-item:last-child { border-bottom: none; }
-    .sp-item:hover { background: var(--bg-card2); }
-    .sp-item.active { background: var(--bg-card2); border-left: 3px solid var(--accent); }
-    .sp-thumb {
-      width: 40px; height: 40px; border-radius: 6px; object-fit: cover;
-      background: var(--bg-deep); flex-shrink: 0; font-size: 1.3rem;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .sp-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-    .sp-info { flex: 1; min-width: 0; }
-    .sp-name-row { font-size: .86rem; font-weight: 600; color: var(--text-main);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sp-sci-row  { font-size: .72rem; color: var(--text-muted); font-style: italic;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sp-meta    { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; flex-shrink: 0; }
-
-    /* ── Panneau lecteur ────────────────────────────────────────────── */
-    .player-card { position: sticky; top: 1rem; }
-    .player-header {
-      display: flex; gap: 1rem; align-items: flex-start;
-      padding: .9rem 1rem; border-bottom: 1px solid var(--border);
-    }
-    .player-photo {
-      width: 64px; height: 64px; border-radius: var(--radius);
-      background: var(--bg-card2); overflow: hidden; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 2rem;
-    }
-    .player-photo img { width: 100%; height: 100%; object-fit: cover; }
-    .player-species { flex: 1; min-width: 0; }
-    .player-name { font-size: 1.15rem; font-weight: 700; font-family: var(--font-display);
-      color: var(--text-main); }
-    .player-sci { font-size: .82rem; color: var(--text-muted); font-style: italic; }
-    .player-meta { display: flex; gap: .5rem; align-items: center; margin-top: .3rem; flex-wrap: wrap; }
-
-    /* ── Spectrogramme ──────────────────────────────────────────────── */
-    .spectro-wrap {
-      position: relative; background: #050a06; overflow: hidden;
-      border-radius: 0;
-    }
-    .spectro-canvas { display: block; width: 100%; height: 200px; cursor: pointer; }
-    .spectro-overlay {
-      position: absolute; inset: 0; pointer-events: none;
-    }
-    .spectro-axes {
-      display: flex; justify-content: space-between;
-      padding: .25rem .5rem; font-size: .68rem; font-family: monospace;
-      color: #5a8a60; background: #070d08;
-      border-top: 1px solid #1a2b1c;
-    }
-    .spectro-freq-labels {
-      position: absolute; right: 4px; top: 0; bottom: 0;
-      display: flex; flex-direction: column; justify-content: space-between;
-      padding: 4px 0; pointer-events: none;
-    }
-    .spectro-freq-label {
-      font-size: .62rem; font-family: monospace; color: #5a8a60;
-      line-height: 1; text-align: right;
-    }
-    .spectro-cursor {
-      position: absolute; top: 0; bottom: 0; width: 1px;
-      background: rgba(255,255,255,.5); pointer-events: none; transition: left .05s;
-    }
-    .spectro-placeholder {
-      height: 200px; display: flex; align-items: center; justify-content: center;
-      color: var(--text-faint); font-size: .85rem; background: #050a06;
-      flex-direction: column; gap: .5rem;
-    }
-
-    /* ── Contrôles audio ────────────────────────────────────────────── */
-    .audio-controls {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .65rem 1rem; border-top: 1px solid var(--border);
-    }
-    .play-big {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--accent); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; color: #fff; flex-shrink: 0;
-      transition: transform .1s, opacity .1s;
-    }
-    .play-big:hover { transform: scale(1.08); }
-    .play-big:active { transform: scale(.96); }
-    .play-big.playing { background: var(--warning); }
-    .audio-progress-wrap {
-      flex: 1; display: flex; flex-direction: column; gap: .2rem;
-    }
-    .audio-progress-bar {
-      height: 4px; background: var(--bg-card2); border-radius: 2px; overflow: hidden; cursor: pointer;
-    }
-    .audio-progress-fill {
-      height: 100%; background: var(--accent); border-radius: 2px; transition: width .1s;
-    }
-    .audio-time { font-size: .72rem; font-family: monospace; color: var(--text-muted); }
-
-    /* ── Feed détections de l'espèce ────────────────────────────────── */
-    .det-scroll {
-      max-height: 180px; overflow-y: auto;
-    }
-    .det-row {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .35rem .75rem; font-size: .8rem; cursor: pointer;
-      border-bottom: 1px solid var(--border); transition: background .1s;
-    }
-    .det-row:hover { background: var(--bg-card2); }
-    .det-row.active { background: var(--bg-card2); color: var(--accent); }
-    .det-row:last-child { border-bottom: none; }
-
-    /* ── KPI strip ──────────────────────────────────────────────────── */
-    .kpi-strip {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: .6rem; margin-bottom: 1rem;
-    }
-    @media (max-width: 700px) {
-      .kpi-strip { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    /* ── Hint vide ──────────────────────────────────────────────────── */
-    .hint-empty {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: .75rem; padding: 3rem 1rem; color: var(--text-faint); text-align: center;
-    }
-    .hint-empty .hint-icon { font-size: 3rem; opacity: .4; }
-  </style>
 </head>
 <body>
-<div id="app" class="app-shell">
-
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn"
-                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
-                @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file"
-       class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span>
-      <span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="today">
 
     <!-- ── Titre + date ─────────────────────────────────────────── -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
@@ -261,7 +91,7 @@
                  class="sp-item" :class="{active: selected && selected.Com_Name===s.Com_Name}"
                  @click="selectSpecies(s)">
               <div class="sp-thumb">
-                <img v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name">
+                <img loading="lazy" v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name">
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
@@ -298,7 +128,7 @@
           <!-- Header espèce -->
           <div class="player-header">
             <div class="player-photo">
-              <img v-if="selected.imgUrl" :src="selected.imgUrl" :alt="selected.Com_Name">
+              <img loading="lazy" v-if="selected.imgUrl" :src="selected.imgUrl" :alt="selected.Com_Name">
               <span v-else>🦜</span>
             </div>
             <div class="player-species">
@@ -449,7 +279,7 @@
       </div>
 
     </div>
-  </main>
+  </pibird-shell>
 </div>
 
 
@@ -693,11 +523,11 @@ let _rawPcm = null;
 let _rawSr  = 22050;
 let _cleanBlobUrl = null; // Blob URL à révoquer lors du changement
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('today');
+    const { navItems, siteName } = useNav('today');
 
     const today   = localDateStr();
     const minConf = ref(BIRD_CONFIG.defaultConfidence);
@@ -977,7 +807,7 @@ createApp({
     });
 
     return {
-      lang, t, setLang, langs, theme, themes, setTheme, navItems,
+      lang, t,
       today, minConf, searchQ,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
@@ -991,7 +821,8 @@ createApp({
       toggleClean, reapplyClean,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

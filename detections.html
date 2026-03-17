@@ -2,118 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Détections</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
-  <style>
-    .det-layout { display:grid; grid-template-columns:240px 1fr; gap:1rem; align-items:start; }
-    @media(max-width:860px){ .det-layout{grid-template-columns:1fr;} }
-    @media(max-width:640px){ .hide-sm{display:none;} }
-    .filter-panel { position:sticky; top:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; display:flex; flex-direction:column; gap:.85rem; }
-    .fp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.35rem; display:block; }
-    .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
-    .fp-quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
-    .fp-quick-btn { font-size:.68rem; padding:.18rem .42rem; border-radius:20px; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; transition:all .12s; white-space:nowrap; flex-shrink:0; }
-    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .fp-slider-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
-    .fp-slider-val { font-size:.8rem; font-family:monospace; color:var(--accent); font-weight:600; }
-    input[type=range] { -webkit-appearance:none; width:100%; height:4px; background:var(--bg-deep); border-radius:2px; outline:none; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--accent); cursor:pointer; }
-    .fp-slider-marks { display:flex; justify-content:space-between; font-size:.65rem; color:var(--text-faint); margin-top:.2rem; }
-    .fp-species-select { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.35rem .5rem; font-size:.8rem; }
-    .fp-toggle-row { display:flex; align-items:center; justify-content:space-between; padding:.4rem .5rem; border-radius:6px; background:var(--bg-deep); cursor:pointer; user-select:none; }
-    .fp-toggle-row:hover { background:var(--bg-card2); }
-    .fp-toggle-label { font-size:.82rem; color:var(--text-main); }
-    .fp-toggle-sub { font-size:.68rem; color:var(--text-faint); }
-    .fp-toggle { width:36px; height:20px; border-radius:10px; background:var(--border); position:relative; transition:background .2s; flex-shrink:0; }
-    .fp-toggle.on { background:var(--accent); }
-    .fp-toggle::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s; }
-    .fp-toggle.on::after { left:19px; }
-    .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; }
-    .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; }
-    .det-count-badge { font-size:.65rem; font-family:monospace; font-weight:700; background:var(--bg-card2); color:var(--text-muted); padding:.1rem .35rem; border-radius:10px; margin-left:.4rem; }
-    .dl-btn { font-size:.75rem; padding:.2rem .45rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
-
-    /* ── Multi-select espèces ─────────────────────────────────────── */
-    .ms-wrap { position:relative; }
-    .ms-trigger {
-      width:100%; box-sizing:border-box; min-height:34px;
-      background:var(--bg-deep); border:1px solid var(--border);
-      border-radius:4px; padding:.3rem .5rem;
-      display:flex; align-items:center; flex-wrap:wrap; gap:.3rem;
-      cursor:pointer; user-select:none; transition:border-color .12s;
-    }
-    .ms-trigger:hover, .ms-trigger.open { border-color:var(--accent); }
-    .ms-placeholder { font-size:.8rem; color:var(--text-faint); }
-    .ms-tag {
-      display:inline-flex; align-items:center; gap:.2rem;
-      background:var(--accent); color:#fff;
-      padding:.1rem .4rem; border-radius:10px; font-size:.72rem; font-weight:500;
-    }
-    .ms-tag-x {
-      background:none; border:none; color:rgba(255,255,255,.8);
-      cursor:pointer; padding:0 .1rem; font-size:.8rem; line-height:1;
-    }
-    .ms-tag-x:hover { color:#fff; }
-    .ms-caret { margin-left:auto; font-size:.65rem; color:var(--text-faint); flex-shrink:0; padding-left:.3rem; }
-    .ms-dropdown {
-      position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
-      background:var(--bg-card); border:1px solid var(--border);
-      border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.28);
-      display:flex; flex-direction:column; max-height:260px;
-    }
-    .ms-search-wrap { padding:.4rem .5rem; border-bottom:1px solid var(--border); flex-shrink:0; }
-    .ms-search {
-      width:100%; box-sizing:border-box;
-      background:var(--bg-deep); border:1px solid var(--border);
-      color:var(--text-main); border-radius:4px;
-      padding:.28rem .5rem; font-size:.8rem;
-    }
-    .ms-search:focus { outline:none; border-color:var(--accent); }
-    .ms-actions {
-      display:flex; gap:.35rem; padding:.3rem .5rem;
-      border-bottom:1px solid var(--border); flex-shrink:0;
-    }
-    .ms-action-btn {
-      font-size:.68rem; padding:.15rem .45rem; border-radius:10px;
-      border:1px solid var(--border); cursor:pointer; transition:all .1s;
-      background:transparent; color:var(--text-muted);
-    }
-    .ms-action-btn:hover { border-color:var(--accent); color:var(--accent); }
-    .ms-list { overflow-y:auto; flex:1; }
-    .ms-item {
-      display:flex; align-items:center; gap:.5rem;
-      padding:.32rem .6rem; cursor:pointer; font-size:.81rem;
-      color:var(--text-main); transition:background .08s;
-    }
-    .ms-item:hover { background:var(--bg-card2); }
-    .ms-item.checked { color:var(--accent); }
-    .ms-item input[type=checkbox] { accent-color:var(--accent); flex-shrink:0; }
-  </style>
 </head>
 <body>
-<div id="app" class="app-shell">
-  <header class="app-header">
-    <div class="header-brand"><span class="brand-name">🐦 PIBIRD</span><span class="brand-sub">Bruxelles</span></div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn" :class="{active:theme===th.id}" :data-t="th.id" :title="th.label" @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn" :class="{active:lang===l.code}" :title="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file" class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span><span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="detections">
     <div class="det-layout">
 
       <!-- Panneau filtres -->
@@ -229,7 +129,7 @@
             <tbody>
               <tr v-for="d in displayRows" :key="d._key">
                 <td style="padding:.3rem .4rem;">
-                  <img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
+                  <img loading="lazy" v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
                   <div v-else class="det-thumb-ph">🐦</div>
                 </td>
                 <td>
@@ -270,7 +170,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -289,12 +189,12 @@ const vClickOutside = {
   unmounted(el) { document.removeEventListener('click', el._clickOutsideHandler); },
 };
 
-createApp({
+const app = createApp({
   directives: { 'click-outside': vClickOutside },
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('detections');
+    const { navItems, siteName } = useNav('detections');
     const { playingFile, toggleAudio }= useAudio();
 
     const PS = BIRD_CONFIG.pageSize;
@@ -488,7 +388,7 @@ createApp({
     });
 
     return {
-      lang,t,setLang,langs,theme,themes,setTheme,navItems,
+      lang,t,
       fSpecies,fDateFrom,fDateTo,fConf,uniqueMode,
       activeQuick,quickDates,applyQuick,speciesList,
       spSearch,spDropdownOpen,filteredSpeciesList,
@@ -501,7 +401,8 @@ createApp({
       applyFilters,resetFilters,goPage,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

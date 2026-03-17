@@ -21,11 +21,12 @@ const PIBIRD_LOCAL = {
   },
 
   // ── Clés API externes ─────────────────────────────────────────────
+  // Préférer les variables d'environnement : EBIRD_API_KEY, BW_STATION_ID
   // eBird API — clé gratuite sur https://ebird.org/api/keygen
-  ebirdApiKey: 'YOUR_EBIRD_API_KEY',
+  ebirdApiKey: process.env.EBIRD_API_KEY || 'YOUR_EBIRD_API_KEY',
 
   // BirdWeather — ID de ta station (visible dans l'URL app.birdweather.com/stations/XXXX)
-  birdweatherStationId: '',
+  birdweatherStationId: process.env.BW_STATION_ID || '',
 
   // ── Paramètres analyse ────────────────────────────────────────────
   defaultConfidence: 0.7,   // Seuil de confiance par défaut (0–1)

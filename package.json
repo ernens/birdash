@@ -1,4 +1,10 @@
 {
+  "name": "pibird",
+  "private": true,
+  "scripts": {
+    "start": "node bird-server.js",
+    "test": "node --test bird-server.test.js"
+  },
   "dependencies": {
     "better-sqlite3": "^12.8.0"
   }

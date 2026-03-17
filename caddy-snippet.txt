@@ -2,6 +2,9 @@
 # A ajouter dans votre Caddyfile existant, dans le bloc de votre site.
 # Remplacez {USER} par votre nom d'utilisateur systeme.
 
+# Compression gzip/zstd pour JS, CSS, HTML, JSON
+encode zstd gzip
+
 handle /birds/api/* {
     # Proxy vers le backend Node.js
     uri strip_prefix /birds

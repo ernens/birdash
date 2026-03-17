@@ -2,74 +2,19 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Système</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
-  <style>
-    .fp-quick-btns { display:flex;flex-wrap:nowrap;gap:.25rem; }
-    .fp-quick-btn { font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap; }
-    .fp-quick-btn:hover,.fp-quick-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
-    .status-dot {
-      display:inline-block;width:10px;height:10px;
-      border-radius:50%;margin-right:.4rem;flex-shrink:0;
-    }
-    .dot-ok  {background:var(--accent);box-shadow:0 0 6px var(--accent);}
-    .dot-err {background:var(--danger);box-shadow:0 0 6px var(--danger);}
-    .sys-row {
-      display:flex;align-items:center;justify-content:space-between;
-      padding:.55rem 0;border-bottom:1px solid var(--bg-card2);font-size:.85rem;
-    }
-    .sys-row:last-child {border-bottom:none;}
-    .sys-label {color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;}
-    .sys-value {color:var(--text-main);font-family:monospace;font-size:.85rem;}
-    .gap-item {
-      padding:.4rem .6rem;background:rgba(224,108,74,.1);
-      border:1px solid rgba(224,108,74,.2);border-radius:var(--radius);
-      font-size:.8rem;margin-bottom:.35rem;
-    }
-    .gap-date {color:var(--danger);font-weight:500;}
-    .gap-days {color:var(--text-muted);font-size:.72rem;}
-  </style>
 </head>
 <body>
-<div id="app" class="app-shell">
-
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id"
-                class="theme-btn" :class="{active: theme===th.id}"
-                :data-t="th.id" :title="th.label" @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code"
-                class="lang-btn" :class="{active: lang===l.code}"
-                :title="l.label" @click="setLang(l.code)">
-          {{l.flag}} {{l.code.toUpperCase()}}
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <nav class="app-nav">
-    <div id="main-nav">
-      <a v-for="p in navItems" :key="p.id" :href="p.file"
-         class="nav-link" :class="{active: p.active}">
-        <span class="nav-icon">{{p.icon}}</span>
-        <span class="nav-label">{{p.label}}</span>
-      </a>
-    </div>
-  </nav>
-
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="system">
 
     <div class="grid-2" style="margin-bottom:1rem;">
 
@@ -330,7 +275,7 @@
       <div v-if="!bw.hasStation" style="font-size:.82rem;color:var(--text-muted);line-height:1.6;">
         Ajouter dans <code style="background:var(--bg-deep);padding:.1rem .35rem;border-radius:3px;">pibird-local.js</code> :
         <code style="display:block;background:var(--bg-deep);padding:.4rem .65rem;border-radius:5px;margin-top:.4rem;font-size:.78rem;">
-          birdweatherStationId: 'XXXX',
+          birdweatherStationId: 'YOUR_STATION_ID',
         </code>
         <div style="font-size:.72rem;color:var(--text-faint);margin-top:.3rem;">
           L'ID est visible dans l'URL : app.birdweather.com/stations/<strong>XXXX</strong>
@@ -374,7 +319,7 @@
           <div v-for="(sp, i) in bw.species.slice(0,10)" :key="sp.id || i"
                style="display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;">
             <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
-            <img v-if="sp.thumbnailUrl" :src="sp.thumbnailUrl"
+            <img loading="lazy" v-if="sp.thumbnailUrl" :src="sp.thumbnailUrl"
                  style="width:28px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0;"
                  :alt="sp.commonName" @error="sp.thumbnailUrl=null">
             <div v-else style="width:28px;height:28px;border-radius:4px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;">🐦</div>
@@ -394,7 +339,7 @@
       </div>
     </div>
 
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -403,11 +348,11 @@ const { useI18n, useTheme, useNav, useChart,
         birdQuery, fmtDate, fmtTime, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo } = PIBIRD;
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('system');
+    const { navItems, siteName } = useNav('system');
     const { mountChart: mountAct }    = useChart();
     const { mountChart: mountHrly }   = useChart();
 
@@ -652,9 +597,7 @@ createApp({
     function openUrl(url) { window.open(url, '_blank'); }
 
     return {
-      lang, t, setLang, langs,
-      theme, themes, setTheme,
-      navItems,
+      lang, t,
       api, db, fresh, gaps,
       rareLocal, ebird,
       bw, bwPeriod, bwPeriods, loadBirdWeather,
@@ -662,7 +605,8 @@ createApp({
       canvasActivity, canvasHourly,
     };
   },
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

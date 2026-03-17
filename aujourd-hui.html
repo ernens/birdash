@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Aujourd'hui</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
   <style>
@@ -261,7 +261,7 @@
                  class="sp-item" :class="{active: selected && selected.Com_Name===s.Com_Name}"
                  @click="selectSpecies(s)">
               <div class="sp-thumb">
-                <img v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name">
+                <img loading="lazy" v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name">
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
@@ -298,7 +298,7 @@
           <!-- Header espèce -->
           <div class="player-header">
             <div class="player-photo">
-              <img v-if="selected.imgUrl" :src="selected.imgUrl" :alt="selected.Com_Name">
+              <img loading="lazy" v-if="selected.imgUrl" :src="selected.imgUrl" :alt="selected.Com_Name">
               <span v-else>🦜</span>
             </div>
             <div class="player-species">

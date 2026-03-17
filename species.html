@@ -2,45 +2,19 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Espèces</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
 </head>
 <body>
-<div id="app" class="app-shell">
-
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">Bruxelles</span>
-    </div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn"
-                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
-                @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file"
-       class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span>
-      <span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="species">
 
     <!-- Picker (si pas de param URL) -->
     <div v-if="mode==='picker'" class="card" style="margin-bottom:1rem;">
@@ -63,7 +37,7 @@
       <div style="display:flex;gap:1.25rem;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;">
         <div style="flex-shrink:0;">
           <div style="width:120px;height:120px;border-radius:var(--radius-lg);background:var(--bg-card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:3rem;overflow:hidden;">
-            <img v-if="sp.imgUrl" :src="sp.imgUrl" :alt="sp.name"
+            <img loading="lazy" v-if="sp.imgUrl" :src="sp.imgUrl" :alt="sp.name"
                  style="width:100%;height:100%;object-fit:cover;">
             <span v-else>🦜</span>
           </div>
@@ -141,7 +115,7 @@
       </div>
 
     </div>
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -151,11 +125,11 @@ const { useI18n, useTheme, useNav, useChart, useAudio,
         daysAgo, getUrlParam, navigateTo,
         buildSpeciesLinks, fetchSpeciesImage, chartDefaults } = PIBIRD;
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('species');
+    const { navItems, siteName } = useNav('species');
     const { playingFile, toggleAudio }= useAudio();
     const { mountChart: mountHourly } = useChart();
     const { mountChart: mountMonthly }= useChart();
@@ -293,7 +267,7 @@ createApp({
     });
 
     return {
-      lang, t, setLang, langs, theme, themes, setTheme, navItems,
+      lang, t,
       mode, speciesList, pickerVal,
       sp, feed, extLinks,
       playingFile, toggleAudio,
@@ -302,7 +276,8 @@ createApp({
       loadDetail,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

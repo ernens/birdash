@@ -2,120 +2,19 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PIBIRD — Vue d'ensemble</title>
   <link rel="stylesheet" href="bird-styles.css">
-  <style>
-    /* ── Photo dernière détection ─────────────────────────────────── */
-    .last-det-photo-wrap {
-      width: 100%; aspect-ratio: 4/3; position: relative;
-      border-radius: 8px; overflow: hidden;
-      background: var(--bg-deep); margin-bottom: .75rem;
-    }
-    .last-det-photo-wrap img {
-      width: 100%; height: 100%;
-      object-fit: cover; object-position: center top;
-      display: block;
-    }
-    /* ── Player ───────────────────────────────────────────────────── */
-    .idx-player { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; }
-    .idx-play-btn {
-      width:32px; height:32px; border-radius:50%; flex-shrink:0;
-      background:var(--accent); color:#fff; border:none; cursor:pointer;
-      display:flex; align-items:center; justify-content:center; font-size:.85rem;
-      transition:filter .1s;
-    }
-    .idx-play-btn:hover  { filter:brightness(1.1); }
-    .idx-play-btn.playing{ background:var(--danger); }
-    .idx-progress {
-      flex:1; height:4px; background:var(--border); border-radius:2px;
-      overflow:hidden; cursor:pointer;
-    }
-    .idx-progress-fill {
-      height:100%; background:var(--accent); border-radius:2px;
-      transition:width .15s linear;
-    }
-    .idx-duration { font-size:.7rem; font-family:monospace; color:var(--text-faint); flex-shrink:0; }
-    /* ── Spectrogramme index ─────────────────────────────────────── */
-    .idx-spectro-wrap {
-      position:relative; background:#03070a; border-radius:5px;
-      overflow:hidden; margin-top:.6rem;
-    }
-    .idx-spectro-wrap canvas { display:block; width:100%; height:90px; }
-    .idx-spectro-overlay {
-      position:absolute; inset:0; display:flex; align-items:center;
-      justify-content:center; font-size:.75rem; color:var(--text-faint);
-      background:rgba(3,7,10,.7);
-    }
-    .idx-spectro-freqs {
-      position:absolute; left:0; top:0; bottom:0; width:24px;
-      display:flex; flex-direction:column; justify-content:space-between;
-      padding:2px 3px; pointer-events:none;
-      background:rgba(3,7,10,.55); border-right:1px solid rgba(90,138,96,.2);
-    }
-    .idx-spectro-freq { font-size:.5rem; font-family:monospace; color:#5a8a60; }
-    .idx-clean-bar {
-      display:flex; align-items:center; gap:.45rem; flex-wrap:wrap;
-      padding:.35rem 0 .1rem;
-    }
-    .idx-clean-btn {
-      padding:.2rem .6rem; font-size:.73rem; font-weight:600; border-radius:5px;
-      border:1px solid; cursor:pointer; white-space:nowrap; transition:all .12s;
-    }
-    /* ── Miniatures feed ──────────────────────────────────────────── */
-    .det-thumb {
-      width:36px; height:36px; border-radius:5px; flex-shrink:0;
-      object-fit:cover; background:var(--bg-deep);
-    }
-    .det-thumb-ph {
-      width:36px; height:36px; border-radius:5px; flex-shrink:0;
-      background:var(--bg-card2); display:flex; align-items:center;
-      justify-content:center; font-size:1rem; color:var(--text-faint);
-    }
-    .rare-badge {
-      font-size:.68rem; font-weight:700; color:var(--danger);
-      background:color-mix(in srgb,var(--danger) 12%,transparent);
-      border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
-      padding:.1rem .35rem; border-radius:8px; flex-shrink:0;
-      white-space:nowrap;
-    }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
 </head>
 <body>
-<div id="app" class="app-shell">
-
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-name">🐦 PIBIRD</span>
-      <span class="brand-sub">{{BIRD_CONFIG.siteName || BIRD_CONFIG.location?.name || 'PIBIRD'}}</span>
-    </div>
-    <div class="header-right">
-      <div class="theme-switcher-wrap">
-        <button v-for="th in themes" :key="th.id" class="theme-btn"
-                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
-                @click="setTheme(th.id)"></button>
-      </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
-      </div>
-    </div>
-  </header>
-
-  <nav class="app-nav"><div id="main-nav">
-    <a v-for="p in navItems" :key="p.id" :href="p.file"
-       class="nav-link" :class="{active:p.active}">
-      <span class="nav-icon">{{p.icon}}</span>
-      <span class="nav-label">{{p.label}}</span>
-    </a>
-  </div></nav>
-
-  <main class="app-main">
+<div id="app">
+  <pibird-shell page="index">
 
     <!-- KPIs -->
     <div class="kpi-grid">
@@ -147,7 +46,7 @@
         <div v-else>
           <!-- Photo espèce -->
           <div class="last-det-photo-wrap">
-            <img v-if="lastDet.photoUrl" :src="lastDet.photoUrl"
+            <img loading="lazy" v-if="lastDet.photoUrl" :src="lastDet.photoUrl"
                  :alt="lastDet.row.Com_Name" @error="lastDet.photoUrl=null">
           </div>
           <!-- Nom + confiance -->
@@ -248,7 +147,7 @@
                class="det-item"
                :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
             <!-- Miniature espèce -->
-            <img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
+            <img loading="lazy" v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
                  :alt="d.Com_Name" @error="d.photoUrl=null">
             <div v-else class="det-thumb-ph">🐦</div>
             <!-- Bouton play -->
@@ -286,7 +185,7 @@
       <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
     </div>
 
-  </main>
+  </pibird-shell>
 </div>
 
 <script>
@@ -341,11 +240,11 @@ const { useI18n, useTheme, useNav, useChart, useAudio,
         localDateStr, daysAgo, chartDefaults, navigateTo,
         buildAudioUrl, fetchCachedPhoto } = PIBIRD;
 
-createApp({
+const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems }                = useNav('index');
+    const { navItems, siteName } = useNav('index');
     const { playingFile, toggleAudio } = useAudio();
     const { mountChart: mount7d }     = useChart();
     const { mountChart: mountTop }    = useChart();
@@ -587,7 +486,7 @@ createApp({
     });
 
     return {
-      lang, t, setLang, langs, theme, themes, setTheme, navItems,
+      lang, t,
       today, kpis, lastDet, feed,
       playingFile, toggleAudio,
       richPlaying, richProgress, richDuration, toggleRichPlay, seekRich,
@@ -597,7 +496,8 @@ createApp({
       canvas7d, canvasTop, canvasHourly,
     };
   }
-}).mount('#app');
+});
+PIBIRD.registerComponents(app).mount('#app');
 </script>
 </body>
 </html>

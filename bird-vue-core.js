@@ -19,6 +19,11 @@
 ;(function (Vue, BIRD_CONFIG) {
   'use strict';
 
+  // ── Service Worker ────────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
   const { ref, computed, watch, onUnmounted } = Vue;
 
   // ── Traductions inline ────────────────────────────────────────────────────
@@ -372,7 +377,6 @@
 
   function useNav(pageId) {
     const { t } = useI18n();
-    // computed : se recalcule automatiquement si _lang change
     const navItems = computed(() =>
       BIRD_CONFIG.pages.map(p => ({
         ...p,
@@ -380,7 +384,11 @@
         active: p.id === pageId,
       }))
     );
-    return { navItems };
+    // siteName exposé pour le template header-brand (BIRD_CONFIG non accessible directement dans Vue 3)
+    const siteName = BIRD_CONFIG.siteName
+      || (BIRD_CONFIG.location && BIRD_CONFIG.location.name)
+      || '';
+    return { navItems, siteName };
   }
 
   // ── useChart ──────────────────────────────────────────────────────────────
@@ -404,6 +412,12 @@
     onUnmounted(() => { if (_instance) { _instance.destroy(); _instance = null; } });
 
     return { mountChart };
+  }
+
+  // ── Échappement HTML (anti-XSS pour v-html) ──────────────────────────────
+  function escHtml(str) {
+    if (typeof str !== 'string') return String(str ?? '');
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ── Utilitaires purs (non réactifs) ───────────────────────────────────────
@@ -625,12 +639,68 @@
     };
   }
 
+  // ── Composant PibirdShell ─────────────────────────────────────────────────
+  // Encapsule le header, la navigation, les switchers thème/langue et le <main>.
+  // Usage : <pibird-shell page="species"> … contenu … </pibird-shell>
+  const PibirdShell = {
+    props: { page: { type: String, default: '' } },
+    setup(props) {
+      const { lang, t, setLang, langs } = useI18n();
+      const { theme, themes, setTheme } = useTheme();
+      const { navItems, siteName }      = useNav(props.page);
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, siteName };
+    },
+    template: `
+<div class="app-shell">
+  <a href="#pibird-main" class="skip-link">Aller au contenu</a>
+  <header class="app-header" role="banner">
+    <div class="header-brand">
+      <img src="robin-logo.svg" class="brand-logo" alt="PIBIRD Robin">
+      <div class="brand-text">
+        <span class="brand-name">PIBIRD</span>
+        <span class="brand-sub">{{siteName}}</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="theme-switcher-wrap">
+        <button v-for="th in themes" :key="th.id" class="theme-btn"
+                :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
+                :aria-label="th.label" @click="setTheme(th.id)"></button>
+      </div>
+      <div class="lang-switcher-wrap">
+        <button v-for="l in langs" :key="l.code" class="lang-btn"
+                :class="{active:lang===l.code}" :title="l.label"
+                :aria-label="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
+      </div>
+    </div>
+  </header>
+  <nav class="app-nav" aria-label="Navigation principale"><div id="main-nav">
+    <a v-for="p in navItems" :key="p.id" :href="p.file"
+       class="nav-link" :class="{active:p.active}" :aria-current="p.active?'page':null">
+      <span class="nav-icon" aria-hidden="true">{{p.icon}}</span>
+      <span class="nav-label">{{p.label}}</span>
+    </a>
+  </div></nav>
+  <main id="pibird-main" class="app-main" role="main">
+    <slot></slot>
+  </main>
+</div>`
+  };
+
+  // Enregistre les composants globaux sur une instance d'app Vue
+  function registerComponents(app) {
+    app.component('pibird-shell', PibirdShell);
+    return app;
+  }
+
   // ── Export global ─────────────────────────────────────────────────────────
   window.PIBIRD = {
     // Composables Vue
     useI18n, useTheme, useNav, useChart, useAudio,
+    // Composants
+    PibirdShell, registerComponents,
     // Utilitaires purs
-    birdQuery,
+    birdQuery, escHtml,
     fmtDate, fmtTime, fmtConf,
     localDateStr, daysAgo, freshnessLabel,
     buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage, fetchCachedPhoto,
