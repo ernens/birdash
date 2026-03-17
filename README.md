@@ -1,18 +1,24 @@
 # BirdBoard
 
-Dashboard ornithologique moderne pour BirdNET-Pi.
-Interface HTML/JS avec backend Node.js, multilingue (FR/EN/NL).
+Dashboard ornithologique moderne pour [BirdNET-Pi](https://github.com/mcguirepr89/BirdNET-Pi).
+Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL).
+
+> [English version](README.en.md)
 
 ## Fonctionnalites
 
-- Vue d'ensemble avec KPIs et graphiques
-- Feed des detections avec lecture audio
-- Fiches especes detaillees
-- Matrice biodiversite
-- Especes rares
+- Vue d'ensemble avec KPIs et graphiques temps reel
+- Feed des detections avec lecture audio integree
+- Fiches especes detaillees avec photos (iNaturalist)
+- Matrice biodiversite (heures x especes)
+- Especes rares et alertes
 - Statistiques et classements
-- Etat du systeme
+- Spectrogramme audio
+- Enregistrements recents avec lecteur
+- Etat du systeme (CPU, RAM, disque, temperature)
 - Analyses avancees
+- Service Worker pour cache offline
+- Accessibilite (WCAG AA, navigation clavier, skip-link)
 
 ## Prerequis
 
@@ -27,9 +33,9 @@ Interface HTML/JS avec backend Node.js, multilingue (FR/EN/NL).
 cd ~
 git clone https://github.com/ernens/BirdBoard.git pibird
 
-# 2. Installer la dependance backend
+# 2. Installer les dependances
 cd ~/pibird
-npm install better-sqlite3
+npm install
 
 # 3. Adapter la configuration
 #    Editer bird-config.js selon votre installation :
@@ -37,13 +43,23 @@ npm install better-sqlite3
 #    - defaultLang (fr, en ou nl)
 nano bird-config.js
 
-# 4. Tester le serveur manuellement
+# 4. Configuration locale (optionnel)
+#    Copier le template et renseigner vos cles API
+cp pibird-local.example.js pibird-local.js
+nano pibird-local.js
+
+# 5. Tester le serveur manuellement
 node bird-server.js
 # -> [PIBIRD] API demarree sur http://127.0.0.1:7474
 # Test : curl http://127.0.0.1:7474/api/health
 
-# 5. Installer le service systemd
+# 6. Lancer les tests
+npm test
+
+# 7. Installer le service systemd
 sudo cp pibird-api.service /etc/systemd/system/
+#    Editer le service pour ajouter vos cles API (EBIRD_API_KEY, BW_STATION_ID)
+sudo systemctl edit pibird-api
 sudo systemctl daemon-reload
 sudo systemctl enable pibird-api
 sudo systemctl start pibird-api
@@ -73,6 +89,7 @@ machine (ex: `raspberrypi.local`, `monpi.local`, ou une adresse IP).
 
 ```
 VOTRE_HOSTNAME {
+    encode zstd gzip
 
     # ── BirdBoard ──────────────────────────────────────
 
@@ -118,6 +135,9 @@ sudo systemctl reload caddy
 # Tester l'API
 curl http://127.0.0.1:7474/api/health
 
+# Lancer les tests backend (19 tests)
+npm test
+
 # Ouvrir le dashboard dans un navigateur
 # http://VOTRE_HOSTNAME/birds/
 ```
@@ -126,35 +146,77 @@ curl http://127.0.0.1:7474/api/health
 
 ```
 ~/pibird/
-├── bird-server.js        # Backend Node.js/Express (port 7474)
-├── bird-config.js        # Configuration (localisation, langue, seuils)
-├── bird-i18n.js          # Traductions (fr/en/nl)
-├── bird-core.js          # Utilitaires partages
-├── bird-styles.css       # Theme visuel
-├── index.html            # Vue d'ensemble
-├── detections.html       # Feed detections + audio
-├── especes.html          # Fiche par espece
-├── biodiversite.html     # Matrice biodiversite
-├── rarites.html          # Especes rares
-├── stats.html            # Statistiques
-├── analyses.html         # Analyses avancees
-├── systeme.html          # Etat du systeme
-├── pibird-api.service    # Service systemd
-└── caddy-snippet.txt     # Extrait de config Caddy
+├── bird-server.js           # Backend Node.js HTTP natif (port 7474)
+├── bird-server.test.js      # Tests backend (19 tests, Node test runner)
+├── bird-config.js           # Configuration (localisation, langue, seuils)
+├── bird-i18n.js             # Traductions (fr/en/nl)
+├── bird-core.js             # Utilitaires partages (fetch, formatage)
+├── bird-vue-core.js         # Composants Vue 3 (PibirdShell, escHtml)
+├── bird-styles.css          # Theme visuel global (clair/sombre/paper)
+├── bird-pages.css           # Styles specifiques par page
+├── sw.js                    # Service Worker (cache offline)
+├── favicon.svg              # Icone du site
+├── robin-logo.svg           # Logo BirdBoard
+├── fr.json / en.json / nl.json  # Fichiers de traduction
+│
+├── index.html               # Vue d'ensemble
+├── today.html               # Aujourd'hui (EN)
+├── recent.html              # Detections recentes (EN)
+├── detections.html          # Feed detections + audio
+├── recordings.html          # Enregistrements (EN)
+├── species.html             # Fiche espece (EN)
+├── biodiversity.html        # Matrice biodiversite (EN)
+├── rarities.html            # Especes rares (EN)
+├── spectrogram.html         # Spectrogramme (EN)
+├── stats.html               # Statistiques
+├── analyses.html            # Analyses avancees
+├── system.html              # Etat du systeme (EN)
+│
+├── aujourd-hui.html         # Aujourd'hui (FR)
+├── especes.html             # Fiche espece (FR)
+├── biodiversite.html        # Matrice biodiversite (FR)
+├── rarites.html             # Especes rares (FR)
+├── systeme.html             # Etat du systeme (FR)
+│
+├── pibird-api.service       # Service systemd
+├── pibird-local.example.js  # Template config locale (cles API)
+├── caddy-snippet.txt        # Extrait de config Caddy
+├── package.json             # Dependances et scripts npm
+└── PATCH-config-nav.txt     # Notes de patch
 ```
 
-## Variables d'environnement (optionnel)
+## Variables d'environnement
 
 ```bash
+# Obligatoires (dans pibird-api.service ou shell)
 PIBIRD_PORT=7474
 PIBIRD_DB=/home/{USER}/BirdNET-Pi/scripts/birds.db
+
+# Optionnelles (dans pibird-local.js ou systemd override)
+EBIRD_API_KEY=your_ebird_api_key
+BW_STATION_ID=your_birdweather_station_id
 ```
+
+## Securite
+
+- Rate limiting : 120 requetes/min par IP
+- Validation SQL stricte (lecture seule, pas de multi-requetes)
+- Headers de securite (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
+- CORS restreint aux origines configurees
+- SRI (Subresource Integrity) sur les scripts CDN
+- Protection XSS (echappement HTML)
+- Masquage des erreurs SQL dans les reponses API
 
 ## Mise a jour
 
 ```bash
 cd ~/pibird
 git pull
+npm install
 # Redemarrer le service si bird-server.js a change
 sudo systemctl restart pibird-api
 ```
+
+## Licence
+
+MIT
