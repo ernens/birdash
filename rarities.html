@@ -23,7 +23,7 @@
         <div>
           <div class="fp-slider-row">
             <span class="fp-label" style="margin:0;">{{t('filter_confidence')}}</span>
-            <span v-if="!confEditing" class="fp-slider-val" @click="startConfEdit" :title="'Cliquer pour saisir'">{{Math.round(fConf*100)}}%</span>
+            <span v-if="!confEditing" class="fp-slider-val" @click="startConfEdit" :title="t('click_to_edit')">{{Math.round(fConf*100)}}%</span>
             <input v-else ref="confInput" type="number" min="0" max="100" step="1"
                    v-model.number="confEditVal"
                    @keydown.enter="commitConfEdit" @blur="commitConfEdit" @keydown.escape="confEditing=false"
@@ -38,7 +38,7 @@
         <div>
           <span class="fp-label">{{t('rarity_threshold_label')}}</span>
           <select class="fp-select" v-model.number="fMaxDet">
-            <option :value="1">= 1 (jamais vu)</option>
+            <option :value="1">= 1 ({{t('never_seen')}})</option>
             <option :value="5">≤ 5</option>
             <option :value="10">≤ 10</option>
             <option :value="25">≤ 25</option>
@@ -48,11 +48,11 @@
 
         <!-- Plage de dates -->
         <div>
-          <span class="fp-label">Plage de dates</span>
+          <span class="fp-label">{{t('date_range')}}</span>
           <input type="date" class="fp-date-input" v-model="fDateFrom">
           <input type="date" class="fp-date-input" v-model="fDateTo" style="margin-bottom:.4rem;">
           <div class="fp-quick-btns">
-            <button v-for="q in quickDates" :key="q.label" class="fp-quick-btn"
+            <button v-for="(q, qi) in quickDates" :key="qi" class="fp-quick-btn"
                     :class="{active:activeQuick===q.label}" @click="applyQuick(q)">{{q.label}}</button>
           </div>
         </div>
@@ -171,7 +171,7 @@
 </div>
 
 <script>
-const { createApp, ref, watch, onMounted, nextTick } = Vue;
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useAudio,
         birdQuery, fmtDate, fmtConf, localDateStr, daysAgo,
         navigateTo, buildAudioUrl, fetchCachedPhoto } = PIBIRD;
@@ -197,14 +197,14 @@ const app = createApp({
     function startConfEdit() { confEditVal.value=Math.round(fConf.value*100); confEditing.value=true; nextTick(()=>confInput.value?.select()); }
     function commitConfEdit() { fConf.value=Math.max(0,Math.min(100,Math.round(confEditVal.value||0)))/100; confEditing.value=false; }
 
-    const quickDates = [
-      { label:'1j',   from:()=>localDateStr(), to:()=>localDateStr() },
-      { label:'7j',   from:()=>daysAgo(6),    to:()=>localDateStr() },
-      { label:'30j',  from:()=>daysAgo(29),   to:()=>localDateStr() },
-      { label:'90j',  from:()=>daysAgo(89),   to:()=>localDateStr() },
-      { label:'1an',  from:()=>daysAgo(364),  to:()=>localDateStr() },
-      { label:'Tout', from:()=>'',            to:()=>''             },
-    ];
+    const quickDates = computed(() => [
+      { label:t('quick_1d'),  from:()=>localDateStr(), to:()=>localDateStr() },
+      { label:t('quick_7d'),  from:()=>daysAgo(6),    to:()=>localDateStr() },
+      { label:t('quick_30d'), from:()=>daysAgo(29),   to:()=>localDateStr() },
+      { label:t('quick_90d'), from:()=>daysAgo(89),   to:()=>localDateStr() },
+      { label:t('quick_1y'),  from:()=>daysAgo(364),  to:()=>localDateStr() },
+      { label:t('quick_all'), from:()=>'',            to:()=>''             },
+    ]);
     function applyQuick(q) { fDateFrom.value=q.from(); fDateTo.value=q.to(); activeQuick.value=q.label; load(); }
     function resetFilters() { fConf.value=BIRD_CONFIG.defaultConfidence; fMaxDet.value=10; fDateFrom.value=''; fDateTo.value=''; activeQuick.value=''; load(); }
 

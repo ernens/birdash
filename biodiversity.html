@@ -19,12 +19,12 @@
 
     <!-- Barre de période -->
     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Période</span>
+      <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">{{t('period')}}</span>
       <div style="display:flex;flex-wrap:nowrap;gap:.25rem;">
-        <button v-for="q in quickDates" :key="q.label"
+        <button v-for="(q,idx) in quickDates" :key="idx"
                 style="font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap;"
-                :style="activePeriod===q.label?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
-                @click="setPeriod(q)">{{q.label}}</button>
+                :style="activePeriod===idx?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
+                @click="setPeriod(q,idx)">{{q.label}}</button>
       </div>
       <span style="font-size:.75rem;color:var(--text-faint);margin-left:.5rem;">
         {{fDateFrom || '…'}} → {{fDateTo || t('today')}}
@@ -87,7 +87,7 @@
 </div>
 
 <script>
-const { createApp, ref, watch, onMounted, nextTick } = Vue;
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart,
         birdQuery, escHtml, chartDefaults, daysAgo, localDateStr, navigateTo } = PIBIRD;
 
@@ -104,17 +104,17 @@ const app = createApp({
     // Période filtre
     const fDateFrom   = ref(daysAgo(89));
     const fDateTo     = ref(localDateStr());
-    const activePeriod= ref('90j');
+    const activePeriod= ref(2);
 
-    const quickDates = [
-      { label:'7j',   from:()=>daysAgo(6),    to:()=>localDateStr(), days:7   },
-      { label:'30j',  from:()=>daysAgo(29),   to:()=>localDateStr(), days:30  },
-      { label:'90j',  from:()=>daysAgo(89),   to:()=>localDateStr(), days:90  },
-      { label:'1an',  from:()=>daysAgo(364),  to:()=>localDateStr(), days:365 },
-      { label:'Tout', from:()=>'',            to:()=>'',             days:0   },
-    ];
-    function setPeriod(q) {
-      fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=q.label;
+    const quickDates = computed(() => [
+      { label:t('quick_7d'),   from:()=>daysAgo(6),    to:()=>localDateStr(), days:7   },
+      { label:t('quick_30d'),  from:()=>daysAgo(29),   to:()=>localDateStr(), days:30  },
+      { label:t('quick_90d'),  from:()=>daysAgo(89),   to:()=>localDateStr(), days:90  },
+      { label:t('quick_1y'),   from:()=>daysAgo(364),  to:()=>localDateStr(), days:365 },
+      { label:t('quick_all'),  from:()=>'',            to:()=>'',             days:0   },
+    ]);
+    function setPeriod(q, idx) {
+      fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=idx;
       loadAll();
     }
 

@@ -20,16 +20,16 @@
     <!-- Barre de filtres stats -->
     <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;padding:.65rem .85rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
       <!-- Période -->
-      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Période</span>
+      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">{{t('period')}}</span>
       <div style="display:flex;flex-wrap:nowrap;gap:.25rem;">
-        <button v-for="q in quickDates" :key="q.label"
+        <button v-for="(q,qi) in quickDates" :key="qi"
                 style="font-size:.68rem;padding:.18rem .42rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-muted);cursor:pointer;transition:all .12s;white-space:nowrap;"
-                :style="activePeriod===q.label?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
-                @click="setPeriod(q)">{{q.label}}</button>
+                :style="activePeriod===qi?'background:var(--accent);color:#fff;border-color:var(--accent);':''"
+                @click="setPeriod(q,qi)">{{q.label}}</button>
       </div>
       <div style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></div>
       <!-- Confiance -->
-      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Confiance min.</span>
+      <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">{{t('conf_min')}}</span>
       <div style="display:flex;align-items:center;gap:.4rem;">
         <input type="range" min="0" max="1" step="0.05" v-model.number="fConf"
                style="width:90px;-webkit-appearance:none;height:4px;border-radius:2px;outline:none;"
@@ -52,7 +52,7 @@
         <div class="kpi-card"><div class="kpi-value">{{kpis.total}}</div><div class="kpi-label">{{t('all_time')}} ({{t('detections')}})</div></div>
         <div class="kpi-card"><div class="kpi-value amber">{{kpis.sp}}</div><div class="kpi-label">{{t('sys_species_distinct')}}</div></div>
         <div class="kpi-card"><div class="kpi-value blue">{{kpis.avgConf}}%</div><div class="kpi-label">{{t('avg_confidence')}}</div></div>
-        <div class="kpi-card"><div class="kpi-value">{{kpis.perDay}}</div><div class="kpi-label">{{t('detections')}} / jour (moy.)</div></div>
+        <div class="kpi-card"><div class="kpi-value">{{kpis.perDay}}</div><div class="kpi-label">{{t('detections')}} {{t('per_day_avg')}}</div></div>
         <div class="kpi-card"><div class="kpi-value">{{kpis.days}}</div><div class="kpi-label">{{t('sys_days_recorded')}}</div></div>
         <div class="kpi-card"><div class="kpi-value amber">{{kpis.maxConf}}%</div><div class="kpi-label">{{t('max_confidence')}}</div></div>
       </template>
@@ -159,7 +159,7 @@
 </div>
 
 <script>
-const { createApp, ref, watch, onMounted, nextTick } = Vue;
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart,
         birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo } = PIBIRD;
 
@@ -180,7 +180,7 @@ const app = createApp({
     const fConf       = ref(BIRD_CONFIG.defaultConfidence);
     const fDateFrom   = ref('');
     const fDateTo     = ref('');
-    const activePeriod= ref('Tout');
+    const activePeriod= ref(3);
     const confEditing = ref(false);
     const confEditVal = ref(70);
     const confInput   = ref(null);
@@ -188,13 +188,13 @@ const app = createApp({
     function startConfEdit() { confEditVal.value=Math.round(fConf.value*100); confEditing.value=true; nextTick(()=>confInput.value?.select()); }
     function commitConfEdit() { fConf.value=Math.max(0,Math.min(100,Math.round(confEditVal.value||0)))/100; confEditing.value=false; }
 
-    const quickDates = [
-      { label:'7j',   from:()=>daysAgo(6),   to:()=>localDateStr() },
-      { label:'30j',  from:()=>daysAgo(29),  to:()=>localDateStr() },
-      { label:'1an',  from:()=>daysAgo(364), to:()=>localDateStr() },
-      { label:'Tout', from:()=>'',           to:()=>''             },
-    ];
-    function setPeriod(q) { fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=q.label; loadAll(); }
+    const quickDates = computed(() => [
+      { label:t('quick_7d'),  from:()=>daysAgo(6),   to:()=>localDateStr() },
+      { label:t('quick_30d'), from:()=>daysAgo(29),  to:()=>localDateStr() },
+      { label:t('quick_1y'),  from:()=>daysAgo(364), to:()=>localDateStr() },
+      { label:t('quick_all'), from:()=>'',           to:()=>''             },
+    ]);
+    function setPeriod(q,qi) { fDateFrom.value=q.from(); fDateTo.value=q.to(); activePeriod.value=qi; loadAll(); }
 
     function buildWhere() {
       const parts = [`Confidence>=?`];

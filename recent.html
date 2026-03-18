@@ -23,7 +23,7 @@
       <button class="date-nav-btn" @click="prevDay" title="Jour précédent">←</button>
       <div class="date-nav-display" @click="openDatePicker" :title="'Cliquer pour choisir une date'">
         {{fmtDateLong(selDate)}}
-        <span v-if="selDate===today" style="font-size:.72rem;color:var(--accent);margin-left:.3rem;">· Aujourd'hui</span>
+        <span v-if="selDate===today" style="font-size:.72rem;color:var(--accent);margin-left:.3rem;">· {{t('today_label')}}</span>
       </div>
       <button class="date-nav-btn" @click="nextDay" :disabled="selDate>=today" title="Jour suivant">→</button>
       <!-- Input date caché -->
@@ -34,8 +34,8 @@
 
       <!-- Presets rapides -->
       <div class="date-nav-quick">
-        <button class="date-nav-quick-btn" :class="{active:selDate===today}" @click="goToday">Aujourd'hui</button>
-        <button class="date-nav-quick-btn" :class="{active:selDate===yesterday}" @click="goYesterday">Hier</button>
+        <button class="date-nav-quick-btn" :class="{active:selDate===today}" @click="goToday">{{t('today_label')}}</button>
+        <button class="date-nav-quick-btn" :class="{active:selDate===yesterday}" @click="goYesterday">{{t('yesterday')}}</button>
         <button v-for="q in recentQuicks" :key="q.label"
                 class="date-nav-quick-btn" :class="{active:activeQuick===q.label}"
                 @click="goQuick(q)">{{q.label}}</button>
@@ -43,7 +43,7 @@
 
       <!-- Slider confiance -->
       <div class="conf-slider-wrap">
-        <span class="conf-slider-label">Conf. min.</span>
+        <span class="conf-slider-label">{{t('conf_min')}}</span>
         <input type="range" min="0" max="1" step="0.01" v-model.number="minConf"
                @change="loadAll"
                :style="'background:linear-gradient(to right,var(--accent) '+minConf*100+'%,var(--bg-deep) '+minConf*100+'%)'">
@@ -87,14 +87,14 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
-        <div class="kpi-label">Nouvelles espèces</div>
+        <div class="kpi-label">{{t('new_species')}}</div>
       </div>
     </div>
 
     <!-- ── Graphique horaire ───────────────────────────────────── -->
     <div class="card" style="margin-bottom:1rem;padding:.6rem .85rem .5rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
-        <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Distribution horaire</span>
+        <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">{{t('hourly_distrib')}}</span>
         <span style="font-size:.72rem;color:var(--text-faint);">{{kpis.det}} détections · {{kpis.sp}} espèces</span>
       </div>
       <div class="hourly-chart-wrap"><canvas ref="canvasHourly"></canvas></div>
@@ -575,10 +575,10 @@ const app = createApp({
     // ── Date sélectionnée (réactive) ──────────────────────────────
     const selDate     = ref(today);
     const activeQuick = ref('');
-    const recentQuicks = [
-      { label:'7j',  days: 6   },
-      { label:'30j', days: 29  },
-    ];
+    const recentQuicks = computed(() => [
+      { label:t('quick_7d'),  days: 6   },
+      { label:t('quick_30d'), days: 29  },
+    ]);
 
     const datePickerInput = ref(null);
     function openDatePicker() { datePickerInput.value?.showPicker?.() || datePickerInput.value?.click(); }

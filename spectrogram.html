@@ -23,9 +23,9 @@
       <!-- Indicateur live -->
       <div class="live-indicator">
         <div class="live-dot" :class="{active:status==='live', error:status==='error'}"></div>
-        <span v-if="status==='idle'">Inactif</span>
-        <span v-else-if="status==='connecting'">Connexion…</span>
-        <span v-else-if="status==='live'" style="color:#4caf50;">En direct</span>
+        <span v-if="status==='idle'">{{t('idle')}}</span>
+        <span v-else-if="status==='connecting'">{{t('connecting')}}</span>
+        <span v-else-if="status==='live'" style="color:#4caf50;">{{t('live')}}</span>
         <span v-else-if="status==='error'" style="color:var(--danger);">Erreur</span>
       </div>
 
@@ -35,19 +35,19 @@
       <button v-if="status!=='live'" class="btn btn-primary"
               style="padding:.3rem .9rem;font-size:.8rem;"
               @click="startLive" :disabled="status==='connecting'">
-        ▶ Démarrer
+        ▶ {{t('start')}}
       </button>
       <button v-else class="btn btn-secondary"
               style="padding:.3rem .9rem;font-size:.8rem;"
               @click="stopLive">
-        ⏹ Arrêter
+        ⏹ {{t('stop')}}
       </button>
 
       <div class="toolbar-sep"></div>
 
       <!-- Gain -->
       <div class="toolbar-group">
-        <label>Gain</label>
+        <label>{{t('gain')}}</label>
         <input type="range" min="0.5" max="5" step="0.1" v-model.number="gain"
                style="width:100px;accent-color:var(--accent);">
         <span style="font-size:.75rem;font-family:monospace;color:var(--accent);min-width:36px;">
@@ -59,7 +59,7 @@
 
       <!-- Fréq max -->
       <div class="toolbar-group">
-        <label>Fréq. max</label>
+        <label>{{t('freq_max')}}</label>
         <select class="bird-select" v-model.number="maxHz"
                 style="padding:.2rem .4rem;font-size:.75rem;">
           <option :value="8000">8 kHz</option>
@@ -105,7 +105,7 @@
                   : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
           <span v-if="processingClean">⏳</span>
           <span v-else-if="cleanMode">✨ Clean</span>
-          <span v-else>🎛 Nettoyer</span>
+          <span v-else>🎛 {{t('clean')}}</span>
         </button>
         <template v-if="cleanMode">
           <input type="range" min="0.2" max="1.0" step="0.05"
@@ -119,9 +119,9 @@
 
       <!-- Poll détections -->
       <div class="toolbar-group">
-        <label>Détections</label>
+        <label>{{t('detections')}}</label>
         <span style="font-size:.75rem;color:var(--text-muted);">
-          {{recentDets.length > 0 ? recentDets.length+' aujourd\'hui' : '—'}}
+          {{recentDets.length > 0 ? recentDets.length+' '+t('today_count') : '—'}}
         </span>
         <span v-if="lastPollAge" style="font-size:.68rem;color:var(--text-faint);">
           ({{lastPollAge}})

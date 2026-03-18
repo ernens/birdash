@@ -18,13 +18,13 @@
 
     <!-- ── Titre + tri global ────────────────────────────────────── -->
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <h2 style="margin:0;font-size:1.1rem;">🏆 Meilleurs enregistrements</h2>
+      <h2 style="margin:0;font-size:1.1rem;">🏆 {{t('best_recordings')}}</h2>
       <div class="filter-sort" style="margin-left:auto;">
-        <label>Trier par</label>
+        <label>{{t('sort_by')}}</label>
         <select class="bird-select" v-model="sortBy" style="padding:.3rem .6rem;font-size:.78rem;">
-          <option value="conf">Confiance ↓</option>
-          <option value="date">Date ↓</option>
-          <option value="species">Espèce A→Z</option>
+          <option value="conf">{{t('sort_conf_desc')}}</option>
+          <option value="date">{{t('sort_date_desc')}}</option>
+          <option value="species">{{t('sort_species_az')}}</option>
         </select>
       </div>
       <!-- Presets période uniforme -->
@@ -35,7 +35,7 @@
                 @click="period=q.val">{{q.label}}</button>
       </div>
       <span style="font-size:.78rem;color:var(--text-faint);">
-        {{filteredRecs.length}} enregistrement{{filteredRecs.length!==1?'s':''}}
+        {{filteredRecs.length}} {{t('nav_recordings').toLowerCase()}}
       </span>
     </div>
 
@@ -43,17 +43,17 @@
 
       <!-- ── Filtre espèces (gauche) ────────────────────────────── -->
       <div class="filter-panel">
-        <input class="filter-search" type="search" placeholder="🔍 Filtrer espèces…"
+        <input class="filter-search" type="search" :placeholder="'🔍 '+t('filter_species_ph')"
                v-model="spSearch">
         <div class="filter-actions">
           <button class="btn btn-secondary" style="flex:1;font-size:.75rem;padding:.3rem;"
-                  @click="selectedSpecies=[]">Tout effacer</button>
+                  @click="selectedSpecies=[]">{{t('clear_all')}}</button>
           <button class="btn btn-secondary" style="flex:1;font-size:.75rem;padding:.3rem;"
-                  @click="selectedSpecies=availableSpecies.map(s=>s.name)">Tout sélect.</button>
+                  @click="selectedSpecies=availableSpecies.map(s=>s.name)">{{t('select_all')}}</button>
         </div>
         <div class="species-scroll">
           <div v-if="!availableSpecies.length" style="padding:.75rem;font-size:.8rem;color:var(--text-faint);">
-            Chargement…
+            {{t('loading')}}
           </div>
           <div v-for="sp in filteredSpeciesList" :key="sp.name"
                class="sp-filter-item" :class="{selected: selectedSpecies.includes(sp.name)}"
@@ -68,9 +68,9 @@
       <!-- ── Grille enregistrements ─────────────────────────────── -->
       <div>
         <div class="rec-grid">
-          <div v-if="loading" class="rec-empty">⏳ Chargement…</div>
+          <div v-if="loading" class="rec-empty">⏳ {{t('loading')}}</div>
           <div v-else-if="!pagedRecs.length" class="rec-empty">
-            Aucun enregistrement trouvé pour la sélection.
+            {{t('no_recordings')}}
           </div>
 
           <div v-for="rec in pagedRecs" :key="rec.uid"
@@ -161,12 +161,12 @@
                       :style="cleanState[rec.uid]?.mode
                         ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
                         : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
-                <span v-if="cleanState[rec.uid]?.processing">⏳ Nettoyage…</span>
-                <span v-else-if="cleanState[rec.uid]?.mode">✨ Nettoyé</span>
-                <span v-else>🎛 Nettoyer le son</span>
+                <span v-if="cleanState[rec.uid]?.processing">⏳ {{t('cleaning')}}</span>
+                <span v-else-if="cleanState[rec.uid]?.mode">✨ {{t('cleaned')}}</span>
+                <span v-else>🎛 {{t('clean_audio')}}</span>
               </button>
               <template v-if="cleanState[rec.uid]?.mode && !cleanState[rec.uid]?.processing">
-                <span style="font-size:.72rem;color:var(--text-muted);">Force</span>
+                <span style="font-size:.72rem;color:var(--text-muted);">{{t('force')}}</span>
                 <input type="range" min="0.2" max="1.0" step="0.05"
                        :value="cleanState[rec.uid]?.strength ?? 0.75"
                        @change="e => { cleanState[rec.uid].strength=parseFloat(e.target.value); reapplyClean(rec); }"
@@ -177,7 +177,7 @@
               </template>
               <span v-if="!cleanState[rec.uid]?.mode"
                     style="font-size:.68rem;color:var(--text-faint);">
-                filtre passe-haut + soustraction spectrale
+                {{t('spectral_sub')}}
               </span>
             </div>
 
@@ -201,7 +201,7 @@
           <!-- Charger plus -->
           <div v-if="hasMore" class="rec-load-more">
             <button class="btn btn-secondary" @click="loadMore">
-              ↓ Charger plus ({{filteredRecs.length - page*PAGE_SIZE}} restants)
+              {{t('load_more')}}
             </button>
           </div>
 
@@ -741,13 +741,13 @@ const app = createApp({
       ctx.putImageData(img,0,0);
     }
 
-    const recQuickDates = [
-      { label:'1j',  val:'today' },
-      { label:'7j',  val:'7'     },
-      { label:'30j', val:'30'    },
-      { label:'1an', val:'365'   },
-      { label:'Tout',val:'all'   },
-    ];
+    const recQuickDates = computed(() => [
+      { label:t('quick_1d'),  val:'today' },
+      { label:t('quick_7d'),  val:'7'     },
+      { label:t('quick_30d'), val:'30'    },
+      { label:t('quick_1y'),  val:'365'   },
+      { label:t('quick_all'), val:'all'   },
+    ]);
 
     // ── Téléchargement audio ───────────────────────────────────────
     function downloadAudio(rec) {

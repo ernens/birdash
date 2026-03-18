@@ -89,7 +89,7 @@
             </div>
             <div class="kpi-card sp-kpi">
               <div class="kpi-value" style="color:var(--accent);">{{sp.avgConf ? sp.avgConf+'%' : '—'}}</div>
-              <div class="kpi-label">Confiance moy.</div>
+              <div class="kpi-label">{{t('avg_conf_short')}}</div>
             </div>
             <div class="kpi-card sp-kpi">
               <div class="kpi-value muted">{{fmtDate(sp.first)}}</div>
@@ -101,7 +101,7 @@
             </div>
             <div class="kpi-card sp-kpi">
               <div class="kpi-value muted">{{sp.daysDetected || '—'}}</div>
-              <div class="kpi-label">Jours détectés</div>
+              <div class="kpi-label">{{t('days_detected')}}</div>
             </div>
           </div>
 
@@ -116,7 +116,7 @@
 
       <!-- ── Wikipedia description ──────────────────────────────── -->
       <div v-if="wikiSummary" class="card" style="margin-bottom:1rem;">
-        <div class="card-title">📖 Description</div>
+        <div class="card-title">📖 {{t('description')}}</div>
         <p style="line-height:1.7;color:var(--text-main);margin:0;">{{wikiSummary}}</p>
         <p v-if="wikiSummaryAlt" style="line-height:1.7;color:var(--text-muted);margin:.75rem 0 0 0;font-size:.9rem;">
           {{wikiSummaryAlt}}
@@ -137,18 +137,18 @@
 
       <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
-          <div class="card-title">Activité — 30 jours</div>
+          <div class="card-title">{{t('activity_30d')}}</div>
           <div class="chart-wrap"><canvas ref="canvas30d"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title">Distribution de confiance</div>
+          <div class="card-title">{{t('conf_distribution')}}</div>
           <div class="chart-wrap"><canvas ref="canvasConf"></canvas></div>
         </div>
       </div>
 
       <!-- ── Heatmap jour/heure ─────────────────────────────────── -->
       <div class="card" style="margin-bottom:1rem;">
-        <div class="card-title">Activité par jour de la semaine</div>
+        <div class="card-title">{{t('activity_by_weekday')}}</div>
         <div class="chart-wrap"><canvas ref="canvasDayHour"></canvas></div>
       </div>
 

@@ -26,7 +26,7 @@
             <!-- Trigger -->
             <div class="ms-trigger" :class="{open:spDropdownOpen}"
                  @click="spDropdownOpen=!spDropdownOpen">
-              <span v-if="!fSpecies.length" class="ms-placeholder">— Toutes espèces —</span>
+              <span v-if="!fSpecies.length" class="ms-placeholder">{{t('all_species_placeholder')}}</span>
               <span v-for="s in fSpecies" :key="s" class="ms-tag">
                 {{s}}
                 <button class="ms-tag-x" @click.stop="removeSpecies(s)">×</button>
@@ -41,10 +41,10 @@
                        v-model="spSearch" @click.stop>
               </div>
               <div class="ms-actions">
-                <button class="ms-action-btn" @click.stop="fSpecies=[]">Tout effacer</button>
+                <button class="ms-action-btn" @click.stop="fSpecies=[]">{{t('clear_all')}}</button>
                 <button class="ms-action-btn"
                         @click.stop="fSpecies=filteredSpeciesList.map(s=>s)">
-                  Tout sélect.
+                  {{t('select_all')}}
                 </button>
               </div>
               <div class="ms-list">
@@ -59,12 +59,12 @@
           </div>
         </div>
         <div>
-          <span class="fp-label">Plage de dates</span>
+          <span class="fp-label">{{t('date_range')}}</span>
           <input type="date" class="fp-date-input" v-model="fDateFrom">
           <input type="date" class="fp-date-input" v-model="fDateTo" style="margin-bottom:.45rem;">
           <div class="fp-quick-btns">
-            <button v-for="q in quickDates" :key="q.label" class="fp-quick-btn"
-                    :class="{active:activeQuick===q.label}" @click="applyQuick(q)">{{q.label}}</button>
+            <button v-for="(q,idx) in quickDates" :key="idx" class="fp-quick-btn"
+                    :class="{active:activeQuick===idx}" @click="applyQuick(q,idx)">{{q.label}}</button>
           </div>
         </div>
         <div>
@@ -91,11 +91,11 @@
           <div class="fp-slider-marks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
         </div>
         <div>
-          <span class="fp-label">Mode</span>
+          <span class="fp-label">{{t('mode')}}</span>
           <div class="fp-toggle-row" @click="uniqueMode=!uniqueMode">
             <div>
-              <div class="fp-toggle-label">Unique</div>
-              <div class="fp-toggle-sub">Regroupe les séquences consécutives</div>
+              <div class="fp-toggle-label">{{t('unique_mode')}}</div>
+              <div class="fp-toggle-sub">{{t('unique_desc')}}</div>
             </div>
             <div class="fp-toggle" :class="{on:uniqueMode}"></div>
           </div>
@@ -206,7 +206,7 @@ const app = createApp({
     const fDateTo     = ref(localDateStr());
     const fConf       = ref(BIRD_CONFIG.defaultConfidence);
     const uniqueMode  = ref(false);
-    const activeQuick = ref('');
+    const activeQuick = ref(-1);
     const speciesList = ref([]);
 
     // Édition directe de la valeur de confiance
@@ -237,19 +237,19 @@ const app = createApp({
       return speciesList.value.filter(s => s.toLowerCase().includes(q));
     });
 
-    const quickDates = [
-      { label:'1j',   from:()=>localDateStr(), to:()=>localDateStr() },
-      { label:'7j',   from:()=>daysAgo(6),   to:()=>localDateStr() },
-      { label:'30j',  from:()=>daysAgo(29),  to:()=>localDateStr() },
-      { label:'90j',  from:()=>daysAgo(89),  to:()=>localDateStr() },
-      { label:'1an',  from:()=>daysAgo(364), to:()=>localDateStr() },
-      { label:'Tout', from:()=>'',           to:()=>''             },
-    ];
+    const quickDates = computed(() => [
+      { label:t('quick_1d'),   from:()=>localDateStr(), to:()=>localDateStr() },
+      { label:t('quick_7d'),   from:()=>daysAgo(6),   to:()=>localDateStr() },
+      { label:t('quick_30d'),  from:()=>daysAgo(29),  to:()=>localDateStr() },
+      { label:t('quick_90d'),  from:()=>daysAgo(89),  to:()=>localDateStr() },
+      { label:t('quick_1y'),   from:()=>daysAgo(364), to:()=>localDateStr() },
+      { label:t('quick_all'),  from:()=>'',           to:()=>''             },
+    ]);
 
-    function applyQuick(q) {
+    function applyQuick(q, idx) {
       fDateFrom.value = q.from();
       fDateTo.value   = q.to();
-      activeQuick.value = q.label;
+      activeQuick.value = idx;
       applyFilters();
     }
 
@@ -371,7 +371,7 @@ const app = createApp({
     function resetFilters() {
       fSpecies.value=[]; fDateFrom.value=daysAgo(BIRD_CONFIG.recentDays);
       fDateTo.value=localDateStr(); fConf.value=BIRD_CONFIG.defaultConfidence;
-      uniqueMode.value=false; activeQuick.value=''; spSearch.value='';
+      uniqueMode.value=false; activeQuick.value=-1; spSearch.value='';
       page.value=1; loadDetections();
     }
     function goPage(p) { page.value=p; window.scrollTo(0,0); loadDetections(); }
