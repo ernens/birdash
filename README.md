@@ -1,77 +1,99 @@
-# BirdBoard
+# 🐦 BirdBoard
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
+[![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Dashboard ornithologique moderne pour [BirdNET-Pi](https://github.com/mcguirepr89/BirdNET-Pi).
 Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL).
 
-> [English version](README.en.md)
+> [English version](README.en.md) · [Contributing](CONTRIBUTING.md)
 
-## Fonctionnalites
+## Screenshots
 
-- Vue d'ensemble avec KPIs et graphiques temps reel
-- Feed des detections avec lecture audio integree
-- Fiches especes detaillees avec photos (iNaturalist)
-- Matrice biodiversite (heures x especes)
-- Especes rares et alertes
-- Statistiques et classements
-- Spectrogramme audio
-- Enregistrements recents avec lecteur
-- Etat du systeme (CPU, RAM, disque, temperature)
-- Analyses avancees
-- Service Worker pour cache offline
-- Accessibilite (WCAG AA, navigation clavier, skip-link)
+| Vue d'ensemble | Fiche espèce |
+|:-:|:-:|
+| ![Dashboard](screenshots/dashboard.png) | ![Species](screenshots/species.png) |
 
-## Prerequis
+| Enregistrements | Détections |
+|:-:|:-:|
+| ![Recordings](screenshots/recordings.png) | ![Detections](screenshots/detections.png) |
 
-- BirdNET-Pi en fonctionnement (`~/BirdNET-Pi/scripts/birds.db` present)
+| Biodiversité | Rarités |
+|:-:|:-:|
+| ![Biodiversity](screenshots/biodiversity.png) | ![Rarities](screenshots/rarities.png) |
+
+| Spectrogramme | Statistiques |
+|:-:|:-:|
+| ![Spectrogram](screenshots/spectrogram.png) | ![Stats](screenshots/stats.png) |
+
+## Fonctionnalités
+
+- 📊 Vue d'ensemble avec KPIs et graphiques temps réel
+- 🎙️ Feed des détections avec lecture audio intégrée
+- 🦜 Fiches espèces détaillées avec carrousel photos (iNaturalist + Wikipedia)
+- 🧬 Infos taxonomiques, statut de conservation (IUCN), envergure
+- 🗓️ Matrice biodiversité (heures × espèces)
+- 💎 Espèces rares et alertes
+- 📈 Statistiques et classements
+- 🎵 Spectrogramme audio avec nettoyage DSP
+- 🏆 Meilleurs enregistrements avec lecteur
+- 🖥️ État du système (CPU, RAM, disque, température)
+- 🔬 Analyses avancées
+- ⚡ Service Worker pour cache offline
+- ♿ Accessibilité (WCAG AA, navigation clavier, skip-link)
+- 🎨 5 thèmes visuels (Forest, Night, Paper, Ocean, Dusk)
+- 🌍 3 langues (FR / EN / NL)
+
+## Prérequis
+
+- BirdNET-Pi en fonctionnement (`~/BirdNET-Pi/scripts/birds.db` présent)
 - Node.js >= 18 (`node --version`)
 - Caddy (voir section Configuration Caddy ci-dessous)
 
 ## Installation
 
 ```bash
-# 1. Cloner le depot
+# 1. Cloner le dépôt
 cd ~
 git clone https://github.com/ernens/BirdBoard.git pibird
 
-# 2. Installer les dependances
+# 2. Installer les dépendances
 cd ~/pibird
 npm install
 
-# 3. Adapter la configuration
-#    Editer bird-config.js selon votre installation :
-#    - location (coordonnees, nom)
-#    - defaultLang (fr, en ou nl)
-nano bird-config.js
-
-# 4. Configuration locale (optionnel)
-#    Copier le template et renseigner vos cles API
+# 3. Configuration locale
+#    Copier le template et renseigner vos paramètres
 cp pibird-local.example.js pibird-local.js
 nano pibird-local.js
 
-# 5. Tester le serveur manuellement
+# 4. Tester le serveur manuellement
 node bird-server.js
-# -> [PIBIRD] API demarree sur http://127.0.0.1:7474
+# -> [PIBIRD] API démarrée sur http://127.0.0.1:7474
 # Test : curl http://127.0.0.1:7474/api/health
 
-# 6. Lancer les tests
+# 5. Lancer les tests
 npm test
 
-# 7. Installer le service systemd
+# 6. Installer le service systemd
 sudo cp pibird-api.service /etc/systemd/system/
-#    Editer le service pour ajouter vos cles API (EBIRD_API_KEY, BW_STATION_ID)
+#    Ajouter vos clés API dans un override systemd :
 sudo systemctl edit pibird-api
+#    [Service]
+#    Environment=EBIRD_API_KEY=votre_clé
+#    Environment=BW_STATION_ID=votre_station
 sudo systemctl daemon-reload
 sudo systemctl enable pibird-api
 sudo systemctl start pibird-api
-sudo systemctl status pibird-api
 ```
 
 ## Configuration Caddy
 
 BirdBoard utilise Caddy comme reverse proxy pour servir l'API, les fichiers
-audio et les pages statiques sous un meme chemin `/birds/`.
+audio et les pages statiques sous un même chemin `/birds/`.
 
-### 1. Installer Caddy (si pas deja installe)
+### 1. Installer Caddy (si pas déjà installé)
 
 ```bash
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
@@ -83,15 +105,11 @@ sudo apt install caddy
 
 ### 2. Configurer le Caddyfile
 
-Editez `/etc/caddy/Caddyfile` et ajoutez le bloc BirdBoard dans votre
-configuration de site. Remplacez `VOTRE_HOSTNAME` par le nom de votre
-machine (ex: `raspberrypi.local`, `monpi.local`, ou une adresse IP).
+Éditez `/etc/caddy/Caddyfile` et ajoutez le bloc BirdBoard :
 
 ```
 VOTRE_HOSTNAME {
     encode zstd gzip
-
-    # ── BirdBoard ──────────────────────────────────────
 
     # API : proxy vers le backend Node.js
     handle /birds/api/* {
@@ -99,7 +117,7 @@ VOTRE_HOSTNAME {
         reverse_proxy 127.0.0.1:7474
     }
 
-    # Audio : sert les fichiers audio extraits par BirdNET-Pi
+    # Audio : fichiers audio extraits par BirdNET-Pi
     handle /birds/audio/* {
         uri strip_prefix /birds/audio
         root * /home/{USER}/BirdSongs/Extracted
@@ -110,26 +128,20 @@ VOTRE_HOSTNAME {
     handle /birds* {
         root * /home/{USER}/pibird
         file_server
-        try_files {path} /birds/index.html
     }
-
-    # ... vos autres configurations ...
 }
 ```
 
-Remplacez `{USER}` par votre nom d'utilisateur systeme (ex: `pi`, `bjorn`).
+Remplacez `{USER}` par votre nom d'utilisateur système.
 
-### 3. Appliquer la configuration
+### 3. Appliquer
 
 ```bash
-# Verifier la syntaxe
 caddy validate --config /etc/caddy/Caddyfile
-
-# Recharger Caddy
 sudo systemctl reload caddy
 ```
 
-## Verification
+## Vérification
 
 ```bash
 # Tester l'API
@@ -138,85 +150,72 @@ curl http://127.0.0.1:7474/api/health
 # Lancer les tests backend (19 tests)
 npm test
 
-# Ouvrir le dashboard dans un navigateur
+# Ouvrir le dashboard
 # http://VOTRE_HOSTNAME/birds/
 ```
 
-## Structure des fichiers
+## Structure du projet
 
 ```
-~/pibird/
-├── bird-server.js           # Backend Node.js HTTP natif (port 7474)
-├── bird-server.test.js      # Tests backend (19 tests, Node test runner)
-├── bird-config.js           # Configuration (localisation, langue, seuils)
-├── bird-i18n.js             # Traductions (fr/en/nl)
-├── bird-core.js             # Utilitaires partages (fetch, formatage)
-├── bird-vue-core.js         # Composants Vue 3 (PibirdShell, escHtml)
-├── bird-styles.css          # Theme visuel global (clair/sombre/paper)
-├── bird-pages.css           # Styles specifiques par page
+BirdBoard/
+├── bird-server.js           # Backend Node.js (API HTTP + SQLite)
+├── bird-server.test.js      # Tests backend (19 tests)
+├── bird-config.js           # Configuration centrale
+├── bird-vue-core.js         # Composables Vue 3 (PibirdShell, i18n, thèmes)
+├── bird-styles.css          # Styles globaux + 5 thèmes
+├── bird-pages.css           # Styles spécifiques par page
 ├── sw.js                    # Service Worker (cache offline)
-├── favicon.svg              # Icone du site
-├── robin-logo.svg           # Logo BirdBoard
-├── fr.json / en.json / nl.json  # Fichiers de traduction
-│
-├── index.html               # Vue d'ensemble
-├── today.html               # Aujourd'hui (EN)
-├── recent.html              # Detections recentes (EN)
-├── detections.html          # Feed detections + audio
-├── recordings.html          # Enregistrements (EN)
-├── species.html             # Fiche espece (EN)
-├── biodiversity.html        # Matrice biodiversite (EN)
-├── rarities.html            # Especes rares (EN)
-├── spectrogram.html         # Spectrogramme (EN)
-├── stats.html               # Statistiques
-├── analyses.html            # Analyses avancees
-├── system.html              # Etat du systeme (EN)
-│
-├── aujourd-hui.html         # Aujourd'hui (FR)
-├── especes.html             # Fiche espece (FR)
-├── biodiversite.html        # Matrice biodiversite (FR)
-├── rarites.html             # Especes rares (FR)
-├── systeme.html             # Etat du systeme (FR)
-│
+├── pibird-local.example.js  # Template config locale
 ├── pibird-api.service       # Service systemd
-├── pibird-local.example.js  # Template config locale (cles API)
-├── caddy-snippet.txt        # Extrait de config Caddy
-├── package.json             # Dependances et scripts npm
-└── PATCH-config-nav.txt     # Notes de patch
+├── index.html               # Dashboard principal
+├── species.html             # Fiche espèce (carrousel, stats, charts)
+├── recordings.html          # Meilleurs enregistrements
+├── detections.html          # Journal des détections
+├── biodiversity.html        # Matrice biodiversité
+├── rarities.html            # Espèces rares
+├── stats.html               # Statistiques
+├── analyses.html            # Analyses avancées
+├── spectrogram.html         # Spectrogramme audio
+├── today.html               # Détections du jour
+├── recent.html              # Détections récentes
+├── system.html              # État du système
+├── screenshots/             # Captures d'écran
+├── CONTRIBUTING.md          # Guide de contribution
+└── LICENSE                  # Licence MIT
 ```
 
 ## Variables d'environnement
 
-```bash
-# Obligatoires (dans pibird-api.service ou shell)
-PIBIRD_PORT=7474
-PIBIRD_DB=/home/{USER}/BirdNET-Pi/scripts/birds.db
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `PIBIRD_PORT` | `7474` | Port du serveur API |
+| `PIBIRD_DB` | `~/BirdNET-Pi/scripts/birds.db` | Chemin vers la base SQLite |
+| `EBIRD_API_KEY` | — | Clé API eBird (optionnelle) |
+| `BW_STATION_ID` | — | ID station BirdWeather (optionnelle) |
 
-# Optionnelles (dans pibird-local.js ou systemd override)
-EBIRD_API_KEY=your_ebird_api_key
-BW_STATION_ID=your_birdweather_station_id
-```
+## Sécurité
 
-## Securite
+- 🛡️ Rate limiting : 120 requêtes/min par IP
+- 🔒 Validation SQL stricte (lecture seule, pas de multi-requêtes)
+- 🔐 Headers de sécurité (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
+- 🌐 CORS restreint aux origines configurées
+- ✅ SRI (Subresource Integrity) sur les scripts CDN
+- 🧹 Protection XSS (échappement HTML)
+- 🙈 Masquage des erreurs SQL dans les réponses API
 
-- Rate limiting : 120 requetes/min par IP
-- Validation SQL stricte (lecture seule, pas de multi-requetes)
-- Headers de securite (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
-- CORS restreint aux origines configurees
-- SRI (Subresource Integrity) sur les scripts CDN
-- Protection XSS (echappement HTML)
-- Masquage des erreurs SQL dans les reponses API
+## Contribuer
 
-## Mise a jour
+Les contributions sont les bienvenues ! Consultez le [guide de contribution](CONTRIBUTING.md).
+
+## Mise à jour
 
 ```bash
 cd ~/pibird
 git pull
 npm install
-# Redemarrer le service si bird-server.js a change
 sudo systemctl restart pibird-api
 ```
 
 ## Licence
 
-MIT
+[MIT](LICENSE) © ernens
