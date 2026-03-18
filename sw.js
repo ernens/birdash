@@ -4,7 +4,7 @@
  * Stratégie : cache-first pour les assets, network-first pour l'API.
  */
 
-const CACHE_NAME = 'pibird-v1';
+const CACHE_NAME = 'pibird-v2';
 
 // Assets statiques à pré-cacher à l'installation
 const PRECACHE = [
@@ -56,9 +56,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets locaux : cache-first avec revalidation en arrière-plan
-  if (CACHEABLE_ASSET.test(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(event.request));
+  // Assets locaux (JS, CSS, SVG) : network-first (toujours à jour, cache fallback)
+  if (CACHEABLE_ASSET.test(url.pathname) && url.origin === self.location.origin) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
