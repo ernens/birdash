@@ -6,7 +6,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Dashboard ornithologique moderne pour [BirdNET-Pi](https://github.com/mcguirepr89/BirdNET-Pi).
-Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL).
+Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL/DE + 36 langues pour les noms d'espèces).
 
 > [English version](README.en.md) · [Contributing](CONTRIBUTING.md)
 
@@ -30,7 +30,7 @@ Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL).
 
 ## Fonctionnalités
 
-- 📊 Vue d'ensemble avec KPIs et graphiques temps réel
+- 📊 Vue d'ensemble avec 6 KPIs (détections, espèces, confiance, total, dernière heure, espèces rares) et graphiques temps réel (activité aujourd'hui + 7 jours avec trendline)
 - 🎙️ Feed des détections avec lecture audio intégrée
 - 🦜 Fiches espèces détaillées avec carrousel photos (iNaturalist + Wikipedia)
 - 🧬 Infos taxonomiques, statut de conservation (IUCN), envergure
@@ -38,13 +38,14 @@ Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL).
 - 💎 Espèces rares et alertes
 - 📈 Statistiques et classements
 - 🎵 Spectrogramme audio avec nettoyage DSP
-- 🏆 Meilleurs enregistrements avec lecteur
+- 🏆 Meilleurs enregistrements avec photos uniformes et lecteur
 - 🖥️ État du système (CPU, RAM, disque, température)
 - 🔬 Analyses avancées
 - ⚡ Service Worker pour cache offline
 - ♿ Accessibilité (WCAG AA, navigation clavier, skip-link)
-- 🎨 5 thèmes visuels (Forest, Night, Paper, Ocean, Dusk)
-- 🌍 3 langues (FR / EN / NL)
+- 🎨 5 thèmes modernes (Forest, Night, Paper, Ocean, Dusk)
+- 🌍 4 langues d'interface (FR / EN / NL / DE) + noms d'espèces traduits automatiquement dans 36 langues via les labels BirdNET
+- 🐦 Traduction automatique des noms d'espèces selon la langue choisie (fichiers BirdNET l18n)
 
 ## Prérequis
 
