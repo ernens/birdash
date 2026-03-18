@@ -130,7 +130,7 @@
             <tbody>
               <tr v-for="d in displayRows" :key="d._key">
                 <td style="padding:.3rem .4rem;">
-                  <img loading="lazy" v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" @error="d.photoUrl=null">
+                  <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" />
                   <div v-else class="det-thumb-ph">🐦</div>
                 </td>
                 <td>

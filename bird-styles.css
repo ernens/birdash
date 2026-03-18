@@ -707,6 +707,58 @@ a:hover { opacity: .85; }
   40%           { transform: scale(1);  opacity: 1;  }
 }
 
+/* ── Image loader (wave dots overlay) ────────────────────────────────────── */
+.img-wrap {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.img-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+
+.img-wrap img.loaded {
+  opacity: 1;
+}
+
+.img-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  background: var(--bg-card);
+  transition: opacity .4s ease;
+  pointer-events: none;
+}
+
+.img-loader.hidden {
+  opacity: 0;
+}
+
+.img-loader span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  animation: img-wave 1.2s ease-in-out infinite;
+}
+
+.img-loader span:nth-child(2) { animation-delay: .15s; }
+.img-loader span:nth-child(3) { animation-delay: .30s; }
+
+@keyframes img-wave {
+  0%, 60%, 100% { transform: translateY(0); opacity: .3; }
+  30%           { transform: translateY(-10px); opacity: 1; }
+}
+
 /* ── Erreur ──────────────────────────────────────────────────────────────── */
 .error-msg { padding: 1rem; color: var(--danger); font-size: .85rem; text-align: center; }
 

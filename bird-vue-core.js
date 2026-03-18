@@ -988,9 +988,42 @@
 </div>`
   };
 
+  // ── Composant BirdImg ────────────────────────────────────────────────────
+  // Image avec animation de chargement (3 dots wave).
+  // Usage : <bird-img :src="url" :alt="text" class="my-class" />
+  const BirdImg = {
+    props: {
+      src:   { type: String, default: '' },
+      alt:   { type: String, default: '' },
+    },
+    setup(props) {
+      const loaded = ref(false);
+      const errored = ref(false);
+      // Reset on src change
+      watch(() => props.src, () => { loaded.value = false; errored.value = false; });
+      function onLoad() { loaded.value = true; }
+      function onError() { loaded.value = true; errored.value = true; }
+      return { loaded, errored, onLoad, onError };
+    },
+    template: `
+      <div class="img-wrap">
+        <div class="img-loader" :class="{ hidden: loaded }">
+          <span></span><span></span><span></span>
+        </div>
+        <img v-if="src && !errored"
+             :src="src" :alt="alt"
+             :class="{ loaded: loaded }"
+             @load="onLoad" @error="onError"
+             loading="lazy">
+        <div v-if="errored" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:2rem;color:var(--text-faint);">🦜</div>
+      </div>
+    `
+  };
+
   // Enregistre les composants globaux sur une instance d'app Vue
   function registerComponents(app) {
     app.component('pibird-shell', PibirdShell);
+    app.component('bird-img', BirdImg);
     return app;
   }
 

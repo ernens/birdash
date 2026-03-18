@@ -55,8 +55,8 @@
         <div v-else>
           <!-- Photo espèce -->
           <div class="last-det-photo-wrap">
-            <img loading="lazy" v-if="lastDet.photoUrl" :src="lastDet.photoUrl"
-                 :alt="lastDet.row.Com_Name" @error="lastDet.photoUrl=null">
+            <bird-img v-if="lastDet.photoUrl" :src="lastDet.photoUrl"
+                 :alt="lastDet.row.Com_Name" />
           </div>
           <!-- Nom + confiance -->
           <div style="display:flex;align-items:flex-start;gap:.75rem;">
@@ -144,7 +144,7 @@
         <div class="card" v-if="rareSpeciesToday.length">
           <div class="card-title">{{t('rare_today')}}</div>
           <div v-for="r in rareSpeciesToday" :key="r.Com_Name" class="det-item">
-            <img loading="lazy" v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" @error="r.photoUrl=null">
+            <bird-img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" />
             <div v-else class="det-thumb-ph">💎</div>
             <div class="det-species">
               <a class="species-link" @click="navigateTo('species.html',{species:r.Com_Name})">{{spName(r.Com_Name, r.Sci_Name)}}</a>
@@ -175,8 +175,8 @@
                class="det-item"
                :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
             <!-- Miniature espèce -->
-            <img loading="lazy" v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
-                 :alt="d.Com_Name" @error="d.photoUrl=null">
+            <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
+                 :alt="d.Com_Name" />
             <div v-else class="det-thumb-ph">🐦</div>
             <!-- Bouton play -->
             <button v-if="d.File_Name" class="play-btn"
