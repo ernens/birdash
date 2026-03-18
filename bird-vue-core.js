@@ -28,6 +28,13 @@
 
   // ── Traductions inline ────────────────────────────────────────────────────
   // Même contenu que bird-i18n.js — pas de fetch, disponible immédiatement.
+  //
+  // ═══ AJOUTER UNE NOUVELLE LANGUE ════════════════════════════════════════
+  // 1. Copier un bloc existant (ex: 'en') et le renommer (ex: 'es')
+  // 2. Remplir _meta: { lang:'es', label:'Español', flag:'🇪🇸' }
+  // 3. Traduire toutes les clés (164 clés)
+  // 4. La langue apparaîtra automatiquement dans le sélecteur
+  // ═══════════════════════════════════════════════════════════════════════
   const _TRANSLATIONS = {
     fr: {
       _meta: { lang:'fr', label:'Français', flag:'🇫🇷' },
@@ -207,6 +214,96 @@
       stats_daily_records:'🏆 Daily records', stats_annual_evolution:'📅 Annual evolution',
       stats_record_most_det:'Day with most detections',
       stats_record_most_sp:'Day with most species', stats_record_max_conf:'Maximum confidence',
+    },
+
+    de: {
+      _meta: { lang:'de', label:'Deutsch', flag:'🇩🇪' },
+      nav_overview:'Übersicht', nav_today:'Heute', nav_recent:'Aktuell',
+      nav_detections:'Erkennungen', nav_species:'Arten',
+      nav_biodiversity:'Biodiversität', nav_rarities:'Seltenheiten',
+      nav_stats:'Statistiken', nav_system:'System', nav_analyses:'Analysen', nav_spectrogram:'Spektrogramm', nav_recordings:'Aufnahmen',
+      today:'Heute', this_week:'Diese Woche', this_month:'Diesen Monat', all_time:'Gesamt',
+      detections:'Erkennungen', species:'Arten', avg_confidence:'Ø Konfidenz',
+      last_detection:'Letzte Erkennung', top_species:'Top-Arten',
+      activity_7d:'7-Tage-Aktivität', activity_today:'Aktivität heute',
+      last_hour:'Letzte Stunde', rare_today:'Seltene Arten heute',
+      recent_detections:'Letzte Erkennungen',
+      no_data:'Keine Daten', loading:'Laden…', error:'Fehler',
+      date:'Datum', time:'Uhrzeit', species_name:'Art', scientific_name:'Wissenschaftlicher Name',
+      confidence:'Konfidenz', audio:'Audio', play:'Abspielen',
+      filter_species:'Nach Art filtern', filter_date_from:'Von', filter_date_to:'Bis',
+      filter_confidence:'Min. Konfidenz', all_species:'Alle Arten',
+      apply_filter:'Anwenden', reset_filter:'Zurücksetzen',
+      prev_page:'← Zurück', next_page:'Weiter →', page:'Seite', of:'von', results:'Ergebnisse',
+      species_detail:'Artensteckbrief', first_detection:'Erste Erkennung', last_seen:'Zuletzt gesehen',
+      total_detections:'Erkennungen gesamt', max_confidence:'Max. Konfidenz',
+      activity_by_hour:'Aktivität pro Stunde', monthly_presence:'Monatliche Präsenz',
+      external_links:'Externe Links', listen_on:'Anhören auf', observe_on:'Beobachten auf',
+      species_x_month:'Arten pro Monat', richness_per_day:'Tagesvielfalt',
+      heatmap_hour_day:'Aktivität Stunde × Tag',
+      rare_species:'Seltene Arten', rare_desc:'Arten mit weniger als {n} Erkennungen',
+      first_seen:'Erstmals gesehen', detections_count:'Erkennungen',
+      top_by_count:'Rangliste nach Erkennungen', top_by_confidence:'Rangliste nach Konfidenz',
+      confidence_distrib:'Konfidenzverteilung', activity_calendar:'Aktivitätskalender',
+      monthly_totals:'Monatssummen',
+      db_status:'Datenbankstatus', db_size:'DB-Größe', db_total:'Einträge gesamt',
+      db_first:'Erste Erkennung', db_last:'Letzte Erkennung',
+      service_status:'Dienststatus', api_ok:'API aktiv', api_error:'API offline',
+      data_freshness:'Datenaktualität',
+      minutes_ago:'vor {n} Min.', hours_ago:'vor {n} Std.', days_ago:'vor {n} Tagen',
+      months_short:['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'],
+      months_long:['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+      days_short:['Mo','Di','Mi','Do','Fr','Sa','So'],
+      analyses_period:'Untersuchungszeitraum {from} → {to}',
+      analyses_what_species:'Welche Art untersuchen?',
+      analyses_loading_ph:'— laden… —', analyses_no_species:'— keine Art —',
+      analyses_topn_label:'Top', analyses_topn_unit:'Arten',
+      analyses_topn_btn:'Auswählen', analyses_clear_btn:'✕ Alles abwählen',
+      analyses_search_ph:'🔍  Arten filtern…',
+      analyses_n_selected:'{n} Art(en) ausgewählt', analyses_n_total:'{n} Arten insgesamt',
+      analyses_kpi_raw:'Rohe Erkennungen', analyses_kpi_resampled:'Nach Resampling',
+      analyses_kpi_conf:'Ø Konfidenz', analyses_kpi_days:'Erkennungstage',
+      analyses_polar_title:'Stundenaktivität · {species}',
+      analyses_series_title:'Erkennungen im Zeitverlauf · {species}',
+      analyses_heatmap_title:'Tages-Heatmap · {species}',
+      analyses_multi_polar:'Stundenaktivität · {species} (Hauptart)',
+      analyses_multi_series:'{n} Arten vergleichen',
+      analyses_no_data_period:'Keine Daten für diesen Zeitraum.',
+      analyses_tooltip_det:'{n} Erkennungen · {pct}% des Tages',
+      analyses_resample_raw:'Roh', analyses_resample_15:'15 Min.',
+      analyses_resample_1h:'Stündlich', analyses_resample_1d:'Täglich',
+      analyses_conf_label:'Min. Konfidenz', analyses_date_from:'Von', analyses_date_to:'Bis',
+      analyses_quick_7d:'7T', analyses_quick_30d:'30T', analyses_quick_90d:'90T',
+      analyses_quick_1y:'1J', analyses_quick_all:'Alle',
+      narr_no_data:'Keine Daten für diesen Zeitraum.',
+      narr_period:'Im Zeitraum {from} → {to},',
+      narr_habit_morning:'ein Morgenvogel', narr_habit_midday:'am aktivsten um die Mittagszeit',
+      narr_habit_afternoon:'am aktivsten am Nachmittag',
+      narr_habit_night:'nacht- oder dämmerungsaktiv', narr_habit_day:'tagaktiv',
+      narr_is:'ist', narr_peak_at:'Aktivitätshöhepunkt um {time}, {pct}% der Tageserkennungen.',
+      narr_activity_range:'Aktivität beginnt gegen {start} und endet gegen {end}, Dauer: {duration}.',
+      narr_duration:'{n} Std. Aktivität', narr_duration_short:'konzentrierte Aktivität',
+      narr_second_peak:'Ein zweiter Höhepunkt zeigt sich gegen {time}.',
+      narr_night_pct:'{pct}% der Erkennungen erfolgen zwischen 21 und 5 Uhr.',
+      narr_total:'Gesamt: {n} Erkennungen über {h} aktive Stunden.',
+      narr_multi_intro:'{n} Arten ausgewählt. Hauptart: {species}.',
+      narr_multi_hint:'Das Rosendiagramm und die Heatmap zeigen Daten von {species}. Die Zeitreihe vergleicht alle Arten.',
+      sys_api_label:'API bird-server', sys_latency:'Latenz', sys_port:'Port',
+      sys_species_distinct:'Verschiedene Arten', sys_days_recorded:'Aufnahmetage',
+      sys_conf_range:'Konfidenz Ø / Min. / Max.', sys_last_det:'Letzte Erkennung',
+      sys_date_time:'Datum / Uhrzeit', sys_det_today:'Erkennungen heute',
+      sys_det_yesterday:'Erkennungen gestern', sys_no_gap:'✓ Keine Lücken erkannt',
+      sys_no_gap_full:'✓ Keine Lücken — durchgehende Daten',
+      sys_gaps_found:'{n} Lücke(n) insgesamt erkannt', sys_gap_missing:'{n} fehlende(r) Tag(e)',
+      sys_gaps_title:'⚠️ Tage ohne Daten (> {n} Tag Lücke)',
+      sys_activity_30d:'📈 Tagesaktivität — letzte 30 Tage',
+      sys_hourly_distrib:'🕐 Globale Stundenverteilung',
+      rarity_threshold_label:'Seltenheitsschwelle (max. Erkennungen)',
+      rarity_seen_once:'💎 Nur einmal gesehen', rarity_last_rare:'🕐 Letzte seltene Erkennungen',
+      latin_name:'Lateinischer Name', bio_total:'Gesamt', kpi_days_detected:'Erkennungstage',
+      stats_daily_records:'🏆 Tagesrekorde', stats_annual_evolution:'📅 Jahresentwicklung',
+      stats_record_most_det:'Tag mit meisten Erkennungen',
+      stats_record_most_sp:'Tag mit meisten Arten', stats_record_max_conf:'Maximale Konfidenz',
     },
 
     nl: {
@@ -659,7 +756,18 @@
       const { lang, t, setLang, langs } = useI18n();
       const { theme, themes, setTheme } = useTheme();
       const { navItems, siteName }      = useNav(props.page);
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, siteName };
+      const langOpen = ref(false);
+      const currentLang = computed(() => langs.find(l => l.code === lang.value) || langs[0]);
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, siteName, langOpen, currentLang };
+    },
+    directives: {
+      'click-outside': {
+        mounted(el, binding) {
+          el._clickOutside = e => { if (!el.contains(e.target)) binding.value(); };
+          document.addEventListener('click', el._clickOutside);
+        },
+        unmounted(el) { document.removeEventListener('click', el._clickOutside); }
+      }
     },
     template: `
 <div class="app-shell">
@@ -678,10 +786,22 @@
                 :class="{active:theme===th.id}" :data-t="th.id" :title="th.label"
                 :aria-label="th.label" @click="setTheme(th.id)"></button>
       </div>
-      <div class="lang-switcher-wrap">
-        <button v-for="l in langs" :key="l.code" class="lang-btn"
-                :class="{active:lang===l.code}" :title="l.label"
-                :aria-label="l.label" @click="setLang(l.code)">{{l.flag}} {{l.code.toUpperCase()}}</button>
+      <div class="lang-dropdown" :class="{open:langOpen}" v-click-outside="()=>langOpen=false">
+        <button class="lang-toggle" @click="langOpen=!langOpen" :aria-expanded="langOpen" aria-haspopup="listbox">
+          <span class="lang-flag">{{currentLang.flag}}</span>
+          <span class="lang-code">{{lang.toUpperCase()}}</span>
+          <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" v-show="langOpen">
+          <button v-for="l in langs" :key="l.code" class="lang-option"
+                  :class="{active:lang===l.code}" role="option"
+                  :aria-selected="lang===l.code"
+                  @click="setLang(l.code);langOpen=false">
+            <span class="lang-flag">{{l.flag}}</span>
+            <span class="lang-label">{{l.label}}</span>
+            <span class="lang-check" v-if="lang===l.code">✓</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
