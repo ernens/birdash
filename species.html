@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="bird-pages.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script src="pibird-local.js"></script>
   <script src="bird-config.js"></script>
   <script src="bird-vue-core.js"></script>
 </head>
@@ -16,62 +17,113 @@
 <div id="app">
   <pibird-shell page="species">
 
-    <!-- Picker (si pas de param URL) -->
-    <div v-if="mode==='picker'" class="card" style="margin-bottom:1rem;">
-      <div class="card-title">{{t('filter_species')}}</div>
-      <div style="display:flex;gap:.6rem;align-items:center;">
-        <select class="bird-select" v-model="pickerVal" style="min-width:250px;flex:1;">
-          <option v-for="s in speciesList" :key="s" :value="s">{{s}}</option>
-        </select>
-        <button class="btn btn-primary" @click="loadDetail(pickerVal)">{{t('apply_filter')}}</button>
-      </div>
-    </div>
-
     <!-- Spinner initial -->
     <div v-if="mode==='loading'" class="spinner" style="padding:4rem;"><div></div><div></div><div></div></div>
 
     <!-- Fiche espèce -->
-    <div v-if="mode==='detail'">
+    <div v-if="mode==='detail' || mode==='picker'">
 
-      <!-- Header -->
-      <div style="display:flex;gap:1.25rem;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;">
-        <div style="flex-shrink:0;">
-          <div style="width:120px;height:120px;border-radius:var(--radius-lg);background:var(--bg-card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:3rem;overflow:hidden;">
-            <img loading="lazy" v-if="sp.imgUrl" :src="sp.imgUrl" :alt="sp.name"
-                 style="width:100%;height:100%;object-fit:cover;">
-            <span v-else>🦜</span>
+      <!-- ── Hero : Photo carousel + infos ──────────────────────── -->
+      <div class="sp-hero">
+
+        <!-- Carousel photos -->
+        <div class="sp-carousel">
+          <div class="sp-carousel-main">
+            <img v-if="photos.length" :src="photos[photoIdx].url" :alt="sp.name"
+                 class="sp-carousel-img" @error="photoErr">
+            <div v-else class="sp-carousel-placeholder">🦜</div>
+            <!-- Navigation arrows -->
+            <button v-if="photos.length>1" class="sp-arrow sp-arrow-l" @click="prevPhoto">‹</button>
+            <button v-if="photos.length>1" class="sp-arrow sp-arrow-r" @click="nextPhoto">›</button>
+            <!-- Counter -->
+            <div v-if="photos.length>1" class="sp-photo-counter">
+              {{photoIdx+1}} / {{photos.length}}
+            </div>
+            <!-- Attribution -->
+            <div v-if="photos[photoIdx]?.attr" class="sp-photo-attr">
+              {{photos[photoIdx].attr}}
+            </div>
+          </div>
+          <!-- Thumbnails -->
+          <div v-if="photos.length>1" class="sp-thumbs">
+            <div v-for="(p,i) in photos" :key="i" class="sp-thumb" :class="{active:i===photoIdx}"
+                 @click="photoIdx=i">
+              <img :src="p.url" :alt="'photo '+(i+1)">
+            </div>
           </div>
         </div>
-        <div style="flex:1;min-width:200px;">
-          <h1 style="font-family:var(--font-display);font-size:1.8rem;font-weight:600;color:var(--text-main);margin-bottom:.2rem;">{{sp.name}}</h1>
-          <div style="font-style:italic;color:var(--text-muted);font-size:1rem;margin-bottom:.75rem;">{{sp.sci}}</div>
-          <div class="ext-links">
+
+        <!-- Info panel -->
+        <div class="sp-info-panel">
+          <!-- Title + inline species picker -->
+          <div class="sp-title-row">
+            <h1 class="sp-title">{{sp.name}}</h1>
+            <div class="sp-picker-inline" v-if="speciesList.length">
+              <select class="bird-select sp-picker-select" v-model="pickerVal" @change="onPickerChange">
+                <option v-for="s in speciesList" :key="s" :value="s">{{s}}</option>
+              </select>
+            </div>
+          </div>
+          <div class="sp-sci">{{sp.sci}}</div>
+
+          <!-- Taxonomy + Conservation -->
+          <div class="sp-meta-badges">
+            <span v-if="speciesInfo.order" class="sp-taxo-badge">{{speciesInfo.order}}</span>
+            <span v-if="speciesInfo.family" class="sp-taxo-badge">{{speciesInfo.family}}</span>
+            <span v-if="speciesInfo.size" class="sp-taxo-badge">📏 {{speciesInfo.size}}</span>
+            <span v-if="speciesInfo.wingspan" class="sp-taxo-badge">🦅 {{speciesInfo.wingspan}}</span>
+            <span v-if="conservation" class="sp-conservation" :class="'cons-'+conservationClass">
+              {{conservation}}
+            </span>
+          </div>
+
+          <!-- KPIs grid -->
+          <div class="sp-kpis">
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value">{{sp.total ? sp.total.toLocaleString() : '—'}}</div>
+              <div class="kpi-label">{{t('total_detections')}}</div>
+            </div>
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value amber">{{sp.maxConf ? sp.maxConf+'%' : '—'}}</div>
+              <div class="kpi-label">{{t('max_confidence')}}</div>
+            </div>
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value" style="color:var(--accent);">{{sp.avgConf ? sp.avgConf+'%' : '—'}}</div>
+              <div class="kpi-label">Confiance moy.</div>
+            </div>
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value muted">{{fmtDate(sp.first)}}</div>
+              <div class="kpi-label">{{t('first_detection')}}</div>
+            </div>
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value muted">{{fmtDate(sp.last)}}</div>
+              <div class="kpi-label">{{t('last_seen')}}</div>
+            </div>
+            <div class="kpi-card sp-kpi">
+              <div class="kpi-value muted">{{sp.daysDetected || '—'}}</div>
+              <div class="kpi-label">Jours détectés</div>
+            </div>
+          </div>
+
+          <!-- External links -->
+          <div class="ext-links" style="margin-top:.75rem;">
             <a v-for="l in extLinks" :key="l.label" class="ext-link" :href="l.url" target="_blank" rel="noopener">
               {{l.icon}} {{l.label}}
             </a>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;flex-shrink:0;">
-          <div class="kpi-card" style="text-align:center;min-width:100px;">
-            <div class="kpi-value">{{sp.total ? sp.total.toLocaleString() : '—'}}</div>
-            <div class="kpi-label">{{t('total_detections')}}</div>
-          </div>
-          <div class="kpi-card" style="text-align:center;">
-            <div class="kpi-value amber">{{sp.maxConf ? sp.maxConf+'%' : '—'}}</div>
-            <div class="kpi-label">{{t('max_confidence')}}</div>
-          </div>
-          <div class="kpi-card" style="text-align:center;">
-            <div class="kpi-value muted">{{fmtDate(sp.first)}}</div>
-            <div class="kpi-label">{{t('first_detection')}}</div>
-          </div>
-          <div class="kpi-card" style="text-align:center;">
-            <div class="kpi-value muted">{{fmtDate(sp.last)}}</div>
-            <div class="kpi-label">{{t('last_seen')}}</div>
-          </div>
-        </div>
       </div>
 
-      <!-- Graphiques -->
+      <!-- ── Wikipedia description ──────────────────────────────── -->
+      <div v-if="wikiSummary" class="card" style="margin-bottom:1rem;">
+        <div class="card-title">📖 Description</div>
+        <p style="line-height:1.7;color:var(--text-main);margin:0;">{{wikiSummary}}</p>
+        <p v-if="wikiSummaryAlt" style="line-height:1.7;color:var(--text-muted);margin:.75rem 0 0 0;font-size:.9rem;">
+          {{wikiSummaryAlt}}
+        </p>
+      </div>
+
+      <!-- ── Graphiques ─────────────────────────────────────────── -->
       <div class="grid-2" style="margin-bottom:1rem;">
         <div class="card">
           <div class="card-title">{{t('activity_by_hour')}}</div>
@@ -83,12 +135,24 @@
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="card-title">{{t('detections')}} — 30 jours</div>
-        <div class="chart-wrap"><canvas ref="canvas30d"></canvas></div>
+      <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+          <div class="card-title">Activité — 30 jours</div>
+          <div class="chart-wrap"><canvas ref="canvas30d"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribution de confiance</div>
+          <div class="chart-wrap"><canvas ref="canvasConf"></canvas></div>
+        </div>
       </div>
 
-      <!-- Feed -->
+      <!-- ── Heatmap jour/heure ─────────────────────────────────── -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-title">Activité par jour de la semaine</div>
+        <div class="chart-wrap"><canvas ref="canvasDayHour"></canvas></div>
+      </div>
+
+      <!-- ── Feed détections récentes ───────────────────────────── -->
       <div class="card">
         <div class="card-title">{{t('recent_detections')}}</div>
         <div v-if="!feed.length" class="error-msg">{{t('no_data')}}</div>
@@ -119,7 +183,7 @@
 </div>
 
 <script>
-const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio,
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
@@ -134,46 +198,159 @@ const app = createApp({
     const { mountChart: mountHourly } = useChart();
     const { mountChart: mountMonthly }= useChart();
     const { mountChart: mount30d }    = useChart();
+    const { mountChart: mountConf }   = useChart();
+    const { mountChart: mountDayHour }= useChart();
 
     const canvasHourly  = ref(null);
     const canvasMonthly = ref(null);
     const canvas30d     = ref(null);
+    const canvasConf    = ref(null);
+    const canvasDayHour = ref(null);
 
     const mode        = ref('loading');
     const speciesList = ref([]);
     const pickerVal   = ref('');
 
-    const sp      = ref({ name:'', sci:'', total:0, maxConf:0, first:null, last:null, imgUrl:null });
+    const sp      = ref({ name:'', sci:'', total:0, maxConf:0, avgConf:0, first:null, last:null, daysDetected:0 });
     const feed    = ref([]);
     const extLinks = computed(() => sp.value.name ? Object.values(buildSpeciesLinks(sp.value.name, sp.value.sci)) : []);
 
-    // Données brutes chart (rerender si lang change)
+    // Photos carousel
+    const photos   = ref([]);
+    const photoIdx = ref(0);
+    const wikiSummary    = ref('');
+    const wikiSummaryAlt = ref('');  // second language summary
+    const conservation   = ref('');
+    const speciesInfo    = reactive({ order: '', family: '', size: '', wingspan: '', diet: '' });
+
+    const conservationClass = computed(() => {
+      const s = conservation.value.toLowerCase();
+      if (s.includes('least concern') || s.includes('préoccupation mineure')) return 'lc';
+      if (s.includes('near threatened') || s.includes('quasi menac')) return 'nt';
+      if (s.includes('vulnerable') || s.includes('vulnérable')) return 'vu';
+      if (s.includes('endangered') || s.includes('en danger')) return 'en';
+      if (s.includes('critical')) return 'cr';
+      return 'dd';
+    });
+
+    // Chart data refs
     const hourlyData  = ref(null);
     const monthlyData = ref(null);
     const data30d     = ref(null);
+    const confData    = ref(null);
+    const dayHourData = ref(null);
+
+    function prevPhoto() { photoIdx.value = (photoIdx.value - 1 + photos.value.length) % photos.value.length; }
+    function nextPhoto() { photoIdx.value = (photoIdx.value + 1) % photos.value.length; }
+    function photoErr()  {
+      if (photos.value.length > 1) {
+        photos.value.splice(photoIdx.value, 1);
+        if (photoIdx.value >= photos.value.length) photoIdx.value = 0;
+      } else {
+        photos.value = [];
+      }
+    }
+
+    // Inline picker change handler
+    function onPickerChange() {
+      if (pickerVal.value) {
+        // Update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set('species', pickerVal.value);
+        window.history.replaceState({}, '', url);
+        loadDetail(pickerVal.value);
+      }
+    }
 
     async function loadDetail(speciesName) {
       if (!speciesName) return;
       mode.value = 'loading';
+      photos.value = [];
+      photoIdx.value = 0;
+      wikiSummary.value = '';
+      wikiSummaryAlt.value = '';
+      conservation.value = '';
+      Object.assign(speciesInfo, { order: '', family: '', size: '', wingspan: '', diet: '' });
+
       try {
+        // Load species list in background if not loaded
+        if (!speciesList.value.length) {
+          birdQuery(`SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`)
+            .then(rows => {
+              speciesList.value = rows.map(r => r.Com_Name);
+              pickerVal.value = speciesName;
+            }).catch(() => {});
+        } else {
+          pickerVal.value = speciesName;
+        }
+
         const [stats] = await birdQuery(
-          `SELECT COUNT(*) as total, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first_date, MAX(Date) as last_date, MAX(Sci_Name) as sci FROM detections WHERE Com_Name=?`,
+          `SELECT COUNT(*) as total,
+                  ROUND(MAX(Confidence)*100,1) as max_conf,
+                  ROUND(AVG(Confidence)*100,1) as avg_conf,
+                  MIN(Date) as first_date,
+                  MAX(Date) as last_date,
+                  MAX(Sci_Name) as sci,
+                  COUNT(DISTINCT Date) as days_detected
+           FROM detections WHERE Com_Name=?`,
           [speciesName]);
         if (!stats?.total) { mode.value='picker'; return; }
 
-        sp.value = { name:speciesName, sci:stats.sci||'', total:stats.total, maxConf:stats.max_conf, first:stats.first_date, last:stats.last_date, imgUrl:null };
+        sp.value = {
+          name: speciesName, sci: stats.sci||'',
+          total: stats.total, maxConf: stats.max_conf, avgConf: stats.avg_conf,
+          first: stats.first_date, last: stats.last_date,
+          daysDetected: stats.days_detected,
+        };
         document.title = `PIBIRD — ${speciesName}`;
         mode.value = 'detail';
 
-        fetchSpeciesImage(stats.sci || speciesName).then(url => { if(url) sp.value.imgUrl=url; });
-
+        // Load all data in parallel
         await Promise.all([
+          loadSpeciesInfo(stats.sci || speciesName),
           loadHourlyData(speciesName),
           loadMonthlyData(speciesName),
           load30dData(speciesName),
+          loadConfData(speciesName),
+          loadDayHourData(speciesName),
           loadFeed(speciesName),
         ]);
-      } catch(e) { mode.value='picker'; }
+      } catch(e) { console.error('[species]', e); mode.value='picker'; }
+    }
+
+    async function loadSpeciesInfo(sciName) {
+      try {
+        const cachedUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
+        const res = await fetch(BIRD_CONFIG.apiUrl + '/species-info?sci=' + encodeURIComponent(sciName));
+        if (res.ok) {
+          const data = await res.json();
+          if (data.photos?.length) {
+            photos.value = data.photos;
+          } else {
+            photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
+          }
+          // Show both FR and EN summaries
+          if (data.summaryFr && data.summary) {
+            wikiSummary.value = data.summaryFr;
+            wikiSummaryAlt.value = data.summary;
+          } else {
+            wikiSummary.value = data.summaryFr || data.summary || '';
+            wikiSummaryAlt.value = '';
+          }
+          conservation.value = data.conservation || '';
+          // Structured info
+          if (data.order) speciesInfo.order = data.order;
+          if (data.family) speciesInfo.family = data.family;
+          if (data.size) speciesInfo.size = data.size;
+          if (data.wingspan) speciesInfo.wingspan = data.wingspan;
+        } else {
+          photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
+        }
+      } catch(e) {
+        console.warn('[species-info]', e);
+        const cachedUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
+        photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
+      }
     }
 
     async function loadHourlyData(name) {
@@ -206,73 +383,222 @@ const app = createApp({
       } catch(e) {}
     }
 
+    async function loadConfData(name) {
+      try {
+        const rows = await birdQuery(
+          `SELECT
+            CASE
+              WHEN Confidence < 0.5 THEN '< 50%'
+              WHEN Confidence < 0.6 THEN '50-60%'
+              WHEN Confidence < 0.7 THEN '60-70%'
+              WHEN Confidence < 0.8 THEN '70-80%'
+              WHEN Confidence < 0.9 THEN '80-90%'
+              ELSE '90-100%'
+            END as bucket,
+            COUNT(*) as n
+           FROM detections WHERE Com_Name=?
+           GROUP BY bucket ORDER BY bucket ASC`, [name]);
+        confData.value = rows;
+      } catch(e) {}
+    }
+
+    async function loadDayHourData(name) {
+      try {
+        const rows = await birdQuery(
+          `SELECT CAST(strftime('%w', Date) AS INTEGER) as dow,
+                  CAST(SUBSTR(Time,1,2) AS INTEGER) as h,
+                  COUNT(*) as n
+           FROM detections WHERE Com_Name=?
+           GROUP BY dow, h`, [name]);
+        dayHourData.value = rows;
+      } catch(e) {}
+    }
+
     async function loadFeed(name) {
       try {
-        const rows = await birdQuery(`SELECT Date,Time,Confidence,File_Name FROM detections WHERE Com_Name=? ORDER BY Date DESC,Time DESC LIMIT 10`,[name]);
+        const rows = await birdQuery(`SELECT Date,Time,Confidence,File_Name FROM detections WHERE Com_Name=? ORDER BY Date DESC,Time DESC LIMIT 15`,[name]);
         feed.value = rows;
       } catch(e) { feed.value=[]; }
     }
 
+    // ── Chart watchers ──────────────────────────────────────────────
     watch([hourlyData, lang], async () => {
       await nextTick();
       if (!hourlyData.value || !canvasHourly.value) return;
-      const base=chartDefaults();
-      mountHourly(canvasHourly, ()=>({
-        type:'bar',
-        data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}h`), datasets:[{label:t('detections'),data:hourlyData.value,backgroundColor:'rgba(90,158,58,.65)',borderColor:'#5a9e3a',borderWidth:1,borderRadius:2}]},
-        options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{x:{...base.scales.x,ticks:{font:{size:9}}},y:{...base.scales.y,beginAtZero:true}}}
+      const base = chartDefaults();
+      mountHourly(canvasHourly, () => ({
+        type: 'bar',
+        data: {
+          labels: Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}h`),
+          datasets: [{
+            label: t('detections'), data: hourlyData.value,
+            backgroundColor: 'rgba(52,211,153,.55)', borderColor: '#34d399',
+            borderWidth: 1, borderRadius: 3
+          }]
+        },
+        options: {...base, plugins:{...base.plugins, legend:{display:false}},
+          scales:{x:{...base.scales.x, ticks:{font:{size:9}}}, y:{...base.scales.y, beginAtZero:true}}}
       }));
     });
 
     watch([monthlyData, lang], async () => {
       await nextTick();
       if (!monthlyData.value || !canvasMonthly.value) return;
-      const base=chartDefaults();
-      mountMonthly(canvasMonthly, ()=>({
-        type:'bar',
-        data:{labels:t('months_short'), datasets:[{label:t('detections'),data:monthlyData.value,backgroundColor:monthlyData.value.map(v=>v>0?'rgba(200,168,75,.65)':'rgba(200,168,75,.1)'),borderColor:'#c8a84b',borderWidth:1,borderRadius:2}]},
-        options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{x:{...base.scales.x,ticks:{font:{size:10}}},y:{...base.scales.y,beginAtZero:true}}}
+      const base = chartDefaults();
+      mountMonthly(canvasMonthly, () => ({
+        type: 'bar',
+        data: {
+          labels: t('months_short'),
+          datasets: [{
+            label: t('detections'), data: monthlyData.value,
+            backgroundColor: monthlyData.value.map(v => v > 0 ? 'rgba(251,191,36,.55)' : 'rgba(251,191,36,.1)'),
+            borderColor: '#fbbf24', borderWidth: 1, borderRadius: 3
+          }]
+        },
+        options: {...base, plugins:{...base.plugins, legend:{display:false}},
+          scales:{x:{...base.scales.x, ticks:{font:{size:10}}}, y:{...base.scales.y, beginAtZero:true}}}
       }));
     });
 
     watch([data30d, lang], async () => {
       await nextTick();
       if (!data30d.value || !canvas30d.value) return;
-      const base=chartDefaults();
-      const labels=data30d.value.map(d=>{ const mo=t('months_short')[new Date(d.date).getMonth()]; return `${new Date(d.date).getDate()} ${mo}`; });
-      mountChart30d(canvas30d, ()=>({
-        type:'bar',
-        data:{labels, datasets:[{label:t('detections'),data:data30d.value.map(d=>d.n),backgroundColor:'rgba(74,138,181,.65)',borderColor:'#4a8ab5',borderWidth:1,borderRadius:2}]},
-        options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{x:{...base.scales.x,ticks:{maxTicksLimit:10,font:{size:9}}},y:{...base.scales.y,beginAtZero:true}}}
+      const base = chartDefaults();
+      const labels = data30d.value.map(d => {
+        const mo = t('months_short')[new Date(d.date).getMonth()];
+        return `${new Date(d.date).getDate()} ${mo}`;
+      });
+      mount30d(canvas30d, () => ({
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: t('detections'), data: data30d.value.map(d => d.n),
+            backgroundColor: 'rgba(34,211,238,.55)', borderColor: '#22d3ee',
+            borderWidth: 1, borderRadius: 3
+          }]
+        },
+        options: {...base, plugins:{...base.plugins, legend:{display:false}},
+          scales:{x:{...base.scales.x, ticks:{maxTicksLimit:10, font:{size:9}}}, y:{...base.scales.y, beginAtZero:true}}}
       }));
     });
 
-    // Rebind — nécessaire car useChart() crée une closure locale
-    const mountChart30d = mount30d;
+    watch([confData, lang], async () => {
+      await nextTick();
+      if (!confData.value || !canvasConf.value) return;
+      const base = chartDefaults();
+      const colors = ['#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4'];
+      mountConf(canvasConf, () => ({
+        type: 'doughnut',
+        data: {
+          labels: confData.value.map(r => r.bucket),
+          datasets: [{
+            data: confData.value.map(r => r.n),
+            backgroundColor: colors.slice(0, confData.value.length),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { font: { size: 11 }, color: base.scales.x.ticks.color, padding: 12 } }
+          }
+        }
+      }));
+    });
+
+    watch([dayHourData, lang], async () => {
+      await nextTick();
+      if (!dayHourData.value || !canvasDayHour.value) return;
+      const base = chartDefaults();
+      const dayLabels = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+      const hourLabels = Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}h`);
+
+      const matrix = Array.from({length:7}, () => Array(24).fill(0));
+      let maxVal = 0;
+      for (const r of dayHourData.value) {
+        matrix[r.dow][r.h] = r.n;
+        if (r.n > maxVal) maxVal = r.n;
+      }
+
+      const bubbleData = [];
+      for (let d = 0; d < 7; d++) {
+        for (let h = 0; h < 24; h++) {
+          if (matrix[d][h] > 0) {
+            bubbleData.push({ x: h, y: d, r: Math.max(2, Math.sqrt(matrix[d][h] / (maxVal||1)) * 14), v: matrix[d][h] });
+          }
+        }
+      }
+
+      mountDayHour(canvasDayHour, () => ({
+        type: 'bubble',
+        data: {
+          datasets: [{
+            data: bubbleData,
+            backgroundColor: 'rgba(52,211,153,.45)',
+            borderColor: '#34d399', borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${dayLabels[ctx.raw.y]} ${hourLabels[ctx.raw.x]} : ${ctx.raw.v} détections`
+              }
+            }
+          },
+          scales: {
+            x: { ...base.scales.x, min: -0.5, max: 23.5, ticks: { callback: v => `${String(v).padStart(2,'0')}h`, stepSize: 1, font: { size: 9 } } },
+            y: { ...base.scales.y, min: -0.5, max: 6.5, reverse: true, ticks: { callback: v => dayLabels[v] || '', stepSize: 1, font: { size: 10 } } }
+          }
+        }
+      }));
+    });
 
     watch(lang, () => { if (sp.value.name) loadDetail(sp.value.name); });
 
     onMounted(async () => {
-      const spParam = getUrlParam('species');
+      // Always load species list for the inline picker
+      try {
+        const rows = await birdQuery(`SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`);
+        speciesList.value = rows.map(r => r.Com_Name);
+      } catch(e) {}
+
+      const spParam = getUrlParam('species') || getUrlParam('name');
       if (spParam) {
+        pickerVal.value = decodeURIComponent(spParam);
         await loadDetail(decodeURIComponent(spParam));
       } else {
+        // No param → load the LAST detected species automatically
         try {
-          const rows = await birdQuery(`SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`);
-          speciesList.value = rows.map(r=>r.Com_Name);
+          const [last] = await birdQuery(
+            `SELECT Com_Name FROM detections ORDER BY Date DESC, Time DESC LIMIT 1`
+          );
+          if (last?.Com_Name) {
+            pickerVal.value = last.Com_Name;
+            await loadDetail(last.Com_Name);
+          } else {
+            pickerVal.value = speciesList.value[0] || '';
+            mode.value = 'picker';
+          }
+        } catch(e) {
           pickerVal.value = speciesList.value[0] || '';
-        } catch(e) {}
-        mode.value = 'picker';
+          mode.value = 'picker';
+        }
       }
     });
 
     return {
       lang, t,
-      mode, speciesList, pickerVal,
-      sp, feed, extLinks,
+      mode, speciesList, pickerVal, onPickerChange,
+      sp, feed, extLinks, speciesInfo,
+      photos, photoIdx, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
+      prevPhoto, nextPhoto, photoErr,
       playingFile, toggleAudio,
       fmtDate, fmtTime, fmtConf, navigateTo,
-      canvasHourly, canvasMonthly, canvas30d,
+      canvasHourly, canvasMonthly, canvas30d, canvasConf, canvasDayHour,
       loadDetail,
     };
   }

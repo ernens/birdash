@@ -340,6 +340,145 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/species-info?sci=Pica+pica ───────────────────────────
+  // Returns multiple photos + Wikipedia summary for species detail page
+  if (req.method === 'GET' && pathname === '/api/species-info') {
+    const sciName = new URL(req.url, 'http://localhost').searchParams.get('sci');
+    if (!sciName || !/^[a-zA-Z ]+$/.test(sciName)) {
+      res.writeHead(400); res.end(JSON.stringify({ error: 'sci param required' })); return;
+    }
+
+    (async () => {
+      try {
+        const result = { photos: [], summary: '', summaryFr: '', habitat: '', range: '', conservation: '', family: '', order: '', wingspan: '', size: '', diet: '' };
+        const tn = encodeURIComponent(sciName);
+
+        // 1. iNaturalist — taxon info + observation photos
+        const inatData = await fetchJson(
+          `https://api.inaturalist.org/v1/taxa?q=${tn}&rank=species&per_page=5`
+        );
+        const taxon = inatData?.results?.find(t => t.name.toLowerCase() === sciName.toLowerCase());
+
+        if (taxon) {
+          // Default photo
+          const dp = taxon.default_photo;
+          if (dp) {
+            const medUrl = dp.medium_url || dp.url;
+            if (medUrl) result.photos.push({ url: medUrl, attr: dp.attribution || '', src: 'iNaturalist' });
+          }
+          // Taxonomy
+          if (taxon.iconic_taxon_name) result.order = taxon.iconic_taxon_name;
+          if (taxon.ancestors) {
+            const fam = taxon.ancestors.find(a => a.rank === 'family');
+            if (fam) result.family = fam.name;
+            const ord = taxon.ancestors.find(a => a.rank === 'order');
+            if (ord) result.order = ord.name;
+          }
+
+          // Observation photos (research-grade, top-voted — diverse angles)
+          const obsData = await fetchJson(
+            `https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&quality_grade=research&photos=true&per_page=10&order=desc&order_by=votes`
+          );
+          if (obsData?.results) {
+            for (const obs of obsData.results) {
+              if (result.photos.length >= 10) break;
+              for (const p of (obs.photos || [])) {
+                if (result.photos.length >= 10) break;
+                const url = p.url?.replace(/square/, 'medium');
+                if (url && !result.photos.some(x => x.url === url)) {
+                  result.photos.push({ url, attr: p.attribution || '', src: 'iNaturalist' });
+                }
+              }
+            }
+          }
+
+          // Conservation status
+          if (taxon.conservation_status) {
+            result.conservation = taxon.conservation_status.status_name || taxon.conservation_status.status || '';
+          } else if (taxon.conservation_statuses?.length) {
+            const iucn = taxon.conservation_statuses.find(c => c.authority === 'IUCN Red List') || taxon.conservation_statuses[0];
+            result.conservation = iucn.status_name || iucn.status || '';
+          }
+        }
+
+        // 2. English Wikipedia — summary
+        const wikiTitle = sciName.replace(/ /g, '_');
+        const wiki = await fetchJson(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`
+        );
+        if (wiki) {
+          result.summary = wiki.extract || '';
+          if (wiki.originalimage?.source && result.photos.length < 10) {
+            result.photos.push({ url: wiki.originalimage.source, attr: 'Wikipedia', src: 'Wikipedia' });
+          }
+        }
+
+        // 3. French Wikipedia — description FR + extract habitat/diet info
+        const wikiFr = await fetchJson(
+          `https://fr.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`
+        );
+        if (wikiFr?.extract) {
+          result.summaryFr = wikiFr.extract;
+        }
+
+        // 4. Try Wikidata for structured data (size, wingspan, habitat, diet)
+        try {
+          const wdSearch = await fetchJson(
+            `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${tn}&language=en&format=json&limit=1`
+          );
+          const wdId = wdSearch?.search?.[0]?.id;
+          if (wdId) {
+            const wdEntity = await fetchJson(
+              `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wdId}&props=claims&format=json`
+            );
+            const claims = wdEntity?.entities?.[wdId]?.claims;
+            if (claims) {
+              // P2050 = wingspan, P2048 = height/length
+              const getAmount = (prop) => {
+                const c = claims[prop]?.[0]?.mainsnak?.datavalue?.value;
+                return c?.amount ? parseFloat(c.amount) : null;
+              };
+              const ws = getAmount('P2050');
+              if (ws) result.wingspan = ws > 10 ? `${Math.round(ws)} cm` : `${Math.round(ws*100)} cm`;
+              const sz = getAmount('P2048');
+              if (sz) result.size = sz > 10 ? `${Math.round(sz)} cm` : `${Math.round(sz*100)} cm`;
+
+              // P2572 = IUCN conservation status label (if not already set)
+              if (!result.conservation && claims['P141']?.[0]?.mainsnak?.datavalue?.value?.id) {
+                const csId = claims['P141'][0].mainsnak.datavalue.value.id;
+                const csMap = { Q211005:'Least Concern', Q719675:'Near Threatened', Q278113:'Vulnerable',
+                                Q11394:'Endangered', Q219127:'Critically Endangered', Q3245245:'Data Deficient' };
+                result.conservation = csMap[csId] || '';
+              }
+            }
+          }
+        } catch(e) { /* Wikidata optional */ }
+
+        // Deduplicate photos by URL
+        const seen = new Set();
+        result.photos = result.photos.filter(p => {
+          const key = p.url.replace(/\/\d+px-/, '/XXpx-');
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400',
+        });
+        res.end(JSON.stringify(result));
+      } catch(e) {
+        console.error('[species-info]', e.message);
+        if (!res.headersSent) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'internal_error' }));
+        }
+      }
+    })();
+    return;
+  }
+
   // ── Route : GET /api/birdweather ─────────────────────────────────────────────
   // Proxy BirdWeather API — évite les CORS + cache 5 min
   // ?endpoint=stats|species|detections  ?period=day|week|month|all
