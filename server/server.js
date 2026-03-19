@@ -140,7 +140,7 @@ const ALLOWED_SERVICES = ['birdnet_analysis', 'birdnet_recording', 'birdnet_log'
 let _localConfig = {};
 try {
   const fs_test = require('fs');
-  const localPath = require('path').join(__dirname, 'birdash-local.js');
+  const localPath = require('path').join(__dirname, '..', 'public', 'js', 'birdash-local.js');
   if (fs_test.existsSync(localPath)) {
     _localConfig = require(localPath);
     console.log('[BIRDASH] Config locale chargée : birdash-local.js');

@@ -295,7 +295,7 @@ async function loadTranslations() {
   await Promise.allSettled(
     SUPPORTED_LANGS.map(async lang => {
       try {
-        const res = await fetch(`${base}lang/${lang}.json`);
+        const res = await fetch(`${base}i18n/${lang}.json`);
         if (!res.ok) return;
         const data = await res.json();
         // Fusionner : JSON a priorité sur inline sauf pour _meta

@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=bjorn
 WorkingDirectory=/home/bjorn/birdash
-ExecStart=/usr/bin/node /home/bjorn/birdash/bird-server.js
+ExecStart=/usr/bin/node /home/bjorn/birdash/server/server.js
 Restart=on-failure
 RestartSec=5
 Environment=BIRDASH_PORT=7474

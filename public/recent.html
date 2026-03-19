@@ -2,44 +2,68 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BIRDASH — Aujourd'hui</title>
-  <link rel="stylesheet" href="bird-styles.css">
-  <link rel="stylesheet" href="bird-pages.css">
+  <title>BIRDASH — Récent</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
-  <script src="birdash-local.js"></script>
-  <script src="bird-config.js"></script>
-  <script src="bird-vue-core.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script src="js/birdash-local.js"></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
 <div id="app">
-  <birdash-shell page="today">
+  <birdash-shell page="recent">
 
-    <!-- ── Titre + date ─────────────────────────────────────────── -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-      <div>
-        <h2 style="margin:0;font-family:var(--font-display);font-size:1.3rem;color:var(--text-main);">
-          {{t('today')}} · {{fmtDateLong(today)}}
-        </h2>
-        <div style="font-size:.78rem;color:var(--text-muted);">
-          {{t('filter_confidence')}} : ≥ {{Math.round(minConf*100)}}%
-          &nbsp;·&nbsp;
-          <select class="bird-select" v-model="minConf" @change="loadAll"
-                  style="padding:.15rem .4rem;font-size:.75rem;display:inline-block;width:auto;">
-            <option :value="0">0%</option>
-            <option :value="0.5">50%</option>
-            <option :value="0.7">70%</option>
-            <option :value="0.8">80%</option>
-          </select>
-          &nbsp;·&nbsp;
-          <button class="btn btn-secondary" @click="loadAll"
-                  style="padding:.15rem .6rem;font-size:.75rem;">↺ {{t('loading').replace('…','')}}</button>
-        </div>
+    <!-- ── Navigation de date ───────────────────────────────────── -->
+    <div class="date-nav">
+      <!-- Flèches navigation -->
+      <button class="date-nav-btn" @click="prevDay" title="Jour précédent">←</button>
+      <div class="date-nav-display" @click="openDatePicker" :title="'Cliquer pour choisir une date'">
+        {{fmtDateLong(selDate)}}
+        <span v-if="selDate===today" style="font-size:.72rem;color:var(--accent);margin-left:.3rem;">· {{t('today_label')}}</span>
       </div>
-      <div style="font-size:.72rem;color:var(--text-faint);text-align:right;">
-        {{t('data_freshness')}}<br>
-        <span style="color:var(--accent);">{{freshness}}</span>
+      <button class="date-nav-btn" @click="nextDay" :disabled="selDate>=today" title="Jour suivant">→</button>
+      <!-- Input date caché -->
+      <input ref="datePickerInput" type="date" class="date-input-hidden"
+             :max="today" v-model="selDate" @change="onDateChange">
+
+      <div class="date-nav-sep"></div>
+
+      <!-- Presets rapides -->
+      <div class="date-nav-quick">
+        <button class="date-nav-quick-btn" :class="{active:selDate===today}" @click="goToday">{{t('today_label')}}</button>
+        <button class="date-nav-quick-btn" :class="{active:selDate===yesterday}" @click="goYesterday">{{t('yesterday')}}</button>
+        <button v-for="q in recentQuicks" :key="q.label"
+                class="date-nav-quick-btn" :class="{active:activeQuick===q.label}"
+                @click="goQuick(q)">{{q.label}}</button>
+      </div>
+
+      <!-- Slider confiance -->
+      <div class="conf-slider-wrap">
+        <span class="conf-slider-label">{{t('conf_min')}}</span>
+        <input type="range" min="0" max="1" step="0.01" v-model.number="minConf"
+               @change="loadAll"
+               :style="'background:linear-gradient(to right,var(--accent) '+minConf*100+'%,var(--bg-deep) '+minConf*100+'%)'">
+        <span v-if="!confEditing" class="conf-slider-val"
+              @click="startConfEdit" title="Cliquer pour saisir">
+          {{Math.round(minConf*100)}}%
+        </span>
+        <input v-else ref="confInput" type="number" min="0" max="100" step="1"
+               v-model.number="confEditVal"
+               @keydown.enter="commitConfEdit" @blur="commitConfEdit"
+               @keydown.escape="confEditing=false"
+               style="width:48px;font-size:.8rem;font-family:monospace;font-weight:600;
+                      color:var(--accent);background:var(--bg-deep);
+                      border:1px solid var(--accent);border-radius:4px;
+                      padding:.1rem .3rem;text-align:right;">
+        <span style="font-size:.72rem;color:var(--text-faint);">
+          {{freshness}}
+        </span>
+        <button class="btn btn-secondary" @click="loadAll"
+                style="padding:.15rem .55rem;font-size:.72rem;">↺</button>
       </div>
     </div>
 
@@ -63,8 +87,17 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
-        <div class="kpi-label">Nouvelles espèces</div>
+        <div class="kpi-label">{{t('new_species')}}</div>
       </div>
+    </div>
+
+    <!-- ── Graphique horaire ───────────────────────────────────── -->
+    <div class="card" style="margin-bottom:1rem;padding:.6rem .85rem .5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+        <span style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">{{t('hourly_distrib')}}</span>
+        <span style="font-size:.72rem;color:var(--text-faint);">{{kpis.det}} détections · {{kpis.sp}} espèces</span>
+      </div>
+      <div class="hourly-chart-wrap"><canvas ref="canvasHourly"></canvas></div>
     </div>
 
     <!-- ── Layout principal ─────────────────────────────────────── -->
@@ -96,7 +129,7 @@
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
-                <div class="sp-name-row">{{s.Com_Name}}</div>
+                <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}}</div>
                 <div class="sp-sci-row">{{s.sci}}</div>
               </div>
               <div class="sp-meta">
@@ -133,7 +166,7 @@
               <span v-else>🦜</span>
             </div>
             <div class="player-species">
-              <div class="player-name">{{selected.Com_Name}}</div>
+              <div class="player-name">{{spName(selected.Com_Name, selected.sci)}}</div>
               <div class="player-sci">{{selected.sci}}</div>
               <div class="player-meta">
                 <span class="conf-badge" :class="parseFloat(currentDet.Confidence)>=0.8?'conf-high':'conf-mid'">
@@ -221,6 +254,11 @@
                 {{fmtDuration(audioCurrentTime)}} / {{fmtDuration(audioDuration)}}
               </div>
             </div>
+            <!-- Téléchargement audio -->
+            <a v-if="currentDet.File_Name"
+               :href="cleanMode && cleanBlobForDownload ? cleanBlobForDownload : buildAudioUrl(currentDet.File_Name)"
+               :download="(selected?.Com_Name||'bird').replace(/[^a-zA-Z0-9]/g,'_')+'_'+selDate+'_'+fmtTime(currentDet.Time).replace(':','')+(cleanMode&&cleanBlobForDownload?'.wav':'.mp3')"
+               class="dl-btn" title="Télécharger">⬇</a>
             <div style="font-size:.72rem;color:var(--text-faint);text-align:right;min-width:60px;">
               {{currentDetIdx+1}} / {{selectedDets.length}}
             </div>
@@ -514,9 +552,9 @@ function encodeWav(pcm, sr) {
 
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav,
+const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
-        localDateStr, buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage,
+        localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage,
         navigateTo } = BIRDASH;
 
 // PCM brut conservé entre loadDetection et applyClean (non réactif)
@@ -528,10 +566,42 @@ const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('today');
+    const { navItems, siteName } = useNav('recent');
+    const { spName } = useSpeciesNames();
+    const { mountChart: mountHourly } = useChart();
 
-    const today   = localDateStr();
-    const minConf = ref(BIRD_CONFIG.defaultConfidence);
+    const today     = localDateStr();
+    const yesterday = daysAgo(1);
+
+    // ── Date sélectionnée (réactive) ──────────────────────────────
+    const selDate     = ref(today);
+    const activeQuick = ref('');
+    const recentQuicks = computed(() => [
+      { label:t('quick_7d'),  days: 6   },
+      { label:t('quick_30d'), days: 29  },
+    ]);
+
+    const datePickerInput = ref(null);
+    function openDatePicker() { datePickerInput.value?.showPicker?.() || datePickerInput.value?.click(); }
+    function prevDay() { const d=new Date(selDate.value); d.setDate(d.getDate()-1); selDate.value=d.toISOString().split('T')[0]; activeQuick.value=''; onDateChange(); }
+    function nextDay() { if (selDate.value>=today) return; const d=new Date(selDate.value); d.setDate(d.getDate()+1); selDate.value=d.toISOString().split('T')[0]; activeQuick.value=''; onDateChange(); }
+    function goToday()     { selDate.value=today;     activeQuick.value=''; onDateChange(); }
+    function goYesterday() { selDate.value=yesterday; activeQuick.value=''; onDateChange(); }
+    function goQuick(q)    { selDate.value=daysAgo(q.days); activeQuick.value=q.label; onDateChange(); }
+    function onDateChange() { selected.value=null; selectedDets.value=[]; loadAll(); }
+
+    // ── Confiance ─────────────────────────────────────────────────
+    const minConf     = ref(BIRD_CONFIG.defaultConfidence);
+    const confEditing = ref(false);
+    const confEditVal = ref(70);
+    const confInput   = ref(null);
+    function startConfEdit() { confEditVal.value=Math.round(minConf.value*100); confEditing.value=true; nextTick(()=>confInput.value?.select()); }
+    function commitConfEdit() { minConf.value=Math.max(0,Math.min(100,Math.round(confEditVal.value||0)))/100; confEditing.value=false; loadAll(); }
+
+    // ── Chart horaire ─────────────────────────────────────────────
+    const canvasHourly = ref(null);
+    const hourlyData   = ref(null);
+
     const searchQ = ref('');
 
     const kpis     = ref({ det:'—', sp:'—', conf:'—', lastHour:'—', newSp:'—' });
@@ -560,8 +630,9 @@ const app = createApp({
     const cleanStrength  = ref(0.75);
     const processingClean= ref(false);
 
+    // Blob URL exposé au template pour le téléchargement clean
+    const cleanBlobForDownload = computed(() => cleanMode.value ? _cleanBlobUrl : null);
     const currentDet = computed(() => selectedDets.value[currentDetIdx.value] || {});
-
     const filteredSpecies = computed(() => {
       const q = searchQ.value.toLowerCase().trim();
       if (!q) return speciesList.value;
@@ -581,10 +652,9 @@ const app = createApp({
       return -1;
     });
 
-    // ── Chargements ─────────────────────────────────────────────────────
     async function loadAll() {
       loadingList.value = true;
-      await Promise.all([loadKpis(), loadSpecies()]);
+      await Promise.all([loadKpis(), loadSpecies(), loadHourlyData()]);
     }
 
     async function loadKpis() {
@@ -593,16 +663,16 @@ const app = createApp({
           `SELECT COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp,
                   ROUND(AVG(Confidence)*100,1) as conf,
                   MAX(Date) as last_date, MAX(Time) as last_time
-           FROM detections WHERE Date=? AND Confidence>=?`, [today, minConf.value]);
+           FROM detections WHERE Date=? AND Confidence>=?`, [selDate.value, minConf.value]);
         const [lh] = await birdQuery(
           `SELECT COUNT(*) as n FROM detections
            WHERE Date=? AND Confidence>=? AND Time >= time('now','-1 hour','localtime')`,
-          [today, minConf.value]);
+          [selDate.value, minConf.value]);
         const [ns] = await birdQuery(
           `SELECT COUNT(*) as n FROM (
              SELECT Com_Name FROM detections WHERE Confidence>=?
              GROUP BY Com_Name HAVING MIN(Date)=?
-           )`, [minConf.value, today]);
+           )`, [minConf.value, selDate.value]);
         kpis.value = {
           det: d ? d.n.toLocaleString() : '0',
           sp:  d ? d.sp : '0',
@@ -621,7 +691,7 @@ const app = createApp({
           `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n,
                   MAX(Time) as last_time, MAX(Confidence) as max_conf
            FROM detections WHERE Date=? AND Confidence>=?
-           GROUP BY Com_Name ORDER BY n DESC`, [today, minConf.value]);
+           GROUP BY Com_Name ORDER BY n DESC`, [selDate.value, minConf.value]);
         speciesList.value = rows.map(r => ({ ...r, imgUrl: null }));
         if (rows.length > 0 && !selected.value) selectSpecies(speciesList.value[0]);
         rows.slice(0, 20).forEach((r, i) => {
@@ -631,6 +701,18 @@ const app = createApp({
         });
       } catch(e) { console.error('species:', e); }
       loadingList.value = false;
+    }
+
+    async function loadHourlyData() {
+      try {
+        const rows = await birdQuery(
+          `SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n
+           FROM detections WHERE Date=? AND Confidence>=?
+           GROUP BY h ORDER BY h ASC`, [selDate.value, minConf.value]);
+        const vals = Array(24).fill(0);
+        rows.forEach(r => { vals[r.h] = r.n; });
+        hourlyData.value = vals;
+      } catch(e) {}
     }
 
     async function selectSpecies(sp) {
@@ -643,7 +725,7 @@ const app = createApp({
         const rows = await birdQuery(
           `SELECT Time, Confidence, File_Name
            FROM detections WHERE Date=? AND Com_Name=? AND Confidence>=?
-           ORDER BY Time DESC`, [today, sp.Com_Name, minConf.value]);
+           ORDER BY Time DESC`, [selDate.value, sp.Com_Name, minConf.value]);
         selectedDets.value = rows;
         if (!sp.imgUrl && sp.sci) fetchSpeciesImage(sp.sci).then(url => { if (url) sp.imgUrl = url; });
         await loadDetection(0);
@@ -801,6 +883,34 @@ const app = createApp({
     }
 
     watch(lang, () => loadKpis());
+
+    // Chart horaire — reconstruit quand les données ou la langue changent
+    watch([hourlyData, lang], async () => {
+      await nextTick();
+      const d = hourlyData.value;
+      if (!d || !canvasHourly.value) return;
+      const base = BIRDASH.chartDefaults();
+      mountHourly(canvasHourly, () => ({
+        type: 'bar',
+        data: {
+          labels: Array.from({length:24}, (_,i) => String(i).padStart(2,'0')+'h'),
+          datasets: [{
+            label: t('detections'),
+            data: d,
+            backgroundColor: d.map(v => v > 0 ? 'rgba(90,158,58,.65)' : 'rgba(90,158,58,.08)'),
+            borderColor: '#5a9e3a', borderWidth: 1, borderRadius: 2,
+          }],
+        },
+        options: {
+          ...base,
+          plugins: { ...base.plugins, legend: { display: false } },
+          scales: {
+            x: { ...base.scales.x, ticks: { font: { size: 9 }, maxTicksLimit: 12 } },
+            y: { ...base.scales.y, beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
+          },
+        },
+      }));
+    });
     onMounted(() => loadAll());
     onUnmounted(() => {
       _stopRaf(); stopAudio();
@@ -808,14 +918,20 @@ const app = createApp({
     });
 
     return {
-      lang, t,
-      today, minConf, searchQ,
+      lang, t, spName,
+      today, yesterday, selDate, activeQuick, recentQuicks,
+      datePickerInput, openDatePicker,
+      prevDay, nextDay, goToday, goYesterday, goQuick, onDateChange,
+      minConf, confEditing, confEditVal, confInput, startConfEdit, commitConfEdit,
+      canvasHourly,
+      searchQ,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx,
       spectroCanvas, spectro,
       isPlaying, audioProgress, audioCurrentTime, audioDuration,
-      cleanMode, cleanStrength, processingClean,
+      cleanMode, cleanStrength, processingClean, cleanBlobForDownload,
+      buildAudioUrl,
       fmtDate, fmtTime, fmtConf, fmtDuration, fmtDateLong,
       navigateTo, loadAll, selectSpecies, loadDetection,
       togglePlay, seekFromProgressBar, seekFromClick,

@@ -4,6 +4,7 @@ node_modules/
 *BAK
 BAK/
 .DS_Store
-birdash-local.js
+public/js/birdash-local.js
+config/birdash-local.js
 deploy.sh
 photo-cache/

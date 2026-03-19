@@ -17,7 +17,7 @@ let serverProc = null;
 // ── Démarrage/arrêt du serveur ────────────────────────────────────────────
 
 before(async () => {
-  serverProc = spawn('node', [path.join(__dirname, 'bird-server.js')], {
+  serverProc = spawn('node', [path.join(__dirname, '..', 'server', 'server.js')], {
     env: { ...process.env, BIRDASH_PORT: String(PORT) },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
