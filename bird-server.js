@@ -33,6 +33,108 @@ const SONGS_DIR = process.env.BIRDASH_SONGS_DIR || path.join(
 const PHOTO_CACHE_DIR = path.join(process.env.HOME, 'birdash', 'photo-cache');
 const AUDIO_RATE = 48000;
 
+// ── BirdNET-Pi Settings helpers ──────────────────────────────────────────────
+const BIRDNET_CONF = '/etc/birdnet/birdnet.conf';
+const BIRDNET_DIR = path.join(process.env.HOME, 'BirdNET-Pi');
+
+// Parse birdnet.conf → { KEY: value }
+async function parseBirdnetConf() {
+  const raw = await fsp.readFile(BIRDNET_CONF, 'utf8');
+  const conf = {};
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq < 1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let val = trimmed.slice(eq + 1).trim();
+    // Remove surrounding quotes
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    conf[key] = val;
+  }
+  return conf;
+}
+
+// Write updates to birdnet.conf (preserves comments, ordering, creates backup)
+async function writeBirdnetConf(updates) {
+  // Backup first
+  await fsp.copyFile(BIRDNET_CONF, BIRDNET_CONF + '.bak').catch(() => {});
+  const raw = await fsp.readFile(BIRDNET_CONF, 'utf8');
+  const lines = raw.split('\n');
+  const written = new Set();
+  const result = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return line;
+    const eq = trimmed.indexOf('=');
+    if (eq < 1) return line;
+    const key = trimmed.slice(0, eq).trim();
+    if (key in updates) {
+      written.add(key);
+      const val = updates[key];
+      // Quote if contains spaces or special chars
+      const needsQuote = /[\s#"'$]/.test(String(val));
+      return needsQuote ? `${key}="${val}"` : `${key}=${val}`;
+    }
+    return line;
+  });
+  // Write via temp file + sudo cp
+  const tmpFile = '/tmp/birdnet.conf.tmp';
+  await fsp.writeFile(tmpFile, result.join('\n'));
+  await execCmd('sudo', ['cp', tmpFile, BIRDNET_CONF]);
+  await fsp.unlink(tmpFile).catch(() => {});
+}
+
+// Execute a command, return stdout
+function execCmd(cmd, args) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args);
+    let stdout = '', stderr = '';
+    proc.stdout.on('data', d => stdout += d);
+    proc.stderr.on('data', d => stderr += d);
+    proc.on('close', code => code === 0 ? resolve(stdout.trim()) : reject(new Error(stderr.trim() || `exit ${code}`)));
+  });
+}
+
+// Validation whitelist for settings
+const SETTINGS_VALIDATORS = {
+  SITE_NAME:       v => typeof v === 'string' && v.length <= 100,
+  LATITUDE:        v => !isNaN(v) && v >= -90 && v <= 90,
+  LONGITUDE:       v => !isNaN(v) && v >= -180 && v <= 180,
+  MODEL:           v => typeof v === 'string' && /^[a-zA-Z0-9_.\-]+$/.test(v),
+  SF_THRESH:       v => !isNaN(v) && v >= 0 && v <= 1,
+  CONFIDENCE:      v => !isNaN(v) && v >= 0.01 && v <= 0.99,
+  SENSITIVITY:     v => !isNaN(v) && v >= 0.5 && v <= 1.5,
+  OVERLAP:         v => !isNaN(v) && v >= 0 && v <= 2.9,
+  RECORDING_LENGTH: v => !isNaN(v) && v >= 6 && v <= 120,
+  EXTRACTION_LENGTH: v => v === '' || (!isNaN(v) && v >= 3 && v <= 30),
+  AUDIOFMT:        v => ['mp3','wav','flac','ogg'].includes(v),
+  CHANNELS:        v => v == 1 || v == 2,
+  DATABASE_LANG:   v => /^[a-z]{2}(_[A-Z]{2})?$/.test(v),
+  BIRDWEATHER_ID:  v => typeof v === 'string' && v.length <= 64,
+  FULL_DISK:       v => ['purge','keep'].includes(v),
+  PURGE_THRESHOLD: v => !isNaN(v) && v >= 50 && v <= 99,
+  MAX_FILES_SPECIES: v => !isNaN(v) && v >= 0,
+  PRIVACY_THRESHOLD: v => !isNaN(v) && v >= 0 && v <= 3,
+  REC_CARD:        v => typeof v === 'string' && v.length <= 200,
+  RTSP_STREAM:     v => typeof v === 'string' && v.length <= 500,
+  APPRISE_NOTIFY_EACH_DETECTION: v => v == 0 || v == 1,
+  APPRISE_NOTIFY_NEW_SPECIES: v => v == 0 || v == 1,
+  APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY: v => v == 0 || v == 1,
+  APPRISE_WEEKLY_REPORT: v => v == 0 || v == 1,
+  APPRISE_NOTIFICATION_TITLE: v => typeof v === 'string' && v.length <= 200,
+  APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES: v => !isNaN(v) && v >= 0,
+  IMAGE_PROVIDER:  v => ['WIKIPEDIA','FLICKR'].includes(v),
+  RARE_SPECIES_THRESHOLD: v => !isNaN(v) && v >= 1 && v <= 365,
+  RAW_SPECTROGRAM: v => v == 0 || v == 1,
+  DATA_MODEL_VERSION: v => v == 1 || v == 2,
+};
+
+// Allowed services for restart
+const ALLOWED_SERVICES = ['birdnet_analysis', 'birdnet_recording', 'birdnet_log', 'birdnet_stats',
+  'chart_viewer', 'livestream', 'spectrogram_viewer', 'web_terminal', 'birdash'];
+
 // Charger la config locale (birdash-local.js) si disponible
 // — silencieux si le fichier n'existe pas (installation fraîche)
 let _localConfig = {};
@@ -708,6 +810,218 @@ const server = http.createServer((req, res) => {
       console.log('[audio-stream] connexion fermée');
     })();
 
+    return;
+  }
+
+  // ── Route : GET /api/settings ───────────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/settings') {
+    (async () => {
+      try {
+        const conf = await parseBirdnetConf();
+        // Redact sensitive fields
+        delete conf.CADDY_PWD;
+        delete conf.ICE_PWD;
+        delete conf.FLICKR_API_KEY;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(conf));
+      } catch(e) {
+        console.error('[settings]', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : POST /api/settings ──────────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/settings') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      (async () => {
+        try {
+          const { updates } = JSON.parse(body);
+          if (!updates || typeof updates !== 'object') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'updates object required' }));
+            return;
+          }
+          // Validate each key
+          const validated = {};
+          const errors = [];
+          for (const [key, val] of Object.entries(updates)) {
+            if (!SETTINGS_VALIDATORS[key]) {
+              errors.push(`Unknown setting: ${key}`);
+              continue;
+            }
+            if (!SETTINGS_VALIDATORS[key](val)) {
+              errors.push(`Invalid value for ${key}: ${val}`);
+              continue;
+            }
+            validated[key] = val;
+          }
+          if (errors.length > 0 && Object.keys(validated).length === 0) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: errors.join('; ') }));
+            return;
+          }
+          await writeBirdnetConf(validated);
+          console.log(`[settings] Updated: ${Object.keys(validated).join(', ')}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, updated: Object.keys(validated), warnings: errors.length ? errors : undefined }));
+        } catch(e) {
+          console.error('[settings]', e.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+    });
+    return;
+  }
+
+  // ── Route : GET /api/services ───────────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/services') {
+    (async () => {
+      try {
+        const services = [];
+        for (const name of ALLOWED_SERVICES) {
+          try {
+            const active = await execCmd('systemctl', ['is-active', name]);
+            services.push({ name, active: active === 'active' });
+          } catch(e) {
+            services.push({ name, active: false });
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ services }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : POST /api/services/restart ──────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/services/restart') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      (async () => {
+        try {
+          const { service } = JSON.parse(body);
+          if (!ALLOWED_SERVICES.includes(service)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Service not allowed: ${service}` }));
+            return;
+          }
+          await execCmd('sudo', ['systemctl', 'restart', service]);
+          console.log(`[services] Restarted: ${service}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, service, action: 'restart' }));
+        } catch(e) {
+          console.error('[services]', e.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+    });
+    return;
+  }
+
+  // ── Route : GET /api/models ─────────────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/models') {
+    (async () => {
+      try {
+        const modelDir = path.join(BIRDNET_DIR, 'model');
+        const files = await fsp.readdir(modelDir);
+        const models = files
+          .filter(f => f.endsWith('.tflite'))
+          .map(f => f.replace('.tflite', ''));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ models }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : GET /api/languages ──────────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/languages') {
+    (async () => {
+      try {
+        const labelDir = path.join(BIRDNET_DIR, 'model', 'l18n');
+        const files = await fsp.readdir(labelDir);
+        const languages = files
+          .filter(f => f.startsWith('labels_') && f.endsWith('.json'))
+          .map(f => f.replace('labels_', '').replace('.json', ''))
+          .sort();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ languages }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : GET /api/species-lists ──────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/species-lists') {
+    (async () => {
+      try {
+        const readList = async (name) => {
+          const fp = path.join(BIRDNET_DIR, name);
+          try {
+            const raw = await fsp.readFile(fp, 'utf8');
+            return raw.split('\n').map(l => l.trim()).filter(Boolean);
+          } catch(e) { return []; }
+        };
+        const include = await readList('include_species_list.txt');
+        const exclude = await readList('exclude_species_list.txt');
+        const whitelist = await readList('whitelist_species_list.txt');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ include, exclude, whitelist }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : POST /api/species-lists ─────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/species-lists') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      (async () => {
+        try {
+          const { list, species } = JSON.parse(body);
+          const validLists = { include: 'include_species_list.txt', exclude: 'exclude_species_list.txt', whitelist: 'whitelist_species_list.txt' };
+          if (!validLists[list]) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Invalid list: ${list}` }));
+            return;
+          }
+          if (!Array.isArray(species)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'species must be an array' }));
+            return;
+          }
+          const fp = path.join(BIRDNET_DIR, validLists[list]);
+          await fsp.writeFile(fp, species.join('\n') + '\n');
+          console.log(`[species-lists] Updated ${list}: ${species.length} species`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, list, count: species.length }));
+        } catch(e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+    });
     return;
   }
 

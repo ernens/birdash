@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BIRDASH — Settings</title>
+  <link rel="stylesheet" href="bird-styles.css">
+  <link rel="stylesheet" href="bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="birdash-local.js"></script>
+  <script src="bird-config.js"></script>
+  <script src="bird-vue-core.js"></script>
+  <style>
+    .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media(max-width:768px) { .settings-grid { grid-template-columns:1fr; } }
+    .set-row { display:flex; justify-content:space-between; align-items:center; padding:.6rem 0; border-bottom:1px solid var(--border); }
+    .set-row:last-child { border-bottom:none; }
+    .set-label { font-weight:500; font-size:.9rem; color:var(--text-secondary); flex:1; }
+    .set-input { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:.45rem .7rem; color:var(--text); font-size:.9rem; width:180px; }
+    .set-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(90,158,58,.2); }
+    .set-select { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:.45rem .7rem; color:var(--text); font-size:.9rem; width:180px; cursor:pointer; }
+    .set-range { width:180px; accent-color:var(--accent); }
+    .set-range-val { font-size:.85rem; font-weight:600; color:var(--accent); min-width:3rem; text-align:right; }
+    .set-check { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
+    .set-check input { accent-color:var(--accent); width:18px; height:18px; }
+    .model-card { padding:.8rem; border-radius:8px; border:2px solid var(--border); cursor:pointer; transition:all .2s; }
+    .model-card:hover { border-color:var(--accent); }
+    .model-card.active { border-color:var(--accent); background:rgba(90,158,58,.08); }
+    .model-name { font-weight:700; font-size:1rem; }
+    .model-desc { font-size:.82rem; color:var(--text-secondary); margin-top:.3rem; }
+    .model-badge { display:inline-block; padding:.15rem .5rem; border-radius:4px; font-size:.75rem; font-weight:600; margin-left:.5rem; }
+    .badge-recommended { background:rgba(90,158,58,.15); color:var(--accent); }
+    .badge-advanced { background:rgba(200,168,75,.15); color:#c8a84b; }
+    .badge-experimental { background:rgba(168,92,58,.15); color:#a85c3a; }
+    .save-bar { position:sticky; bottom:0; background:var(--bg-body); padding:1rem 0; border-top:1px solid var(--border); display:flex; gap:1rem; align-items:center; flex-wrap:wrap; z-index:10; }
+    .btn-save { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:.7rem 2rem; font-size:1rem; font-weight:600; cursor:pointer; transition:opacity .2s; }
+    .btn-save:hover { opacity:.9; }
+    .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-outline { background:transparent; color:var(--text-secondary); border:1px solid var(--border); border-radius:8px; padding:.7rem 1.5rem; font-size:.9rem; cursor:pointer; }
+    .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+    .save-msg { font-size:.9rem; padding:.4rem .8rem; border-radius:6px; }
+    .save-ok { background:rgba(90,158,58,.12); color:var(--accent); }
+    .save-err { background:rgba(200,60,60,.12); color:#c84b4b; }
+    .svc-row { display:flex; align-items:center; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid var(--border); }
+    .svc-row:last-child { border-bottom:none; }
+    .svc-name { font-family:monospace; font-size:.88rem; }
+    .svc-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:.5rem; }
+    .svc-active { background:#5a9e3a; }
+    .svc-inactive { background:#c84b4b; }
+    .svc-btn { background:transparent; border:1px solid var(--border); border-radius:5px; padding:.3rem .7rem; font-size:.8rem; cursor:pointer; color:var(--text-secondary); }
+    .svc-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .section-title { font-size:1.1rem; font-weight:700; margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
+    textarea.set-textarea { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:.5rem; color:var(--text); font-size:.85rem; font-family:monospace; width:100%; min-height:120px; resize:vertical; }
+    textarea.set-textarea:focus { outline:none; border-color:var(--accent); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <birdash-shell page="settings">
+
+    <!-- Loading -->
+    <div v-if="loading" style="display:flex;justify-content:center;padding:3rem;">
+      <div class="spinner"><div></div><div></div><div></div></div>
+    </div>
+
+    <template v-else>
+
+      <!-- ═══ Model Selection ═══ -->
+      <div class="card" style="margin-bottom:1.2rem;">
+        <div class="section-title">🤖 {{t('set_model')}}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;">
+          <div v-for="m in models" :key="m"
+               class="model-card" :class="{ active: conf.MODEL === m }"
+               @click="conf.MODEL = m">
+            <div style="display:flex;align-items:center;">
+              <span class="model-name">{{ modelLabel(m) }}</span>
+              <span v-if="m === 'BirdNET_GLOBAL_6K_V2.4_Model_FP16'" class="model-badge badge-recommended">6.5K</span>
+              <span v-else-if="m.includes('MData_Model_V2')" class="model-badge badge-recommended">6.5K + range V2</span>
+              <span v-else-if="m.includes('MData_Model')" class="model-badge badge-recommended">6.5K + range</span>
+              <span v-else-if="m === 'BirdNET_6K_GLOBAL_MODEL'" class="model-badge badge-experimental">legacy</span>
+              <span v-else-if="m.includes('Perch')" class="model-badge badge-advanced">15K</span>
+              <span v-else-if="m.includes('Go')" class="model-badge badge-experimental">exp.</span>
+            </div>
+            <div class="model-desc">{{ modelDescription(m) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+
+        <!-- ═══ Location ═══ -->
+        <div class="card">
+          <div class="section-title">📍 {{t('set_location')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_site_name')}}</span>
+            <input v-model="conf.SITE_NAME" class="set-input">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_latitude')}}</span>
+            <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_longitude')}}</span>
+            <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
+          </div>
+        </div>
+
+        <!-- ═══ Analysis ═══ -->
+        <div class="card">
+          <div class="section-title">🔬 {{t('set_analysis')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_confidence')}}</span>
+            <span class="set-range-val">{{conf.CONFIDENCE}}</span>
+            <input v-model="conf.CONFIDENCE" type="range" min="0.01" max="0.99" step="0.01" class="set-range">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_sensitivity')}}</span>
+            <span class="set-range-val">{{conf.SENSITIVITY}}</span>
+            <input v-model="conf.SENSITIVITY" type="range" min="0.5" max="1.5" step="0.05" class="set-range">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_species_freq_thresh')}}</span>
+            <span class="set-range-val">{{conf.SF_THRESH}}</span>
+            <input v-model="conf.SF_THRESH" type="range" min="0" max="0.5" step="0.01" class="set-range">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_overlap')}}</span>
+            <span class="set-range-val">{{conf.OVERLAP}}</span>
+            <input v-model="conf.OVERLAP" type="range" min="0" max="2.9" step="0.1" class="set-range">
+          </div>
+        </div>
+
+        <!-- ═══ Recording ═══ -->
+        <div class="card">
+          <div class="section-title">🎙️ {{t('set_recording')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_rec_length')}}</span>
+            <input v-model="conf.RECORDING_LENGTH" type="number" min="6" max="120" class="set-input" style="width:80px;">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_extraction_length')}}</span>
+            <input v-model="conf.EXTRACTION_LENGTH" type="number" min="3" max="30" class="set-input" style="width:80px;" placeholder="6">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_audio_format')}}</span>
+            <select v-model="conf.AUDIOFMT" class="set-select" style="width:100px;">
+              <option value="mp3">MP3</option>
+              <option value="wav">WAV</option>
+              <option value="flac">FLAC</option>
+              <option value="ogg">OGG</option>
+            </select>
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_channels')}}</span>
+            <select v-model="conf.CHANNELS" class="set-select" style="width:80px;">
+              <option value="1">Mono</option>
+              <option value="2">Stereo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ═══ Language & Images ═══ -->
+        <div class="card">
+          <div class="section-title">🌍 {{t('set_language')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_language')}}</span>
+            <select v-model="conf.DATABASE_LANG" class="set-select">
+              <option v-for="l in languages" :key="l" :value="l">{{l}}</option>
+            </select>
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_image_provider')}}</span>
+            <select v-model="conf.IMAGE_PROVIDER" class="set-select" style="width:140px;">
+              <option value="WIKIPEDIA">Wikipedia</option>
+              <option value="FLICKR">Flickr</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ═══ BirdWeather ═══ -->
+        <div class="card">
+          <div class="section-title">🌤️ {{t('set_birdweather')}}</div>
+          <div class="set-row">
+            <span class="set-label">Station ID</span>
+            <input v-model="conf.BIRDWEATHER_ID" class="set-input" placeholder="empty = disabled">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_rtsp_stream')}}</span>
+            <input v-model="conf.RTSP_STREAM" class="set-input" style="width:240px;" placeholder="rtsp://...">
+          </div>
+        </div>
+
+        <!-- ═══ Disk Management ═══ -->
+        <div class="card">
+          <div class="section-title">💾 {{t('set_disk_mgmt')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_full_disk')}}</span>
+            <select v-model="conf.FULL_DISK" class="set-select" style="width:120px;">
+              <option value="purge">Purge</option>
+              <option value="keep">Keep</option>
+            </select>
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_purge_threshold')}}</span>
+            <span class="set-range-val">{{conf.PURGE_THRESHOLD}}%</span>
+            <input v-model="conf.PURGE_THRESHOLD" type="range" min="50" max="99" step="1" class="set-range">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_max_files')}}</span>
+            <input v-model="conf.MAX_FILES_SPECIES" type="number" min="0" class="set-input" style="width:80px;">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_privacy_threshold')}}</span>
+            <select v-model="conf.PRIVACY_THRESHOLD" class="set-select" style="width:80px;">
+              <option value="0">0 (off)</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ═══ Notifications ═══ -->
+        <div class="card">
+          <div class="section-title">🔔 {{t('set_notifications')}}</div>
+          <div class="set-row">
+            <label class="set-check">
+              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_EACH_DETECTION" true-value="1" false-value="0">
+              <span>{{t('set_notify_each')}}</span>
+            </label>
+          </div>
+          <div class="set-row">
+            <label class="set-check">
+              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES" true-value="1" false-value="0">
+              <span>{{t('set_notify_new_species')}}</span>
+            </label>
+          </div>
+          <div class="set-row">
+            <label class="set-check">
+              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" true-value="1" false-value="0">
+              <span>{{t('set_notify_new_daily')}}</span>
+            </label>
+          </div>
+          <div class="set-row">
+            <label class="set-check">
+              <input type="checkbox" v-model="conf.APPRISE_WEEKLY_REPORT" true-value="1" false-value="0">
+              <span>{{t('set_weekly_report')}}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ═══ Services ═══ -->
+        <div class="card">
+          <div class="section-title">🔧 {{t('set_services')}}</div>
+          <div v-if="svcLoading" class="spinner"><div></div><div></div><div></div></div>
+          <template v-else>
+            <div v-for="s in services" :key="s.name" class="svc-row">
+              <div>
+                <span class="svc-dot" :class="s.active ? 'svc-active' : 'svc-inactive'"></span>
+                <span class="svc-name">{{s.name}}</span>
+              </div>
+              <button class="svc-btn" @click="restartService(s.name)" :disabled="s.restarting">
+                {{s.restarting ? '...' : t('set_restart')}}
+              </button>
+            </div>
+          </template>
+        </div>
+
+      </div><!-- /settings-grid -->
+
+      <!-- ═══ Species Lists ═══ -->
+      <div class="card" style="margin-top:1.2rem;">
+        <div class="section-title">📋 {{t('set_species_lists')}}</div>
+        <div class="settings-grid">
+          <div>
+            <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_include_list')}}</div>
+            <textarea v-model="includeList" class="set-textarea" :placeholder="'Pica pica\nTurdus merula\n...'"></textarea>
+          </div>
+          <div>
+            <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_exclude_list')}}</div>
+            <textarea v-model="excludeList" class="set-textarea" :placeholder="'Homo sapiens\n...'"></textarea>
+          </div>
+        </div>
+        <button class="btn-outline" style="margin-top:.8rem;" @click="saveSpeciesLists" :disabled="savingLists">
+          {{savingLists ? '...' : t('set_save') + ' lists'}}
+        </button>
+      </div>
+
+      <!-- ═══ Save bar ═══ -->
+      <div class="save-bar">
+        <button class="btn-save" @click="save(false)" :disabled="saving">
+          {{saving ? '...' : t('set_save')}}
+        </button>
+        <button class="btn-save" style="background:#c8a84b;" @click="save(true)" :disabled="saving">
+          {{saving ? '...' : t('set_save_restart')}}
+        </button>
+        <button class="btn-outline" @click="reload">{{t('set_reload')}}</button>
+        <span v-if="saveMsg" class="save-msg" :class="saveErr ? 'save-err' : 'save-ok'">{{saveMsg}}</span>
+      </div>
+
+    </template>
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted, computed } = Vue;
+const { useI18n, useTheme, useNav, registerComponents } = BIRDASH;
+
+const app = createApp({
+  setup() {
+    const { lang, t } = useI18n();
+    const API = BIRD_CONFIG.apiUrl;
+
+    const conf = reactive({});
+    const models = ref([]);
+    const languages = ref([]);
+    const services = ref([]);
+    const loading = ref(true);
+    const saving = ref(false);
+    const svcLoading = ref(true);
+    const saveMsg = ref('');
+    const saveErr = ref(false);
+    const includeList = ref('');
+    const excludeList = ref('');
+    const savingLists = ref(false);
+
+    function modelLabel(m) {
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_Model_FP16') return 'BirdNET V2.4';
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_MData_Model_FP16') return 'BirdNET V2.4 MData';
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16') return 'BirdNET V2.4 MData V2';
+      if (m === 'BirdNET_6K_GLOBAL_MODEL') return 'BirdNET V1';
+      if (m.includes('Perch')) return 'Perch v2';
+      if (m.includes('Go')) return 'BirdNET-Go';
+      return m;
+    }
+
+    function modelDescription(m) {
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_Model_FP16') return t('set_model_desc_birdnet');
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_MData_Model_FP16') return t('set_model_desc_mdata');
+      if (m === 'BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16') return t('set_model_desc_mdata_v2');
+      if (m === 'BirdNET_6K_GLOBAL_MODEL') return t('set_model_desc_v1');
+      if (m.includes('Perch')) return t('set_model_desc_perch');
+      if (m.includes('Go')) return t('set_model_desc_go');
+      return m;
+    }
+
+    async function reload() {
+      loading.value = true;
+      saveMsg.value = '';
+      try {
+        const [confData, modelData, langData, listsData] = await Promise.all([
+          fetch(API + '/settings').then(r => r.json()),
+          fetch(API + '/models').then(r => r.json()),
+          fetch(API + '/languages').then(r => r.json()),
+          fetch(API + '/species-lists').then(r => r.json()),
+        ]);
+        // Populate reactive config
+        Object.keys(conf).forEach(k => delete conf[k]);
+        Object.assign(conf, confData);
+        models.value = modelData.models || [];
+        languages.value = langData.languages || [];
+        includeList.value = (listsData.include || []).join('\n');
+        excludeList.value = (listsData.exclude || []).join('\n');
+      } catch(e) {
+        saveMsg.value = e.message;
+        saveErr.value = true;
+      }
+      loading.value = false;
+      loadServices();
+    }
+
+    async function loadServices() {
+      svcLoading.value = true;
+      try {
+        const data = await fetch(API + '/services').then(r => r.json());
+        services.value = (data.services || []).map(s => ({ ...s, restarting: false }));
+      } catch(e) { console.error(e); }
+      svcLoading.value = false;
+    }
+
+    async function save(andRestart) {
+      saving.value = true;
+      saveMsg.value = '';
+      saveErr.value = false;
+      try {
+        const res = await fetch(API + '/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates: { ...conf } }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          saveMsg.value = t('set_saved');
+          if (data.warnings) saveMsg.value += ' (' + data.warnings.join(', ') + ')';
+          if (andRestart) {
+            // Restart core services
+            for (const svc of ['birdnet_analysis', 'birdnet_recording']) {
+              await fetch(API + '/services/restart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service: svc }),
+              });
+            }
+            saveMsg.value += ' + services restarted';
+            loadServices();
+          }
+        } else {
+          saveMsg.value = data.error || 'Error';
+          saveErr.value = true;
+        }
+      } catch(e) {
+        saveMsg.value = e.message;
+        saveErr.value = true;
+      }
+      saving.value = false;
+    }
+
+    async function restartService(name) {
+      const svc = services.value.find(s => s.name === name);
+      if (svc) svc.restarting = true;
+      try {
+        await fetch(API + '/services/restart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service: name }),
+        });
+      } catch(e) { console.error(e); }
+      setTimeout(loadServices, 1500);
+    }
+
+    async function saveSpeciesLists() {
+      savingLists.value = true;
+      try {
+        const inc = includeList.value.split('\n').map(l => l.trim()).filter(Boolean);
+        const exc = excludeList.value.split('\n').map(l => l.trim()).filter(Boolean);
+        await Promise.all([
+          fetch(API + '/species-lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ list: 'include', species: inc }),
+          }),
+          fetch(API + '/species-lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ list: 'exclude', species: exc }),
+          }),
+        ]);
+      } catch(e) { console.error(e); }
+      savingLists.value = false;
+    }
+
+    onMounted(reload);
+
+    return {
+      t, conf, models, languages, services,
+      loading, saving, svcLoading, saveMsg, saveErr,
+      includeList, excludeList, savingLists,
+      modelLabel, modelDescription,
+      reload, save, restartService, saveSpeciesLists,
+    };
+  }
+});
+registerComponents(app).mount('#app');
+</script>
+</body>
+</html>
