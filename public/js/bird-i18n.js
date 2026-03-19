@@ -1,3 +1,5 @@
+// DEPRECATED - This file is kept for potential vanilla JS pages. All current pages use bird-vue-core.js for i18n.
+
 /**
  * bird-i18n.js — Moteur de traductions BIRDASH
  *

@@ -1,22 +1,19 @@
 /**
- * bird-vue-core.js — Composables partagés BIRDASH (Vue 3 CDN)
+ * bird-vue-core.js — Vue 3 composables & components for BIRDASH
  *
- * Dépend de : Vue 3 (CDN global), bird-config.js
- * Remplace  : bird-i18n.js + bird-core.js pour les pages migrées
+ * Depends on: Vue 3 (CDN global), bird-config.js, bird-shared.js (BIRDASH_UTILS)
  *
- * Expose via window :
- *   useI18n()        → { lang, t, setLang, langs }
- *   useTheme()       → { theme, themes, setTheme }
- *   useNav(pageId)   → { navItems }  (computed, réactif à lang)
- *   birdQuery(sql, params)
- *   fmtDate / fmtTime / fmtConf / localDateStr / daysAgo / freshnessLabel
- *   buildAudioUrl / useAudio()
- *   buildSpeciesLinks / fetchSpeciesImage
- *   getUrlParam / navigateTo
- *   chartDefaults()
+ * Pure utility functions have been extracted to bird-shared.js.
+ * This file contains only Vue-specific code: composables, components,
+ * inline translations, and Service Worker registration.
+ *
+ * Expose via window.BIRDASH :
+ *   useI18n(), useTheme(), useNav(), useChart(), useAudio(), useSpeciesNames()
+ *   PibirdShell, BirdImg, registerComponents()
+ *   + re-exports of BIRDASH_UTILS for backward compatibility
  */
 
-;(function (Vue, BIRD_CONFIG) {
+;(function (Vue, BIRD_CONFIG, U) {
   'use strict';
 
   // ── Service Worker ────────────────────────────────────────────────────────
@@ -709,112 +706,14 @@
     return { mountChart };
   }
 
-  // ── Échappement HTML (anti-XSS pour v-html) ──────────────────────────────
-  function escHtml(str) {
-    if (typeof str !== 'string') return String(str ?? '');
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  // ── Utility references from bird-shared.js (BIRDASH_UTILS) ──────────────
+  // Pure utility functions are defined in bird-shared.js and accessed via U.
+  // Wrappers below provide backward compatibility and inject reactive state
+  // (e.g. current language) where needed.
 
-  // ── Utilitaires purs (non réactifs) ───────────────────────────────────────
-
-  async function birdQuery(sql, params = []) {
-    const res = await fetch(`${BIRD_CONFIG.apiUrl}/query`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ sql, params }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data.rows.map(row => {
-      const obj = {};
-      data.columns.forEach((col, i) => { obj[col] = row[i]; });
-      return obj;
-    });
-  }
-
-  function fmtDate(dateStr) {
-    if (!dateStr) return '—';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  function fmtTime(timeStr) {
-    if (!timeStr) return '—';
-    return timeStr.substring(0, 5);
-  }
-
-  function fmtConf(val) {
-    if (val == null) return '—';
-    return (parseFloat(val) * 100).toFixed(1) + '%';
-  }
-
-  function localDateStr(d = new Date()) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-  function daysAgo(n) {
-    const d = new Date();
-    d.setDate(d.getDate() - n);
-    return localDateStr(d);
-  }
-
-  // freshnessLabel dépend de t() — prend t en paramètre pour rester pur
-  function freshnessLabel(dateStr, timeStr, t) {
-    if (!dateStr || !timeStr) return '—';
-    const last = new Date(`${dateStr}T${timeStr}`);
-    const diffMs  = Date.now() - last.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 60)   return t('minutes_ago', { n: diffMin });
-    if (diffMin < 1440) return t('hours_ago',   { n: Math.floor(diffMin / 60) });
-    return t('days_ago', { n: Math.floor(diffMin / 1440) });
-  }
-
-  function getUrlParam(name) {
-    return new URLSearchParams(window.location.search).get(name);
-  }
-
-  function navigateTo(page, params = {}) {
-    const qs = new URLSearchParams(params).toString();
-    window.location.href = `${page}${qs ? '?' + qs : ''}`;
-  }
-
-  function buildAudioUrl(fileName) {
-    if (!fileName) return null;
-    const m = fileName.match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
-    if (!m) return null;
-    return `${BIRD_CONFIG.audioUrl}/By_Date/${m[2]}/${m[1]}/${encodeURIComponent(fileName)}`;
-  }
-
+  // buildSpeciesLinks wrapper: auto-injects current reactive language
   function buildSpeciesLinks(comName, sciName) {
-    const sci     = encodeURIComponent(sciName || '');
-    const com     = encodeURIComponent(comName || '');
-    const sciWiki = (sciName || '').replace(/ /g, '_');
-    // Use current language for Wikipedia link
-    const wikiLang = _lang.value === 'nl' ? 'nl' : _lang.value === 'de' ? 'de' : _lang.value === 'en' ? 'en' : 'fr';
-    return {
-      xenocanto:   { url:`https://xeno-canto.org/explore?query=${sci}`,          label:'Xeno-canto',    icon:'🎵' },
-      ebird:       { url:`https://ebird.org/search?q=${sci}`,                    label:'eBird',         icon:'🌍' },
-      wikipedia:   { url:`https://${wikiLang}.wikipedia.org/wiki/${sciWiki}`,    label:'Wikipedia',     icon:'📖' },
-      inaturalist: { url:`https://www.inaturalist.org/taxa/search?q=${sci}`,     label:'iNaturalist',   icon:'🔬' },
-      avibase:     { url:`https://avibase.bsc-eoc.org/search.jsp?query=${sci}`,  label:'Avibase',       icon:'📋' },
-    };
-  }
-
-  async function fetchSpeciesImage(sciName) {
-    if (!sciName) return null;
-    const title = sciName.replace(/ /g, '_');
-    try {
-      const res = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.thumbnail?.source || null;
-    } catch { return null; }
+    return U.buildSpeciesLinks(comName, sciName, _lang.value);
   }
 
   // ── useAudio ──────────────────────────────────────────────────────────────
@@ -823,7 +722,7 @@
     const playingFile = ref(null);
 
     function toggleAudio(fileName) {
-      const url = buildAudioUrl(fileName);
+      const url = U.buildAudioUrl(fileName);
       if (!url) return;
 
       if (_current && playingFile.value === fileName) {
@@ -846,74 +745,6 @@
     onUnmounted(() => { if (_current) { _current.pause(); _current = null; } });
 
     return { playingFile, toggleAudio };
-  }
-
-  // ── fetchCachedPhoto — cache localStorage + /api/photo + fallbacks ───────────
-  // Utilisable depuis toutes les pages. TTL 30 jours.
-  const PHOTO_TTL = 30 * 24 * 3600 * 1000;
-  const PHOTO_LS_PREFIX = 'birdash_photo_';
-
-  async function fetchCachedPhoto(sciName) {
-    if (!sciName) return null;
-
-    // 1. localStorage — vérifier TTL
-    const lsKey = PHOTO_LS_PREFIX + sciName.replace(/[^a-zA-Z0-9]/g, '_');
-    try {
-      const cached = JSON.parse(localStorage.getItem(lsKey));
-      if (cached && cached.url && (Date.now() - cached.ts < PHOTO_TTL)) {
-        return cached.url;
-      }
-    } catch(e) {}
-
-    let url = null;
-
-    // 2. /api/photo (cache disque serveur)
-    try {
-      const apiUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
-      const res = await fetch(apiUrl);
-      if (res.ok) url = apiUrl;
-    } catch(e) {}
-
-    // 3. iNaturalist direct (si serveur indisponible)
-    if (!url) {
-      try {
-        const tn  = encodeURIComponent(sciName);
-        const res = await fetch(
-          `https://api.inaturalist.org/v1/taxa?taxon_name=${tn}&rank=species&per_page=3`
-        );
-        if (res.ok) {
-          const data  = await res.json();
-          const taxon = data.results?.find(t =>
-            t.name.toLowerCase() === sciName.toLowerCase()
-          );
-          url = taxon?.default_photo?.medium_url
-             || taxon?.default_photo?.square_url
-             || taxon?.default_photo?.url
-             || null;
-        }
-      } catch(e) {}
-    }
-
-    // 4. Wikipedia direct
-    if (!url) {
-      try {
-        const title = sciName.replace(/ /g, '_');
-        const res   = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          url = data.thumbnail?.source || null;
-        }
-      } catch(e) {}
-    }
-
-    // Stocker en localStorage (même null → évite de re-fetcher inutilement)
-    try {
-      localStorage.setItem(lsKey, JSON.stringify({ url, ts: Date.now() }));
-    } catch(e) {}
-
-    return url;
   }
 
   // ── Species name translation (BirdNET labels) ───────────────────────────
@@ -981,30 +812,6 @@
     }
 
     return { spName, spNamesReady };
-  }
-
-  // ── Chart.js defaults ─────────────────────────────────────────────────────
-  function chartDefaults() {
-    const cs = getComputedStyle(document.documentElement);
-    const txtC = cs.getPropertyValue('--text-muted').trim() || '#7a8a8e';
-    const gridC = (cs.getPropertyValue('--border').trim() || '#243030') + '40';
-    const accent = cs.getPropertyValue('--accent').trim() || '#34d399';
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: txtC, usePointStyle: true, pointStyle: 'circle', boxWidth: 6 } },
-        tooltip: {
-          backgroundColor: cs.getPropertyValue('--bg-card').trim() || '#151b20',
-          borderColor: accent + '40', borderWidth: 1,
-          titleColor: '#fff', bodyColor: txtC,
-        },
-      },
-      scales: {
-        x: { ticks: { color: txtC }, grid: { color: gridC, lineWidth: 0.5 }, border: { display: false } },
-        y: { ticks: { color: txtC }, grid: { color: gridC, lineWidth: 0.5 }, border: { display: false } },
-      },
-    };
   }
 
   // ── Composant PibirdShell ─────────────────────────────────────────────────
@@ -1119,19 +926,31 @@
 
   // ── Export global ─────────────────────────────────────────────────────────
   window.BIRDASH = {
-    // Composables Vue
+    // Vue composables
     useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
-    // Composants
+    // Vue components
     PibirdShell, registerComponents,
-    // Utilitaires purs
-    birdQuery, escHtml,
-    fmtDate, fmtTime, fmtConf,
-    localDateStr, daysAgo, freshnessLabel,
-    buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage, fetchCachedPhoto,
-    getUrlParam, navigateTo,
-    chartDefaults,
-    // Accès direct aux traductions (pour les pages qui en auraient besoin)
+    // Wrapper with reactive lang injection (calls BIRDASH_UTILS under the hood)
+    buildSpeciesLinks,
+    // Re-exports from BIRDASH_UTILS for backward compatibility
+    // (pages destructure these from BIRDASH, so they must remain available)
+    birdQuery:        U.birdQuery,
+    escHtml:          U.escHtml,
+    fmtDate:          U.fmtDate,
+    fmtTime:          U.fmtTime,
+    fmtConf:          U.fmtConf,
+    localDateStr:     U.localDateStr,
+    daysAgo:          U.daysAgo,
+    freshnessLabel:   U.freshnessLabel,
+    buildAudioUrl:    U.buildAudioUrl,
+    fetchSpeciesImage:U.fetchSpeciesImage,
+    fetchCachedPhoto: U.fetchCachedPhoto,
+    getUrlParam:      U.getUrlParam,
+    navigateTo:       U.navigateTo,
+    chartDefaults:    U.chartDefaults,
+    spinnerHTML:      U.spinnerHTML,
+    // Direct access to translations
     TRANSLATIONS: _TRANSLATIONS,
   };
 
-})(Vue, BIRD_CONFIG);
+})(Vue, BIRD_CONFIG, window.BIRDASH_UTILS);
