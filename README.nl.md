@@ -43,8 +43,11 @@ Vue 3 (CDN) frontend met Node.js backend, meertalig (FR/EN/NL/DE + 36 talen voor
 - 🏆 Beste opnames met uniforme foto's en speler
 - 🖥️ Systeemstatus (CPU, RAM, schijf, temperatuur)
 - 🔬 Geavanceerde analyses
-- 🔧 **Instellingenpagina** — modelselector, analyseparameters, servicesbeheer
-- 🤖 **Perch v2-ondersteuning** — Google DeepMind-model (15.000 soorten) naast BirdNET V2.4
+- 🔧 **Instellingenpagina** — modelselector, analyseparameters, servicesbeheer, ⓘ helptips bij elke parameter
+- 🤖 **Perch v2-ondersteuning** — Google Research-model (10.340 vogelsoorten) met temperatuur-softmax, vogel-only filter en MData-geofilter
+- 🔄 **Modelvergelijking** — zij-aan-zij periodevergelijking met gewonnen/verloren soorten, tabel per soort, nachtelijke monitoring
+- 🏷️ **Modeltracking** — elke detectie registreert welk AI-model het identificeerde (weergegeven op alle pagina's)
+- 🗑️ **Detectiebeheer** — individuele detecties of alle detecties van een soort verwijderen (met naambevestiging)
 - ⚡ Service Worker voor offline caching
 - ♿ Toegankelijkheid (WCAG AA, toetsenbordnavigatie, skip-link)
 - 🎨 5 moderne thema's (Forest, Night, Paper, Ocean, Dusk)

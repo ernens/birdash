@@ -1122,6 +1122,7 @@
     navigateTo:       U.navigateTo,
     chartDefaults:    U.chartDefaults,
     spinnerHTML:      U.spinnerHTML,
+    shortModel:       U.shortModel,
     // Direct access to translations
     TRANSLATIONS: _TRANSLATIONS,
   };

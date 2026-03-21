@@ -72,7 +72,8 @@
                 {{fmtDate(lastDet.row.Date)}} · {{fmtTime(lastDet.row.Time)}}
               </div>
             </div>
-            <div>
+            <div style="display:flex;align-items:center;gap:.3rem;">
+              <span v-if="lastDet.row.Model" class="model-tag">{{shortModel(lastDet.row.Model)}}</span>
               <span :class="'conf-badge '+(parseFloat(lastDet.row.Confidence)>=0.8?'conf-high':parseFloat(lastDet.row.Confidence)>=0.6?'conf-mid':'conf-low')">
                 {{fmtConf(lastDet.row.Confidence)}}
               </span>
@@ -196,8 +197,11 @@
             <span v-if="d.isRare" class="rare-badge" :title="'Vu seulement '+d.totalDet+' fois'">
               💎 {{d.totalDet}}×
             </span>
-            <span v-else :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
-              {{fmtConf(d.Confidence)}}
+            <span v-else style="display:flex;align-items:center;gap:.25rem;">
+              <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+              <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
+                {{fmtConf(d.Confidence)}}
+              </span>
             </span>
           </div>
         </div>
@@ -262,7 +266,7 @@ const { createApp, ref, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo,
-        buildAudioUrl, fetchCachedPhoto } = BIRDASH;
+        buildAudioUrl, fetchCachedPhoto, shortModel } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -337,7 +341,7 @@ const app = createApp({
     async function loadLastDet() {
       lastDet.value.loading = true;
       try {
-        const [row] = await birdQuery(`SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name FROM detections ORDER BY Date DESC,Time DESC LIMIT 1`);
+        const [row] = await birdQuery(`SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model FROM detections ORDER BY Date DESC,Time DESC LIMIT 1`);
         const photoUrl = row?.Sci_Name ? await fetchCachedPhoto(row.Sci_Name) : null;
         lastDet.value = { loading:false, row:row||null, photoUrl };
         // Charger le spectrogramme automatiquement
@@ -349,7 +353,7 @@ const app = createApp({
       feed.value.loading = true;
       try {
         const rows = await birdQuery(
-          `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name
+          `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model
            FROM detections ORDER BY Date DESC,Time DESC LIMIT 15`
         );
 
@@ -568,7 +572,7 @@ const app = createApp({
       richPlaying, richProgress, richDuration, toggleRichPlay, seekRich,
       spectroCanvas, spectroState, loadSpectro,
       cleanMode, cleanStrength, cleanProcessing, toggleClean, reapplyClean,
-      fmtDate, fmtTime, fmtConf, freshnessLabel, navigateTo,
+      fmtDate, fmtTime, fmtConf, freshnessLabel, navigateTo, shortModel,
       canvas7d, canvasTop, canvasHourly,
     };
   }

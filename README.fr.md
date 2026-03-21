@@ -43,8 +43,11 @@ Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL/DE + 36 langue
 - 🏆 Meilleurs enregistrements avec photos uniformes et lecteur
 - 🖥️ État du système (CPU, RAM, disque, température)
 - 🔬 Analyses avancées
-- 🔧 **Page réglages** — sélecteur de modèle, paramètres d'analyse, gestion des services
-- 🤖 **Support Perch v2** — modèle Google DeepMind (15 000 espèces) en plus de BirdNET V2.4
+- 🔧 **Page réglages** — sélecteur de modèle, paramètres d'analyse, gestion des services, infobulles ⓘ sur chaque paramètre
+- 🤖 **Support Perch v2** — modèle Google Research (10 340 espèces d'oiseaux) avec softmax à température, filtre oiseaux uniquement et filtre géographique MData
+- 🔄 **Comparaison de modèles** — comparaison côte à côte par période avec espèces gagnées/perdues, tableau par espèce, monitoring nocturne
+- 🏷️ **Suivi du modèle** — chaque détection enregistre quel modèle IA l'a identifiée (affiché sur toutes les pages)
+- 🗑️ **Gestion des détections** — supprimer des détections individuelles ou en masse pour une espèce (avec confirmation par saisie du nom)
 - ⚡ Service Worker pour cache offline
 - ♿ Accessibilité (WCAG AA, navigation clavier, skip-link)
 - 🎨 5 thèmes modernes (Forest, Night, Paper, Ocean, Dusk)

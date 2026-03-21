@@ -43,8 +43,11 @@ Vue 3 (CDN) frontend with Node.js backend, multilingual (FR/EN/NL/DE + 36 langua
 - 🏆 Best recordings with uniform photos and player
 - 🖥️ System status (CPU, RAM, disk, temperature)
 - 🔬 Advanced analyses
-- 🔧 **Settings page** — model selector, analysis parameters, services management
-- 🤖 **Perch v2 support** — Google DeepMind model (15,000 species) alongside BirdNET V2.4
+- 🔧 **Settings page** — model selector, analysis parameters, services management, ⓘ help tooltips on every parameter
+- 🤖 **Perch v2 support** — Google Research model (10,340 bird species) with temperature-scaled softmax, bird-only filter, and MData geographic filter
+- 🔄 **Model comparison** — side-by-side period comparison with species gained/lost, per-species table, nocturnal detection monitoring
+- 🏷️ **Model tracking** — each detection records which AI model identified it (displayed across all pages)
+- 🗑️ **Detection management** — delete individual detections or bulk-delete an entire species (with typed-name confirmation safety)
 - ⚡ Service Worker for offline caching
 - ♿ Accessibility (WCAG AA, keyboard navigation, skip-link)
 - 🎨 5 modern themes (Forest, Night, Paper, Ocean, Dusk)
@@ -179,7 +182,7 @@ birdash/
 │   │   ├── bird-vue-core.js   # Vue 3 composables (shell, themes)
 │   │   └── bird-i18n.js       # i18n engine
 │   ├── css/                   # Stylesheets + 5 themes
-│   ├── i18n/                  # Translation files (fr/en/nl)
+│   ├── i18n/                  # Translation files (fr/en/nl/de)
 │   ├── img/                   # SVG assets
 │   └── sw.js                  # Service Worker (offline cache)
 ├── config/
@@ -207,7 +210,7 @@ birdash/
 ## Security
 
 - 🛡️ Rate limiting: 120 requests/min per IP
-- 🔒 Strict SQL validation (read-only, no multi-statements)
+- 🔒 Strict SQL validation (read-only queries, dedicated write connection for deletions only)
 - 🔐 Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
 - 🌐 CORS restricted to configured origins
 - ✅ SRI (Subresource Integrity) on CDN scripts

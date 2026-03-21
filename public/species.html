@@ -178,6 +178,7 @@
             <div class="det-time">{{fmtDate(d.Date)}}</div>
             <div class="det-time" style="min-width:44px;">{{fmtTime(d.Time)}}</div>
             <div style="flex:1;"></div>
+            <span v-if="d.Model" class="model-tag" style="margin-right:.3rem;">{{shortModel(d.Model)}}</span>
             <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
               {{fmtConf(d.Confidence)}}
             </span>
@@ -280,7 +281,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
-        buildSpeciesLinks, fetchSpeciesImage, chartDefaults } = BIRDASH;
+        buildSpeciesLinks, fetchSpeciesImage, chartDefaults, shortModel } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -529,7 +530,7 @@ const app = createApp({
 
     async function loadFeed(name) {
       try {
-        const rows = await birdQuery(`SELECT Date,Time,Confidence,File_Name FROM detections WHERE Com_Name=? ORDER BY Date DESC,Time DESC LIMIT 15`,[name]);
+        const rows = await birdQuery(`SELECT Date,Time,Confidence,File_Name,Model FROM detections WHERE Com_Name=? ORDER BY Date DESC,Time DESC LIMIT 15`,[name]);
         feed.value = rows;
       } catch(e) { feed.value=[]; }
     }
@@ -806,7 +807,7 @@ const app = createApp({
       photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,
       playingFile, toggleAudio,
-      fmtDate, fmtTime, fmtConf, navigateTo,
+      fmtDate, fmtTime, fmtConf, navigateTo, shortModel,
       canvasHourly, canvasMonthly, canvas30d, canvasConf, canvasDayHour,
       loadDetail,
       deleteMode, showBulkModal, bulkConfirmName, bulkDeleting, deleteError,

@@ -127,6 +127,7 @@
               <th>{{t('species_name')}}</th>
               <th class="hide-sm">{{t('scientific_name')}}</th>
               <th style="width:90px;">{{t('confidence')}}</th>
+              <th class="hide-sm" style="width:70px;">{{t('set_model_choice')}}</th>
             </tr></thead>
             <tbody>
               <tr v-for="d in displayRows" :key="d._key">
@@ -158,6 +159,9 @@
                     {{fmtConf(d.Confidence)}}
                   </span>
                 </td>
+                <td class="hide-sm">
+                  <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -180,7 +184,7 @@ const { createApp, ref, computed, watch, onMounted } = Vue;
 const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf,
         localDateStr, daysAgo, getUrlParam, navigateTo,
-        fetchCachedPhoto, buildAudioUrl } = BIRDASH;
+        fetchCachedPhoto, buildAudioUrl, shortModel } = BIRDASH;
 
 // Directive v-click-outside pour fermer le dropdown
 const vClickOutside = {
@@ -326,7 +330,7 @@ const app = createApp({
         const { where, params } = buildWhere();
         if (uniqueMode.value) {
           const data = await birdQuery(
-            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name
+            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model
              FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT 5000`,
             params
           );
@@ -338,7 +342,7 @@ const app = createApp({
           const [cnt] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE ${where}`, params);
           total.value = cnt ? cnt.n : 0;
           const data = await birdQuery(
-            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name
+            `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model
              FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT ? OFFSET ?`,
             [...params, PS, (page.value-1)*PS]
           );
@@ -400,7 +404,7 @@ const app = createApp({
       page,total,rows,loading,totalPages,paginationPages,
       displayRows,displayTotal,
       playingFile,toggleAudio, buildAudioUrl,
-      fmtDate,fmtTime,fmtConf,navigateTo,spName,
+      fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,
       applyFilters,resetFilters,goPage,
     };
   }

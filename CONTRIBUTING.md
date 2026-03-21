@@ -108,7 +108,7 @@ birdash/
 | **Frontend** | Vue 3 via CDN (no build step), Composition API |
 | **Charts** | Chart.js (line/bar), ECharts (polar/heatmap) |
 | **Audio** | Web Audio API (real-time filters: gain, highpass, lowpass, spectral subtraction) |
-| **Backend** | Node.js HTTP (native `http` module), better-sqlite3 (read-only) |
+| **Backend** | Node.js HTTP (native `http` module), better-sqlite3 (read-only + dedicated write for deletions) |
 | **Proxy** | Caddy with zstd/gzip compression |
 | **Security** | Rate limiting, SQL validation, SRI, CORS, CSP headers |
 | **i18n** | 4 UI languages (FR/EN/DE/NL) + 36 species name languages via BirdNET labels |
@@ -148,7 +148,7 @@ Browser                    Raspberry Pi
 | `bird-shared.js` | Pure utilities | No Vue dependency — framework-agnostic |
 | `bird-vue-core.js` | Vue composables + i18n | Contains all translations inline |
 | `bird-pages.css` | Page-specific styles | Organized by page with comments |
-| `server.js` | API routes | All routes in one file, async IIFE pattern |
+| `server.js` | API routes | All routes in one file, async IIFE pattern, DELETE endpoints for detection management |
 
 ### Commits
 
@@ -165,7 +165,7 @@ All translations live in the `_TRANSLATIONS` object in `bird-vue-core.js`:
 1. Copy an existing language block (e.g. `en: { ... }`)
 2. Rename it (e.g. `es: { ... }`)
 3. Fill `_meta: { lang:'es', label:'Español', flag:'🇪🇸' }`
-4. Translate all keys (~180 keys)
+4. Translate all keys (~200 keys)
 5. The language automatically appears in the UI language selector
 
 Species names are loaded from BirdNET label files (`/api/species-names?lang=xx`) — no action needed if BirdNET already supports the language.

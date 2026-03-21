@@ -562,6 +562,18 @@ a:hover { opacity: .85; }
 .conf-mid  { background: rgba(251,191,36,.15);  color: var(--amber); }
 .conf-low  { background: rgba(248,113,113,.15); color: var(--danger); }
 
+.model-tag {
+  display:       inline-block;
+  padding:       .1rem .35rem;
+  border-radius: .2rem;
+  font-size:     .62rem;
+  font-weight:   600;
+  letter-spacing:.02em;
+  white-space:   nowrap;
+  color:         var(--info, #4a8ab5);
+  background:    color-mix(in srgb, var(--info, #4a8ab5) 12%, transparent);
+}
+
 /* ── Bouton audio ────────────────────────────────────────────────────────── */
 .play-btn {
   display:         inline-flex;

@@ -91,6 +91,7 @@
                 <div class="rec-sci-name">{{rec.Sci_Name}}</div>
               </div>
               <div class="rec-badges">
+                <span v-if="rec.Model" class="model-tag">{{shortModel(rec.Model)}}</span>
                 <span :class="'conf-badge '+(rec.conf>=80?'conf-high':rec.conf>=60?'conf-mid':'conf-low')">
                   {{rec.conf.toFixed(1)}}%
                 </span>
@@ -423,7 +424,7 @@ function encodeWavRec(pcm, sr) {
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
 const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery, fmtConf, localDateStr,
-        buildAudioUrl, buildSpeciesLinks } = BIRDASH;
+        buildAudioUrl, buildSpeciesLinks, shortModel } = BIRDASH;
 
 const PAGE_SIZE = 12;
 
@@ -518,7 +519,7 @@ const app = createApp({
         const where = 'WHERE ' + baseWhere.join(' AND ');
 
         const rows = await birdQuery(
-          `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
+          `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name, Model
            FROM detections
            ${where}
            ORDER BY Com_Name ASC, Confidence DESC`,
@@ -961,7 +962,7 @@ const app = createApp({
       onPhotoError, recQuickDates, downloadAudio, dlUrl, dlName,
       toggleSpecies, loadMore, togglePlay, toggleClean, reapplyClean,
       toggleSpectro, buildSpeciesLinks,
-      setFilter, toggleFileInfo, fmtSize,
+      setFilter, toggleFileInfo, fmtSize, shortModel,
     };
   }
 });
