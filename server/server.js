@@ -906,10 +906,8 @@ const server = http.createServer((req, res) => {
           const validated = {};
           const errors = [];
           for (const [key, val] of Object.entries(updates)) {
-            if (!SETTINGS_VALIDATORS[key]) {
-              errors.push(`Unknown setting: ${key}`);
-              continue;
-            }
+            // Skip keys without a validator (pass-through from conf, not editable)
+            if (!SETTINGS_VALIDATORS[key]) continue;
             if (!SETTINGS_VALIDATORS[key](val)) {
               errors.push(`Invalid value for ${key}: ${val}`);
               continue;

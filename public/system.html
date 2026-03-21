@@ -157,6 +157,257 @@
       <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
     </div>
 
+    <!-- ── Model Performance Monitor ──────────────────────────────── -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+        <div class="card-title" style="margin:0;">🤖 {{t('mod_title')}}</div>
+        <div class="fp-quick-btns">
+          <button v-for="p in modPeriods" :key="p.val"
+                  class="fp-quick-btn" :class="{active:modPeriod===p.val}"
+                  @click="modPeriod=p.val;loadModelMonitor()">{{p.label}}</button>
+        </div>
+      </div>
+
+      <div v-if="mod.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="mod.error" class="error-msg">{{mod.error}}</div>
+      <template v-else>
+        <!-- Model name badge -->
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
+          <span style="font-size:.75rem;color:var(--text-muted);">{{t('mod_current')}} :</span>
+          <span style="font-size:.8rem;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);
+                       padding:.2rem .6rem;border-radius:.3rem;">
+            {{mod.modelLabel}}
+          </span>
+        </div>
+
+        <!-- KPIs row -->
+        <div class="kpi-grid" style="margin-bottom:1rem;">
+          <div class="kpi-card">
+            <div class="kpi-value">{{mod.totalDet?.toLocaleString() || '0'}}</div>
+            <div class="kpi-label">{{t('mod_detections')}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value amber">{{mod.uniqueSpecies || '0'}}</div>
+            <div class="kpi-label">{{t('mod_species')}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value blue">{{mod.avgConf}}%</div>
+            <div class="kpi-label">{{t('mod_confidence')}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value" style="color:var(--info);">{{mod.ratePerHour}}<span style="font-size:.6em;color:var(--text-muted);">{{t('mod_per_hour')}}</span></div>
+            <div class="kpi-label">{{t('mod_rate')}}</div>
+          </div>
+        </div>
+
+        <!-- Two columns: confidence distribution + top species -->
+        <div class="grid-2">
+          <!-- Confidence distribution -->
+          <div>
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
+              {{t('mod_conf_dist')}}
+            </div>
+            <div class="chart-wrap" style="max-height:180px;"><canvas ref="canvasModConf"></canvas></div>
+          </div>
+
+          <!-- Top species -->
+          <div>
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
+              {{t('mod_top_species')}}
+            </div>
+            <div v-if="!mod.topSpecies.length" class="error-msg" style="font-size:.8rem;">{{t('mod_no_data')}}</div>
+            <div v-else>
+              <div v-for="(sp, i) in mod.topSpecies" :key="sp.name"
+                   style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;">
+                <div style="font-size:.68rem;color:var(--text-faint);min-width:16px;text-align:right;font-family:monospace;">{{i+1}}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:.78rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{sp.name}}
+                  </div>
+                  <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:2px;">
+                    <div :style="{height:'100%',width:sp.pct+'%',background:'var(--accent)',borderRadius:'2px',transition:'width .4s'}"></div>
+                  </div>
+                </div>
+                <div style="font-size:.72rem;color:var(--accent);min-width:32px;text-align:right;font-family:monospace;">
+                  {{sp.count}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily trend sparkline -->
+        <div style="margin-top:1rem;">
+          <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
+            {{t('mod_trend')}} — {{t('mod_detections')}} & {{t('mod_species')}}
+          </div>
+          <div class="chart-wrap" style="max-height:160px;"><canvas ref="canvasModTrend"></canvas></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ── Model Comparison ────────────────────────────────────── -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+        <div class="card-title" style="margin:0;">🔄 {{t('cmp_title')}}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <label style="font-size:.72rem;color:var(--text-muted);">{{t('cmp_split_date')}}</label>
+          <input type="date" v-model="cmpDate" @change="loadModelCompare()"
+                 style="font-size:.75rem;padding:.2rem .4rem;border:1px solid var(--border);
+                        border-radius:.3rem;background:var(--bg-card);color:var(--text-main);
+                        font-family:inherit;">
+        </div>
+      </div>
+
+      <div v-if="cmp.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="cmp.error" class="error-msg">{{cmp.error}}</div>
+      <template v-else>
+        <!-- Side-by-side KPIs -->
+        <div class="cmp-grid">
+          <div class="cmp-col">
+            <div class="cmp-header cmp-before">{{t('cmp_before')}} <span class="cmp-dates">{{cmp.beforeRange}}</span></div>
+            <div class="cmp-kpis">
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.before.totalDet?.toLocaleString() || '0'}}</div>
+                <div class="cmp-kpi-lbl">{{t('mod_detections')}}</div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.before.detPerDay}}<small>{{t('cmp_per_day')}}</small></div>
+                <div class="cmp-kpi-lbl">{{t('cmp_det_day')}}</div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.before.species}}</div>
+                <div class="cmp-kpi-lbl">{{t('mod_species')}}</div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.before.avgConf}}%</div>
+                <div class="cmp-kpi-lbl">{{t('mod_confidence')}}</div>
+              </div>
+            </div>
+          </div>
+          <div class="cmp-col">
+            <div class="cmp-header cmp-after">{{t('cmp_after')}} <span class="cmp-dates">{{cmp.afterRange}}</span></div>
+            <div class="cmp-kpis">
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.after.totalDet?.toLocaleString() || '0'}}</div>
+                <div class="cmp-kpi-lbl">{{t('mod_detections')}}</div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.after.detPerDay}}<small>{{t('cmp_per_day')}}</small></div>
+                <div class="cmp-kpi-lbl">{{t('cmp_det_day')}}
+                  <span :class="cmp.detDayDelta>0?'cmp-up':'cmp-down'" v-if="cmp.detDayDelta!==0">
+                    {{cmp.detDayDelta>0?'↑':'↓'}}{{Math.abs(cmp.detDayDelta)}}%
+                  </span>
+                </div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.after.species}}</div>
+                <div class="cmp-kpi-lbl">{{t('mod_species')}}
+                  <span :class="cmp.speciesDelta>=0?'cmp-up':'cmp-down'" v-if="cmp.speciesDelta!==0">
+                    {{cmp.speciesDelta>0?'+':''}}{{cmp.speciesDelta}}
+                  </span>
+                </div>
+              </div>
+              <div class="cmp-kpi">
+                <div class="cmp-kpi-val">{{cmp.after.avgConf}}%</div>
+                <div class="cmp-kpi-lbl">{{t('mod_confidence')}}
+                  <span :class="cmp.confDelta>=0?'cmp-up':'cmp-down'" v-if="cmp.confDelta!==0">
+                    {{cmp.confDelta>0?'+':''}}{{cmp.confDelta}}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Species gained / lost -->
+        <div class="grid-2" style="margin-top:1rem;">
+          <div>
+            <div class="cmp-section-title" style="color:var(--accent);">
+              ✅ {{t('cmp_species_gained')}} <span class="cmp-badge cmp-badge-ok">{{cmp.gained.length}}</span>
+            </div>
+            <div v-if="!cmp.gained.length" style="font-size:.78rem;color:var(--text-faint);padding:.3rem 0;">{{t('cmp_none')}}</div>
+            <div v-else class="cmp-species-list">
+              <div v-for="sp in cmp.gained" :key="sp.name" class="cmp-sp-row">
+                <span class="cmp-sp-name">{{sp.name}}</span>
+                <span class="cmp-sp-count">{{sp.count}}× <span style="color:var(--text-faint);">({{sp.conf}}%)</span></span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="cmp-section-title" style="color:var(--danger);">
+              ❌ {{t('cmp_species_lost')}} <span class="cmp-badge cmp-badge-err">{{cmp.lost.length}}</span>
+            </div>
+            <div v-if="!cmp.lost.length" style="font-size:.78rem;color:var(--text-faint);padding:.3rem 0;">{{t('cmp_none')}}</div>
+            <div v-else class="cmp-species-list">
+              <div v-for="sp in cmp.lost" :key="sp.name" class="cmp-sp-row">
+                <span class="cmp-sp-name">{{sp.name}}</span>
+                <span class="cmp-sp-count" style="color:var(--text-faint);">{{sp.count}}× <span>({{sp.conf}}%)</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per-species comparison table -->
+        <div style="margin-top:1rem;">
+          <div class="cmp-section-title">📊 {{t('cmp_species_detail')}}</div>
+          <div class="cmp-table-wrap">
+            <table class="cmp-table">
+              <thead>
+                <tr>
+                  <th style="text-align:left;">{{t('species_name')}}</th>
+                  <th>{{t('cmp_before')}}</th>
+                  <th>{{t('cmp_after')}}</th>
+                  <th>{{t('cmp_change')}}</th>
+                  <th>{{t('mod_confidence')}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="sp in cmp.speciesTable" :key="sp.sci">
+                  <td style="text-align:left;">
+                    <div style="font-size:.78rem;">{{sp.name}}</div>
+                    <div style="font-size:.65rem;color:var(--text-faint);font-style:italic;">{{sp.sci}}</div>
+                  </td>
+                  <td>{{sp.beforeCount || '—'}}</td>
+                  <td>{{sp.afterCount || '—'}}</td>
+                  <td>
+                    <span v-if="sp.beforeCount===0" class="cmp-up" style="font-weight:600;">NEW</span>
+                    <span v-else-if="sp.afterCount===0" class="cmp-down" style="font-weight:600;">LOST</span>
+                    <span v-else :class="sp.delta>=0?'cmp-up':'cmp-down'">
+                      {{sp.delta>0?'↑':'↓'}}{{Math.abs(sp.delta)}}%
+                    </span>
+                  </td>
+                  <td>
+                    <span style="color:var(--text-faint);">{{sp.beforeConf || '—'}}</span>
+                    →
+                    <span :style="{color: sp.afterConf >= sp.beforeConf ? 'var(--accent)' : 'var(--danger)'}">{{sp.afterConf || '—'}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Nocturnal detections -->
+        <div style="margin-top:1rem;">
+          <div class="cmp-section-title">
+            🌙 {{t('cmp_nocturnal')}} <span style="font-weight:400;color:var(--text-faint);">({{t('cmp_nocturnal_sub')}})</span>
+            <span class="cmp-badge" :class="cmp.nocturnal.length>5?'cmp-badge-err':'cmp-badge-ok'">{{cmp.nocturnal.length}}</span>
+          </div>
+          <div v-if="!cmp.nocturnal.length" style="font-size:.78rem;color:var(--text-faint);padding:.3rem 0;">{{t('cmp_none')}}</div>
+          <div v-else class="cmp-species-list" style="max-height:180px;overflow-y:auto;">
+            <div v-for="d in cmp.nocturnal" :key="d.date+d.time" class="cmp-sp-row">
+              <span style="font-size:.7rem;color:var(--text-faint);min-width:95px;font-family:monospace;">
+                {{d.date}} {{d.time}}
+              </span>
+              <span class="cmp-sp-name">{{d.species}}</span>
+              <span class="cmp-sp-count">{{d.conf}}%</span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
     <!-- ── Alertes raretés locales ──────────────────────────────── -->
     <div class="card" style="margin-bottom:1rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;">
@@ -345,8 +596,8 @@
 </div>
 
 <script>
-const { createApp, ref, watch, onMounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useChart,
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
+const { useI18n, useTheme, useNav, useChart, MODEL_LABELS,
         birdQuery, fmtDate, fmtTime, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo } = BIRDASH;
 
@@ -357,9 +608,13 @@ const app = createApp({
     const { navItems, siteName } = useNav('system');
     const { mountChart: mountAct }    = useChart();
     const { mountChart: mountHrly }   = useChart();
+    const { mountChart: mountModC }   = useChart();
+    const { mountChart: mountModT }   = useChart();
 
     const canvasActivity = ref(null);
     const canvasHourly   = ref(null);
+    const canvasModConf  = ref(null);
+    const canvasModTrend = ref(null);
 
     const api   = ref({ loading:true, error:null, latency:0, total:0 });
     const db    = ref({ loading:true, error:null, total:0, species:0, days:0,
@@ -369,6 +624,277 @@ const app = createApp({
     const gaps  = ref({ loading:true, error:null, total:0, list:[] });
     const actData  = ref({ labels:[], values:[], colors:[], borderColors:[] });
     const hrlyData = ref({ values:[] });
+
+    // Model monitoring
+    const modPeriod  = ref('today');
+    const modPeriods = computed(() => [
+      { label: t('mod_today'), val:'today' },
+      { label: t('mod_7d'),    val:'7d'    },
+      { label: t('mod_30d'),   val:'30d'   },
+    ]);
+    const mod = ref({
+      loading:true, error:null, modelLabel:'', totalDet:0, uniqueSpecies:0,
+      avgConf:0, ratePerHour:0, confDist:[], topSpecies:[], dailyTrend:[]
+    });
+
+    async function loadModelMonitor() {
+      mod.value.loading = true;
+      try {
+        // Fetch current model
+        const settingsRes = await fetch(`${BIRD_CONFIG.apiUrl}/settings`);
+        const conf = await settingsRes.json();
+        const rawModel = conf.MODEL || '';
+        const modelLabel = MODEL_LABELS[rawModel] || rawModel.replace(/_/g, ' ');
+
+        // Date range
+        const periodDays = modPeriod.value === 'today' ? 0 : modPeriod.value === '7d' ? 6 : 29;
+        const dateFrom = periodDays === 0 ? localDateStr() : daysAgo(periodDays);
+
+        // Main KPIs
+        const [kpi] = await birdQuery(
+          `SELECT COUNT(*) as total, COUNT(DISTINCT Sci_Name) as species,
+                  ROUND(AVG(Confidence)*100,1) as avg_conf,
+                  MIN(Date) as first_date, MAX(Date) as last_date,
+                  MIN(Time) as first_time, MAX(Time) as last_time
+           FROM detections WHERE Date >= ?`, [dateFrom]);
+
+        // Hours active (for rate calc)
+        const hourRows = await birdQuery(
+          `SELECT Date, MIN(Time) as t0, MAX(Time) as t1
+           FROM detections WHERE Date >= ? GROUP BY Date`, [dateFrom]);
+
+        let totalHours = 0;
+        hourRows.forEach(r => {
+          const h0 = parseInt(r.t0?.substring(0,2) || '0');
+          const h1 = parseInt(r.t1?.substring(0,2) || '23');
+          totalHours += Math.max(h1 - h0, 1);
+        });
+        const ratePerHour = totalHours > 0 ? Math.round(kpi.total / totalHours) : 0;
+
+        // Confidence distribution
+        const confRows = await birdQuery(
+          `SELECT
+            CASE
+              WHEN Confidence < 0.7 THEN '65-70'
+              WHEN Confidence < 0.75 THEN '70-75'
+              WHEN Confidence < 0.8 THEN '75-80'
+              WHEN Confidence < 0.85 THEN '80-85'
+              WHEN Confidence < 0.9 THEN '85-90'
+              WHEN Confidence < 0.95 THEN '90-95'
+              ELSE '95-100'
+            END as bracket,
+            COUNT(*) as n
+           FROM detections WHERE Date >= ?
+           GROUP BY bracket ORDER BY bracket`, [dateFrom]);
+
+        // Top species
+        const spRows = await birdQuery(
+          `SELECT Com_Name as name, COUNT(*) as count
+           FROM detections WHERE Date >= ?
+           GROUP BY Sci_Name ORDER BY count DESC LIMIT 10`, [dateFrom]);
+        const maxCount = spRows.length ? spRows[0].count : 1;
+        const topSpecies = spRows.map(r => ({ ...r, pct: Math.round(r.count / maxCount * 100) }));
+
+        // Daily trend (7 days)
+        const trendRows = await birdQuery(
+          `SELECT Date, COUNT(*) as det, COUNT(DISTINCT Sci_Name) as sp
+           FROM detections WHERE Date >= ? GROUP BY Date ORDER BY Date`, [daysAgo(6)]);
+
+        mod.value = {
+          loading: false, error: null, modelLabel, totalDet: kpi.total,
+          uniqueSpecies: kpi.species, avgConf: kpi.avg_conf || 0,
+          ratePerHour, confDist: confRows, topSpecies, dailyTrend: trendRows
+        };
+
+        // Render charts after data is set
+        await nextTick();
+        renderModCharts();
+      } catch(e) {
+        mod.value = { ...mod.value, loading:false, error: e.message };
+      }
+    }
+
+    function renderModCharts() {
+      // Confidence distribution bar chart
+      if (canvasModConf.value && mod.value.confDist.length) {
+        const base = chartDefaults();
+        const labels = mod.value.confDist.map(r => r.bracket + '%');
+        const data = mod.value.confDist.map(r => r.n);
+        const colors = mod.value.confDist.map(r => {
+          const b = parseInt(r.bracket);
+          if (b >= 90) return 'rgba(90,158,58,.8)';
+          if (b >= 80) return 'rgba(74,138,181,.8)';
+          if (b >= 70) return 'rgba(200,168,75,.8)';
+          return 'rgba(224,108,74,.8)';
+        });
+        mountModC(canvasModConf, () => ({
+          type: 'bar',
+          data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 3 }] },
+          options: { ...base, plugins: { ...base.plugins, legend: { display: false } },
+            scales: { x: { ...base.scales.x, ticks: { font: { size: 9 } } },
+                      y: { ...base.scales.y, beginAtZero: true } } }
+        }));
+      }
+
+      // Daily trend dual-axis chart
+      if (canvasModTrend.value && mod.value.dailyTrend.length) {
+        const base = chartDefaults();
+        const labels = mod.value.dailyTrend.map(r => {
+          const d = new Date(r.Date);
+          const mo = t('months_short')[d.getMonth()];
+          return `${d.getDate()} ${mo}`;
+        });
+        mountModT(canvasModTrend, () => ({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: t('mod_detections'), data: mod.value.dailyTrend.map(r => r.det),
+                backgroundColor: 'rgba(90,158,58,.6)', borderColor: '#5a9e3a',
+                borderWidth: 1, borderRadius: 3, yAxisID: 'y', order: 2 },
+              { label: t('mod_species'), data: mod.value.dailyTrend.map(r => r.sp),
+                type: 'line', borderColor: '#c8a84b', backgroundColor: 'rgba(200,168,75,.15)',
+                borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#c8a84b',
+                fill: true, tension: .3, yAxisID: 'y1', order: 1 },
+            ]
+          },
+          options: {
+            ...base,
+            plugins: { ...base.plugins, legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } } },
+            scales: {
+              x: { ...base.scales.x, ticks: { font: { size: 9 } } },
+              y:  { ...base.scales.y, beginAtZero: true, position: 'left',
+                    title: { display: true, text: t('mod_detections'), font: { size: 9 }, color: '#5a9e3a' } },
+              y1: { ...base.scales.y, beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                    title: { display: true, text: t('mod_species'), font: { size: 9 }, color: '#c8a84b' } },
+            }
+          }
+        }));
+      }
+    }
+
+    // ── Model Comparison ─────────────────────────────────────────────────
+    const cmpDate = ref(daysAgo(1));  // default: yesterday (adjust to model switch date)
+    const cmp = ref({
+      loading:true, error:null,
+      beforeRange:'', afterRange:'',
+      before: { totalDet:0, detPerDay:0, species:0, avgConf:0 },
+      after:  { totalDet:0, detPerDay:0, species:0, avgConf:0 },
+      detDayDelta:0, speciesDelta:0, confDelta:0,
+      gained:[], lost:[], speciesTable:[], nocturnal:[]
+    });
+
+    async function loadModelCompare() {
+      cmp.value.loading = true;
+      try {
+        const splitDate = cmpDate.value;
+        // "Before" = same number of days before split, ending day before split
+        // "After" = split date to today
+        const afterStart = splitDate;
+        const todayStr = localDateStr();
+
+        // Calculate how many days in "after"
+        const afterDays = Math.max(1, Math.round((new Date(todayStr) - new Date(afterStart)) / 86400000) + 1);
+        // "Before" covers same duration ending the day before split
+        const splitD = new Date(afterStart + 'T12:00:00');
+        const beforeEndD = new Date(splitD); beforeEndD.setDate(beforeEndD.getDate() - 1);
+        const beforeStartD = new Date(beforeEndD); beforeStartD.setDate(beforeStartD.getDate() - afterDays + 1);
+        const pad = d => d.toISOString().slice(0, 10);
+        const beforeEnd = pad(beforeEndD);
+        const beforeStart = pad(beforeStartD);
+
+        // KPIs — before
+        const [bKpi] = await birdQuery(
+          `SELECT COUNT(*) as total, COUNT(DISTINCT Sci_Name) as species,
+                  ROUND(AVG(Confidence)*100,1) as avg_conf
+           FROM detections WHERE Date >= ? AND Date < ?`, [beforeStart, afterStart]);
+
+        // KPIs — after
+        const [aKpi] = await birdQuery(
+          `SELECT COUNT(*) as total, COUNT(DISTINCT Sci_Name) as species,
+                  ROUND(AVG(Confidence)*100,1) as avg_conf
+           FROM detections WHERE Date >= ?`, [afterStart]);
+
+        // Days active
+        const [bDays] = await birdQuery(
+          `SELECT COUNT(DISTINCT Date) as d FROM detections WHERE Date >= ? AND Date < ?`, [beforeStart, afterStart]);
+        const [aDays] = await birdQuery(
+          `SELECT COUNT(DISTINCT Date) as d FROM detections WHERE Date >= ?`, [afterStart]);
+
+        const bDetDay = bDays.d > 0 ? Math.round(bKpi.total / bDays.d) : 0;
+        const aDetDay = aDays.d > 0 ? Math.round(aKpi.total / aDays.d) : 0;
+
+        const detDayDelta = bDetDay > 0 ? Math.round((aDetDay - bDetDay) / bDetDay * 100) : 0;
+        const speciesDelta = (aKpi.species || 0) - (bKpi.species || 0);
+        const confDelta = Math.round(((aKpi.avg_conf || 0) - (bKpi.avg_conf || 0)) * 10) / 10;
+
+        // Species lists — before and after
+        const beforeSpecies = await birdQuery(
+          `SELECT Com_Name as name, Sci_Name as sci, COUNT(*) as count,
+                  ROUND(AVG(Confidence)*100,1) as conf
+           FROM detections WHERE Date >= ? AND Date < ?
+           GROUP BY Sci_Name ORDER BY count DESC`, [beforeStart, afterStart]);
+
+        const afterSpecies = await birdQuery(
+          `SELECT Com_Name as name, Sci_Name as sci, COUNT(*) as count,
+                  ROUND(AVG(Confidence)*100,1) as conf
+           FROM detections WHERE Date >= ?
+           GROUP BY Sci_Name ORDER BY count DESC`, [afterStart]);
+
+        const beforeMap = {};
+        beforeSpecies.forEach(s => { beforeMap[s.sci] = s; });
+        const afterMap = {};
+        afterSpecies.forEach(s => { afterMap[s.sci] = s; });
+
+        // Gained: in after but not before
+        const gained = afterSpecies
+          .filter(s => !beforeMap[s.sci])
+          .map(s => ({ name: s.name, count: s.count, conf: s.conf }));
+
+        // Lost: in before but not after
+        const lost = beforeSpecies
+          .filter(s => !afterMap[s.sci])
+          .map(s => ({ name: s.name, count: s.count, conf: s.conf }));
+
+        // Full species comparison table
+        const allSci = new Set([...beforeSpecies.map(s=>s.sci), ...afterSpecies.map(s=>s.sci)]);
+        const speciesTable = Array.from(allSci).map(sci => {
+          const b = beforeMap[sci] || {};
+          const a = afterMap[sci] || {};
+          // Normalize to per-day for fair comparison
+          const bPerDay = bDays.d > 0 ? b.count / bDays.d : 0;
+          const aPerDay = aDays.d > 0 ? (a.count || 0) / aDays.d : 0;
+          const delta = bPerDay > 0 ? Math.round((aPerDay - bPerDay) / bPerDay * 100) : 0;
+          return {
+            name: a.name || b.name, sci,
+            beforeCount: b.count || 0, afterCount: a.count || 0,
+            beforeConf: b.conf || 0, afterConf: a.conf || 0,
+            delta
+          };
+        }).sort((a,b) => (b.afterCount + b.beforeCount) - (a.afterCount + a.beforeCount));
+
+        // Nocturnal detections (22h-4h) in "after" period
+        const nocturnal = await birdQuery(
+          `SELECT Date as date, Time as time, Com_Name as species,
+                  ROUND(Confidence*100,1) as conf
+           FROM detections
+           WHERE Date >= ?
+             AND (CAST(substr(Time,1,2) AS INT) >= 22 OR CAST(substr(Time,1,2) AS INT) < 4)
+           ORDER BY Date DESC, Time DESC LIMIT 20`, [afterStart]);
+
+        cmp.value = {
+          loading: false, error: null,
+          beforeRange: `${fmtDate(beforeStart)} → ${fmtDate(beforeEnd)}`,
+          afterRange: `${fmtDate(afterStart)} → ${fmtDate(todayStr)}`,
+          before: { totalDet: bKpi.total, detPerDay: bDetDay, species: bKpi.species, avgConf: bKpi.avg_conf || 0 },
+          after:  { totalDet: aKpi.total, detPerDay: aDetDay, species: aKpi.species, avgConf: aKpi.avg_conf || 0 },
+          detDayDelta, speciesDelta, confDelta,
+          gained, lost, speciesTable, nocturnal
+        };
+      } catch(e) {
+        cmp.value = { ...cmp.value, loading:false, error: e.message };
+      }
+    }
 
     // Alertes raretés locales
     const rareLocal = ref({ loading:true, rows:[] });
@@ -593,7 +1119,7 @@ const app = createApp({
     }
 
     onMounted(async () => {
-      await Promise.all([loadApi(), loadDb(), loadFresh(), loadGaps(), loadActData(), loadHrlyData(), loadRareLocal(), loadEbird(), loadBirdWeather()]);
+      await Promise.all([loadApi(), loadDb(), loadFresh(), loadGaps(), loadActData(), loadHrlyData(), loadModelMonitor(), loadModelCompare(), loadRareLocal(), loadEbird(), loadBirdWeather()]);
     });
 
     function openUrl(url) { window.open(url, '_blank'); }
@@ -601,10 +1127,12 @@ const app = createApp({
     return {
       lang, t,
       api, db, fresh, gaps,
+      mod, modPeriod, modPeriods, loadModelMonitor,
+      cmp, cmpDate, loadModelCompare,
       rareLocal, ebird,
       bw, bwPeriod, bwPeriods, loadBirdWeather,
       fmtDate, fmtTime, freshnessLabel, navigateTo, openUrl,
-      canvasActivity, canvasHourly,
+      canvasActivity, canvasHourly, canvasModConf, canvasModTrend,
     };
   },
 });

@@ -958,6 +958,103 @@
     .gap-date {color:var(--danger);font-weight:500;}
     .gap-days {color:var(--text-muted);font-size:.72rem;}
 
+/* ── Model Comparison (system.html) ─────────────────────────────────── */
+    .cmp-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+    @media (max-width: 640px) { .cmp-grid { grid-template-columns: 1fr; } }
+    .cmp-col {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .cmp-header {
+      padding: .45rem .65rem; font-size: .78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .cmp-header.cmp-before {
+      background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+      color: var(--text-muted);
+    }
+    .cmp-header.cmp-after {
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--accent);
+    }
+    .cmp-dates {
+      font-weight: 400; font-size: .68rem; text-transform: none;
+      letter-spacing: 0;
+    }
+    .cmp-kpis {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: .5rem; padding: .65rem;
+    }
+    .cmp-kpi { text-align: center; }
+    .cmp-kpi-val {
+      font-size: 1.1rem; font-weight: 700; color: var(--text-main);
+      font-family: monospace; line-height: 1.2;
+    }
+    .cmp-kpi-val small {
+      font-size: .6em; color: var(--text-faint); font-weight: 400;
+    }
+    .cmp-kpi-lbl {
+      font-size: .65rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .03em; margin-top: .15rem;
+    }
+    .cmp-up   { color: var(--accent); font-size: .68rem; font-weight: 600; margin-left: .3rem; }
+    .cmp-down { color: var(--danger); font-size: .68rem; font-weight: 600; margin-left: .3rem; }
+    .cmp-section-title {
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; margin-bottom: .5rem;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .cmp-badge {
+      font-size: .65rem; font-weight: 700; padding: .1rem .4rem;
+      border-radius: .2rem; line-height: 1.2;
+    }
+    .cmp-badge-ok {
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      color: var(--accent);
+    }
+    .cmp-badge-err {
+      background: color-mix(in srgb, var(--danger) 15%, transparent);
+      color: var(--danger);
+    }
+    .cmp-species-list {
+      display: flex; flex-direction: column; gap: .25rem;
+    }
+    .cmp-sp-row {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .3rem .5rem; border-radius: .25rem;
+      background: var(--bg-card2); font-size: .78rem;
+    }
+    .cmp-sp-row:hover { background: var(--bg-deep); }
+    .cmp-sp-name {
+      flex: 1; min-width: 0; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      color: var(--text-main);
+    }
+    .cmp-sp-count {
+      font-family: monospace; font-size: .75rem; color: var(--accent);
+      flex-shrink: 0;
+    }
+    .cmp-table-wrap {
+      max-height: 400px; overflow-y: auto;
+      border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .cmp-table {
+      width: 100%; border-collapse: collapse; font-size: .78rem;
+    }
+    .cmp-table th {
+      position: sticky; top: 0; background: var(--bg-card2);
+      padding: .4rem .5rem; font-size: .68rem; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--text-muted); text-align: center;
+      border-bottom: 2px solid var(--border);
+    }
+    .cmp-table td {
+      padding: .35rem .5rem; border-bottom: 1px solid var(--bg-card2);
+      text-align: center; font-family: monospace; color: var(--text-main);
+    }
+    .cmp-table tr:hover td { background: var(--bg-deep); }
+
 /* ── species.html — Detail page ──────────────────────────────────────── */
 
     /* Hero: carousel left + info right */

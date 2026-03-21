@@ -54,11 +54,60 @@
     .section-title { font-size:1.1rem; font-weight:700; margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
     textarea.set-textarea { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:.5rem; color:var(--text); font-size:.85rem; font-family:monospace; width:100%; min-height:120px; resize:vertical; }
     textarea.set-textarea:focus { outline:none; border-color:var(--accent); }
+    /* Info badge & modal */
+    .info-btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:18px; height:18px; border-radius:50%; border:1.5px solid var(--accent);
+      color:var(--accent); font-size:.7rem; font-weight:700; font-style:italic;
+      cursor:pointer; flex-shrink:0; margin-left:.4rem;
+      font-family:Georgia,serif; line-height:1; transition:all .15s;
+      background:transparent; padding:0;
+    }
+    .info-btn:hover { background:var(--accent); color:#fff; }
+    .info-overlay {
+      position:fixed; inset:0; z-index:1000;
+      background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center;
+      padding:1rem; animation:fadeIn .15s;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .info-modal {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+      max-width:480px; width:100%; padding:1.5rem; box-shadow:0 8px 32px rgba(0,0,0,.25);
+      position:relative; max-height:80vh; overflow-y:auto;
+    }
+    .info-modal-title {
+      font-size:1rem; font-weight:700; color:var(--accent); margin-bottom:.75rem;
+      display:flex; align-items:center; gap:.5rem;
+    }
+    .info-modal-body { font-size:.88rem; line-height:1.6; color:var(--text-main); }
+    .info-modal-body strong { color:var(--accent); }
+    .info-modal-body code {
+      background:var(--bg-deep); padding:.1rem .35rem; border-radius:3px;
+      font-size:.82rem; font-family:monospace;
+    }
+    .info-modal-close {
+      position:absolute; top:.75rem; right:.75rem; background:none; border:none;
+      font-size:1.2rem; cursor:pointer; color:var(--text-muted); padding:.25rem;
+      line-height:1;
+    }
+    .info-modal-close:hover { color:var(--text-main); }
+    .info-rec { margin-top:.6rem; padding:.5rem .7rem; border-radius:6px;
+      background:color-mix(in srgb,var(--accent) 8%,transparent);
+      border-left:3px solid var(--accent); font-size:.82rem; }
   </style>
 </head>
 <body>
 <div id="app">
   <birdash-shell page="settings">
+
+    <!-- Info modal -->
+    <div v-if="helpKey" class="info-overlay" @click.self="helpKey=null">
+      <div class="info-modal">
+        <button class="info-modal-close" @click="helpKey=null">&times;</button>
+        <div class="info-modal-title">ⓘ {{helpTitle}}</div>
+        <div class="info-modal-body" v-html="helpBody"></div>
+      </div>
+    </div>
 
     <!-- Loading -->
     <div v-if="loading" style="display:flex;justify-content:center;padding:3rem;">
@@ -69,7 +118,7 @@
 
       <!-- ═══ Model Selection ═══ -->
       <div class="card" style="margin-bottom:1.2rem;">
-        <div class="section-title">🤖 {{t('set_model')}}</div>
+        <div class="section-title">🤖 {{t('set_model')}} <button class="info-btn" @click="helpKey='model'">i</button></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;">
           <div v-for="m in models" :key="m"
                class="model-card" :class="{ active: conf.MODEL === m }"
@@ -94,15 +143,15 @@
         <div class="card">
           <div class="section-title">📍 {{t('set_location')}}</div>
           <div class="set-row">
-            <span class="set-label">{{t('set_site_name')}}</span>
+            <span class="set-label">{{t('set_site_name')}} <button class="info-btn" @click="helpKey='site_name'">i</button></span>
             <input v-model="conf.SITE_NAME" class="set-input">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_latitude')}}</span>
+            <span class="set-label">{{t('set_latitude')}} <button class="info-btn" @click="helpKey='latitude'">i</button></span>
             <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_longitude')}}</span>
+            <span class="set-label">{{t('set_longitude')}} <button class="info-btn" @click="helpKey='longitude'">i</button></span>
             <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
           </div>
         </div>
@@ -111,22 +160,22 @@
         <div class="card">
           <div class="section-title">🔬 {{t('set_analysis')}}</div>
           <div class="set-row">
-            <span class="set-label">{{t('set_confidence')}}</span>
+            <span class="set-label">{{t('set_confidence')}} <button class="info-btn" @click="helpKey='confidence'">i</button></span>
             <span class="set-range-val">{{conf.CONFIDENCE}}</span>
             <input v-model="conf.CONFIDENCE" type="range" min="0.01" max="0.99" step="0.01" class="set-range">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_sensitivity')}}</span>
+            <span class="set-label">{{t('set_sensitivity')}} <button class="info-btn" @click="helpKey='sensitivity'">i</button></span>
             <span class="set-range-val">{{conf.SENSITIVITY}}</span>
             <input v-model="conf.SENSITIVITY" type="range" min="0.5" max="1.5" step="0.05" class="set-range">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_species_freq_thresh')}}</span>
+            <span class="set-label">{{t('set_species_freq_thresh')}} <button class="info-btn" @click="helpKey='sf_thresh'">i</button></span>
             <span class="set-range-val">{{conf.SF_THRESH}}</span>
             <input v-model="conf.SF_THRESH" type="range" min="0" max="0.5" step="0.01" class="set-range">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_overlap')}}</span>
+            <span class="set-label">{{t('set_overlap')}} <button class="info-btn" @click="helpKey='overlap'">i</button></span>
             <span class="set-range-val">{{conf.OVERLAP}}</span>
             <input v-model="conf.OVERLAP" type="range" min="0" max="2.9" step="0.1" class="set-range">
           </div>
@@ -136,15 +185,15 @@
         <div class="card">
           <div class="section-title">🎙️ {{t('set_recording')}}</div>
           <div class="set-row">
-            <span class="set-label">{{t('set_rec_length')}}</span>
+            <span class="set-label">{{t('set_rec_length')}} <button class="info-btn" @click="helpKey='rec_length'">i</button></span>
             <input v-model="conf.RECORDING_LENGTH" type="number" min="6" max="120" class="set-input" style="width:80px;">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_extraction_length')}}</span>
+            <span class="set-label">{{t('set_extraction_length')}} <button class="info-btn" @click="helpKey='extraction_length'">i</button></span>
             <input v-model="conf.EXTRACTION_LENGTH" type="number" min="3" max="30" class="set-input" style="width:80px;" placeholder="6">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_audio_format')}}</span>
+            <span class="set-label">{{t('set_audio_format')}} <button class="info-btn" @click="helpKey='audio_format'">i</button></span>
             <select v-model="conf.AUDIOFMT" class="set-select" style="width:100px;">
               <option value="mp3">MP3</option>
               <option value="wav">WAV</option>
@@ -153,7 +202,7 @@
             </select>
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_channels')}}</span>
+            <span class="set-label">{{t('set_channels')}} <button class="info-btn" @click="helpKey='channels'">i</button></span>
             <select v-model="conf.CHANNELS" class="set-select" style="width:80px;">
               <option value="1">Mono</option>
               <option value="2">Stereo</option>
@@ -165,13 +214,13 @@
         <div class="card">
           <div class="section-title">🌍 {{t('set_language')}}</div>
           <div class="set-row">
-            <span class="set-label">{{t('set_language')}}</span>
+            <span class="set-label">{{t('set_language')}} <button class="info-btn" @click="helpKey='database_lang'">i</button></span>
             <select v-model="conf.DATABASE_LANG" class="set-select">
               <option v-for="l in languages" :key="l" :value="l">{{l}}</option>
             </select>
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_image_provider')}}</span>
+            <span class="set-label">{{t('set_image_provider')}} <button class="info-btn" @click="helpKey='image_provider'">i</button></span>
             <select v-model="conf.IMAGE_PROVIDER" class="set-select" style="width:140px;">
               <option value="WIKIPEDIA">Wikipedia</option>
               <option value="FLICKR">Flickr</option>
@@ -183,11 +232,11 @@
         <div class="card">
           <div class="section-title">🌤️ {{t('set_birdweather')}}</div>
           <div class="set-row">
-            <span class="set-label">Station ID</span>
+            <span class="set-label">Station ID <button class="info-btn" @click="helpKey='birdweather'">i</button></span>
             <input v-model="conf.BIRDWEATHER_ID" class="set-input" placeholder="empty = disabled">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_rtsp_stream')}}</span>
+            <span class="set-label">{{t('set_rtsp_stream')}} <button class="info-btn" @click="helpKey='rtsp'">i</button></span>
             <input v-model="conf.RTSP_STREAM" class="set-input" style="width:240px;" placeholder="rtsp://...">
           </div>
         </div>
@@ -196,23 +245,23 @@
         <div class="card">
           <div class="section-title">💾 {{t('set_disk_mgmt')}}</div>
           <div class="set-row">
-            <span class="set-label">{{t('set_full_disk')}}</span>
+            <span class="set-label">{{t('set_full_disk')}} <button class="info-btn" @click="helpKey='full_disk'">i</button></span>
             <select v-model="conf.FULL_DISK" class="set-select" style="width:120px;">
               <option value="purge">Purge</option>
               <option value="keep">Keep</option>
             </select>
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_purge_threshold')}}</span>
+            <span class="set-label">{{t('set_purge_threshold')}} <button class="info-btn" @click="helpKey='purge_threshold'">i</button></span>
             <span class="set-range-val">{{conf.PURGE_THRESHOLD}}%</span>
             <input v-model="conf.PURGE_THRESHOLD" type="range" min="50" max="99" step="1" class="set-range">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_max_files')}}</span>
+            <span class="set-label">{{t('set_max_files')}} <button class="info-btn" @click="helpKey='max_files'">i</button></span>
             <input v-model="conf.MAX_FILES_SPECIES" type="number" min="0" class="set-input" style="width:80px;">
           </div>
           <div class="set-row">
-            <span class="set-label">{{t('set_privacy_threshold')}}</span>
+            <span class="set-label">{{t('set_privacy_threshold')}} <button class="info-btn" @click="helpKey='privacy'">i</button></span>
             <select v-model="conf.PRIVACY_THRESHOLD" class="set-select" style="width:80px;">
               <option value="0">0 (off)</option>
               <option value="1">1</option>
@@ -272,7 +321,7 @@
 
       <!-- ═══ Species Lists ═══ -->
       <div class="card" style="margin-top:1.2rem;">
-        <div class="section-title">📋 {{t('set_species_lists')}}</div>
+        <div class="section-title">📋 {{t('set_species_lists')}} <button class="info-btn" @click="helpKey='species_lists'">i</button></div>
         <div class="settings-grid">
           <div>
             <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_include_list')}}</div>
@@ -451,14 +500,353 @@ const app = createApp({
       savingLists.value = false;
     }
 
+    // ── Help system ──────────────────────────────────────────────────────
+    const helpKey = ref(null);
+
+    const HELP = {
+      fr: {
+        model: {
+          title: 'Modèle de détection',
+          body: `Le modèle IA utilisé pour identifier les espèces d'oiseaux à partir de l'audio.<br><br>
+            <strong>BirdNET V2.4</strong> — Modèle de référence par Cornell Lab. 6 500 espèces, optimisé pour Raspberry Pi. Chunks de 3s à 48 kHz. Rapide et fiable.<br>
+            <strong>BirdNET V2.4 + MData</strong> — Même modèle + filtre géographique qui élimine les espèces improbables selon votre localisation et la semaine.<br>
+            <strong>Perch V2</strong> — Modèle Google Research. 10 340 espèces d'oiseaux (filtré). Chunks de 5s à 32 kHz. Plus précis mais plus lent (~1.6× temps réel sur Pi 4).<br>
+            <strong>BirdNET-Go</strong> — Variante expérimentale.`,
+          rec: 'Recommandé : <strong>BirdNET V2.4</strong> sur Pi 4, <strong>Perch V2</strong> si vous acceptez un léger retard d\'analyse.'
+        },
+        confidence: {
+          title: 'Seuil de confiance',
+          body: `Confiance minimale (0.01–0.99) requise pour qu'une détection soit enregistrée dans la base de données.<br><br>
+            Une valeur <strong>basse</strong> (0.50) capture plus de détections mais inclut plus de faux positifs.<br>
+            Une valeur <strong>haute</strong> (0.85) ne garde que les détections très sûres mais peut rater des espèces discrètes.`,
+          rec: 'Recommandé : <strong>0.65–0.75</strong>. Commencez à 0.70 et ajustez selon le bruit de votre environnement.'
+        },
+        sensitivity: {
+          title: 'Sensibilité',
+          body: `Contrôle la sensibilité du modèle aux sons faibles (0.5–1.5).<br><br>
+            <strong>BirdNET</strong> : applique un facteur sigmoid — une sensibilité plus haute amplifie les scores faibles.<br>
+            <strong>Perch V2</strong> : contrôle la température du softmax — une sensibilité plus haute rend la distribution plus piquée, augmentant les scores des espèces dominantes.<br><br>
+            <strong>Valeur basse</strong> (0.5) : moins sensible, ignore les sons faibles ou lointains.<br>
+            <strong>Valeur haute</strong> (1.5) : très sensible, détecte les oiseaux lointains mais risque plus de faux positifs.`,
+          rec: 'Recommandé : <strong>1.0–1.3</strong>. Valeur par défaut 1.25.'
+        },
+        sf_thresh: {
+          title: 'Seuil fréquence espèces',
+          body: `Seuil du filtre géographique MData (0.0–0.5). Ne s'applique qu'avec les modèles <strong>BirdNET + MData</strong>.<br><br>
+            Le modèle MData prédit la probabilité de présence de chaque espèce selon votre latitude, longitude et la semaine de l'année. Les espèces en dessous de ce seuil sont exclues de l'analyse.<br><br>
+            <strong>0.0</strong> : aucun filtrage (toutes les espèces).<br>
+            <strong>0.03</strong> : filtrage léger (par défaut).<br>
+            <strong>0.10+</strong> : filtrage strict (peut exclure des migrateurs rares).<br><br>
+            <em>Ignoré par Perch V2 et BirdNET V1.</em>`,
+          rec: 'Recommandé : <strong>0.03</strong>. Monter à 0.05 en zone urbaine avec beaucoup de bruit.'
+        },
+        overlap: {
+          title: 'Chevauchement (secondes)',
+          body: `Chevauchement entre les fenêtres d'analyse successives (0.0–2.9 secondes).<br><br>
+            Un chevauchement plus grand signifie que chaque segment audio est analysé avec plus de décalages, ce qui augmente les chances de capturer un chant qui tombe entre deux fenêtres.<br><br>
+            <strong>BirdNET</strong> : chunks de 3s. Overlap 0.5 → fenêtres à 0s, 2.5s, 5s, 7.5s…<br>
+            <strong>Perch V2</strong> : chunks de 5s. Overlap 0.5 → fenêtres à 0s, 4.5s, 9s, 13.5s…<br><br>
+            ⚠️ Plus d'overlap = plus de chunks = analyse plus longue. Sur Pi 4 avec Perch, gardez une valeur basse.`,
+          rec: 'Recommandé : <strong>0.0–0.5</strong> pour Perch sur Pi 4, <strong>0.5–1.5</strong> pour BirdNET.'
+        },
+        rec_length: {
+          title: 'Durée d\'enregistrement (secondes)',
+          body: `Durée de chaque fichier audio capturé pour l'analyse (6–120 secondes).<br><br>
+            Un fichier plus long contient plus de chants potentiels, mais prend plus de temps à analyser.<br><br>
+            <strong>BirdNET</strong> (3s chunks) : 15s = 5 chunks, 45s = 15 chunks.<br>
+            <strong>Perch V2</strong> (5s chunks, overlap 0.5) : 45s ≈ 10 chunks × 7.3s = ~73s d'analyse sur Pi 4.<br><br>
+            ⚠️ Si la durée d'analyse dépasse la durée d'enregistrement, un backlog s'accumule.`,
+          rec: 'Recommandé : <strong>15–18s</strong> pour BirdNET, <strong>45s max</strong> pour Perch sur Pi 4.'
+        },
+        extraction_length: {
+          title: 'Durée d\'extraction (secondes)',
+          body: `Durée des clips audio extraits pour chaque détection (3–30 secondes).<br><br>
+            Quand un oiseau est détecté, un extrait audio est sauvegardé dans le dossier <code>Extracted/</code> pour réécoute ultérieure.<br><br>
+            <strong>Courte</strong> (3s) : juste le chant, fichiers légers.<br>
+            <strong>Longue</strong> (10-15s) : plus de contexte, utile pour vérifier les détections.`,
+          rec: 'Recommandé : <strong>6s</strong> (par défaut). Monter à 10s si vous vérifiez souvent les détections manuellement.'
+        },
+        audio_format: {
+          title: 'Format audio',
+          body: `Format des fichiers audio extraits pour les détections.<br><br>
+            <strong>MP3</strong> : bonne compression (~1/10 de la taille WAV), compatible partout. Recommandé.<br>
+            <strong>WAV</strong> : qualité maximale, aucune perte, mais fichiers 10× plus gros.<br>
+            <strong>FLAC</strong> : sans perte comme WAV mais compressé (~60% de la taille WAV).<br>
+            <strong>OGG</strong> : similaire à MP3, format libre.`,
+          rec: 'Recommandé : <strong>MP3</strong> pour économiser l\'espace disque.'
+        },
+        channels: {
+          title: 'Canaux microphone',
+          body: `Nombre de canaux d'enregistrement audio.<br><br>
+            <strong>Mono</strong> (1) : un seul canal. Suffisant pour la détection d'oiseaux.<br>
+            <strong>Stéréo</strong> (2) : deux canaux. Fichiers 2× plus gros mais peut améliorer la détection dans certains cas.<br><br>
+            Le modèle d'analyse convertit toujours en mono internement — le stéréo n'améliore pas la précision de l'IA.`,
+          rec: 'Recommandé : <strong>Mono</strong> pour économiser l\'espace disque et le CPU.'
+        },
+        database_lang: {
+          title: 'Langue des espèces',
+          body: `Langue utilisée pour les noms communs des espèces dans la base de données BirdNET.<br><br>
+            Affecte le nom affiché dans les détections (ex : "Merle noir" en français vs "Common Blackbird" en anglais).<br><br>
+            <em>Cette langue est indépendante de la langue de l'interface Birdash.</em>`,
+          rec: 'Choisissez la langue que vous préférez pour identifier les espèces.'
+        },
+        image_provider: {
+          title: 'Source des images',
+          body: `Source utilisée pour afficher les photos d'oiseaux sur les pages espèces et détections.<br><br>
+            <strong>Wikipedia</strong> : images libres de droits, pas de clé API nécessaire.<br>
+            <strong>Flickr</strong> : plus grande variété de photos, nécessite une clé API Flickr (gratuite).`,
+          rec: 'Recommandé : <strong>Flickr</strong> avec une clé API pour la meilleure qualité d\'images.'
+        },
+        birdweather: {
+          title: 'BirdWeather Station ID',
+          body: `Identifiant de votre station BirdWeather pour partager vos détections en temps réel sur <a href="https://app.birdweather.com" target="_blank" style="color:var(--accent);">birdweather.com</a>.<br><br>
+            Créez un compte gratuit sur BirdWeather et obtenez votre Station ID. Vos détections seront automatiquement téléversées et visibles sur la carte mondiale.<br><br>
+            <strong>Vide</strong> = désactivé.`,
+          rec: 'Optionnel mais recommandé pour contribuer à la communauté scientifique.'
+        },
+        rtsp: {
+          title: 'Flux RTSP',
+          body: `URL d'un flux audio RTSP externe à utiliser comme source au lieu du microphone USB.<br><br>
+            Utile pour utiliser une caméra IP avec microphone intégré ou un microphone déporté via le réseau.<br><br>
+            Format : <code>rtsp://user:pass@ip:port/stream</code><br>
+            <strong>Vide</strong> = utilise le microphone local (par défaut).`,
+          rec: 'Laissez vide sauf si vous utilisez un microphone réseau.'
+        },
+        full_disk: {
+          title: 'Disque plein',
+          body: `Action à effectuer quand le disque est plein.<br><br>
+            <strong>Purge</strong> : supprime automatiquement les enregistrements les plus anciens pour libérer de l'espace.<br>
+            <strong>Keep</strong> : conserve tout et arrête l'enregistrement. Vous devrez nettoyer manuellement.`,
+          rec: 'Recommandé : <strong>Purge</strong> pour un fonctionnement continu sans intervention.'
+        },
+        purge_threshold: {
+          title: 'Seuil de purge (%)',
+          body: `Pourcentage d'utilisation du disque au-delà duquel la purge automatique se déclenche (50–99%).<br><br>
+            Quand le disque dépasse ce seuil, les enregistrements les plus anciens sont supprimés jusqu'à repasser en dessous.`,
+          rec: 'Recommandé : <strong>90–95%</strong>. Plus bas si votre carte SD est petite.'
+        },
+        max_files: {
+          title: 'Max fichiers par espèce',
+          body: `Nombre maximum de fichiers audio conservés par espèce (0 = illimité).<br><br>
+            Limite l'espace disque utilisé par les espèces très communes (ex : Moineau domestique) qui peuvent générer des milliers de détections.<br><br>
+            Les fichiers les plus anciens sont supprimés en premier.`,
+          rec: 'Recommandé : <strong>0</strong> (illimité) si vous avez assez d\'espace, ou <strong>100–500</strong> sur carte SD limitée.'
+        },
+        privacy: {
+          title: 'Filtre voix humaine',
+          body: `Niveau de sensibilité au filtrage des voix humaines (0–3).<br><br>
+            <strong>0</strong> : désactivé — aucun filtrage.<br>
+            <strong>1</strong> : léger — supprime les segments où une voix humaine est fortement détectée.<br>
+            <strong>2-3</strong> : agressif — supprime même les détections faibles de voix humaine.<br><br>
+            Quand une voix est détectée, tout le segment audio est ignoré (pas d'extraction, pas d'enregistrement en base).`,
+          rec: 'Recommandé : <strong>0</strong> en zone rurale, <strong>1</strong> en zone urbaine/résidentielle.'
+        },
+        site_name: {
+          title: 'Nom du site',
+          body: 'Nom affiché dans le header de l\'interface et sur BirdWeather.',
+          rec: 'Votre localité ou le nom de votre jardin.'
+        },
+        latitude: {
+          title: 'Latitude',
+          body: 'Latitude GPS de votre installation (4 décimales max). Utilisée par le filtre géographique MData pour déterminer quelles espèces sont probables dans votre zone.',
+          rec: 'Utilisez Google Maps pour trouver vos coordonnées exactes.'
+        },
+        longitude: {
+          title: 'Longitude',
+          body: 'Longitude GPS de votre installation (4 décimales max). Utilisée par le filtre géographique MData.',
+          rec: 'Utilisez Google Maps pour trouver vos coordonnées exactes.'
+        },
+        species_lists: {
+          title: 'Listes d\'espèces',
+          body: `<strong>Liste d'inclusion</strong> : si elle n'est pas vide, SEULES les espèces listées seront détectées. Toutes les autres sont ignorées.<br><br>
+            <strong>Liste d'exclusion</strong> : les espèces listées ne seront JAMAIS détectées, même avec une haute confiance.<br><br>
+            Format : un nom scientifique par ligne (<code>Pica pica</code>, <code>Turdus merula</code>…).`,
+          rec: 'Utilisez l\'exclusion pour éliminer les faux positifs récurrents (ex : <code>Homo sapiens</code>).'
+        },
+      },
+      en: {
+        model: {
+          title: 'Detection model',
+          body: `The AI model used to identify bird species from audio.<br><br>
+            <strong>BirdNET V2.4</strong> — Reference model by Cornell Lab. 6,500 species, optimized for Raspberry Pi. 3s chunks at 48 kHz. Fast and reliable.<br>
+            <strong>BirdNET V2.4 + MData</strong> — Same model + geographic filter that eliminates unlikely species based on your location and week.<br>
+            <strong>Perch V2</strong> — Google Research model. 10,340 bird species (filtered). 5s chunks at 32 kHz. More accurate but slower (~1.6× realtime on Pi 4).<br>
+            <strong>BirdNET-Go</strong> — Experimental variant.`,
+          rec: 'Recommended: <strong>BirdNET V2.4</strong> on Pi 4, <strong>Perch V2</strong> if you accept slight analysis delay.'
+        },
+        confidence: {
+          title: 'Confidence threshold',
+          body: `Minimum confidence (0.01–0.99) required for a detection to be saved to the database.<br><br>
+            A <strong>low</strong> value (0.50) captures more detections but includes more false positives.<br>
+            A <strong>high</strong> value (0.85) only keeps very certain detections but may miss subtle species.`,
+          rec: 'Recommended: <strong>0.65–0.75</strong>. Start at 0.70 and adjust based on your environment noise.'
+        },
+        sensitivity: {
+          title: 'Sensitivity',
+          body: `Controls model sensitivity to faint sounds (0.5–1.5).<br><br>
+            <strong>BirdNET</strong>: applies a sigmoid factor — higher sensitivity boosts weak scores.<br>
+            <strong>Perch V2</strong>: controls softmax temperature — higher sensitivity makes the distribution sharper, boosting dominant species scores.<br><br>
+            <strong>Low</strong> (0.5): less sensitive, ignores faint or distant sounds.<br>
+            <strong>High</strong> (1.5): very sensitive, detects distant birds but more false positives.`,
+          rec: 'Recommended: <strong>1.0–1.3</strong>. Default 1.25.'
+        },
+        sf_thresh: {
+          title: 'Species frequency threshold',
+          body: `Geographic filter threshold (0.0–0.5). Only applies with <strong>BirdNET + MData</strong> models.<br><br>
+            The MData model predicts presence probability for each species based on latitude, longitude and week. Species below this threshold are excluded.<br><br>
+            <em>Ignored by Perch V2 and BirdNET V1.</em>`,
+          rec: 'Recommended: <strong>0.03</strong>.'
+        },
+        overlap: {
+          title: 'Overlap (seconds)',
+          body: `Overlap between successive analysis windows (0.0–2.9 seconds).<br><br>
+            More overlap means each audio segment is analyzed with more offsets, increasing chances of capturing a song between windows.<br><br>
+            ⚠️ More overlap = more chunks = longer analysis. On Pi 4 with Perch, keep low.`,
+          rec: 'Recommended: <strong>0.0–0.5</strong> for Perch on Pi 4, <strong>0.5–1.5</strong> for BirdNET.'
+        },
+        rec_length: {
+          title: 'Recording length (seconds)',
+          body: `Duration of each audio file captured for analysis (6–120 seconds).<br><br>
+            Longer files contain more potential songs but take longer to analyze.<br><br>
+            ⚠️ If analysis time exceeds recording duration, a backlog accumulates.`,
+          rec: 'Recommended: <strong>15–18s</strong> for BirdNET, <strong>45s max</strong> for Perch on Pi 4.'
+        },
+        extraction_length: {
+          title: 'Extraction length (seconds)',
+          body: 'Duration of audio clips saved for each detection (3–30s). Saved in <code>Extracted/</code> for later review.',
+          rec: 'Recommended: <strong>6s</strong> (default).'
+        },
+        audio_format: {
+          title: 'Audio format',
+          body: '<strong>MP3</strong>: good compression. <strong>WAV</strong>: lossless, 10× bigger. <strong>FLAC</strong>: lossless compressed. <strong>OGG</strong>: similar to MP3, open format.',
+          rec: 'Recommended: <strong>MP3</strong>.'
+        },
+        channels: {
+          title: 'Microphone channels',
+          body: 'Mono (1) or Stereo (2). The AI model always converts to mono internally — stereo does not improve detection accuracy.',
+          rec: 'Recommended: <strong>Mono</strong>.'
+        },
+        database_lang: {
+          title: 'Species language',
+          body: 'Language for common species names in the BirdNET database. Independent of the Birdash interface language.',
+          rec: 'Choose your preferred language for species identification.'
+        },
+        image_provider: {
+          title: 'Image source',
+          body: '<strong>Wikipedia</strong>: free images, no API key. <strong>Flickr</strong>: more variety, requires free API key.',
+          rec: 'Recommended: <strong>Flickr</strong> with an API key.'
+        },
+        birdweather: {
+          title: 'BirdWeather Station ID',
+          body: 'Your BirdWeather station ID to share detections on <a href="https://app.birdweather.com" target="_blank" style="color:var(--accent);">birdweather.com</a>. Empty = disabled.',
+          rec: 'Optional but recommended to contribute to citizen science.'
+        },
+        rtsp: {
+          title: 'RTSP Stream',
+          body: 'External RTSP audio stream URL. Format: <code>rtsp://user:pass@ip:port/stream</code>. Empty = use local microphone.',
+          rec: 'Leave empty unless using a network microphone.'
+        },
+        full_disk: {
+          title: 'Full disk policy',
+          body: '<strong>Purge</strong>: auto-delete oldest recordings. <strong>Keep</strong>: stop recording, manual cleanup needed.',
+          rec: 'Recommended: <strong>Purge</strong>.'
+        },
+        purge_threshold: {
+          title: 'Purge threshold (%)',
+          body: 'Disk usage percentage that triggers automatic purge (50–99%).',
+          rec: 'Recommended: <strong>90–95%</strong>.'
+        },
+        max_files: {
+          title: 'Max files per species',
+          body: 'Maximum audio files kept per species (0 = unlimited). Oldest files deleted first.',
+          rec: 'Recommended: <strong>0</strong> (unlimited) or <strong>100–500</strong> on small SD cards.'
+        },
+        privacy: {
+          title: 'Human voice filter',
+          body: '<strong>0</strong>: disabled. <strong>1</strong>: light filtering. <strong>2-3</strong>: aggressive. When a voice is detected, the entire segment is discarded.',
+          rec: 'Recommended: <strong>0</strong> rural, <strong>1</strong> urban.'
+        },
+        site_name: { title:'Site name', body:'Name shown in the header and on BirdWeather.', rec:'Your locality or garden name.' },
+        latitude: { title:'Latitude', body:'GPS latitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
+        longitude: { title:'Longitude', body:'GPS longitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
+        species_lists: {
+          title: 'Species lists',
+          body: '<strong>Include list</strong>: only listed species detected. <strong>Exclude list</strong>: listed species never detected. One scientific name per line.',
+          rec: 'Use exclude to eliminate recurring false positives.'
+        },
+      },
+      de: {
+        model: { title:'Erkennungsmodell', body:'Das KI-Modell zur Vogelartenerkennung.<br><br><strong>BirdNET V2.4</strong> — Referenzmodell, 6.500 Arten, optimiert für Pi. Schnell.<br><strong>Perch V2</strong> — Google-Modell, 10.340 Vogelarten. Genauer aber langsamer (~1,6× Echtzeit auf Pi 4).', rec:'Empfohlen: <strong>BirdNET V2.4</strong> auf Pi 4.' },
+        confidence: { title:'Konfidenzschwelle', body:'Mindestkonfidenz (0,01–0,99) für eine Erkennung. Niedrig = mehr Erkennungen + mehr Fehlalarme. Hoch = nur sichere Erkennungen.', rec:'Empfohlen: <strong>0,65–0,75</strong>.' },
+        sensitivity: { title:'Empfindlichkeit', body:'Steuert die Empfindlichkeit für leise Töne (0,5–1,5).<br><br><strong>BirdNET</strong>: Sigmoid-Skalierung.<br><strong>Perch V2</strong>: Softmax-Temperatur.<br><br>Höher = empfindlicher, mehr Erkennungen, mehr Fehlalarme.', rec:'Empfohlen: <strong>1,0–1,3</strong>.' },
+        sf_thresh: { title:'Artenhäufigkeitsschwelle', body:'Geographischer Filter (0,0–0,5). Nur für BirdNET + MData. Arten unter diesem Schwellwert werden ausgeschlossen. Von Perch V2 ignoriert.', rec:'Empfohlen: <strong>0,03</strong>.' },
+        overlap: { title:'Überlappung (Sekunden)', body:'Überlappung zwischen Analysefenstern (0,0–2,9s). Mehr Überlappung = mehr Chunks = längere Analyse. Auf Pi 4 mit Perch niedrig halten.', rec:'Empfohlen: <strong>0,0–0,5</strong> für Perch, <strong>0,5–1,5</strong> für BirdNET.' },
+        rec_length: { title:'Aufnahmedauer (Sekunden)', body:'Dauer jeder Audiodatei (6–120s). Längere Dateien = mehr potenzielle Gesänge, aber längere Analyse. ⚠️ Wenn die Analyse länger dauert als die Aufnahme, entsteht ein Rückstand.', rec:'Empfohlen: <strong>15–18s</strong> BirdNET, <strong>45s</strong> Perch auf Pi 4.' },
+        extraction_length: { title:'Extraktionsdauer (Sekunden)', body:'Dauer der gespeicherten Audioclips pro Erkennung (3–30s).', rec:'Empfohlen: <strong>6s</strong>.' },
+        audio_format: { title:'Audioformat', body:'<strong>MP3</strong>: gute Kompression. <strong>WAV</strong>: verlustfrei, 10× größer. <strong>FLAC</strong>: verlustfrei komprimiert.', rec:'Empfohlen: <strong>MP3</strong>.' },
+        channels: { title:'Mikrofonkanäle', body:'Mono (1) oder Stereo (2). Das KI-Modell konvertiert immer zu Mono.', rec:'Empfohlen: <strong>Mono</strong>.' },
+        database_lang: { title:'Artensprache', body:'Sprache für die Artnamen in der Datenbank. Unabhängig von der Oberflächensprache.', rec:'Wählen Sie Ihre bevorzugte Sprache.' },
+        image_provider: { title:'Bildquelle', body:'<strong>Wikipedia</strong>: kostenlos. <strong>Flickr</strong>: mehr Vielfalt, API-Schlüssel nötig.', rec:'Empfohlen: <strong>Flickr</strong>.' },
+        birdweather: { title:'BirdWeather Station ID', body:'Ihre BirdWeather-Stations-ID. Leer = deaktiviert.', rec:'Optional aber empfohlen.' },
+        rtsp: { title:'RTSP-Stream', body:'Externe RTSP-Audio-URL. Leer = lokales Mikrofon.', rec:'Leer lassen, außer bei Netzwerkmikrofon.' },
+        full_disk: { title:'Festplatte voll', body:'<strong>Purge</strong>: älteste Aufnahmen automatisch löschen. <strong>Keep</strong>: Aufnahme stoppen.', rec:'Empfohlen: <strong>Purge</strong>.' },
+        purge_threshold: { title:'Bereinigungsschwelle (%)', body:'Festplattennutzung, ab der automatisch bereinigt wird (50–99%).', rec:'Empfohlen: <strong>90–95%</strong>.' },
+        max_files: { title:'Max. Dateien pro Art', body:'Maximale Audiodateien pro Art (0 = unbegrenzt).', rec:'Empfohlen: <strong>0</strong> oder <strong>100–500</strong>.' },
+        privacy: { title:'Sprachfilter', body:'<strong>0</strong>: aus. <strong>1</strong>: leicht. <strong>2-3</strong>: aggressiv. Bei Spracherkennung wird das Segment verworfen.', rec:'Empfohlen: <strong>0</strong> ländlich, <strong>1</strong> städtisch.' },
+        site_name: { title:'Standortname', body:'Name im Header und auf BirdWeather.', rec:'Ihr Ort oder Gartenname.' },
+        latitude: { title:'Breitengrad', body:'GPS-Breitengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
+        longitude: { title:'Längengrad', body:'GPS-Längengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
+        species_lists: { title:'Artenlisten', body:'<strong>Einschlussliste</strong>: nur gelistete Arten. <strong>Ausschlussliste</strong>: gelistete Arten ignoriert. Ein wissenschaftlicher Name pro Zeile.', rec:'Ausschluss für wiederkehrende Fehlalarme nutzen.' },
+      },
+      nl: {
+        model: { title:'Detectiemodel', body:'Het AI-model voor vogelsoortherkenning.<br><br><strong>BirdNET V2.4</strong> — Referentiemodel, 6.500 soorten, geoptimaliseerd voor Pi. Snel.<br><strong>Perch V2</strong> — Google-model, 10.340 vogelsoorten. Nauwkeuriger maar trager (~1,6× realtime op Pi 4).', rec:'Aanbevolen: <strong>BirdNET V2.4</strong> op Pi 4.' },
+        confidence: { title:'Betrouwbaarheidsdrempel', body:'Minimale betrouwbaarheid (0,01–0,99) voor een detectie. Laag = meer detecties + meer valse positieven. Hoog = alleen zekere detecties.', rec:'Aanbevolen: <strong>0,65–0,75</strong>.' },
+        sensitivity: { title:'Gevoeligheid', body:'Regelt de gevoeligheid voor zachte geluiden (0,5–1,5).<br><br><strong>BirdNET</strong>: sigmoid-schaling.<br><strong>Perch V2</strong>: softmax-temperatuur.<br><br>Hoger = gevoeliger, meer detecties, meer valse positieven.', rec:'Aanbevolen: <strong>1,0–1,3</strong>.' },
+        sf_thresh: { title:'Soortfrequentiedrempel', body:'Geografisch filter (0,0–0,5). Alleen voor BirdNET + MData. Soorten onder de drempel worden uitgesloten. Genegeerd door Perch V2.', rec:'Aanbevolen: <strong>0,03</strong>.' },
+        overlap: { title:'Overlap (seconden)', body:'Overlap tussen analysevensters (0,0–2,9s). Meer overlap = meer chunks = langere analyse.', rec:'Aanbevolen: <strong>0,0–0,5</strong> voor Perch, <strong>0,5–1,5</strong> voor BirdNET.' },
+        rec_length: { title:'Opnameduur (seconden)', body:'Duur van elk audiobestand (6–120s). Langer = meer potentiële zang maar langere analyse.', rec:'Aanbevolen: <strong>15–18s</strong> BirdNET, <strong>45s</strong> Perch op Pi 4.' },
+        extraction_length: { title:'Extractieduur (seconden)', body:'Duur van opgeslagen audioclips per detectie (3–30s).', rec:'Aanbevolen: <strong>6s</strong>.' },
+        audio_format: { title:'Audioformaat', body:'<strong>MP3</strong>: goede compressie. <strong>WAV</strong>: lossless, 10× groter. <strong>FLAC</strong>: lossless gecomprimeerd.', rec:'Aanbevolen: <strong>MP3</strong>.' },
+        channels: { title:'Microfoonkanalen', body:'Mono (1) of Stereo (2). Het AI-model converteert altijd naar mono.', rec:'Aanbevolen: <strong>Mono</strong>.' },
+        database_lang: { title:'Soortnaamtaal', body:'Taal voor soortnamen in de database. Onafhankelijk van de interfacetaal.', rec:'Kies uw voorkeurstaal.' },
+        image_provider: { title:'Afbeeldingsbron', body:'<strong>Wikipedia</strong>: gratis. <strong>Flickr</strong>: meer variatie, API-sleutel nodig.', rec:'Aanbevolen: <strong>Flickr</strong>.' },
+        birdweather: { title:'BirdWeather Station ID', body:'Uw BirdWeather station-ID. Leeg = uitgeschakeld.', rec:'Optioneel maar aanbevolen.' },
+        rtsp: { title:'RTSP-stream', body:'Externe RTSP-audio-URL. Leeg = lokale microfoon.', rec:'Leeg laten tenzij netwerkmicrofoon.' },
+        full_disk: { title:'Schijf vol', body:'<strong>Purge</strong>: oudste opnames verwijderen. <strong>Keep</strong>: opname stoppen.', rec:'Aanbevolen: <strong>Purge</strong>.' },
+        purge_threshold: { title:'Opruimdrempel (%)', body:'Schijfgebruik waarbij automatisch opgeruimd wordt (50–99%).', rec:'Aanbevolen: <strong>90–95%</strong>.' },
+        max_files: { title:'Max bestanden per soort', body:'Maximum audiobestanden per soort (0 = onbeperkt).', rec:'Aanbevolen: <strong>0</strong> of <strong>100–500</strong>.' },
+        privacy: { title:'Stemfilter', body:'<strong>0</strong>: uit. <strong>1</strong>: licht. <strong>2-3</strong>: agressief.', rec:'Aanbevolen: <strong>0</strong> landelijk, <strong>1</strong> stedelijk.' },
+        site_name: { title:'Locatienaam', body:'Naam in de header en op BirdWeather.', rec:'Uw locatie of tuinnaam.' },
+        latitude: { title:'Breedtegraad', body:'GPS-breedtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
+        longitude: { title:'Lengtegraad', body:'GPS-lengtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
+        species_lists: { title:'Soortenlijsten', body:'<strong>Inclusielijst</strong>: alleen vermelde soorten. <strong>Exclusielijst</strong>: vermelde soorten genegeerd.', rec:'Exclusie gebruiken voor terugkerende valse positieven.' },
+      },
+    };
+
+    const helpTitle = computed(() => {
+      if (!helpKey.value) return '';
+      const h = (HELP[lang.value] || HELP.en)[helpKey.value] || HELP.en[helpKey.value];
+      return h ? h.title : helpKey.value;
+    });
+
+    const helpBody = computed(() => {
+      if (!helpKey.value) return '';
+      const h = (HELP[lang.value] || HELP.en)[helpKey.value] || HELP.en[helpKey.value];
+      if (!h) return '';
+      let html = h.body;
+      if (h.rec) html += `<div class="info-rec">💡 ${h.rec}</div>`;
+      return html;
+    });
+
     onMounted(reload);
 
     return {
-      t, conf, models, languages, services,
+      t, lang, conf, models, languages, services,
       loading, saving, svcLoading, saveMsg, saveErr,
       includeList, excludeList, savingLists,
       modelLabel, modelDescription,
       reload, save, restartService, saveSpeciesLists,
+      helpKey, helpTitle, helpBody,
     };
   }
 });

@@ -231,6 +231,19 @@ a:hover { opacity: .85; }
   line-height:1;
 }
 
+.brand-model {
+  display:       inline-block;
+  font-size:     .55rem;
+  font-weight:   600;
+  letter-spacing:.03em;
+  color:         var(--accent);
+  background:    color-mix(in srgb, var(--accent) 12%, transparent);
+  padding:       .1rem .4rem;
+  border-radius: .25rem;
+  line-height:   1.3;
+  white-space:   nowrap;
+}
+
 .header-right {
   display:     flex;
   align-items: center;
@@ -858,7 +871,7 @@ a:hover { opacity: .85; }
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .app-main  { padding: .75rem; }
-  .brand-sub { display: none; }
+  .brand-sub, .brand-model { display: none; }
   .nav-label { display: none; }
   .nav-link  { padding: .55rem .5rem; }
   .kpi-grid  { grid-template-columns: repeat(2, 1fr); }

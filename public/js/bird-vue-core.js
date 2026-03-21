@@ -168,6 +168,18 @@
       af_file_info:'Infos fichier', af_duration:'Durée', af_type:'Type', af_size:'Taille',
       af_sample_rate:'Fréq. échantillonnage', af_channels:'Canaux', af_file_path:'Chemin',
       af_mono:'Mono', af_stereo:'Stéréo', af_filters:'Filtres audio',
+      // Model monitoring
+      mod_title:'Monitoring modèle', mod_current:'Modèle actif', mod_detections:'Détections',
+      mod_species:'Espèces', mod_confidence:'Confiance moy.', mod_rate:'Rythme',
+      mod_per_hour:'/h', mod_conf_dist:'Distribution confiance',
+      mod_top_species:'Top espèces', mod_trend:'Tendance 7j', mod_no_data:'Pas de données',
+      mod_today:'Auj.', mod_7d:'7j', mod_30d:'30j',
+      cmp_title:'Comparaison de périodes', cmp_split_date:'Date pivot',
+      cmp_before:'Avant', cmp_after:'Après', cmp_det_day:'Dét./jour',
+      cmp_species_gained:'Espèces gagnées', cmp_species_lost:'Espèces perdues',
+      cmp_nocturnal:'Détections nocturnes', cmp_nocturnal_sub:'22h – 4h',
+      cmp_none:'Aucune', cmp_per_day:'/j', cmp_change:'Variation',
+      cmp_species_detail:'Comparaison par espèce', cmp_count:'Nb',
       // Species detail
       avg_conf_short:'Confiance moy.', days_detected:'Jours détectés',
       activity_30d:'Activité — 30 jours', conf_distribution:'Distribution de confiance',
@@ -329,6 +341,17 @@
       af_file_info:'File info', af_duration:'Duration', af_type:'Type', af_size:'Size',
       af_sample_rate:'Sample rate', af_channels:'Channels', af_file_path:'Path',
       af_mono:'Mono', af_stereo:'Stereo', af_filters:'Audio filters',
+      mod_title:'Model monitoring', mod_current:'Active model', mod_detections:'Detections',
+      mod_species:'Species', mod_confidence:'Avg confidence', mod_rate:'Rate',
+      mod_per_hour:'/h', mod_conf_dist:'Confidence distribution',
+      mod_top_species:'Top species', mod_trend:'7d trend', mod_no_data:'No data',
+      mod_today:'Today', mod_7d:'7d', mod_30d:'30d',
+      cmp_title:'Period comparison', cmp_split_date:'Split date',
+      cmp_before:'Before', cmp_after:'After', cmp_det_day:'Det./day',
+      cmp_species_gained:'Species gained', cmp_species_lost:'Species lost',
+      cmp_nocturnal:'Nocturnal detections', cmp_nocturnal_sub:'10pm – 4am',
+      cmp_none:'None', cmp_per_day:'/d', cmp_change:'Change',
+      cmp_species_detail:'Per-species comparison', cmp_count:'Count',
       avg_conf_short:'Avg confidence', days_detected:'Days detected',
       activity_30d:'Activity — 30 days', conf_distribution:'Confidence distribution',
       activity_by_weekday:'Activity by day of week', description:'Description',
@@ -483,6 +506,17 @@
       af_file_info:'Dateiinfo', af_duration:'Dauer', af_type:'Typ', af_size:'Größe',
       af_sample_rate:'Abtastrate', af_channels:'Kanäle', af_file_path:'Pfad',
       af_mono:'Mono', af_stereo:'Stereo', af_filters:'Audiofilter',
+      mod_title:'Modell-Monitoring', mod_current:'Aktives Modell', mod_detections:'Erkennungen',
+      mod_species:'Arten', mod_confidence:'Ø Konfidenz', mod_rate:'Rate',
+      mod_per_hour:'/h', mod_conf_dist:'Konfidenzverteilung',
+      mod_top_species:'Top-Arten', mod_trend:'7-Tage-Trend', mod_no_data:'Keine Daten',
+      mod_today:'Heute', mod_7d:'7T', mod_30d:'30T',
+      cmp_title:'Periodenvergleich', cmp_split_date:'Stichtag',
+      cmp_before:'Vorher', cmp_after:'Nachher', cmp_det_day:'Erk./Tag',
+      cmp_species_gained:'Neue Arten', cmp_species_lost:'Verlorene Arten',
+      cmp_nocturnal:'Nächtliche Erkennungen', cmp_nocturnal_sub:'22h – 4h',
+      cmp_none:'Keine', cmp_per_day:'/T', cmp_change:'Änderung',
+      cmp_species_detail:'Vergleich nach Art', cmp_count:'Anz.',
       avg_conf_short:'Ø Konfidenz', days_detected:'Erkennungstage',
       activity_30d:'Aktivität — 30 Tage', conf_distribution:'Konfidenzverteilung',
       activity_by_weekday:'Aktivität nach Wochentag', description:'Beschreibung',
@@ -637,6 +671,17 @@
       af_file_info:'Bestandsinfo', af_duration:'Duur', af_type:'Type', af_size:'Grootte',
       af_sample_rate:'Samplefrequentie', af_channels:'Kanalen', af_file_path:'Pad',
       af_mono:'Mono', af_stereo:'Stereo', af_filters:'Audiofilters',
+      mod_title:'Model monitoring', mod_current:'Actief model', mod_detections:'Detecties',
+      mod_species:'Soorten', mod_confidence:'Gem. betrouwbaarheid', mod_rate:'Tempo',
+      mod_per_hour:'/u', mod_conf_dist:'Betrouwbaarheidsverdeling',
+      mod_top_species:'Topsoorten', mod_trend:'7d trend', mod_no_data:'Geen gegevens',
+      mod_today:'Vandaag', mod_7d:'7d', mod_30d:'30d',
+      cmp_title:'Periodevergelijking', cmp_split_date:'Splitdatum',
+      cmp_before:'Voor', cmp_after:'Na', cmp_det_day:'Det./dag',
+      cmp_species_gained:'Nieuwe soorten', cmp_species_lost:'Verloren soorten',
+      cmp_nocturnal:'Nachtelijke detecties', cmp_nocturnal_sub:'22u – 4u',
+      cmp_none:'Geen', cmp_per_day:'/d', cmp_change:'Wijziging',
+      cmp_species_detail:'Vergelijking per soort', cmp_count:'Aantal',
       avg_conf_short:'Gem. betrouwbaarheid', days_detected:'Detectiedagen',
       activity_30d:'Activiteit — 30 dagen', conf_distribution:'Betrouwbaarheidsverdeling',
       activity_by_weekday:'Activiteit per weekdag', description:'Beschrijving',
@@ -893,6 +938,14 @@
   // ── Composant PibirdShell ─────────────────────────────────────────────────
   // Encapsule le header, la navigation, les switchers thème/langue et le <main>.
   // Usage : <birdash-shell page="species"> … contenu … </birdash-shell>
+  // ── Model display names ────────────────────────────────────────────────
+  const MODEL_LABELS = {
+    'BirdNET_GLOBAL_6K_V2.4_Model_FP16': 'BirdNET V2.4',
+    'BirdNET_6K_GLOBAL_MODEL':           'BirdNET V1',
+    'Perch_v2':                          'Perch V2',
+    'BirdNET-Go_classifier_20250916':    'BirdNET-Go',
+  };
+
   const PibirdShell = {
     props: { page: { type: String, default: '' } },
     setup(props) {
@@ -901,7 +954,13 @@
       const { navItems, siteName }      = useNav(props.page);
       const langOpen = ref(false);
       const currentLang = computed(() => langs.find(l => l.code === lang.value) || langs[0]);
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, siteName, langOpen, currentLang };
+      const modelName = ref('');
+      // Fetch active model from settings (non-blocking)
+      fetch(`${BIRD_CONFIG.apiUrl}/settings`).then(r => r.json()).then(conf => {
+        const raw = conf.MODEL || '';
+        modelName.value = MODEL_LABELS[raw] || raw.replace(/_/g, ' ');
+      }).catch(() => {});
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, siteName, langOpen, currentLang, modelName };
     },
     directives: {
       'click-outside': {
@@ -917,10 +976,11 @@
   <a href="#birdash-main" class="skip-link">Aller au contenu</a>
   <header class="app-header" role="banner">
     <div class="header-brand">
-      <img src="robin-logo.svg" class="brand-logo" alt="BIRDASH Robin">
+      <img src="img/robin-logo.svg" class="brand-logo" alt="BIRDASH Robin">
       <div class="brand-text">
         <span class="brand-name">BIRDASH</span>
         <span class="brand-sub">{{siteName}}</span>
+        <span class="brand-model" v-if="modelName">🤖 {{modelName}}</span>
       </div>
     </div>
     <div class="header-right">
@@ -1005,7 +1065,7 @@
     // Vue composables
     useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
     // Vue components
-    PibirdShell, registerComponents,
+    PibirdShell, registerComponents, MODEL_LABELS,
     // Wrapper with reactive lang injection (calls BIRDASH_UTILS under the hood)
     buildSpeciesLinks,
     // Re-exports from BIRDASH_UTILS for backward compatibility
