@@ -18,33 +18,33 @@
 <body>
 <div id="app">
   <birdash-shell page="analyses">
-  <div @click="pickerOpen=false">
+  <div @click="pickerOpen=false" style="max-width:100%;overflow-x:hidden;">
     <div class="analyses-layout">
 
       <aside class="ctrl-panel" @click.stop>
         <div class="ctrl-section">
-          <span class="ctrl-label">Plage de dates</span>
+          <span class="ctrl-label">{{t('analyses_date_range')}}</span>
           <input type="date" v-model="fromDate">
           <input type="date" v-model="toDate">
           <div class="quick-btns" style="margin-top:.4rem;">
-            <button class="quick-btn" :class="{active:quickActive===7}"   @click="setRange(7)">7j</button>
-            <button class="quick-btn" :class="{active:quickActive===30}"  @click="setRange(30)">30j</button>
-            <button class="quick-btn" :class="{active:quickActive===90}"  @click="setRange(90)">90j</button>
-            <button class="quick-btn" :class="{active:quickActive===365}" @click="setRange(365)">1an</button>
-            <button class="quick-btn" :class="{active:quickActive===0}"   @click="setAll()">Tout</button>
+            <button class="quick-btn" :class="{active:quickActive===7}"   @click="setRange(7)">{{t('analyses_quick_7d')}}</button>
+            <button class="quick-btn" :class="{active:quickActive===30}"  @click="setRange(30)">{{t('analyses_quick_30d')}}</button>
+            <button class="quick-btn" :class="{active:quickActive===90}"  @click="setRange(90)">{{t('analyses_quick_90d')}}</button>
+            <button class="quick-btn" :class="{active:quickActive===365}" @click="setRange(365)">{{t('analyses_quick_1y')}}</button>
+            <button class="quick-btn" :class="{active:quickActive===0}"   @click="setAll()">{{t('analyses_quick_all')}}</button>
           </div>
         </div>
         <div class="ctrl-section">
-          <span class="ctrl-label">{{t('resolution')||'Resolution'}}</span>
+          <span class="ctrl-label">{{t('resolution')}}</span>
           <div class="radio-group">
-            <label class="radio-row"><input type="radio" v-model="resample" value="raw"><label>Brut</label></label>
-            <label class="radio-row"><input type="radio" v-model="resample" value="15min"><label>15 minutes</label></label>
-            <label class="radio-row"><input type="radio" v-model="resample" value="hourly"><label>Horaire</label></label>
-            <label class="radio-row"><input type="radio" v-model="resample" value="daily"><label>Journalier</label></label>
+            <label class="radio-row"><input type="radio" v-model="resample" value="raw"><label>{{t('analyses_resample_raw')}}</label></label>
+            <label class="radio-row"><input type="radio" v-model="resample" value="15min"><label>{{t('analyses_resample_15')}}</label></label>
+            <label class="radio-row"><input type="radio" v-model="resample" value="hourly"><label>{{t('analyses_resample_1h')}}</label></label>
+            <label class="radio-row"><input type="radio" v-model="resample" value="daily"><label>{{t('analyses_resample_1d')}}</label></label>
           </div>
         </div>
         <div class="ctrl-section">
-          <span class="ctrl-label">Confiance min — <strong>{{confSlider}}%</strong></span>
+          <span class="ctrl-label">{{t('analyses_conf_label')}} — <strong>{{confSlider}}%</strong></span>
           <div class="range-wrap">
             <input type="range" v-model.number="confSlider" min="50" max="95" step="5">
             <div class="range-labels"><span>50%</span><span>95%</span></div>
@@ -69,7 +69,7 @@
                 </template>
                 <template v-else>
                   <span v-for="name in selectedSpecies.slice(0,3)" :key="name" class="sp-tag">
-                    {{name}}<button class="sp-tag-x" @click.stop="removeTag(name)">&#x2715;</button>
+                    {{spName(name, sciFor(name))}}<button class="sp-tag-x" @click.stop="removeTag(name)">&#x2715;</button>
                   </span>
                   <span v-if="selectedSpecies.length>3" class="sp-tag"
                         style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);">
@@ -95,7 +95,7 @@
                     <input type="checkbox" :value="sp.name"
                            :checked="selectedSpecies.includes(sp.name)"
                            @change="toggleSpecies(sp.name)">
-                    {{sp.name}}<span class="sp-item-count">{{sp.n}}</span>
+                    {{spName(sp.name, sp.sci)}}<span class="sp-item-count">{{sp.n}}</span>
                   </label>
                 </div>
                 <div class="sp-footer">
@@ -124,13 +124,13 @@
             <div v-if="polarDetail.visible" class="polar-detail">
               <div class="pd-header">
                 <span class="pd-hour">{{polarDetail.hour}}h</span>
-                <span class="pd-count">{{polarDetail.count.toLocaleString()}} détections</span>
-                <span class="pd-pct">{{polarDetail.pct}}% de la journée</span>
+                <span class="pd-count">{{polarDetail.count.toLocaleString()}} {{t('detections').toLowerCase()}}</span>
+                <span class="pd-pct">{{polarDetail.pct}}% {{t('analyses_pct_of_day')}}</span>
                 <button class="pd-close" @click="polarDetail.visible=false">✕</button>
               </div>
               <!-- Distribution par quart d'heure -->
               <div class="pd-quarters">
-                <div class="pd-q-label">Distribution quarts d'heure</div>
+                <div class="pd-q-label">{{t('analyses_quarter_distrib')}}</div>
                 <div v-for="q in polarDetail.quarters" :key="q.m" class="pd-bar-row">
                   <span class="pd-bar-label">{{zeroPad(polarDetail.hour)}}h{{zeroPad(q.m)}}</span>
                   <div class="pd-bar-track">
@@ -142,9 +142,9 @@
               </div>
               <!-- Top détections de l'heure -->
               <div class="pd-detections">
-                <div class="pd-det-label">Meilleures détections</div>
+                <div class="pd-det-label">{{t('analyses_best_dets')}}</div>
                 <div v-if="polarDetail.loadingDets" class="spinner" style="padding:.5rem;"><div></div><div></div><div></div></div>
-                <div v-else-if="!polarDetail.topDets.length" style="font-size:.78rem;color:var(--text-faint);">Aucune détection</div>
+                <div v-else-if="!polarDetail.topDets.length" style="font-size:.78rem;color:var(--text-faint);">{{t('analyses_no_det')}}</div>
                 <div v-for="d in polarDetail.topDets" :key="d.Time+d.Confidence" class="pd-det-item">
                   <span class="pd-det-time">{{fmtTimeFull(d.Time)}}</span>
                   <span class="pd-det-conf conf-badge"
@@ -168,19 +168,20 @@
 
         <div v-show="selectedSpecies.length" class="chart-card">
           <div class="chart-card-title">{{seriesTitle}}</div>
-          <div style="position:relative;height:160px;"><canvas ref="elSeries"></canvas></div>
-        </div>
-
-        <div v-show="mainSpecies" class="chart-card">
-          <div class="chart-card-title">{{heatmapTitle}}</div>
-          <div class="daily-heatmap-wrap">
-            <div v-if="heatmapLoading" class="spinner"><div></div><div></div><div></div></div>
-            <div v-else v-html="heatmapHtml"></div>
-          </div>
+          <div style="position:relative;height:320px;"><canvas ref="elSeries"></canvas></div>
         </div>
 
         <div v-if="!mainSpecies&&!loading" style="padding:3rem;text-align:center;color:var(--text-faint);font-size:.9rem;">
-          &#x1F50D; Selectionnez une ou plusieurs especes pour explorer leurs donnees.
+          &#x1F50D; {{t('analyses_select_prompt')}}
+        </div>
+
+        <!-- Heatmap journalière -->
+        <div v-show="mainSpecies" class="chart-card">
+          <div class="chart-card-title">{{heatmapTitle}}</div>
+          <div class="daily-heatmap-wrap" style="overflow-x:auto;">
+            <div v-if="heatmapLoading" class="spinner"><div></div><div></div><div></div></div>
+            <div v-else v-html="heatmapHtml"></div>
+          </div>
         </div>
 
       </div>
@@ -191,7 +192,7 @@
 
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useAudio,
+const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
         birdQuery, escHtml, fmtDate, fmtTime, localDateStr, daysAgo, fetchSpeciesImage,
         buildAudioUrl } = BIRDASH;
 
@@ -204,6 +205,7 @@ const app = createApp({
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName }      = useNav('analyses');
     const { playingFile, toggleAudio }= useAudio();
+    const { spName, spNamesReady }   = useSpeciesNames();
 
     // Stocke les données pour le panel détail heure (clic sur secteur)
     const polarDetail = ref({
@@ -241,26 +243,38 @@ const app = createApp({
     const speciesLabel = computed(() =>
       t('analyses_period', { from: fmtDate(fromDate.value), to: fmtDate(toDate.value) })
     );
+    const mainSpeciesDisplay = computed(() => {
+      if (!mainSpecies.value) return '';
+      return spName(mainSpecies.value, sciFor(mainSpecies.value));
+    });
     const polarTitle = computed(() => {
       if (!mainSpecies.value) return '';
       return selectedSpecies.value.length > 1
-        ? t('analyses_multi_polar', { species: mainSpecies.value })
-        : t('analyses_polar_title', { species: mainSpecies.value });
+        ? t('analyses_multi_polar', { species: mainSpeciesDisplay.value })
+        : t('analyses_polar_title', { species: mainSpeciesDisplay.value });
     });
     const seriesTitle = computed(() => {
       if (!mainSpecies.value) return '';
       return selectedSpecies.value.length > 1
         ? t('analyses_multi_series', { n: selectedSpecies.value.length })
-        : t('analyses_series_title', { species: mainSpecies.value });
+        : t('analyses_series_title', { species: mainSpeciesDisplay.value });
     });
     const heatmapTitle = computed(() =>
-      mainSpecies.value ? t('analyses_heatmap_title', { species: mainSpecies.value }) : ''
+      mainSpecies.value ? t('analyses_heatmap_title', { species: mainSpeciesDisplay.value }) : ''
     );
     const filteredSpeciesList = computed(() => {
       const q = spSearch.value.toLowerCase();
-      return q ? speciesList.value.filter(s => s.name.toLowerCase().includes(q))
-               : speciesList.value;
+      return q ? speciesList.value.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        spName(s.name, s.sci).toLowerCase().includes(q) ||
+        (s.sci && s.sci.toLowerCase().includes(q))
+      ) : speciesList.value;
     });
+
+    function sciFor(comName) {
+      const sp = speciesList.value.find(s => s.name === comName);
+      return sp ? sp.sci : '';
+    }
 
     function resampleExpr(r) {
       switch (r) {
@@ -318,10 +332,10 @@ const app = createApp({
         const conf = confSlider.value / 100;
         const expr = resampleExpr(resample.value);
         const rows = await birdQuery(
-          'SELECT Com_Name, ' + expr + ' FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC',
+          'SELECT Com_Name, MIN(Sci_Name) as Sci_Name, ' + expr + ' FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC',
           [fromDate.value, toDate.value, conf]
         );
-        speciesList.value = rows.map(r => ({ name: r.Com_Name, n: r.n }));
+        speciesList.value = rows.map(r => ({ name: r.Com_Name, sci: r.Sci_Name || '', n: r.n }));
         const available = new Set(rows.map(r => r.Com_Name));
         selectedSpecies.value = selectedSpecies.value.filter(s => available.has(s));
         mainSpecies.value = selectedSpecies.value[0] || null;
@@ -389,7 +403,7 @@ const app = createApp({
         const el = elPolar.value;
         if (!el) { narrativeLoading.value = false; return; }
         if (_chartPolar) _chartPolar.dispose();
-        _chartPolar = echarts.init(el, null, { renderer: 'canvas' });
+        _chartPolar = echarts.init(el, null, { renderer: 'canvas', width: 'auto', height: 'auto' });
 
         const sectorColors = byHour.map((v,i) => {
           const p = v / maxVal;
@@ -417,7 +431,7 @@ const app = createApp({
             type: 'text',
             left: 'center', top: 'middle',
             style: {
-              text: totalDet.toLocaleString() + '\ndét.',
+              text: totalDet.toLocaleString() + '\n' + t('detections').toLowerCase(),
               textAlign: 'center', fill: '#9abf9a',
               fontSize: 13, fontFamily: 'Lora, serif', lineHeight: 18,
             }
@@ -429,8 +443,8 @@ const app = createApp({
             textStyle: { color: '#c8e6c0', fontFamily: 'Lora, serif', fontSize: 13 },
             formatter: function(p) {
               const pct = totalDet ? Math.round(p.value / totalDet * 100) : 0;
-              return '<b>' + p.name + '</b><br>' + p.value.toLocaleString() + ' dét. (' + pct + '%)'
-                + (p.dataIndex === peakH ? '<br>⭐ Heure de pointe' : '');
+              return '<b>' + p.name + '</b><br>' + t('analyses_tooltip_det', {n: p.value.toLocaleString(), pct: pct})
+                + (p.dataIndex === peakH ? '<br>⭐ ' + t('analyses_peak_hour') : '');
             }
           },
           angleAxis: {
@@ -451,7 +465,7 @@ const app = createApp({
             axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
             splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } }
           },
-          polar: { radius: ['6%', '78%'], center: ['50%', '50%'] },
+          polar: { radius: ['6%', '85%'], center: ['50%', '50%'] },
           series: [{
             type: 'bar', coordinateSystem: 'polar', barMaxWidth: '100%',
             data: byHour.map(function(v, i) {
@@ -555,12 +569,14 @@ const app = createApp({
       var from = fmtDate(fromDate.value), to = fmtDate(toDate.value);
       var html = '';
       if (multiMode) {
+        var spDisplay = spName(sp, sciFor(sp));
         html += '<p style="margin-bottom:.5rem;padding:.4rem .65rem;background:var(--bg-card2);border-radius:var(--radius);font-size:.8rem;color:var(--text-muted);border-left:3px solid var(--accent-dim);">'
-          +t('narr_multi_intro',{n:selectedSpecies.value.length,species:'<strong>'+escHtml(sp)+'</strong>'})
-          +'<br><span style="font-size:.75rem;opacity:.8;">'+t('narr_multi_hint',{species:escHtml(sp)})+'</span></p>';
+          +t('narr_multi_intro',{n:selectedSpecies.value.length,species:'<strong>'+escHtml(spDisplay)+'</strong>'})
+          +'<br><span style="font-size:.75rem;opacity:.8;">'+t('narr_multi_hint',{species:escHtml(spDisplay)})+'</span></p>';
       }
+      var spDisplay = spName(sp, sciFor(sp));
       html += '<p>'+t('narr_period',{from:chip(from,'amber'),to:chip(to,'amber')})
-        +' <strong>'+escHtml(sp)+'</strong> '+t('narr_is')+' <em>'+t(habitKey)+'</em>.'
+        +' <strong>'+escHtml(spDisplay)+'</strong> '+t('narr_is')+' <em>'+t(habitKey)+'</em>.'
         +' '+t('narr_peak_at',{time:chip(peakLabel),pct:chip(peakPct+'%')})+'</p>';
       if (startH>=0&&endH>=0) {
         html += '<p>'+t('narr_activity_range',{start:chip(startLabel),end:chip(endLabel),duration:chip(durLabel,'blue')})+'</p>';
@@ -617,7 +633,7 @@ const app = createApp({
             var hex=PALETTE[idx%PALETTE.length];
             var rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
             return {
-              label:sp, data:data,
+              label:spName(sp, sciFor(sp)), data:data,
               backgroundColor:isSingle&&!byMonth?'rgba(74,138,181,.40)':'rgba('+rr+','+gg+','+bb+',.35)',
               borderColor:hex, borderWidth:isSingle&&!byMonth?1:1.5,
               borderRadius:!byMonth?2:0, fill:byMonth&&isSingle,
@@ -637,7 +653,7 @@ const app = createApp({
             interaction:{mode:'index',intersect:false},
             plugins:{
               legend:{display:species.length>1,labels:{color:'var(--text-muted)',font:{family:'Lora',size:11},boxWidth:12}},
-              tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+' : '+c.raw.toLocaleString()+' dets';}}}
+              tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+' : '+c.raw.toLocaleString()+' '+t('detections').toLowerCase();}}}
             },
             scales:{
               x:{ticks:{maxTicksLimit:18,color:'#7a9a7a',font:{size:9}},grid:{color:'rgba(255,255,255,.03)'}},
@@ -674,9 +690,11 @@ const app = createApp({
           if(p<.60)return 'dhm-3'; if(p<.85)return 'dhm-4'; return 'dhm-5';
         }
         var displayDates=dates.slice(-60);
-        var html='<table class="dhm-table"><thead><tr><th style="text-align:left;min-width:70px;">Date</th>';
+        var html='<table class="dhm-table"><thead><tr><th style="text-align:left;min-width:55px;">'+t('date')+'</th>';
+        var use12h = lang.value==='en';
         for(var h=0;h<24;h++){
-          html+='<th style="'+(h%3===0?'':'color:transparent;')+'">'+(h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p')+'</th>';
+          var lbl = use12h ? (h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p') : h+'h';
+          html+='<th style="'+(h%3===0?'':'color:transparent;')+'">'+lbl+'</th>';
         }
         html+='</tr></thead><tbody>';
         displayDates.forEach(function(date){
@@ -691,9 +709,9 @@ const app = createApp({
           html+='</tr>';
         });
         html+='</tbody></table>';
-        if(dates.length>60){html='<p style="font-size:.72rem;color:var(--text-faint);margin-bottom:.3rem;">Affichage des 60 derniers jours ('+dates.length+' jours au total)</p>'+html;}
+        if(dates.length>60){html='<p style="font-size:.72rem;color:var(--text-faint);margin-bottom:.3rem;">'+t('analyses_last_60d',{total:dates.length})+'</p>'+html;}
         heatmapHtml.value=html;
-      } catch(e){console.error('[analyses-heatmap]',e);heatmapHtml.value='<div class="error-msg">'+t('error_generic','Erreur de chargement')+'</div>';}
+      } catch(e){console.error('[analyses-heatmap]',e);heatmapHtml.value='<div class="error-msg">'+t('error')+'</div>';}
       heatmapLoading.value=false;
     }
 
@@ -724,7 +742,7 @@ const app = createApp({
     }
 
     return {
-      lang,t,
+      lang,t,spName,sciFor,
       fromDate,toDate,resample,confSlider,quickActive,
       speciesList,selectedSpecies,mainSpecies,spSearch,pickerOpen,topN,
       loading,kpis,narrativeHtml,narrativeLoading,heatmapHtml,heatmapLoading,

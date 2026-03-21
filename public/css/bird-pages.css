@@ -730,10 +730,10 @@
 /* ── biodiversity.html ───────────────────────────────────────────────── */
 
     .heatmap-wrap{overflow-x:auto;}
-    .heatmap-table{border-collapse:collapse;font-size:.72rem;min-width:600px;}
-    .heatmap-table th{padding:.3rem .5rem;color:var(--text-muted);font-weight:500;text-align:center;border-bottom:1px solid var(--border);}
-    .heatmap-table th.row-header{text-align:left;min-width:160px;}
-    .heatmap-table td{padding:.25rem .4rem;text-align:center;border:1px solid var(--bg-deep);border-radius:2px;font-size:.7rem;font-family:monospace;min-width:36px;}
+    .heatmap-table{border-collapse:collapse;font-size:.72rem;min-width:600px;width:100%;}
+    .heatmap-table th{padding:.2rem .3rem;color:var(--text-muted);font-weight:500;text-align:center;border-bottom:1px solid var(--border);font-size:.65rem;}
+    .heatmap-table th.row-header{text-align:left;min-width:40px;}
+    .heatmap-table td{padding:.15rem .25rem;text-align:center;border:1px solid var(--bg-deep);border-radius:2px;font-size:.62rem;font-family:monospace;min-width:0;}
     .heatmap-table tr:hover td{outline:1px solid var(--border-light);}
     .hm-0{background:var(--bg-card2);color:var(--text-faint);}
     .hm-1{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent-dim);}
@@ -742,7 +742,7 @@
     .hm-4{background:color-mix(in srgb,var(--accent) 58%,transparent);color:var(--bg-deep);}
     .hm-5{background:color-mix(in srgb,var(--accent) 78%,transparent);color:var(--bg-deep);}
     .matrix-wrap{overflow-x:auto;}
-    .matrix-table{border-collapse:collapse;font-size:.72rem;}
+    .matrix-table{border-collapse:collapse;font-size:.72rem;width:100%;}
     .matrix-table th{padding:.3rem .5rem;color:var(--text-muted);font-weight:500;white-space:nowrap;border-bottom:1px solid var(--border);}
     .matrix-table th.sp-col{text-align:left;min-width:170px;}
     .matrix-table td{padding:.2rem .3rem;text-align:center;border:1px solid var(--bg-deep);min-width:38px;font-size:.68rem;font-family:monospace;}
@@ -867,10 +867,10 @@
     .pd-det-play { width:22px; height:22px; border-radius:50%; background:var(--accent); border:none; cursor:pointer; color:#fff; font-size:.6rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .pd-det-play:hover { opacity:.8; }
     .daily-heatmap-wrap { overflow-x:auto; }
-    .dhm-table { border-collapse:collapse; font-size:.68rem; white-space:nowrap; }
+    .dhm-table { border-collapse:collapse; font-size:.68rem; white-space:nowrap; width:100%; }
     .dhm-table th,.dhm-table td { padding:1px 2px; }
     .dhm-table thead th { color:var(--text-faint); font-weight:400; text-align:center; }
-    .dhm-table td { width:10px; height:10px; border-radius:1px; }
+    .dhm-table td { height:12px; border-radius:1px; }
     .dhm-0{background:var(--bg-deep);} .dhm-1{background:color-mix(in srgb,var(--accent) 20%,transparent);} .dhm-2{background:color-mix(in srgb,var(--accent) 42%,transparent);}
     .dhm-3{background:color-mix(in srgb,var(--accent) 62%,transparent);} .dhm-4{background:color-mix(in srgb,var(--amber) 70%,transparent);} .dhm-5{background:color-mix(in srgb,var(--amber) 95%,transparent);}
     .spinner{display:flex;gap:4px;justify-content:center;padding:2rem;}

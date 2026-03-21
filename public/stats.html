@@ -77,7 +77,7 @@
             <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name)}}</span>
+                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</span>
                 <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.n.toLocaleString()}}</span>
               </div>
               <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
@@ -98,7 +98,7 @@
             <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name)}}</span>
+                <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</span>
                 <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.avg_conf}}%</span>
               </div>
               <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
@@ -141,7 +141,7 @@
             <div style="font-size:1.5rem;">🎯</div>
             <div style="flex:1;">
               <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_max_conf')}}</div>
-              <div style="font-size:.85rem;"><strong>{{records.maxConf ? spName(records.maxConf.Com_Name) : '—'}}</strong></div>
+              <div style="font-size:.85rem;"><strong>{{records.maxConf ? spName(records.maxConf.Com_Name, records.maxConf.Sci_Name) : '—'}}</strong></div>
               <div style="font-size:.75rem;color:var(--text-muted);">{{records.maxConf ? fmtDate(records.maxConf.Date) : ''}}</div>
             </div>
             <div class="conf-badge conf-high" style="font-size:.9rem;">{{records.maxConf ? records.maxConf.conf+'%' : '—'}}</div>
@@ -245,7 +245,7 @@ const app = createApp({
       topCount.value.loading = true;
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT Com_Name, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Com_Name ORDER BY n DESC LIMIT 15`,[fConf.value]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT 15`,[fConf.value]);
         topCount.value = { loading:false, rows };
       } catch(e) { topCount.value = { loading:false, rows:[] }; }
     }
@@ -254,7 +254,7 @@ const app = createApp({
       topConf.value.loading = true;
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT Com_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${where} GROUP BY Com_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,[fConf.value]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,[fConf.value]);
         topConf.value = { loading:false, rows };
       } catch(e) { topConf.value = { loading:false, rows:[] }; }
     }
@@ -272,7 +272,7 @@ const app = createApp({
         const where = buildWhere();
         const [maxDet]  = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fConf.value]);
         const [maxSp]   = await birdQuery(`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fConf.value]);
-        const [maxConf] = await birdQuery(`SELECT Date, Com_Name, ROUND(Confidence*100,1) as conf FROM detections ORDER BY Confidence DESC LIMIT 1`);
+        const [maxConf] = await birdQuery(`SELECT Date, Com_Name, Sci_Name, ROUND(Confidence*100,1) as conf FROM detections ORDER BY Confidence DESC LIMIT 1`);
         records.value = { loading:false, maxDet, maxSp, maxConf };
       } catch(e) { records.value = { loading:false, maxDet:null, maxSp:null, maxConf:null }; }
     }

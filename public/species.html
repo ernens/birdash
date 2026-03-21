@@ -226,15 +226,30 @@ const app = createApp({
     const photosLoading = ref(false);
     const wikiSummary    = ref('');
     const wikiSummaryAlt = ref('');  // second language summary
-    const conservation   = ref('');
+    const conservationRaw = ref('');
     const speciesInfo    = reactive({ order: '', family: '', size: '', wingspan: '', diet: '' });
 
+    const _consTranslations = {
+      'Least Concern':         { fr:'Préoccupation mineure', en:'Least Concern', de:'Nicht gefährdet', nl:'Niet bedreigd' },
+      'Near Threatened':       { fr:'Quasi menacé', en:'Near Threatened', de:'Potenziell gefährdet', nl:'Kwetsbaar' },
+      'Vulnerable':            { fr:'Vulnérable', en:'Vulnerable', de:'Gefährdet', nl:'Kwetsbaar' },
+      'Endangered':            { fr:'En danger', en:'Endangered', de:'Stark gefährdet', nl:'Bedreigd' },
+      'Critically Endangered': { fr:'En danger critique', en:'Critically Endangered', de:'Vom Aussterben bedroht', nl:'Ernstig bedreigd' },
+      'Data Deficient':        { fr:'Données insuffisantes', en:'Data Deficient', de:'Unzureichende Datenlage', nl:'Onvoldoende data' },
+    };
+    const conservation = computed(() => {
+      const raw = conservationRaw.value;
+      if (!raw) return '';
+      const tr = _consTranslations[raw];
+      return tr ? (tr[lang.value] || tr.en || raw) : raw;
+    });
+
     const conservationClass = computed(() => {
-      const s = conservation.value.toLowerCase();
-      if (s.includes('least concern') || s.includes('préoccupation mineure')) return 'lc';
-      if (s.includes('near threatened') || s.includes('quasi menac')) return 'nt';
-      if (s.includes('vulnerable') || s.includes('vulnérable')) return 'vu';
-      if (s.includes('endangered') || s.includes('en danger')) return 'en';
+      const s = conservationRaw.value.toLowerCase();
+      if (s.includes('least concern')) return 'lc';
+      if (s.includes('near threatened')) return 'nt';
+      if (s.includes('vulnerable')) return 'vu';
+      if (s.includes('endangered') && !s.includes('critical')) return 'en';
       if (s.includes('critical')) return 'cr';
       return 'dd';
     });
@@ -276,7 +291,7 @@ const app = createApp({
       photosLoading.value = true;
       wikiSummary.value = '';
       wikiSummaryAlt.value = '';
-      conservation.value = '';
+      conservationRaw.value = '';
       Object.assign(speciesInfo, { order: '', family: '', size: '', wingspan: '', diet: '' });
 
       try {
@@ -344,7 +359,7 @@ const app = createApp({
             wikiSummary.value = data.summaryFr || data.summary || '';
             wikiSummaryAlt.value = '';
           }
-          conservation.value = data.conservation || '';
+          conservationRaw.value = data.conservation || '';
           // Structured info
           if (data.order) speciesInfo.order = data.order;
           if (data.family) speciesInfo.family = data.family;

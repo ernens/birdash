@@ -60,7 +60,7 @@
                class="sp-filter-item" :class="{selected: selectedSpecies.includes(sp.name)}"
                @click="toggleSpecies(sp.name)">
             <div class="sp-filter-check">{{selectedSpecies.includes(sp.name)?'✓':''}}</div>
-            <span class="sp-filter-name" :title="sp.name">{{sp.name}}</span>
+            <span class="sp-filter-name" :title="sp.name">{{spName(sp.name, sp.sci)}}</span>
             <span class="sp-filter-count">{{sp.count}}</span>
           </div>
         </div>
@@ -120,7 +120,7 @@
                  class="dl-btn" title="Télécharger l'audio">⬇</a>
               <button class="rec-spectro-btn"
                       :class="{open: spectroUid===rec.uid}"
-                      :title="spectroUid===rec.uid ? 'Fermer spectrogramme' : 'Afficher spectrogramme'"
+                      :title="spectroUid===rec.uid ? t('spectro_close') : t('spectro_show')"
                       @click="toggleSpectro(rec)">
                 📊
               </button>
@@ -186,7 +186,7 @@
             <div class="rec-footer">
               <a :href="'species.html?name='+encodeURIComponent(rec.Com_Name)"
                  class="btn-details">
-                🔍 Détails espèce
+                🔍 {{t('species_detail')}}
               </a>
               <div class="rec-links">
                 <a v-for="(lnk,key) in buildSpeciesLinks(rec.Sci_Name, rec.Com_Name)"
@@ -424,7 +424,7 @@ const app = createApp({
     // ── Computed ───────────────────────────────────────────────────
     const filteredSpeciesList = computed(() => {
       const q = spSearch.value.toLowerCase();
-      return availableSpecies.value.filter(s => s.name.toLowerCase().includes(q));
+      return availableSpecies.value.filter(s => spName(s.name, s.sci).toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
     });
 
     const filteredRecs = computed(() => {
@@ -491,10 +491,11 @@ const app = createApp({
 
         // Liste espèces pour le filtre (avec compteur sur rows complet)
         const spMap = {};
-        for (const r of rows) spMap[r.Com_Name] = (spMap[r.Com_Name]||0)+1;
+        const sciMap = {};
+        for (const r of rows) { spMap[r.Com_Name] = (spMap[r.Com_Name]||0)+1; sciMap[r.Com_Name] = r.Sci_Name; }
         availableSpecies.value = Object.entries(spMap)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a,b) => a.name.localeCompare(b.name));
+          .map(([name, count]) => ({ name, sci: sciMap[name], count }))
+          .sort((a,b) => spName(a.name, a.sci).localeCompare(spName(b.name, b.sci)));
 
         // Photos : URL directe vers /api/photo — le serveur gère le cache disque.
         // Assignation synchrone → Vue rend immédiatement les img tags,

@@ -496,7 +496,7 @@ const app = createApp({
     }
     async function loadTopData() {
       try {
-        const rows = await birdQuery(`SELECT Com_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC LIMIT ?`,[daysAgo(6),CONF,BIRD_CONFIG.topSpeciesCount]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Confidence>=? GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT ?`,[daysAgo(6),CONF,BIRD_CONFIG.topSpeciesCount]);
         dataTop.value = rows;
       } catch(e) {}
     }
@@ -540,7 +540,7 @@ const app = createApp({
       const cs=getComputedStyle(document.documentElement);
       const gridC=cs.getPropertyValue('--border').trim()+'40';
       const txtC=cs.getPropertyValue('--text-muted').trim();
-      mountTop(canvasTop, ()=>({type:'bar',data:{labels:d.map(r=>r.Com_Name),datasets:[{label:t('detections'),data:d.map(r=>r.n),backgroundColor:BIRD_CONFIG.chartColors.map(c=>c+'cc'),borderColor:BIRD_CONFIG.chartColors,borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(evt,els)=>{if(els.length)navigateTo('species.html',{species:d[els[0].index].Com_Name});},plugins:{legend:{display:false},tooltip:{backgroundColor:'var(--bg-card,#151b20)',borderColor:gridC,borderWidth:1,titleColor:'#fff',bodyColor:txtC,callbacks:{title:i=>i[0].label,label:i=>` ${i.raw} ${t('detections')}`}}},scales:{x:{ticks:{color:txtC},grid:{color:gridC,lineWidth:0.5},border:{display:false},beginAtZero:true},y:{ticks:{color:txtC,font:{size:11}},grid:{display:false}}}}}));
+      mountTop(canvasTop, ()=>({type:'bar',data:{labels:d.map(r=>spName(r.Com_Name,r.Sci_Name)),datasets:[{label:t('detections'),data:d.map(r=>r.n),backgroundColor:BIRD_CONFIG.chartColors.map(c=>c+'cc'),borderColor:BIRD_CONFIG.chartColors,borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(evt,els)=>{if(els.length)navigateTo('species.html',{species:d[els[0].index].Com_Name});},plugins:{legend:{display:false},tooltip:{backgroundColor:'var(--bg-card,#151b20)',borderColor:gridC,borderWidth:1,titleColor:'#fff',bodyColor:txtC,callbacks:{title:i=>i[0].label,label:i=>` ${i.raw} ${t('detections')}`}}},scales:{x:{ticks:{color:txtC},grid:{color:gridC,lineWidth:0.5},border:{display:false},beginAtZero:true},y:{ticks:{color:txtC,font:{size:11}},grid:{display:false}}}}}));
     });
 
     watch([dataHourly, lang], async () => {

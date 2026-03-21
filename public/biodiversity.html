@@ -38,49 +38,44 @@
       <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasRichness"></canvas></div>
     </div>
 
-    <div class="grid-2" style="margin-bottom:1rem;">
-
-      <!-- Heatmap -->
-      <div class="card">
-        <div class="card-title">{{t('heatmap_hour_day')}}</div>
-        <div class="heatmap-wrap">
-          <div v-if="heatmap.loading" class="spinner"><div></div><div></div><div></div></div>
-          <div v-else-if="heatmap.error" class="error-msg">⚠ {{heatmap.error}}</div>
-          <!-- Le HTML de la heatmap est généré côté JS car trop complexe pour v-for nested -->
-          <div v-else v-html="heatmap.html"></div>
-        </div>
-      </div>
-
-      <!-- Top espèces ce mois -->
-      <div class="card">
-        <div class="card-title">{{t('top_species')}} — {{t('this_month')}}</div>
-        <div v-if="monthly.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!monthly.rows.length" class="error-msg">{{t('no_data')}}</div>
-        <div v-else>
-          <div v-for="(r,i) in monthly.rows" :key="r.Com_Name"
-               style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;cursor:pointer;"
-               @click="navigateTo('species.html',{species:r.Com_Name})">
-            <div style="font-size:.72rem;color:var(--text-faint);min-width:16px;text-align:right;">{{i+1}}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</div>
-              <div style="height:4px;background:var(--bg-card2);border-radius:2px;margin-top:2px;">
-                <div :style="{height:'100%',width:Math.round(r.n/monthly.rows[0].n*100)+'%',background:chartColor(i),borderRadius:'2px',transition:'width .4s'}"></div>
-              </div>
-            </div>
-            <div style="font-size:.78rem;color:var(--text-muted);min-width:40px;text-align:right;">{{r.n.toLocaleString()}}</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Matrice espèce × mois -->
-    <div class="card">
+    <!-- Matrice espèce × mois — pleine largeur -->
+    <div class="card" style="margin-bottom:1rem;">
       <div class="card-title">{{t('species_x_month')}}</div>
       <div class="matrix-wrap">
         <div v-if="matrix.loading" class="spinner"><div></div><div></div><div></div></div>
         <div v-else-if="matrix.error" class="error-msg">⚠ {{matrix.error}}</div>
         <div v-else v-html="matrix.html"></div>
+      </div>
+    </div>
+
+    <!-- Top espèces ce mois — pleine largeur -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">{{t('top_species')}} — {{t('this_month')}}</div>
+      <div v-if="monthly.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="!monthly.rows.length" class="error-msg">{{t('no_data')}}</div>
+      <div v-else style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem;">
+        <div v-for="(r,i) in monthly.rows" :key="r.Com_Name"
+             style="display:flex;align-items:center;gap:.6rem;cursor:pointer;"
+             @click="navigateTo('species.html',{species:r.Com_Name})">
+          <div style="font-size:.72rem;color:var(--text-faint);min-width:16px;text-align:right;">{{i+1}}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</div>
+            <div style="height:4px;background:var(--bg-card2);border-radius:2px;margin-top:2px;">
+              <div :style="{height:'100%',width:Math.round(r.n/monthly.rows[0].n*100)+'%',background:chartColor(i),borderRadius:'2px',transition:'width .4s'}"></div>
+            </div>
+          </div>
+          <div style="font-size:.78rem;color:var(--text-muted);min-width:40px;text-align:right;">{{r.n.toLocaleString()}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heatmap heure × jour — pleine largeur, compact -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-title">{{t('heatmap_hour_day')}}</div>
+      <div class="heatmap-wrap">
+        <div v-if="heatmap.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else-if="heatmap.error" class="error-msg">⚠ {{heatmap.error}}</div>
+        <div v-else v-html="heatmap.html"></div>
       </div>
     </div>
 
@@ -194,7 +189,7 @@ const app = createApp({
         rows.forEach(r=>{if(data[r.Com_Name]) data[r.Com_Name][r.m-1]=r.n;});
         let maxVal=0;
         Object.values(data).forEach(arr=>arr.forEach(v=>{if(v>maxVal) maxVal=v;}));
-        const cs = v => { if(!v) return 'background:var(--bg-card2);color:var(--text-faint);'; const p=v/maxVal; const a=.1+p*.7; return `background:rgba(90,158,58,${a.toFixed(2)});color:${p>.5?'#0d1a0f':'#e8f0e9'};`; };
+        const cs = v => { if(!v) return 'background:var(--bg-card2);color:var(--text-faint);'; const p=v/maxVal; const a=.15+p*.65; return `background:rgba(90,158,58,${a.toFixed(2)});color:${p>.4?'#fff':'var(--text-main)'};font-weight:${p>.3?'500':'400'};`; };
         const months = t('months_short');
         let html = `<table class="matrix-table"><thead><tr><th class="sp-col">${t('species_name')}</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>${t('bio_total')}</th></tr></thead><tbody>`;
         topSp.forEach(sp => {

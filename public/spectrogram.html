@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BIRDASH — Spectrogramme live</title>
+  <title>BIRDASH — Spectrogram</title>
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
@@ -27,7 +27,7 @@
         <span v-if="status==='idle'">{{t('idle')}}</span>
         <span v-else-if="status==='connecting'">{{t('connecting')}}</span>
         <span v-else-if="status==='live'" style="color:#4caf50;">{{t('live')}}</span>
-        <span v-else-if="status==='error'" style="color:var(--danger);">Erreur</span>
+        <span v-else-if="status==='error'" style="color:var(--danger);">{{t('error')}}</span>
       </div>
 
       <div class="toolbar-sep"></div>
@@ -105,7 +105,7 @@
                   ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
                   : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
           <span v-if="processingClean">⏳</span>
-          <span v-else-if="cleanMode">✨ Clean</span>
+          <span v-else-if="cleanMode">✨ {{t('clean')}}</span>
           <span v-else>🎛 {{t('clean')}}</span>
         </button>
         <template v-if="cleanMode">
@@ -149,8 +149,8 @@
       <div class="colorbar-wrap">
         <canvas ref="colorbarCanvas" class="colorbar-canvas" width="12"></canvas>
         <div class="colorbar-labels">
-          <span class="colorbar-label">max</span>
-          <span class="colorbar-label">min</span>
+          <span class="colorbar-label">{{t('colorbar_max')}}</span>
+          <span class="colorbar-label">{{t('colorbar_min')}}</span>
         </div>
       </div>
       <div class="time-axis">
@@ -180,7 +180,7 @@
           <div v-for="d in feedDets" :key="d.id"
                class="det-feed-item"
                :style="{ borderColor: d.color }">
-            <span class="det-feed-name" :style="{ color: d.color }">{{d.Com_Name}}</span>
+            <span class="det-feed-name" :style="{ color: d.color }">{{d.displayName}}</span>
             <span class="det-feed-conf" :style="{ color: d.color }">{{d.confStr}}</span>
             <span class="det-feed-time">{{d.Time.substring(0,5)}}</span>
           </div>
@@ -195,12 +195,12 @@
           <span v-else>🚫</span>
         </div>
         <p v-if="status==='idle'">
-          Cliquez sur <strong>Démarrer</strong> pour activer le spectrogramme.<br>
-          L'audio provient des MP3 récents de BirdNET — aucun conflit avec l'analyse en cours.<br>
-          Les détections apparaissent en overlay automatiquement.
+          {{t('spectro_idle_msg')}}<br>
+          {{t('spectro_idle_desc')}}<br>
+          {{t('spectro_idle_overlay')}}
         </p>
         <p v-else-if="status==='connecting'">
-          Connexion au flux audio du Pi…
+          {{t('spectro_connecting_msg')}}
         </p>
         <p v-else style="color:var(--danger);">
           {{errorMsg}}
@@ -325,13 +325,14 @@ function cleanAudioPipeline(pcm, sr, strength) {
 
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, birdQuery, fmtConf, localDateStr, buildAudioUrl } = BIRDASH;
+const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery, fmtConf, localDateStr, buildAudioUrl } = BIRDASH;
 
 const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('spectrogram');
+    const { spName } = useSpeciesNames();
 
     const status    = ref('idle');
     const errorMsg  = ref('');
@@ -573,7 +574,7 @@ const app = createApp({
       try {
         const today   = localDateStr();
         const allRows = await birdQuery(
-          `SELECT File_Name FROM detections
+          `SELECT File_Name, Com_Name, Sci_Name FROM detections
            WHERE Date = ? AND Confidence >= ? AND File_Name != ''
            ORDER BY Time ASC`,
           [today, BIRD_CONFIG.defaultConfidence]
@@ -594,7 +595,7 @@ const app = createApp({
         try {
           const today = localDateStr();
           const rows  = await birdQuery(
-            `SELECT Date, Time, Com_Name, Confidence, File_Name
+            `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
              FROM detections
              WHERE Date = ? AND Confidence >= ? AND File_Name != ''
              ORDER BY Time ASC`,
@@ -681,7 +682,7 @@ const app = createApp({
           _source.connect(_analyser);
 
           nowPlaying.value = {
-            name:  det.Com_Name,
+            name:  spName(det.Com_Name, det.Sci_Name),
             conf:  fmtConf(det.Confidence),
             time:  det.Time.substring(0, 5),
             color,
@@ -689,7 +690,7 @@ const app = createApp({
 
           detLabels.value = [{
             id:            labelId,
-            name:          det.Com_Name,
+            name:          spName(det.Com_Name, det.Sci_Name),
             conf:          fmtConf(det.Confidence),
             color,
             insertedAtCol: _colsDrawn,
@@ -697,6 +698,7 @@ const app = createApp({
 
           feedDets.value = [{
             ...det, id: labelId, color, confStr: fmtConf(det.Confidence),
+            displayName: spName(det.Com_Name, det.Sci_Name),
           }, ...feedDets.value].slice(0, 6);
 
           _source.start();
