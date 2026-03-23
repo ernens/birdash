@@ -1,0 +1,48 @@
+{
+  "destination": "nfs",
+  "content": ["all"],
+  "schedule": "daily",
+  "scheduleTime": "22:00",
+  "retention": 30,
+  "local": {
+    "path": "/mnt/backup"
+  },
+  "smb": {
+    "host": "",
+    "share": "",
+    "user": "",
+    "pass": "",
+    "remotePath": "/birdash-backup"
+  },
+  "nfs": {
+    "host": "192.168.2.148",
+    "exportPath": "/export/backup",
+    "mountPoint": "/mnt/backup",
+    "remotePath": "/Backup/biloute"
+  },
+  "sftp": {
+    "host": "",
+    "port": 22,
+    "user": "",
+    "pass": "",
+    "remotePath": "/birdash-backup"
+  },
+  "s3": {
+    "bucket": "",
+    "region": "eu-west-1",
+    "accessKey": "",
+    "secretKey": "",
+    "remotePath": "birdash-backup"
+  },
+  "gdrive": {
+    "folderId": ""
+  },
+  "webdav": {
+    "url": "",
+    "user": "",
+    "pass": "",
+    "remotePath": "/birdash-backup"
+  },
+  "lastRun": null,
+  "lastStatus": null
+}

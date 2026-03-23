@@ -94,6 +94,16 @@
     .info-rec { margin-top:.6rem; padding:.5rem .7rem; border-radius:6px;
       background:color-mix(in srgb,var(--accent) 8%,transparent);
       border-left:3px solid var(--accent); font-size:.82rem; }
+    /* Backup state badges */
+    .bkp-state-badge { font-size:.72rem; padding:.15rem .45rem; border-radius:10px;
+      font-weight:600; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+    .bkp-running { background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent);
+      animation:bkp-pulse 1.5s ease-in-out infinite; }
+    .bkp-completed { background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent); }
+    .bkp-failed { background:color-mix(in srgb,var(--danger) 15%,transparent); color:var(--danger); }
+    .bkp-stopped { background:color-mix(in srgb,var(--warning,#c8a84b) 15%,transparent); color:var(--warning,#c8a84b); }
+    .bkp-paused { background:color-mix(in srgb,var(--warning,#c8a84b) 15%,transparent); color:var(--warning,#c8a84b); }
+    @keyframes bkp-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
   </style>
 </head>
 <body>
@@ -337,6 +347,303 @@
         </button>
       </div>
 
+      <!-- ═══ Backup Configuration ═══ -->
+      <div class="card" style="margin-top:1.2rem;">
+        <div class="section-title">💾 {{t('set_backup')}} <button class="info-btn" @click="helpKey='backup'">i</button></div>
+
+        <div class="settings-grid">
+
+          <!-- Destination -->
+          <div>
+            <div style="font-weight:600;margin-bottom:.6rem;">{{t('set_backup_dest')}}</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
+              <div v-for="d in backupDests" :key="d.value"
+                   class="model-card" style="padding:.55rem .7rem;"
+                   :class="{ active: bkp.destination === d.value }"
+                   @click="bkp.destination = d.value">
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                  <span style="font-size:1.1rem;">{{d.icon}}</span>
+                  <span style="font-weight:600;font-size:.85rem;">{{t(d.labelKey)}}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic fields per destination -->
+            <div style="margin-top:.8rem;">
+
+              <!-- Local / USB -->
+              <template v-if="bkp.destination === 'local'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_path')}}</span>
+                  <input v-model="bkp.local.path" class="set-input" style="width:220px;" placeholder="/mnt/backup">
+                </div>
+              </template>
+
+              <!-- SMB/CIFS -->
+              <template v-if="bkp.destination === 'smb'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_host')}}</span>
+                  <input v-model="bkp.smb.host" class="set-input" placeholder="192.168.1.100">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_share')}}</span>
+                  <input v-model="bkp.smb.share" class="set-input" placeholder="backups">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_user')}}</span>
+                  <input v-model="bkp.smb.user" class="set-input" placeholder="user">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_pass')}}</span>
+                  <input v-model="bkp.smb.pass" type="password" class="set-input" placeholder="••••••">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_remote_path')}}</span>
+                  <input v-model="bkp.smb.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                </div>
+              </template>
+
+              <!-- NFS -->
+              <template v-if="bkp.destination === 'nfs'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_host')}}</span>
+                  <input v-model="bkp.nfs.host" class="set-input" placeholder="192.168.1.100">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">Export</span>
+                  <input v-model="bkp.nfs.exportPath" class="set-input" style="width:220px;" placeholder="/volume1/backups">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_remote_path')}}</span>
+                  <input v-model="bkp.nfs.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                </div>
+              </template>
+
+              <!-- SFTP -->
+              <template v-if="bkp.destination === 'sftp'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_host')}}</span>
+                  <input v-model="bkp.sftp.host" class="set-input" placeholder="backup.example.com">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_port')}}</span>
+                  <input v-model="bkp.sftp.port" type="number" class="set-input" style="width:80px;" placeholder="22">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_user')}}</span>
+                  <input v-model="bkp.sftp.user" class="set-input" placeholder="user">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_pass')}}</span>
+                  <input v-model="bkp.sftp.pass" type="password" class="set-input" placeholder="••••••">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_remote_path')}}</span>
+                  <input v-model="bkp.sftp.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                </div>
+              </template>
+
+              <!-- S3 -->
+              <template v-if="bkp.destination === 's3'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_bucket')}}</span>
+                  <input v-model="bkp.s3.bucket" class="set-input" placeholder="my-birdash-backups">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_region')}}</span>
+                  <input v-model="bkp.s3.region" class="set-input" placeholder="eu-west-1">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_access_key')}}</span>
+                  <input v-model="bkp.s3.accessKey" class="set-input" placeholder="AKIA...">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_secret_key')}}</span>
+                  <input v-model="bkp.s3.secretKey" type="password" class="set-input" placeholder="••••••">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_remote_path')}}</span>
+                  <input v-model="bkp.s3.remotePath" class="set-input" style="width:220px;" placeholder="birdash-backup">
+                </div>
+              </template>
+
+              <!-- Google Drive -->
+              <template v-if="bkp.destination === 'gdrive'">
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_gdrive_folder')}}</span>
+                  <input v-model="bkp.gdrive.folderId" class="set-input" style="width:260px;" placeholder="1A2B3C...">
+                </div>
+                <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">
+                  Requires <code>rclone</code> configured with Google Drive.
+                </div>
+              </template>
+
+              <!-- WebDAV -->
+              <template v-if="bkp.destination === 'webdav'">
+                <div class="set-row">
+                  <span class="set-label">URL</span>
+                  <input v-model="bkp.webdav.url" class="set-input" style="width:260px;" placeholder="https://cloud.example.com/remote.php/dav">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_user')}}</span>
+                  <input v-model="bkp.webdav.user" class="set-input" placeholder="user">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_pass')}}</span>
+                  <input v-model="bkp.webdav.pass" type="password" class="set-input" placeholder="••••••">
+                </div>
+                <div class="set-row">
+                  <span class="set-label">{{t('set_backup_remote_path')}}</span>
+                  <input v-model="bkp.webdav.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                </div>
+              </template>
+
+            </div>
+          </div>
+
+          <!-- Content + Schedule -->
+          <div>
+            <div style="font-weight:600;margin-bottom:.6rem;">{{t('set_backup_content')}}</div>
+
+            <div style="display:flex;flex-direction:column;gap:.3rem;">
+              <label class="set-check" @change="toggleBackupContent('all')">
+                <input type="checkbox" :checked="bkp.content.includes('all')">
+                <span>{{t('set_backup_content_all')}}</span>
+              </label>
+              <label class="set-check" @change="toggleBackupContent('db')">
+                <input type="checkbox" :checked="bkp.content.includes('all') || bkp.content.includes('db')" :disabled="bkp.content.includes('all')">
+                <span>🗄️ {{t('set_backup_content_db')}} <span style="font-size:.75rem;color:var(--text-faint);">birds.db</span></span>
+              </label>
+              <label class="set-check" @change="toggleBackupContent('audio')">
+                <input type="checkbox" :checked="bkp.content.includes('all') || bkp.content.includes('audio')" :disabled="bkp.content.includes('all')">
+                <span>🎵 {{t('set_backup_content_audio')}} <span style="font-size:.75rem;color:var(--text-faint);">BirdSongs/</span></span>
+              </label>
+              <label class="set-check" @change="toggleBackupContent('config')">
+                <input type="checkbox" :checked="bkp.content.includes('all') || bkp.content.includes('config')" :disabled="bkp.content.includes('all')">
+                <span>⚙️ {{t('set_backup_content_config')}} <span style="font-size:.75rem;color:var(--text-faint);">birdnet.conf, lists…</span></span>
+              </label>
+            </div>
+
+            <!-- Schedule -->
+            <div style="font-weight:600;margin-top:1.2rem;margin-bottom:.6rem;">{{t('set_backup_schedule')}}</div>
+            <div class="set-row">
+              <span class="set-label">{{t('set_backup_schedule')}}</span>
+              <select v-model="bkp.schedule" class="set-select" style="width:140px;">
+                <option value="manual">{{t('set_backup_schedule_manual')}}</option>
+                <option value="daily">{{t('set_backup_schedule_daily')}}</option>
+                <option value="weekly">{{t('set_backup_schedule_weekly')}}</option>
+              </select>
+            </div>
+            <div v-if="bkp.schedule !== 'manual'" class="set-row">
+              <span class="set-label">{{t('set_backup_schedule_time')}}</span>
+              <input v-model="bkp.scheduleTime" type="time" class="set-input" style="width:110px;">
+            </div>
+            <div class="set-row">
+              <span class="set-label">{{t('set_backup_retention')}}</span>
+              <input v-model="bkp.retention" type="number" min="1" max="365" class="set-input" style="width:80px;">
+            </div>
+
+            <!-- Status & Actions -->
+            <div style="margin-top:1rem;padding:.7rem;background:var(--bg-deep);border-radius:8px;">
+
+              <!-- Live progress (visible when running or paused) -->
+              <div v-if="bkpProgress.state === 'running' || bkpProgress.state === 'paused'" style="margin-bottom:.7rem;">
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+                  <span class="bkp-state-badge" :class="bkpProgress.state === 'paused' ? 'bkp-paused' : 'bkp-running'">
+                    {{bkpProgress.state === 'paused' ? t('set_backup_state_paused') : t('set_backup_state_running')}}
+                  </span>
+                  <span style="font-size:.78rem;color:var(--text-muted);flex:1;">{{bkpProgress.detail}}</span>
+                  <!-- Pause / Resume -->
+                  <button class="svc-btn" @click="pauseBackup" :title="bkpProgress.state === 'paused' ? t('set_backup_resume') : t('set_backup_pause')"
+                          style="font-size:.9rem;padding:.2rem .5rem;min-width:32px;">
+                    {{bkpProgress.state === 'paused' ? '▶' : '⏸'}}
+                  </button>
+                  <!-- Stop -->
+                  <button class="svc-btn" @click="stopBackup" :title="t('set_backup_stop')"
+                          style="font-size:.9rem;padding:.2rem .5rem;min-width:32px;color:var(--danger);">
+                    ⏹
+                  </button>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                  <div class="health-bar" style="height:10px;flex:1;">
+                    <div class="health-fill" :class="bkpProgress.state === 'paused' ? '' : 'bar-ok'"
+                         :style="{width: bkpProgress.percent + '%', transition:'width .8s ease',
+                                  background: bkpProgress.state === 'paused' ? 'var(--warning,#c8a84b)' : undefined}"></div>
+                  </div>
+                  <span style="font-size:.78rem;font-family:monospace;min-width:32px;text-align:right;">{{bkpProgress.percent}}%</span>
+                </div>
+                <div style="font-size:.72rem;color:var(--text-faint);margin-top:.25rem;">
+                  {{t('set_backup_step')}}: {{bkpStepLabel(bkpProgress.step)}}
+                  <span v-if="bkpProgress.startedAt"> — {{t('set_backup_started')}} {{bkpElapsed}}</span>
+                </div>
+                <!-- Disk info -->
+                <div v-if="bkpProgress.backupSize || bkpProgress.diskFree" style="display:flex;flex-wrap:wrap;gap:.8rem;margin-top:.5rem;font-size:.75rem;color:var(--text-muted);">
+                  <span v-if="bkpProgress.backupSize">{{t('set_backup_transferred')}}: <strong style="color:var(--text-main);">{{fmtSize(bkpProgress.backupSize)}}</strong></span>
+                  <span v-if="bkpProgress.diskFree">{{t('set_backup_disk_free')}}: <strong style="color:var(--text-main);">{{fmtSize(bkpProgress.diskFree)}}</strong></span>
+                  <span v-if="bkpProgress.diskTotal">/ {{fmtSize(bkpProgress.diskTotal)}}</span>
+                </div>
+              </div>
+
+              <!-- State badges for non-running states -->
+              <div v-else-if="bkpProgress.state === 'completed'" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+                <span class="bkp-state-badge bkp-completed">{{t('set_backup_state_completed')}}</span>
+                <span style="font-size:.78rem;color:var(--text-muted);">{{bkpProgress.detail || t('set_backup_success')}}</span>
+              </div>
+              <div v-else-if="bkpProgress.state === 'failed'" style="margin-bottom:.5rem;">
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                  <span class="bkp-state-badge bkp-failed">{{t('set_backup_state_failed')}}</span>
+                  <span style="font-size:.78rem;color:var(--text-muted);">{{bkpProgress.detail}}</span>
+                </div>
+                <div v-if="bkpProgress.percent > 0" style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem;">
+                  <div class="health-bar" style="height:8px;flex:1;">
+                    <div class="health-fill bar-danger" :style="{width: bkpProgress.percent + '%'}"></div>
+                  </div>
+                  <span style="font-size:.72rem;font-family:monospace;color:var(--danger);">{{bkpProgress.percent}}%</span>
+                </div>
+              </div>
+              <div v-else-if="bkpProgress.state === 'stopped'" style="margin-bottom:.5rem;">
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                  <span class="bkp-state-badge bkp-stopped">{{t('set_backup_state_stopped')}}</span>
+                  <span style="font-size:.78rem;color:var(--text-muted);">{{bkpProgress.detail}}</span>
+                </div>
+                <div v-if="bkpProgress.percent > 0" style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem;">
+                  <div class="health-bar" style="height:8px;flex:1;">
+                    <div class="health-fill" style="background:var(--warning);" :style="{width: bkpProgress.percent + '%'}"></div>
+                  </div>
+                  <span style="font-size:.72rem;font-family:monospace;color:var(--warning);">{{bkpProgress.percent}}%</span>
+                </div>
+              </div>
+
+              <!-- Last run info (when not active) -->
+              <div v-if="bkpProgress.state !== 'running' && bkpProgress.state !== 'paused'" style="font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem;">
+                {{t('set_backup_last_status')}}:
+                <span v-if="!bkp.lastRun" style="color:var(--text-faint);">{{t('set_backup_never')}}</span>
+                <span v-else>
+                  <span :style="{color: bkp.lastStatus === 'success' ? 'var(--accent)' : 'var(--danger)'}">
+                    {{bkp.lastStatus === 'success' ? t('set_backup_success') : t('set_backup_failed')}}
+                  </span>
+                  — {{bkp.lastRun}}
+                </span>
+              </div>
+
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button class="btn-outline" @click="saveBackupConfig" :disabled="savingBkp" style="font-size:.85rem;">
+                  {{savingBkp ? '...' : t('set_backup_save')}}
+                </button>
+                <button class="btn-save" @click="runBackup"
+                        :disabled="bkpProgress.state === 'running' || bkpProgress.state === 'paused'"
+                        style="font-size:.85rem;padding:.5rem 1.2rem;">
+                  {{(bkpProgress.state === 'running' || bkpProgress.state === 'paused') ? t('set_backup_running') : t('set_backup_run_now')}}
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div><!-- /settings-grid -->
+      </div>
+
       <!-- ═══ Save bar ═══ -->
       <div class="save-bar">
         <button class="btn-save" @click="save(false)" :disabled="saving">
@@ -374,6 +681,178 @@ const app = createApp({
     const includeList = ref('');
     const excludeList = ref('');
     const savingLists = ref(false);
+
+    // ── Backup configuration ──────────────────────────────────────
+    const bkp = reactive({
+      destination: 'local', content: ['all'], schedule: 'manual', scheduleTime: '02:00', retention: 30,
+      local: { path: '/mnt/backup' },
+      smb: { host: '', share: '', user: '', pass: '', remotePath: '/birdash-backup' },
+      nfs: { host: '', exportPath: '', mountPoint: '/mnt/nfs-backup', remotePath: '/birdash-backup' },
+      sftp: { host: '', port: 22, user: '', pass: '', remotePath: '/birdash-backup' },
+      s3: { bucket: '', region: 'eu-west-1', accessKey: '', secretKey: '', remotePath: 'birdash-backup' },
+      gdrive: { folderId: '' },
+      webdav: { url: '', user: '', pass: '', remotePath: '/birdash-backup' },
+      lastRun: null, lastStatus: null,
+    });
+    const savingBkp = ref(false);
+    const runningBkp = ref(false);
+    const bkpProgress = reactive({ state: 'idle', percent: 0, step: '', detail: '', startedAt: null, updatedAt: null });
+    let _bkpPollTimer = null;
+
+    const backupDests = [
+      { value: 'local', icon: '💿', labelKey: 'set_backup_dest_local' },
+      { value: 'smb', icon: '🖥️', labelKey: 'set_backup_dest_smb' },
+      { value: 'nfs', icon: '📁', labelKey: 'set_backup_dest_nfs' },
+      { value: 'sftp', icon: '🔐', labelKey: 'set_backup_dest_sftp' },
+      { value: 's3', icon: '☁️', labelKey: 'set_backup_dest_s3' },
+      { value: 'gdrive', icon: '📎', labelKey: 'set_backup_dest_gdrive' },
+      { value: 'webdav', icon: '🌐', labelKey: 'set_backup_dest_webdav' },
+    ];
+
+    function toggleBackupContent(type) {
+      if (type === 'all') {
+        bkp.content = bkp.content.includes('all') ? ['db', 'config'] : ['all'];
+      } else {
+        if (bkp.content.includes('all')) return;
+        const idx = bkp.content.indexOf(type);
+        if (idx >= 0) { bkp.content.splice(idx, 1); if (bkp.content.length === 0) bkp.content.push('db'); }
+        else bkp.content.push(type);
+      }
+    }
+
+    async function loadBackupConfig() {
+      try {
+        const data = await fetch(API + '/backup-config').then(r => r.json());
+        if (data.error) return;
+        Object.keys(data).forEach(k => { if (k in bkp) { if (typeof bkp[k] === 'object' && !Array.isArray(bkp[k]) && bkp[k] !== null) Object.assign(bkp[k], data[k]); else bkp[k] = data[k]; } });
+      } catch(e) { console.warn('Could not load backup config:', e); }
+      // Check if a backup is already running
+      try {
+        const prog = await fetch(API + '/backup-progress').then(r => r.json());
+        if (prog.state === 'running') {
+          Object.assign(bkpProgress, prog);
+          runningBkp.value = true;
+          startBackupPoll();
+        } else if (prog.state && prog.state !== 'idle') {
+          Object.assign(bkpProgress, prog);
+        }
+      } catch(e) { /* silent */ }
+    }
+
+    function bkpStepLabel(step) {
+      const labels = { init: 'Initialisation', db: 'Base de données', config: 'Configuration',
+        projects: 'Projets', audio: 'BirdSongs', upload: 'Upload', mount: 'Montage', done: 'Terminé' };
+      return labels[step] || step || '';
+    }
+
+    const bkpElapsed = computed(() => {
+      if (!bkpProgress.startedAt) return '';
+      const ms = new Date(bkpProgress.updatedAt || new Date()) - new Date(bkpProgress.startedAt);
+      const sec = Math.floor(ms / 1000);
+      if (sec < 60) return sec + 's';
+      const min = Math.floor(sec / 60);
+      if (min < 60) return min + 'min ' + (sec % 60) + 's';
+      const hr = Math.floor(min / 60);
+      return hr + 'h ' + (min % 60) + 'min';
+    });
+
+    async function pollBackupProgress() {
+      try {
+        const data = await fetch(API + '/backup-progress').then(r => r.json());
+        if (data.error) return;
+        Object.assign(bkpProgress, data);
+        // If backup finished, refresh config to get lastRun/lastStatus
+        if (data.state === 'completed' || data.state === 'failed' || data.state === 'stopped') {
+          stopBackupPoll();
+          runningBkp.value = false;
+          await loadBackupConfig();
+        }
+      } catch(e) { /* silent */ }
+    }
+
+    function startBackupPoll() {
+      stopBackupPoll();
+      _bkpPollTimer = setInterval(pollBackupProgress, 2000);
+    }
+
+    function stopBackupPoll() {
+      if (_bkpPollTimer) { clearInterval(_bkpPollTimer); _bkpPollTimer = null; }
+    }
+
+    function fmtSize(bytes) {
+      if (!bytes || bytes <= 0) return '0 B';
+      const units = ['B', 'Ko', 'Mo', 'Go', 'To'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    async function pauseBackup() {
+      try {
+        const res = await fetch(API + '/backup-pause', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          if (data.action === 'pause') bkpProgress.state = 'paused';
+          else bkpProgress.state = 'running';
+        }
+      } catch(e) { console.error('Pause failed:', e); }
+    }
+
+    async function stopBackup() {
+      if (!confirm(t('set_backup_stop_confirm'))) return;
+      try {
+        const res = await fetch(API + '/backup-stop', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          bkpProgress.state = 'stopped';
+          bkpProgress.detail = 'Arrêté par l\'utilisateur';
+          stopBackupPoll();
+          runningBkp.value = false;
+          await loadBackupConfig();
+        }
+      } catch(e) { console.error('Stop failed:', e); }
+    }
+
+    async function saveBackupConfig() {
+      savingBkp.value = true;
+      try {
+        const res = await fetch(API + '/backup-config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...bkp }),
+        });
+        const data = await res.json();
+        if (data.ok) { saveMsg.value = t('set_backup_saved'); saveErr.value = false; }
+        else { saveMsg.value = data.error || 'Error'; saveErr.value = true; }
+      } catch(e) { saveMsg.value = e.message; saveErr.value = true; }
+      savingBkp.value = false;
+    }
+
+    async function runBackup() {
+      runningBkp.value = true;
+      Object.assign(bkpProgress, { state: 'running', percent: 0, step: 'init', detail: 'Démarrage...', startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      try {
+        // Save config first
+        await fetch(API + '/backup-config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...bkp }),
+        });
+        const res = await fetch(API + '/backup-run', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          saveMsg.value = '';
+          saveErr.value = false;
+          // Start polling for live progress
+          startBackupPoll();
+          return;
+        } else {
+          saveMsg.value = data.error || 'Error'; saveErr.value = true;
+          Object.assign(bkpProgress, { state: 'idle', percent: 0 });
+        }
+      } catch(e) {
+        saveMsg.value = e.message; saveErr.value = true;
+        Object.assign(bkpProgress, { state: 'idle', percent: 0 });
+      }
+      runningBkp.value = false;
+    }
 
     function modelLabel(m) {
       if (m === 'BirdNET_GLOBAL_6K_V2.4_Model_FP16') return 'BirdNET V2.4';
@@ -418,6 +897,7 @@ const app = createApp({
       }
       loading.value = false;
       loadServices();
+      loadBackupConfig();
     }
 
     async function loadServices() {
@@ -663,6 +1143,21 @@ const app = createApp({
             Format : un nom scientifique par ligne (<code>Pica pica</code>, <code>Turdus merula</code>…).`,
           rec: 'Utilisez l\'exclusion pour éliminer les faux positifs récurrents (ex : <code>Homo sapiens</code>).'
         },
+        backup: {
+          title: 'Sauvegarde',
+          body: `Configurez la sauvegarde automatique de votre station BirdNET, inspirée des meilleures pratiques de Duplicati.<br><br>
+            <strong>Destinations supportées :</strong><br>
+            <strong>Disque USB / Local</strong> — Sauvegarde vers un disque externe ou un répertoire local.<br>
+            <strong>SMB/CIFS</strong> — Partage réseau Windows/Samba (NAS Synology, QNAP…).<br>
+            <strong>NFS</strong> — Montage réseau Unix/Linux.<br>
+            <strong>SFTP</strong> — Transfert sécurisé via SSH vers un serveur distant.<br>
+            <strong>Amazon S3</strong> — Stockage cloud AWS (nécessite <code>aws-cli</code>).<br>
+            <strong>Google Drive</strong> — Stockage cloud Google (nécessite <code>rclone</code>).<br>
+            <strong>WebDAV</strong> — Nextcloud, ownCloud, ou tout serveur WebDAV.<br><br>
+            <strong>Contenu :</strong> Choisissez de sauvegarder la base de données (détections), les fichiers audio, la configuration, ou tout.<br><br>
+            <strong>Planification :</strong> Manuel, quotidien ou hebdomadaire. La rétention supprime automatiquement les anciennes sauvegardes.`,
+          rec: 'Recommandé : sauvegarde quotidienne de la <strong>base de données + configuration</strong>. Les fichiers audio sont volumineux, ne les inclure que si l\'espace le permet.'
+        },
       },
       en: {
         model: {
@@ -774,6 +1269,21 @@ const app = createApp({
           body: '<strong>Include list</strong>: only listed species detected. <strong>Exclude list</strong>: listed species never detected. One scientific name per line.',
           rec: 'Use exclude to eliminate recurring false positives.'
         },
+        backup: {
+          title: 'Backup',
+          body: `Configure automatic backup of your BirdNET station, inspired by Duplicati best practices.<br><br>
+            <strong>Supported destinations:</strong><br>
+            <strong>USB Disk / Local</strong> — Backup to an external drive or local directory.<br>
+            <strong>SMB/CIFS</strong> — Windows/Samba network share (Synology, QNAP NAS…).<br>
+            <strong>NFS</strong> — Unix/Linux network mount.<br>
+            <strong>SFTP</strong> — Secure transfer via SSH to a remote server.<br>
+            <strong>Amazon S3</strong> — AWS cloud storage (requires <code>aws-cli</code>).<br>
+            <strong>Google Drive</strong> — Google cloud storage (requires <code>rclone</code>).<br>
+            <strong>WebDAV</strong> — Nextcloud, ownCloud, or any WebDAV server.<br><br>
+            <strong>Content:</strong> Choose to back up the database (detections), audio files, configuration, or everything.<br><br>
+            <strong>Schedule:</strong> Manual, daily or weekly. Retention automatically removes old backups.`,
+          rec: 'Recommended: daily backup of <strong>database + configuration</strong>. Audio files are large — only include if space allows.'
+        },
       },
       de: {
         model: { title:'Erkennungsmodell', body:'Das KI-Modell zur Vogelartenerkennung.<br><br><strong>BirdNET V2.4</strong> — Referenzmodell, 6.500 Arten, optimiert für Pi. Schnell.<br><strong>Perch V2</strong> — Google-Modell, 10.340 Vogelarten. Genauer aber langsamer (~1,6× Echtzeit auf Pi 4).', rec:'Empfohlen: <strong>BirdNET V2.4</strong> auf Pi 4.' },
@@ -797,6 +1307,7 @@ const app = createApp({
         latitude: { title:'Breitengrad', body:'GPS-Breitengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
         longitude: { title:'Längengrad', body:'GPS-Längengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
         species_lists: { title:'Artenlisten', body:'<strong>Einschlussliste</strong>: nur gelistete Arten. <strong>Ausschlussliste</strong>: gelistete Arten ignoriert. Ein wissenschaftlicher Name pro Zeile.', rec:'Ausschluss für wiederkehrende Fehlalarme nutzen.' },
+        backup: { title:'Sicherung', body:'Automatische Sicherung Ihrer BirdNET-Station.<br><br><strong>Ziele:</strong> USB/Lokal, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV.<br><strong>Inhalt:</strong> Datenbank, Audiodateien, Konfiguration oder alles.<br><strong>Zeitplan:</strong> Manuell, täglich oder wöchentlich.', rec:'Empfohlen: tägliche Sicherung von <strong>Datenbank + Konfiguration</strong>.' },
       },
       nl: {
         model: { title:'Detectiemodel', body:'Het AI-model voor vogelsoortherkenning.<br><br><strong>BirdNET V2.4</strong> — Referentiemodel, 6.500 soorten, geoptimaliseerd voor Pi. Snel.<br><strong>Perch V2</strong> — Google-model, 10.340 vogelsoorten. Nauwkeuriger maar trager (~1,6× realtime op Pi 4).', rec:'Aanbevolen: <strong>BirdNET V2.4</strong> op Pi 4.' },
@@ -820,6 +1331,7 @@ const app = createApp({
         latitude: { title:'Breedtegraad', body:'GPS-breedtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
         longitude: { title:'Lengtegraad', body:'GPS-lengtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
         species_lists: { title:'Soortenlijsten', body:'<strong>Inclusielijst</strong>: alleen vermelde soorten. <strong>Exclusielijst</strong>: vermelde soorten genegeerd.', rec:'Exclusie gebruiken voor terugkerende valse positieven.' },
+        backup: { title:'Back-up', body:'Automatische back-up van uw BirdNET-station.<br><br><strong>Bestemmingen:</strong> USB/Lokaal, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV.<br><strong>Inhoud:</strong> Database, audiobestanden, configuratie of alles.<br><strong>Planning:</strong> Handmatig, dagelijks of wekelijks.', rec:'Aanbevolen: dagelijkse back-up van <strong>database + configuratie</strong>.' },
       },
     };
 
@@ -847,6 +1359,10 @@ const app = createApp({
       modelLabel, modelDescription,
       reload, save, restartService, saveSpeciesLists,
       helpKey, helpTitle, helpBody,
+      bkp, backupDests, savingBkp, runningBkp, bkpProgress,
+      toggleBackupContent, saveBackupConfig, runBackup,
+      bkpStepLabel, bkpElapsed, pollBackupProgress,
+      pauseBackup, stopBackup, fmtSize,
     };
   }
 });
