@@ -79,6 +79,29 @@
       </div>
     </div>
 
+    <!-- Répartition taxonomique — donut -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <div class="card">
+        <div class="card-title">{{t('bio_taxonomy_orders')}}</div>
+        <div class="chart-wrap"><canvas ref="canvasTaxOrders"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">{{t('bio_taxonomy_families')}}</div>
+        <div v-if="taxFamilies.length" style="max-height:300px;overflow-y:auto;">
+          <div v-for="f in taxFamilies" :key="f.sci"
+               style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border);cursor:pointer;"
+               @click="navigateTo('detections.html',{family:f.sci})">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.8rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{f.com}}</div>
+              <div style="font-size:.68rem;color:var(--text-faint);">{{f.sci}} · {{f.order}}</div>
+            </div>
+            <div style="font-size:.75rem;color:var(--accent);font-weight:600;min-width:28px;text-align:right;">{{f.count}}</div>
+          </div>
+        </div>
+        <div v-else class="spinner"><div></div><div></div><div></div></div>
+      </div>
+    </div>
+
   </birdash-shell>
 </div>
 
@@ -93,9 +116,12 @@ const app = createApp({
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('biodiversity');
     const { mountChart: mountRichness } = useChart();
+    const { mountChart: mountTaxChart } = useChart();
     const { spName } = useSpeciesNames();
 
     const canvasRichness = ref(null);
+    const canvasTaxOrders = ref(null);
+    const taxFamilies = ref([]);
     const CONF = BIRD_CONFIG.defaultConfidence;
 
     // Période filtre
@@ -240,12 +266,54 @@ const app = createApp({
     // Heatmap et matrice : retraduits si lang change
     watch(lang, () => { loadHeatmap(); loadMonthly(); loadMatrix(); });
 
-    onMounted(() => loadAll());
+    // ── Taxonomy donut chart ────────────────────────────────────────────
+    async function loadTaxonomy() {
+      const tax = await BIRDASH_UTILS.loadTaxonomy();
+      if (!tax.orders || !Object.keys(tax.orders).length) return;
+
+      // Build families list
+      const famMap = {};
+      for (const s of tax.species) {
+        if (!s.familySci) continue;
+        if (!famMap[s.familySci]) famMap[s.familySci] = { sci: s.familySci, com: s.familyCom, order: s.order, count: 0 };
+        famMap[s.familySci].count++;
+      }
+      taxFamilies.value = Object.values(famMap).sort((a, b) => b.count - a.count);
+
+      // Render donut chart
+      await nextTick();
+      if (!canvasTaxOrders.value) return;
+      const orders = Object.entries(tax.orders).sort((a, b) => b[1] - a[1]);
+      const palette = ['#5a9e3a','#c8a84b','#4a90d9','#d96b4a','#9b59b6','#1abc9c','#e67e22','#e74c3c',
+                        '#3498db','#2ecc71','#f39c12','#8e44ad','#16a085','#d35400','#c0392b','#2980b9','#27ae60'];
+      const base = chartDefaults();
+      mountTaxChart(canvasTaxOrders, () => ({
+        type: 'doughnut',
+        data: {
+          labels: orders.map(([o]) => o),
+          datasets: [{
+            data: orders.map(([, n]) => n),
+            backgroundColor: orders.map((_, i) => palette[i % palette.length]),
+            borderWidth: 1,
+            borderColor: 'var(--bg-card)',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: true,
+          plugins: {
+            legend: { position: 'right', labels: { color: base.scales?.y?.ticks?.color || '#aaa', font: { size: 10 }, boxWidth: 12, padding: 6 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} ${t('species')}` } },
+          },
+        }
+      }));
+    }
+
+    onMounted(() => { loadAll(); loadTaxonomy(); });
 
     return {
       lang, t,
       heatmap, monthly, matrix,
-      canvasRichness,
+      canvasRichness, canvasTaxOrders, taxFamilies,
       fDateFrom, fDateTo, activePeriod, quickDates, setPeriod,
       chartColor, navigateTo, spName,
     };

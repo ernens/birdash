@@ -50,6 +50,18 @@
             <div class="range-labels"><span>50%</span><span>95%</span></div>
           </div>
         </div>
+        <div v-if="taxonomyOrders.length" class="ctrl-section">
+          <span class="ctrl-label">{{t('filter_order')}}</span>
+          <select class="ctrl-select" v-model="fOrder" @change="onTaxChange" style="width:100%;font-size:.78rem;">
+            <option value="">{{t('all_orders')}}</option>
+            <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
+          </select>
+          <span class="ctrl-label" style="margin-top:.4rem;">{{t('filter_family')}}</span>
+          <select class="ctrl-select" v-model="fFamily" @change="onTaxChange" style="width:100%;font-size:.78rem;">
+            <option value="">{{t('all_families')}}</option>
+            <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
+          </select>
+        </div>
         <button class="btn-apply" @click="applyFilters">{{t('apply_filter')}}</button>
       </aside>
 
@@ -226,6 +238,34 @@ const app = createApp({
     const selectedSpecies = ref([]);
     const mainSpecies     = ref(null);
     const spSearch        = ref('');
+
+    // Taxonomy filters
+    const fOrder  = ref('');
+    const fFamily = ref('');
+    const taxonomyData = ref([]);
+    const taxonomyOrders = computed(() => {
+      const set = new Set(taxonomyData.value.map(s => s.order).filter(Boolean));
+      return [...set].sort();
+    });
+    const taxonomyAllFamilies = computed(() => {
+      const map = {};
+      for (const s of taxonomyData.value) {
+        if (s.familySci && !map[s.familySci] && (!fOrder.value || s.order === fOrder.value))
+          map[s.familySci] = { sci: s.familySci, com: s.familyCom };
+      }
+      return Object.values(map).sort((a, b) => a.com.localeCompare(b.com));
+    });
+    function onTaxChange() {
+      if (fOrder.value === '') fFamily.value = '';
+      // Auto-select species matching the taxonomy filter
+      if (fOrder.value || fFamily.value) {
+        const matching = taxonomyData.value
+          .filter(s => (!fOrder.value || s.order === fOrder.value) && (!fFamily.value || s.familySci === fFamily.value))
+          .map(s => s.comName);
+        const available = speciesList.value.filter(s => matching.includes(s.name)).map(s => s.name);
+        selectedSpecies.value = available;
+      }
+    }
     const pickerOpen      = ref(false);
     const topN            = ref(10);
     const loading         = ref(false);
@@ -720,6 +760,9 @@ const app = createApp({
     function onResize() { if (_chartPolar) _chartPolar.resize(); }
 
     onMounted(async function() {
+      // Load taxonomy
+      const tax = await BIRDASH_UTILS.loadTaxonomy();
+      taxonomyData.value = tax.species || [];
       try {
         var r=(await birdQuery('SELECT MIN(Date) as f, MAX(Date) as l FROM detections'))[0];
         if (r) { fromDate.value=r.f; toDate.value=r.l; quickActive.value=0; }
@@ -744,6 +787,7 @@ const app = createApp({
     return {
       lang,t,spName,sciFor,
       fromDate,toDate,resample,confSlider,quickActive,
+      fOrder,fFamily,taxonomyOrders,taxonomyAllFamilies,onTaxChange,
       speciesList,selectedSpecies,mainSpecies,spSearch,pickerOpen,topN,
       loading,kpis,narrativeHtml,narrativeLoading,heatmapHtml,heatmapLoading,
       thumbUrl,elPolar,elSeries,

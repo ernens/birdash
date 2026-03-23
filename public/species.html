@@ -72,8 +72,13 @@
 
           <!-- Taxonomy + Conservation -->
           <div class="sp-meta-badges">
-            <span v-if="speciesInfo.order" class="sp-taxo-badge">{{speciesInfo.order}}</span>
-            <span v-if="speciesInfo.family" class="sp-taxo-badge">{{speciesInfo.family}}</span>
+            <span v-if="speciesInfo.order" class="sp-taxo-badge" style="cursor:pointer;"
+                  @click="navigateTo('detections.html',{order:speciesInfo.order})">{{speciesInfo.order}}</span>
+            <span v-if="speciesInfo.family" class="sp-taxo-badge" style="cursor:pointer;"
+                  @click="navigateTo('detections.html',{family:speciesInfo.family})">
+              {{speciesInfo.familyCom || speciesInfo.family}}
+              <span v-if="speciesInfo.familyCom" style="font-size:.68rem;opacity:.7;"> ({{speciesInfo.family}})</span>
+            </span>
             <span v-if="speciesInfo.size" class="sp-taxo-badge">📏 {{speciesInfo.size}}</span>
             <span v-if="speciesInfo.wingspan" class="sp-taxo-badge">🦅 {{speciesInfo.wingspan}}</span>
             <span v-if="conservation" class="sp-conservation" :class="'cons-'+conservationClass">
@@ -417,6 +422,14 @@ const app = createApp({
         document.title = `BIRDASH — ${speciesName}`;
         mode.value = 'detail';
 
+        // Pre-populate taxonomy from cached eBird data (instant)
+        const tax = BIRDASH_UTILS.getTaxonomy(stats.sci || speciesName);
+        if (tax) {
+          if (tax.order) speciesInfo.order = tax.order;
+          if (tax.familySci) speciesInfo.family = tax.familySci;
+          if (tax.familyCom) speciesInfo.familyCom = tax.familyCom;
+        }
+
         // Load all data in parallel
         await Promise.all([
           loadSpeciesInfo(stats.sci || speciesName),
@@ -676,6 +689,8 @@ const app = createApp({
     watch(lang, () => { if (sp.value.name) loadDetail(sp.value.name); });
 
     onMounted(async () => {
+      // Pre-load taxonomy data (cached in sessionStorage)
+      BIRDASH_UTILS.loadTaxonomy();
       // Always load species list for the inline picker
       try {
         const rows = await birdQuery(`SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC`);

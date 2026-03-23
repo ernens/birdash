@@ -267,6 +267,35 @@
     return '<div class="spinner"><div></div><div></div><div></div></div>';
   }
 
+  // ── Taxonomy helper (shared across all pages) ──────────────────────────
+  let _taxonomyCache = null;
+
+  async function loadTaxonomy() {
+    if (_taxonomyCache) return _taxonomyCache;
+    // Try sessionStorage
+    try {
+      const cached = sessionStorage.getItem('birdash-taxonomy');
+      if (cached) { _taxonomyCache = JSON.parse(cached); return _taxonomyCache; }
+    } catch(e) {}
+    // Fetch from API
+    try {
+      const res = await fetch(`${config.apiUrl}/taxonomy`);
+      const data = await res.json();
+      if (data.species) {
+        _taxonomyCache = data;
+        try { sessionStorage.setItem('birdash-taxonomy', JSON.stringify(data)); } catch(e) {}
+        return data;
+      }
+    } catch(e) { console.warn('Could not load taxonomy:', e); }
+    return { species: [], orders: {}, families: {} };
+  }
+
+  // Lookup taxonomy for a scientific name
+  function getTaxonomy(sciName) {
+    if (!_taxonomyCache) return null;
+    return _taxonomyCache.species.find(s => s.sciName === sciName) || null;
+  }
+
   // ── Export ─────────────────────────────────────────────────────────────
 
   window.BIRDASH_UTILS = {
@@ -287,6 +316,8 @@
     escHtml: escHtml,
     spinnerHTML: spinnerHTML,
     shortModel: shortModel,
+    loadTaxonomy: loadTaxonomy,
+    getTaxonomy: getTaxonomy,
   };
 
 })(BIRD_CONFIG);

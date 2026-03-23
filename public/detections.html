@@ -66,11 +66,11 @@
             <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
           </select>
         </div>
-        <div v-if="fOrder && taxonomyFamilies.length">
+        <div v-if="taxonomyAllFamilies.length">
           <span class="fp-label">{{t('filter_family')}}</span>
           <select class="fp-select" v-model="fFamily">
             <option value="">{{t('all_families')}}</option>
-            <option v-for="f in taxonomyFamilies" :key="f.sci" :value="f.sci">{{f.com}} ({{f.sci}})</option>
+            <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}} ({{f.sci}})</option>
           </select>
         </div>
         <div>
@@ -237,11 +237,10 @@ const app = createApp({
       const set = new Set(taxonomyData.value.map(s => s.order).filter(Boolean));
       return [...set].sort();
     });
-    const taxonomyFamilies = computed(() => {
-      if (!fOrder.value) return [];
+    const taxonomyAllFamilies = computed(() => {
       const map = {};
       for (const s of taxonomyData.value) {
-        if (s.order === fOrder.value && s.familySci && !map[s.familySci]) {
+        if (s.familySci && !map[s.familySci] && (!fOrder.value || s.order === fOrder.value)) {
           map[s.familySci] = { sci: s.familySci, com: s.familyCom };
         }
       }
@@ -251,9 +250,9 @@ const app = createApp({
 
     // Get species names matching current order/family filter
     function taxonomyFilteredSpecies() {
-      if (!fOrder.value) return null; // no filter
+      if (!fOrder.value && !fFamily.value) return null; // no filter
       return taxonomyData.value
-        .filter(s => s.order === fOrder.value && (!fFamily.value || s.familySci === fFamily.value))
+        .filter(s => (!fOrder.value || s.order === fOrder.value) && (!fFamily.value || s.familySci === fFamily.value))
         .map(s => s.comName);
     }
 
@@ -446,18 +445,16 @@ const app = createApp({
       if (sp) fSpecies.value=[decodeURIComponent(sp)];
       if (dt) { fDateFrom.value=dt; fDateTo.value=dt; }
       await loadSpecies();
-      // Load taxonomy data
-      try {
-        const tax = await fetch(BIRD_CONFIG.apiUrl + '/taxonomy').then(r => r.json());
-        if (tax.species) taxonomyData.value = tax.species;
-      } catch(e) {}
+      // Load taxonomy data (cached in sessionStorage)
+      const tax = await BIRDASH_UTILS.loadTaxonomy();
+      taxonomyData.value = tax.species || [];
       await loadDetections();
     });
 
     return {
       lang,t,
       fSpecies,fDateFrom,fDateTo,fConf,uniqueMode,
-      fOrder,fFamily,taxonomyOrders,taxonomyFamilies,onOrderChange,
+      fOrder,fFamily,taxonomyOrders,taxonomyAllFamilies,onOrderChange,
       activeQuick,quickDates,applyQuick,speciesList,
       spSearch,spDropdownOpen,filteredSpeciesList,
       closeSpDropdown,removeSpecies,
