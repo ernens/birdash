@@ -48,6 +48,7 @@ Vue 3 (CDN) frontend with Node.js backend, multilingual (FR/EN/NL/DE + 36 langua
 - 🔄 **Model comparison** — side-by-side period comparison with species gained/lost, per-species table, nocturnal detection monitoring
 - 🏷️ **Model tracking** — each detection records which AI model identified it (displayed across all pages)
 - 🗑️ **Detection management** — delete individual detections or bulk-delete an entire species (with typed-name confirmation safety)
+- 💾 **Backup management** — multi-destination backup (USB/Local, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV) with content selection (DB, audio, config), scheduling (manual/daily/weekly), live progress bar, pause/resume/stop controls, disk space monitoring, and automatic legacy script detection
 - ⚡ Service Worker for offline caching
 - ♿ Accessibility (WCAG AA, keyboard navigation, skip-link)
 - 🎨 5 modern themes (Forest, Night, Paper, Ocean, Dusk)
@@ -185,9 +186,12 @@ birdash/
 │   ├── i18n/                  # Translation files (fr/en/nl/de)
 │   ├── img/                   # SVG assets
 │   └── sw.js                  # Service Worker (offline cache)
+├── scripts/
+│   └── backup.sh              # Backup script (rsync incremental)
 ├── config/
 │   ├── birdash.service        # systemd service
-│   └── birdash-local.example.js  # Local config template
+│   ├── birdash-local.example.js  # Local config template
+│   └── backup.json            # Backup configuration
 ├── screenshots/
 ├── CONTRIBUTING.md
 ├── LICENSE

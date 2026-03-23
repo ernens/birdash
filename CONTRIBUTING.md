@@ -77,7 +77,7 @@ birdash/
 │   ├── stats.html             # Statistics & rankings
 │   ├── analyses.html          # Advanced multi-species analysis
 │   ├── system.html            # System health (CPU, RAM, disk)
-│   ├── settings.html          # Settings (model, params, services)
+│   ├── settings.html          # Settings (model, params, services, backup)
 │   ├── js/
 │   │   ├── bird-config.js     # Central configuration
 │   │   ├── bird-shared.js     # Shared utilities (no Vue dependency)
@@ -88,9 +88,12 @@ birdash/
 │   │   └── bird-pages.css     # Page-specific styles
 │   ├── img/                   # SVG assets
 │   └── sw.js                  # Service Worker (offline cache)
+├── scripts/
+│   └── backup.sh              # Backup script (rsync incremental, multi-destination)
 ├── config/
 │   ├── birdash.service        # systemd service unit
-│   └── birdash-local.example.js
+│   ├── birdash-local.example.js
+│   └── backup.json            # Backup configuration (destination, schedule, content)
 ├── screenshots/
 ├── CONTRIBUTING.md
 ├── LICENSE
@@ -148,7 +151,8 @@ Browser                    Raspberry Pi
 | `bird-shared.js` | Pure utilities | No Vue dependency — framework-agnostic |
 | `bird-vue-core.js` | Vue composables + i18n | Contains all translations inline |
 | `bird-pages.css` | Page-specific styles | Organized by page with comments |
-| `server.js` | API routes | All routes in one file, async IIFE pattern, DELETE endpoints for detection management |
+| `server.js` | API routes | All routes in one file, async IIFE pattern, DELETE endpoints for detection management, backup management (config/run/progress/pause/stop) |
+| `backup.sh` | Backup script | rsync incremental with progress tracking via JSON status file, supports 7 destination types |
 
 ### Commits
 

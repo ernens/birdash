@@ -48,6 +48,7 @@ Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL/DE + 36 langue
 - 🔄 **Comparaison de modèles** — comparaison côte à côte par période avec espèces gagnées/perdues, tableau par espèce, monitoring nocturne
 - 🏷️ **Suivi du modèle** — chaque détection enregistre quel modèle IA l'a identifiée (affiché sur toutes les pages)
 - 🗑️ **Gestion des détections** — supprimer des détections individuelles ou en masse pour une espèce (avec confirmation par saisie du nom)
+- 💾 **Gestion des sauvegardes** — backup multi-destination (USB/Local, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV) avec sélection du contenu (DB, audio, config), planification (manuel/quotidien/hebdomadaire), barre de progression en temps réel, contrôles pause/reprise/arrêt, suivi de l'espace disque, et détection automatique des scripts legacy
 - ⚡ Service Worker pour cache offline
 - ♿ Accessibilité (WCAG AA, navigation clavier, skip-link)
 - 🎨 5 thèmes modernes (Forest, Night, Paper, Ocean, Dusk)
@@ -185,9 +186,12 @@ birdash/
 │   ├── i18n/                  # Fichiers de traduction (fr/en/nl)
 │   ├── img/                   # Assets SVG
 │   └── sw.js                  # Service Worker (cache offline)
+├── scripts/
+│   └── backup.sh              # Script de sauvegarde (rsync incrémental)
 ├── config/
 │   ├── birdash.service        # Service systemd
-│   └── birdash-local.example.js  # Template config locale
+│   ├── birdash-local.example.js  # Template config locale
+│   └── backup.json            # Configuration de sauvegarde
 ├── screenshots/
 ├── CONTRIBUTING.md
 ├── LICENSE
