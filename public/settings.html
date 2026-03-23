@@ -104,6 +104,13 @@
     .bkp-stopped { background:color-mix(in srgb,var(--warning,#c8a84b) 15%,transparent); color:var(--warning,#c8a84b); }
     .bkp-paused { background:color-mix(in srgb,var(--warning,#c8a84b) 15%,transparent); color:var(--warning,#c8a84b); }
     @keyframes bkp-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+    /* Tab navigation (same as system.html) */
+    .set-tabs{display:flex;gap:.25rem;padding:.25rem;background:var(--bg-card2);border-radius:.5rem;margin-bottom:1.25rem;overflow-x:auto;}
+    .set-tab-btn{display:flex;align-items:center;gap:.35rem;padding:.5rem .9rem;border:none;background:transparent;color:var(--text-muted);font-size:.82rem;font-family:inherit;cursor:pointer;border-radius:.4rem;transition:all .2s;white-space:nowrap;}
+    .set-tab-btn:hover{background:var(--bg-card);color:var(--text-main);}
+    .set-tab-btn.active{background:var(--bg-card);color:var(--accent);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12);}
+    .set-tab-icon{font-size:1rem;}
+    .set-tab-label{font-size:.78rem;}
   </style>
 </head>
 <body>
@@ -125,6 +132,21 @@
     </div>
 
     <template v-else>
+
+      <!-- ── Tab Navigation ──────────────────────────────────────── -->
+      <div class="set-tabs">
+        <button v-for="tab in tabs" :key="tab.id"
+                class="set-tab-btn" :class="{active: activeTab === tab.id}"
+                @click="switchTab(tab.id)">
+          <span class="set-tab-icon">{{tab.icon}}</span>
+          <span class="set-tab-label">{{t(tab.labelKey)}}</span>
+        </button>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           TAB 1: DETECTION
+           ════════════════════════════════════════════════════════════ -->
+      <div v-if="activeTab==='detection'">
 
       <!-- ═══ Model Selection ═══ -->
       <div class="card" style="margin-bottom:1.2rem;">
@@ -148,23 +170,6 @@
       </div>
 
       <div class="settings-grid">
-
-        <!-- ═══ Location ═══ -->
-        <div class="card">
-          <div class="section-title">📍 {{t('set_location')}}</div>
-          <div class="set-row">
-            <span class="set-label">{{t('set_site_name')}} <button class="info-btn" @click="helpKey='site_name'">i</button></span>
-            <input v-model="conf.SITE_NAME" class="set-input">
-          </div>
-          <div class="set-row">
-            <span class="set-label">{{t('set_latitude')}} <button class="info-btn" @click="helpKey='latitude'">i</button></span>
-            <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
-          </div>
-          <div class="set-row">
-            <span class="set-label">{{t('set_longitude')}} <button class="info-btn" @click="helpKey='longitude'">i</button></span>
-            <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
-          </div>
-        </div>
 
         <!-- ═══ Analysis ═══ -->
         <div class="card">
@@ -220,6 +225,32 @@
           </div>
         </div>
 
+      </div><!-- /settings-grid -->
+      </div><!-- /tab detection -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           TAB 2: STATION
+           ════════════════════════════════════════════════════════════ -->
+      <div v-if="activeTab==='station'">
+      <div class="settings-grid">
+
+        <!-- ═══ Location ═══ -->
+        <div class="card">
+          <div class="section-title">📍 {{t('set_location')}}</div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_site_name')}} <button class="info-btn" @click="helpKey='site_name'">i</button></span>
+            <input v-model="conf.SITE_NAME" class="set-input">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_latitude')}} <button class="info-btn" @click="helpKey='latitude'">i</button></span>
+            <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
+          </div>
+          <div class="set-row">
+            <span class="set-label">{{t('set_longitude')}} <button class="info-btn" @click="helpKey='longitude'">i</button></span>
+            <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
+          </div>
+        </div>
+
         <!-- ═══ Language & Images ═══ -->
         <div class="card">
           <div class="section-title">🌍 {{t('set_language')}}</div>
@@ -250,6 +281,15 @@
             <input v-model="conf.RTSP_STREAM" class="set-input" style="width:240px;" placeholder="rtsp://...">
           </div>
         </div>
+
+      </div><!-- /settings-grid -->
+      </div><!-- /tab station -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           TAB 3: SYSTEM
+           ════════════════════════════════════════════════════════════ -->
+      <div v-if="activeTab==='system'">
+      <div class="settings-grid">
 
         <!-- ═══ Disk Management ═══ -->
         <div class="card">
@@ -327,7 +367,7 @@
           </template>
         </div>
 
-      </div><!-- /settings-grid -->
+      </div><!-- /settings-grid (system) -->
 
       <!-- ═══ Species Lists ═══ -->
       <div class="card" style="margin-top:1.2rem;">
@@ -346,6 +386,13 @@
           {{savingLists ? '...' : t('set_save') + ' lists'}}
         </button>
       </div>
+
+      </div><!-- /tab system -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           TAB 4: BACKUP
+           ════════════════════════════════════════════════════════════ -->
+      <div v-if="activeTab==='backup'">
 
       <!-- ═══ Backup Configuration ═══ -->
       <div class="card" style="margin-top:1.2rem;">
@@ -644,6 +691,8 @@
         </div><!-- /settings-grid -->
       </div>
 
+      </div><!-- /tab backup -->
+
       <!-- ═══ Save bar ═══ -->
       <div class="save-bar">
         <button class="btn-save" @click="save(false)" :disabled="saving">
@@ -674,6 +723,20 @@ const app = createApp({
     const languages = ref([]);
     const services = ref([]);
     const loading = ref(true);
+
+    // ── Tab navigation ──────────────────────────────────────────
+    const tabs = [
+      { id: 'detection', icon: '🤖', labelKey: 'set_tab_detection' },
+      { id: 'station',   icon: '📍', labelKey: 'set_tab_station' },
+      { id: 'system',    icon: '🔧', labelKey: 'set_tab_system' },
+      { id: 'backup',    icon: '💾', labelKey: 'set_tab_backup' },
+    ];
+    const activeTab = ref(localStorage.getItem('birdash-settings-tab') || 'detection');
+
+    function switchTab(id) {
+      activeTab.value = id;
+      localStorage.setItem('birdash-settings-tab', id);
+    }
     const saving = ref(false);
     const svcLoading = ref(true);
     const saveMsg = ref('');
@@ -1354,6 +1417,7 @@ const app = createApp({
 
     return {
       t, lang, conf, models, languages, services,
+      tabs, activeTab, switchTab,
       loading, saving, svcLoading, saveMsg, saveErr,
       includeList, excludeList, savingLists,
       modelLabel, modelDescription,
