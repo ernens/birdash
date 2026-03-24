@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <title>BIRDASH — Analyses espèces</title>
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
@@ -17,15 +18,76 @@
 </head>
 <body>
 <div id="app">
-  <birdash-shell page="analyses">
+  <birdash-shell page="analyses" :title="t('nav_analyses')">
   <div @click="pickerOpen=false" style="max-width:100%;overflow-x:hidden;">
     <div class="analyses-layout">
 
       <aside class="ctrl-panel" @click.stop>
+        <!-- Taxonomy cascade filters -->
+        <div v-if="taxonomyOrders.length" class="ctrl-section">
+          <span class="ctrl-label">{{t('filter_order')}}</span>
+          <select v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')" style="width:100%;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.35rem .5rem;">
+            <option value="">{{t('all_orders')}}</option>
+            <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
+          </select>
+          <span class="ctrl-label" style="margin-top:.4rem;">{{t('filter_family')}}</span>
+          <select v-model="fFamily" @change="onFamilyChange" :aria-label="t('filter_family')" style="width:100%;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.35rem .5rem;">
+            <option value="">{{t('all_families')}}</option>
+            <option v-for="f in availableFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
+          </select>
+        </div>
+
+        <!-- Species picker -->
+        <div class="ctrl-section">
+          <span class="ctrl-label">{{t('filter_species')}}</span>
+          <div class="sp-picker" @click.stop>
+            <div class="sp-tags-bar" @click="pickerOpen=!pickerOpen">
+              <template v-if="selectedSpecies.length===0">
+                <span class="sp-placeholder">{{t('analyses_no_species')}}</span>
+              </template>
+              <template v-else>
+                <span v-for="name in selectedSpecies.slice(0,3)" :key="name" class="sp-tag">
+                  {{spName(name, sciFor(name))}}<button class="sp-tag-x" @click.stop="removeTag(name)">&#x2715;</button>
+                </span>
+                <span v-if="selectedSpecies.length>3" class="sp-tag"
+                      style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);">
+                  +{{selectedSpecies.length-3}}
+                </span>
+              </template>
+              <span class="sp-caret">{{pickerOpen?'&#x25B4;':'&#x25BE;'}}</span>
+            </div>
+            <div v-show="pickerOpen" class="sp-dropdown">
+              <div class="sp-topn-bar">
+                <button class="sp-topn-btn" @click="selectAllFiltered" style="flex:1;">{{t('select_all')}} ({{filteredSpeciesList.length}})</button>
+                <span style="margin:0 .2rem;">{{t('analyses_topn_label')||'Top'}}</span>
+                <input type="number" class="sp-topn-input" v-model.number="topN" min="1" max="100">
+                <button class="sp-topn-btn" @click="selectTopN">{{t('analyses_topn_btn')||'OK'}}</button>
+                <button class="sp-clear-btn" @click="clearSelection">{{t('analyses_clear_btn')||'Clear'}}</button>
+              </div>
+              <div class="sp-search-wrap">
+                <input ref="spSearchInput" type="text" class="sp-search" v-model="spSearch" :placeholder="t('analyses_search_ph')+' (/)' || 'Filter... (/)'">
+              </div>
+              <div class="sp-list">
+                <label v-for="sp in filteredSpeciesList" :key="sp.name"
+                       class="sp-item" :class="{checked:selectedSpecies.includes(sp.name)}">
+                  <input type="checkbox" :value="sp.name"
+                         :checked="selectedSpecies.includes(sp.name)"
+                         @change="toggleSpecies(sp.name)">
+                  {{spName(sp.name, sp.sci)}}<span class="sp-item-count">{{sp.n}}</span>
+                </label>
+              </div>
+              <div class="sp-footer">
+                <span>{{t('analyses_n_selected',{n:selectedSpecies.length})}}</span>
+                <span>{{t('analyses_n_total',{n:filteredSpeciesList.length})}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="ctrl-section">
           <span class="ctrl-label">{{t('analyses_date_range')}}</span>
-          <input type="date" v-model="fromDate">
-          <input type="date" v-model="toDate">
+          <input type="date" v-model="fromDate" :aria-label="t('filter_date_from')">
+          <input type="date" v-model="toDate" :aria-label="t('filter_date_to')">
           <div class="quick-btns" style="margin-top:.4rem;">
             <button class="quick-btn" :class="{active:quickActive===7}"   @click="setRange(7)">{{t('analyses_quick_7d')}}</button>
             <button class="quick-btn" :class="{active:quickActive===30}"  @click="setRange(30)">{{t('analyses_quick_30d')}}</button>
@@ -46,101 +108,52 @@
         <div class="ctrl-section">
           <span class="ctrl-label">{{t('analyses_conf_label')}} — <strong>{{confSlider}}%</strong></span>
           <div class="range-wrap">
-            <input type="range" v-model.number="confSlider" min="50" max="95" step="5">
+            <input type="range" v-model.number="confSlider" min="50" max="95" step="5" :aria-label="t('analyses_conf_label')">
             <div class="range-labels"><span>50%</span><span>95%</span></div>
           </div>
-        </div>
-        <div v-if="taxonomyOrders.length" class="ctrl-section">
-          <span class="ctrl-label">{{t('filter_order')}}</span>
-          <select v-model="fOrder" @change="onTaxChange" style="width:100%;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.35rem .5rem;">
-            <option value="">{{t('all_orders')}}</option>
-            <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
-          </select>
-          <span class="ctrl-label" style="margin-top:.4rem;">{{t('filter_family')}}</span>
-          <select v-model="fFamily" @change="onTaxChange" style="width:100%;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.35rem .5rem;">
-            <option value="">{{t('all_families')}}</option>
-            <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
-          </select>
         </div>
         <button class="btn-apply" @click="applyFilters">{{t('apply_filter')}}</button>
       </aside>
 
       <div class="main-content">
 
-        <div class="species-header">
+        <!-- Header: adapts to selection context -->
+        <div class="species-header" v-if="selectedSpecies.length">
           <div class="species-thumb-placeholder">
             <img v-if="thumbUrl" :src="thumbUrl" class="species-thumb" :alt="mainSpecies" @error="thumbUrl=null">
-            <span v-else style="font-size:1.6rem;">&#x1F426;</span>
+            <span v-else-if="selCtx.type==='single'" style="font-size:1.6rem;">&#x1F426;</span>
+            <span v-else style="font-size:1.4rem;background:var(--accent-dim);border-radius:50%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">&#x1F9EC;</span>
           </div>
           <div style="flex:1;min-width:0;">
-            <span class="species-select-label">{{speciesLabel}}</span>
-            <div class="sp-picker" @click.stop>
-              <div class="sp-tags-bar" @click="pickerOpen=!pickerOpen">
-                <template v-if="selectedSpecies.length===0">
-                  <span class="sp-placeholder">{{t('analyses_no_species')}}</span>
-                </template>
-                <template v-else>
-                  <span v-for="name in selectedSpecies.slice(0,3)" :key="name" class="sp-tag">
-                    {{spName(name, sciFor(name))}}<button class="sp-tag-x" @click.stop="removeTag(name)">&#x2715;</button>
-                  </span>
-                  <span v-if="selectedSpecies.length>3" class="sp-tag"
-                        style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);">
-                    +{{selectedSpecies.length-3}}
-                  </span>
-                </template>
-                <span class="sp-caret">{{pickerOpen?'&#x25B4;':'&#x25BE;'}}</span>
-              </div>
-              <div v-show="pickerOpen" class="sp-dropdown">
-                <div class="sp-topn-bar">
-                  <span>{{t('analyses_topn_label')||'Top'}}</span>
-                  <input type="number" class="sp-topn-input" v-model.number="topN" min="1" max="100">
-                  <span>{{t('analyses_topn_unit')||'esp.'}}</span>
-                  <button class="sp-topn-btn" @click="selectTopN">{{t('analyses_topn_btn')||'Select'}}</button>
-                  <button class="sp-clear-btn" @click="clearSelection">{{t('analyses_clear_btn')||'Clear'}}</button>
-                </div>
-                <div class="sp-search-wrap">
-                  <input type="text" class="sp-search" v-model="spSearch" :placeholder="t('analyses_search_ph')||'Filter...'">
-                </div>
-                <div class="sp-list">
-                  <label v-for="sp in filteredSpeciesList" :key="sp.name"
-                         class="sp-item" :class="{checked:selectedSpecies.includes(sp.name)}">
-                    <input type="checkbox" :value="sp.name"
-                           :checked="selectedSpecies.includes(sp.name)"
-                           @change="toggleSpecies(sp.name)">
-                    {{spName(sp.name, sp.sci)}}<span class="sp-item-count">{{sp.n}}</span>
-                  </label>
-                </div>
-                <div class="sp-footer">
-                  <span>{{t('analyses_n_selected',{n:selectedSpecies.length})}}</span>
-                  <span>{{t('analyses_n_total',{n:speciesList.length})}}</span>
-                </div>
-              </div>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <span class="species-select-label" style="font-size:1.05rem;">{{headerTitle}}</span>
+              <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;">⬇ CSV</button>
             </div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem;">{{speciesLabel}}</div>
           </div>
         </div>
 
-        <div class="sp-kpis">
+        <!-- KPIs -->
+        <div v-if="kpis.length" class="sp-kpis">
           <div v-for="k in kpis" :key="k.label" class="sp-kpi">
             <div class="sp-kpi-val" :class="k.cls">{{k.val}}</div>
             <div class="sp-kpi-label">{{k.label}}</div>
           </div>
         </div>
 
-        <div v-show="mainSpecies" class="chart-card">
+        <!-- Polar chart -->
+        <div v-show="selectedSpecies.length" class="chart-card">
           <div class="chart-card-title">{{polarTitle}}</div>
           <div class="polar-inner">
-            <!-- Graphe pleine largeur -->
             <div class="polar-wrap" ref="elPolar"></div>
-
-            <!-- Panel détail heure (visible après clic) -->
-            <div v-if="polarDetail.visible" class="polar-detail">
+            <!-- Hour detail panel (single species only) -->
+            <div v-if="polarDetail.visible && selCtx.type==='single'" class="polar-detail">
               <div class="pd-header">
                 <span class="pd-hour">{{polarDetail.hour}}h</span>
                 <span class="pd-count">{{polarDetail.count.toLocaleString()}} {{t('detections').toLowerCase()}}</span>
                 <span class="pd-pct">{{polarDetail.pct}}% {{t('analyses_pct_of_day')}}</span>
                 <button class="pd-close" @click="polarDetail.visible=false">✕</button>
               </div>
-              <!-- Distribution par quart d'heure -->
               <div class="pd-quarters">
                 <div class="pd-q-label">{{t('analyses_quarter_distrib')}}</div>
                 <div v-for="q in polarDetail.quarters" :key="q.m" class="pd-bar-row">
@@ -152,7 +165,6 @@
                   <span class="pd-bar-val">{{q.n}}</span>
                 </div>
               </div>
-              <!-- Top détections de l'heure -->
               <div class="pd-detections">
                 <div class="pd-det-label">{{t('analyses_best_dets')}}</div>
                 <div v-if="polarDetail.loadingDets" class="spinner" style="padding:.5rem;"><div></div><div></div><div></div></div>
@@ -169,8 +181,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Narratif -->
             <div class="activity-narrative">
               <div v-if="narrativeLoading" class="spinner"><div></div><div></div><div></div></div>
               <div v-else v-html="narrativeHtml"></div>
@@ -178,22 +188,63 @@
           </div>
         </div>
 
+        <!-- Series chart -->
         <div v-show="selectedSpecies.length" class="chart-card">
           <div class="chart-card-title">{{seriesTitle}}</div>
           <div style="position:relative;height:320px;"><canvas ref="elSeries"></canvas></div>
         </div>
 
-        <div v-if="!mainSpecies&&!loading" style="padding:3rem;text-align:center;color:var(--text-faint);font-size:.9rem;">
-          &#x1F50D; {{t('analyses_select_prompt')}}
+        <!-- Species breakdown table (multi-species) -->
+        <div v-if="breakdown.length>1" class="chart-card">
+          <div class="chart-card-title">{{t('grp_breakdown_title')}}</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:.72rem;text-transform:uppercase;">
+                  <th style="text-align:left;padding:.4rem .5rem;">#</th>
+                  <th style="text-align:left;padding:.4rem .5rem;">{{t('grp_breakdown_species')}}</th>
+                  <th style="text-align:left;padding:.4rem .5rem;">{{t('filter_family')}}</th>
+                  <th style="text-align:right;padding:.4rem .5rem;">{{t('grp_breakdown_count')}}</th>
+                  <th style="text-align:right;padding:.4rem .5rem;">{{t('grp_breakdown_pct')}}</th>
+                  <th style="text-align:right;padding:.4rem .5rem;">{{t('grp_breakdown_conf')}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(sp,i) in breakdown" :key="sp.name" style="border-bottom:1px solid var(--border-faint);">
+                  <td style="padding:.35rem .5rem;color:var(--text-faint);">{{i+1}}</td>
+                  <td style="padding:.35rem .5rem;">{{spName(sp.name, sp.sci)}}</td>
+                  <td style="padding:.35rem .5rem;font-size:.72rem;color:var(--text-muted);">{{sp.familyCom}}</td>
+                  <td style="text-align:right;padding:.35rem .5rem;font-variant-numeric:tabular-nums;">{{sp.count.toLocaleString()}}</td>
+                  <td style="text-align:right;padding:.35rem .5rem;">
+                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:.3rem;">
+                      <div style="width:50px;height:6px;background:var(--bg-deep);border-radius:3px;overflow:hidden;">
+                        <div :style="{width:sp.pct+'%',height:'100%',background:'var(--accent)',borderRadius:'3px'}"></div>
+                      </div>
+                      <span style="font-size:.72rem;min-width:2.5rem;text-align:right;">{{sp.pct}}%</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right;padding:.35rem .5rem;">
+                    <span class="conf-badge" :class="sp.conf>=80?'conf-high':sp.conf>=60?'conf-mid':'conf-low'"
+                          style="font-size:.72rem;">{{sp.conf}}%</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Heatmap journalière -->
-        <div v-show="mainSpecies" class="chart-card">
+        <!-- Heatmap -->
+        <div v-show="selectedSpecies.length" class="chart-card">
           <div class="chart-card-title">{{heatmapTitle}}</div>
           <div class="daily-heatmap-wrap" style="overflow-x:auto;">
             <div v-if="heatmapLoading" class="spinner"><div></div><div></div><div></div></div>
             <div v-else v-html="heatmapHtml"></div>
           </div>
+        </div>
+
+        <!-- Empty state -->
+        <div v-if="!selectedSpecies.length&&!loading" style="padding:3rem;text-align:center;color:var(--text-faint);font-size:.9rem;">
+          &#x1F50D; {{t('analyses_select_prompt')}}
         </div>
 
       </div>
@@ -219,58 +270,26 @@ const app = createApp({
     const { playingFile, toggleAudio }= useAudio();
     const { spName, spNamesReady }   = useSpeciesNames();
 
-    // Stocke les données pour le panel détail heure (clic sur secteur)
-    const polarDetail = ref({
-      visible: false, hour: 0, count: 0, pct: 0,
-      quarters: [], qMax: 0, topDets: [], loadingDets: false,
-    });
-    // Cache des données brutes pour loadHourDetail
-    let _byHourCache = null;
-    let _totalDetCache = 0;
-
+    // ── State ──────────────────────────────────────────────────────────────
     const fromDate    = ref(daysAgo(364));
     const toDate      = ref(localDateStr());
     const resample    = ref('15min');
     const confSlider  = ref(70);
     const quickActive = ref(365);
 
-    const speciesList     = ref([]);
-    const selectedSpecies = ref([]);
-    const mainSpecies     = ref(null);
-    const spSearch        = ref('');
-
-    // Taxonomy filters
     const fOrder  = ref('');
     const fFamily = ref('');
-    const taxonomyData = ref([]);
-    const taxonomyOrders = computed(() => {
-      const set = new Set(taxonomyData.value.map(s => s.order).filter(Boolean));
-      return [...set].sort();
-    });
-    const taxonomyAllFamilies = computed(() => {
-      const map = {};
-      for (const s of taxonomyData.value) {
-        if (s.familySci && !map[s.familySci] && (!fOrder.value || s.order === fOrder.value))
-          map[s.familySci] = { sci: s.familySci, com: s.familyCom };
-      }
-      return Object.values(map).sort((a, b) => a.com.localeCompare(b.com));
-    });
-    function onTaxChange() {
-      if (fOrder.value === '') fFamily.value = '';
-      // Auto-select species matching the taxonomy filter
-      if (fOrder.value || fFamily.value) {
-        const matching = taxonomyData.value
-          .filter(s => (!fOrder.value || s.order === fOrder.value) && (!fFamily.value || s.familySci === fFamily.value))
-          .map(s => s.comName);
-        const available = speciesList.value.filter(s => matching.includes(s.name)).map(s => s.name);
-        selectedSpecies.value = available;
-      }
-    }
+
+    const speciesList     = ref([]);   // all species for the period
+    const selectedSpecies = ref([]);
+    const mainSpecies     = computed(() => selectedSpecies.value[0] || null);
+    const spSearch        = ref('');
     const pickerOpen      = ref(false);
     const topN            = ref(10);
     const loading         = ref(false);
 
     const kpis            = ref([]);
+    const breakdown       = ref([]);
     const narrativeHtml   = ref('');
     const narrativeLoading= ref(false);
     const heatmapHtml     = ref('');
@@ -280,51 +299,144 @@ const app = createApp({
     const elPolar  = ref(null);
     const elSeries = ref(null);
 
-    const speciesLabel = computed(() =>
-      t('analyses_period', { from: fmtDate(fromDate.value), to: fmtDate(toDate.value) })
-    );
-    const mainSpeciesDisplay = computed(() => {
-      if (!mainSpecies.value) return '';
-      return spName(mainSpecies.value, sciFor(mainSpecies.value));
+    const polarDetail = ref({
+      visible: false, hour: 0, count: 0, pct: 0,
+      quarters: [], qMax: 0, topDets: [], loadingDets: false,
     });
-    const polarTitle = computed(() => {
-      if (!mainSpecies.value) return '';
-      return selectedSpecies.value.length > 1
-        ? t('analyses_multi_polar', { species: mainSpeciesDisplay.value })
-        : t('analyses_polar_title', { species: mainSpeciesDisplay.value });
+    let _byHourCache = null;
+    let _totalDetCache = 0;
+
+    // ── Taxonomy data ──────────────────────────────────────────────────────
+    const taxonomyData = ref([]);
+    const taxonomyOrders = computed(() => {
+      const set = new Set(taxonomyData.value.map(s => s.order).filter(Boolean));
+      return [...set].sort();
     });
-    const seriesTitle = computed(() => {
-      if (!mainSpecies.value) return '';
-      return selectedSpecies.value.length > 1
-        ? t('analyses_multi_series', { n: selectedSpecies.value.length })
-        : t('analyses_series_title', { species: mainSpeciesDisplay.value });
+    const availableFamilies = computed(() => {
+      const map = {};
+      for (const s of taxonomyData.value) {
+        if (s.familySci && !map[s.familySci] && (!fOrder.value || s.order === fOrder.value))
+          map[s.familySci] = { sci: s.familySci, com: s.familyCom };
+      }
+      return Object.values(map).sort((a, b) => a.com.localeCompare(b.com));
     });
-    const heatmapTitle = computed(() =>
-      mainSpecies.value ? t('analyses_heatmap_title', { species: mainSpeciesDisplay.value }) : ''
-    );
+
+    // Set of comNames allowed by current taxonomy filters
+    const taxonomyAllowed = computed(() => {
+      if (!fOrder.value && !fFamily.value) return null; // no filter
+      const set = new Set();
+      for (const s of taxonomyData.value) {
+        if (fOrder.value && s.order !== fOrder.value) continue;
+        if (fFamily.value && s.familySci !== fFamily.value) continue;
+        set.add(s.comName);
+      }
+      return set;
+    });
+
     const filteredSpeciesList = computed(() => {
+      let list = speciesList.value;
+      // Apply taxonomy filter
+      const allowed = taxonomyAllowed.value;
+      if (allowed) list = list.filter(s => allowed.has(s.name));
+      // Apply text search
       const q = spSearch.value.toLowerCase();
-      return q ? speciesList.value.filter(s =>
+      if (q) list = list.filter(s =>
         s.name.toLowerCase().includes(q) ||
         spName(s.name, s.sci).toLowerCase().includes(q) ||
         (s.sci && s.sci.toLowerCase().includes(q))
-      ) : speciesList.value;
+      );
+      return list;
     });
 
+    // ── Selection context (for smart header) ───────────────────────────────
+    const selCtx = computed(() => {
+      const sel = selectedSpecies.value;
+      if (sel.length === 0) return { type: 'none' };
+      if (sel.length === 1) return { type: 'single', name: sel[0] };
+      const families = new Set(), orders = new Set();
+      for (const name of sel) {
+        const tax = taxonomyData.value.find(t => t.comName === name);
+        if (tax) { families.add(tax.familySci); orders.add(tax.order); }
+      }
+      if (families.size === 1) {
+        const fam = taxonomyData.value.find(t => t.familySci === [...families][0]);
+        return { type: 'family', sci: [...families][0], name: fam ? fam.familyCom : [...families][0], count: sel.length };
+      }
+      if (orders.size === 1) return { type: 'order', name: [...orders][0], count: sel.length };
+      return { type: 'mixed', count: sel.length };
+    });
+
+    const headerTitle = computed(() => {
+      const ctx = selCtx.value;
+      if (ctx.type === 'single') return spName(ctx.name, sciFor(ctx.name));
+      if (ctx.type === 'family') return t('grp_title_family', { name: ctx.name }) + ' · ' + ctx.count + ' ' + t('species').toLowerCase();
+      if (ctx.type === 'order') return t('grp_title_order', { name: ctx.name }) + ' · ' + ctx.count + ' ' + t('species').toLowerCase();
+      if (ctx.type === 'mixed') return ctx.count + ' ' + t('species').toLowerCase();
+      return '';
+    });
+
+    const speciesLabel = computed(() =>
+      t('analyses_period', { from: fmtDate(fromDate.value), to: fmtDate(toDate.value) })
+    );
+    const polarTitle = computed(() => {
+      const ctx = selCtx.value;
+      if (ctx.type === 'none') return '';
+      if (ctx.type === 'single') return t('analyses_polar_title', { species: spName(ctx.name, sciFor(ctx.name)) });
+      if (ctx.type === 'family') return t('grp_polar_title', { name: ctx.name });
+      if (ctx.type === 'order') return t('grp_polar_title', { name: ctx.name });
+      return t('analyses_multi_polar', { species: spName(mainSpecies.value, sciFor(mainSpecies.value)) });
+    });
+    const seriesTitle = computed(() => {
+      const ctx = selCtx.value;
+      if (ctx.type === 'none') return '';
+      if (ctx.type === 'single') return t('analyses_series_title', { species: spName(ctx.name, sciFor(ctx.name)) });
+      if (ctx.type === 'family') return t('grp_series_title', { name: ctx.name });
+      if (ctx.type === 'order') return t('grp_series_title', { name: ctx.name });
+      return t('analyses_multi_series', { n: selectedSpecies.value.length });
+    });
+    const heatmapTitle = computed(() => {
+      const ctx = selCtx.value;
+      if (ctx.type === 'none') return '';
+      if (ctx.type === 'single') return t('analyses_heatmap_title', { species: spName(ctx.name, sciFor(ctx.name)) });
+      if (ctx.type === 'family') return t('grp_heatmap_title', { name: ctx.name });
+      if (ctx.type === 'order') return t('grp_heatmap_title', { name: ctx.name });
+      return t('analyses_heatmap_title', { species: selectedSpecies.value.length + ' ' + t('species').toLowerCase() });
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
     function sciFor(comName) {
       const sp = speciesList.value.find(s => s.name === comName);
       return sp ? sp.sci : '';
     }
-
     function resampleExpr(r) {
       switch (r) {
         case 'raw':    return 'COUNT(*) as n';
         case 'hourly': return "COUNT(DISTINCT Date || SUBSTR(Time,1,2)) as n";
         case 'daily':  return "COUNT(DISTINCT Date) as n";
-        default:
-          return "COUNT(DISTINCT Date || SUBSTR(Time,1,2) || CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)) as n";
+        default:       return "COUNT(DISTINCT Date || SUBSTR(Time,1,2) || CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)) as n";
       }
     }
+    function selectedSciNames() {
+      return selectedSpecies.value.map(name => {
+        const sp = speciesList.value.find(s => s.name === name);
+        return sp ? sp.sci : name;
+      }).filter(Boolean);
+    }
+    function sqlInClause(arr) {
+      return arr.map(() => '?').join(',');
+    }
+    function zeroPad(n) { return n < 10 ? '0' + n : '' + n; }
+    function fmtTimeFull(t) { return t ? t.substring(0, 5) : '—'; }
+    function toggleAudioFile(fileName) {
+      const url = buildAudioUrl(fileName);
+      if (url) toggleAudio(fileName);
+    }
+
+    // ── Filter actions ─────────────────────────────────────────────────────
+    function onOrderChange() {
+      fFamily.value = '';
+    }
+    function onFamilyChange() {}
 
     function setRange(days) {
       quickActive.value = days;
@@ -339,30 +451,32 @@ const app = createApp({
       } catch(e) {}
     }
 
+    // ── Species selection ──────────────────────────────────────────────────
     function toggleSpecies(name) {
       const idx = selectedSpecies.value.indexOf(name);
       if (idx >= 0) selectedSpecies.value.splice(idx, 1);
       else           selectedSpecies.value.push(name);
-      mainSpecies.value = selectedSpecies.value[0] || null;
-      if (mainSpecies.value) loadSpeciesData();
+      if (selectedSpecies.value.length) loadAnalysis();
     }
     function removeTag(name) {
       selectedSpecies.value = selectedSpecies.value.filter(s => s !== name);
-      mainSpecies.value = selectedSpecies.value[0] || null;
-      if (mainSpecies.value) loadSpeciesData();
+      if (selectedSpecies.value.length) loadAnalysis();
+      else { kpis.value = []; breakdown.value = []; narrativeHtml.value = ''; heatmapHtml.value = ''; }
     }
     function selectTopN() {
-      selectedSpecies.value = speciesList.value.slice(0, topN.value).map(s => s.name);
-      mainSpecies.value = selectedSpecies.value[0] || null;
-      pickerOpen.value  = false;
-      if (mainSpecies.value) loadSpeciesData();
+      selectedSpecies.value = filteredSpeciesList.value.slice(0, topN.value).map(s => s.name);
+      pickerOpen.value = false;
+      if (selectedSpecies.value.length) loadAnalysis();
+    }
+    function selectAllFiltered() {
+      selectedSpecies.value = filteredSpeciesList.value.map(s => s.name);
+      pickerOpen.value = false;
+      if (selectedSpecies.value.length) loadAnalysis();
     }
     function clearSelection() {
       selectedSpecies.value = [];
-      mainSpecies.value = null;
-      kpis.value = [];
-      narrativeHtml.value = '';
-      heatmapHtml.value   = '';
+      kpis.value = []; breakdown.value = [];
+      narrativeHtml.value = ''; heatmapHtml.value = '';
     }
 
     async function applyFilters() {
@@ -376,67 +490,101 @@ const app = createApp({
           [fromDate.value, toDate.value, conf]
         );
         speciesList.value = rows.map(r => ({ name: r.Com_Name, sci: r.Sci_Name || '', n: r.n }));
+        // Keep only selected species that still exist
         const available = new Set(rows.map(r => r.Com_Name));
         selectedSpecies.value = selectedSpecies.value.filter(s => available.has(s));
-        mainSpecies.value = selectedSpecies.value[0] || null;
-        if (mainSpecies.value) await loadSpeciesData();
+        if (selectedSpecies.value.length) await loadAnalysis();
       } catch(e) { console.error('[analyses] applyFilters:', e); }
       loading.value = false;
     }
 
-    async function loadSpeciesData() {
-      if (!mainSpecies.value) return;
+    // ══════════════════════════════════════════════════════════════════════
+    //  UNIFIED ANALYSIS (works for 1 or N species)
+    // ══════════════════════════════════════════════════════════════════════
+
+    async function loadAnalysis() {
+      if (!selectedSpecies.value.length) return;
       thumbUrl.value = null;
-      fetchSpeciesImage(mainSpecies.value).then(u => { if (u) thumbUrl.value = u; });
+      if (selCtx.value.type === 'single') {
+        fetchSpeciesImage(mainSpecies.value).then(u => { if (u) thumbUrl.value = u; });
+      }
       await Promise.all([loadKpis(), loadPolarChart(), loadSeriesChart(), loadDailyHeatmap()]);
     }
 
     async function loadKpis() {
-      const sp   = mainSpecies.value;
+      const sciNames = selectedSciNames();
+      if (!sciNames.length) return;
       const conf = confSlider.value / 100;
+      const ph = sqlInClause(sciNames);
       try {
         const [r] = await birdQuery(
-          'SELECT COUNT(*) as total, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last, COUNT(DISTINCT Date) as days FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=?',
-          [sp, fromDate.value, toDate.value, conf]
+          'SELECT COUNT(*) as total, ROUND(AVG(Confidence)*100,1) as avg_conf, COUNT(DISTINCT Com_Name) as sp_count, COUNT(DISTINCT Date) as days FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=?',
+          [...sciNames, fromDate.value, toDate.value, conf]
         );
         if (!r) return;
-        const expr = resampleExpr(resample.value);
-        const [sampled] = await birdQuery(
-          'SELECT ' + expr + ' FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=?',
-          [sp, fromDate.value, toDate.value, conf]
-        );
-        kpis.value = [
-          { val: r.total.toLocaleString(),            label: t('analyses_kpi_raw'),       cls: ''      },
-          { val: sampled && sampled.n ? sampled.n.toLocaleString() : '—', label: t('analyses_kpi_resampled'), cls: 'amber' },
-          { val: r.avg_conf + '%',                    label: t('analyses_kpi_conf'),      cls: 'blue'  },
-          { val: r.days,                              label: t('analyses_kpi_days'),      cls: ''      },
-        ];
+
+        if (selectedSpecies.value.length === 1) {
+          const expr = resampleExpr(resample.value);
+          const [sampled] = await birdQuery(
+            'SELECT ' + expr + ' FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=?',
+            [...sciNames, fromDate.value, toDate.value, conf]
+          );
+          kpis.value = [
+            { val: r.total.toLocaleString(),            label: t('analyses_kpi_raw'),       cls: ''      },
+            { val: sampled && sampled.n ? sampled.n.toLocaleString() : '—', label: t('analyses_kpi_resampled'), cls: 'amber' },
+            { val: r.avg_conf + '%',                    label: t('analyses_kpi_conf'),      cls: 'blue'  },
+            { val: r.days,                              label: t('analyses_kpi_days'),      cls: ''      },
+          ];
+          breakdown.value = [];
+        } else {
+          kpis.value = [
+            { val: r.sp_count,                           label: t('grp_kpi_species'),    cls: ''      },
+            { val: r.total.toLocaleString(),             label: t('grp_kpi_detections'), cls: 'amber' },
+            { val: r.avg_conf + '%',                     label: t('grp_kpi_conf'),       cls: 'blue'  },
+            { val: r.days,                               label: t('grp_kpi_days'),       cls: ''      },
+          ];
+          // Build breakdown
+          const bdRows = await birdQuery(
+            'SELECT Com_Name, Sci_Name, COUNT(*) as count, ROUND(AVG(Confidence)*100,0) as avg_conf FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY count DESC',
+            [...sciNames, fromDate.value, toDate.value, conf]
+          );
+          const totalCount = bdRows.reduce((s, r) => s + r.count, 0);
+          breakdown.value = bdRows.map(row => {
+            const tax = taxonomyData.value.find(s => s.sciName === row.Sci_Name);
+            return {
+              name: row.Com_Name, sci: row.Sci_Name, count: row.count,
+              pct: totalCount ? Math.round(row.count / totalCount * 100) : 0,
+              conf: row.avg_conf,
+              familyCom: tax ? tax.familyCom : '',
+            };
+          });
+        }
       } catch(e) { console.error('[analyses] kpis:', e); }
     }
 
     async function loadPolarChart() {
-      const sp        = mainSpecies.value;
-      const conf      = confSlider.value / 100;
-      const multiMode = selectedSpecies.value.length > 1;
+      const sciNames = selectedSciNames();
+      if (!sciNames.length) return;
+      const conf = confSlider.value / 100;
+      const ph = sqlInClause(sciNames);
       narrativeLoading.value = true;
       polarDetail.value.visible = false;
       try {
         const rows = await birdQuery(
-          'SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY h ORDER BY h ASC',
-          [sp, fromDate.value, toDate.value, conf]
+          'SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY h ORDER BY h ASC',
+          [...sciNames, fromDate.value, toDate.value, conf]
         );
         const rowsMin = await birdQuery(
-          'SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)*15 as m, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY h, m ORDER BY n DESC',
-          [sp, fromDate.value, toDate.value, conf]
+          'SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)*15 as m, COUNT(*) as n FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY h, m ORDER BY n DESC',
+          [...sciNames, fromDate.value, toDate.value, conf]
         );
-        const byHour   = Array(24).fill(0);
+        const byHour = Array(24).fill(0);
         rows.forEach(r => { byHour[r.h] = r.n; });
         const totalDet = byHour.reduce((a,b)=>a+b,0);
         const maxVal   = Math.max(...byHour) || 1;
         const peakH    = rowsMin.length ? rowsMin[0].h : byHour.indexOf(maxVal);
 
-        // Cache pour loadHourDetail
-        _byHourCache   = byHour;
+        _byHourCache = byHour;
         _totalDetCache = totalDet;
 
         await nextTick();
@@ -444,91 +592,14 @@ const app = createApp({
         if (!el) { narrativeLoading.value = false; return; }
         if (_chartPolar) _chartPolar.dispose();
         _chartPolar = echarts.init(el, null, { renderer: 'canvas', width: 'auto', height: 'auto' });
+        renderPolarChart(_chartPolar, byHour, totalDet, maxVal, peakH);
 
-        const sectorColors = byHour.map((v,i) => {
-          const p = v / maxVal;
-          if (i === peakH) return 'rgba(200,168,75,0.95)';
-          if (i === 5 || i === 6 || i === 20 || i === 21)
-            return 'rgba(200,168,75,' + (0.28 + p * 0.55) + ')';
-          if (i >= 6 && i <= 20)
-            return 'rgba(90,158,58,' + (0.22 + p * 0.65) + ')';
-          return 'rgba(74,138,181,' + (0.18 + p * 0.65) + ')';
-        });
-
-        // Labels : toutes les heures visibles, couleur selon moment
-        const labelColors = byHour.map((v, i) => {
-          if (i === peakH)              return '#c8a84b';
-          if (i === 5 || i === 6 || i === 19 || i === 20 || i === 21)
-                                        return '#d4a840';
-          if (i >= 6 && i <= 19)        return '#8abf8a';
-          return '#5a7ab5';
-        });
-        const labelWeights = byHour.map((_, i) => i === peakH ? 'bold' : 'normal');
-
-        _chartPolar.setOption({
-          backgroundColor: 'transparent',
-          graphic: [{
-            type: 'text',
-            left: 'center', top: 'middle',
-            style: {
-              text: totalDet.toLocaleString() + '\n' + t('detections').toLowerCase(),
-              textAlign: 'center', fill: '#9abf9a',
-              fontSize: 13, fontFamily: 'Lora, serif', lineHeight: 18,
-            }
-          }],
-          tooltip: {
-            trigger: 'item',
-            backgroundColor: 'rgba(10,20,12,0.92)',
-            borderColor: 'rgba(90,158,58,.4)', borderWidth: 1,
-            textStyle: { color: '#c8e6c0', fontFamily: 'Lora, serif', fontSize: 13 },
-            formatter: function(p) {
-              const pct = totalDet ? Math.round(p.value / totalDet * 100) : 0;
-              return '<b>' + p.name + '</b><br>' + t('analyses_tooltip_det', {n: p.value.toLocaleString(), pct: pct})
-                + (p.dataIndex === peakH ? '<br>⭐ ' + t('analyses_peak_hour') : '');
-            }
-          },
-          angleAxis: {
-            type: 'category',
-            data: Array.from({length: 24}, function(_, i) { return i + 'h'; }),
-            startAngle: 90, clockwise: true, boundaryGap: false,
-            axisLine: { show: false }, axisTick: { show: false },
-            axisLabel: {
-              color: function(val, idx) { return labelColors[idx]; },
-              fontWeight: function(val, idx) { return labelWeights[idx]; },
-              fontSize: 12, fontFamily: 'Lora, serif',
-              // Distance augmenté pour le grand format
-              margin: 10,
-            }
-          },
-          radiusAxis: {
-            type: 'value', min: 0, max: maxVal,
-            axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
-            splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } }
-          },
-          polar: { radius: ['6%', '85%'], center: ['50%', '50%'] },
-          series: [{
-            type: 'bar', coordinateSystem: 'polar', barMaxWidth: '100%',
-            data: byHour.map(function(v, i) {
-              return {
-                value: v, name: i + 'h',
-                itemStyle: { color: sectorColors[i], borderRadius: [2, 2, 0, 0] },
-              };
-            }),
-            emphasis: {
-              itemStyle: { opacity: 1, borderColor: '#c8a84b', borderWidth: 1 }
-            }
-          }]
-        });
-
-        // Clic sur un secteur → panel détail
         _chartPolar.off('click');
         _chartPolar.on('click', function(params) {
-          if (params.componentType === 'series') {
-            loadHourDetail(params.dataIndex);
-          }
+          if (params.componentType === 'series' && selCtx.value.type === 'single') loadHourDetail(params.dataIndex);
         });
 
-        narrativeHtml.value = buildNarrative(byHour, rowsMin, totalDet, maxVal, peakH, multiMode, sp);
+        narrativeHtml.value = buildNarrative(byHour, rowsMin, totalDet, maxVal, peakH);
       } catch(e) {
         console.error('[analyses] polar:', e);
         narrativeHtml.value = '<p>' + t('narr_no_data') + '</p>';
@@ -541,159 +612,198 @@ const app = createApp({
       const conf = confSlider.value / 100;
       const count = (_byHourCache && _byHourCache[h]) || 0;
       const pct   = _totalDetCache ? Math.round(count / _totalDetCache * 100) : 0;
-
-      polarDetail.value = {
-        visible: true, hour: h, count, pct,
-        quarters: [], qMax: 0, topDets: [], loadingDets: true,
-      };
-
+      polarDetail.value = { visible: true, hour: h, count, pct, quarters: [], qMax: 0, topDets: [], loadingDets: true };
       try {
-        // Distribution par quart d'heure
         const qRows = await birdQuery(
           'SELECT CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER)*15 as m, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? AND CAST(SUBSTR(Time,1,2) AS INTEGER)=? GROUP BY m ORDER BY m ASC',
           [sp, fromDate.value, toDate.value, conf, h]
         );
-        // S'assurer que les 4 quarts sont présents
         const qMap = { 0:0, 15:0, 30:0, 45:0 };
         qRows.forEach(r => { qMap[r.m] = r.n; });
         const quarters = [0, 15, 30, 45].map(m => ({ m, n: qMap[m] || 0 }));
         const qMax = Math.max(...quarters.map(q => q.n)) || 1;
-
-        // Top 5 détections de l'heure (confiance desc)
         const topDets = await birdQuery(
           'SELECT Time, Confidence, File_Name FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? AND CAST(SUBSTR(Time,1,2) AS INTEGER)=? ORDER BY Confidence DESC LIMIT 5',
           [sp, fromDate.value, toDate.value, conf, h]
         );
-
-        polarDetail.value = {
-          visible: true, hour: h, count, pct,
-          quarters, qMax, topDets, loadingDets: false,
-        };
-      } catch(e) {
-        polarDetail.value.loadingDets = false;
-      }
+        polarDetail.value = { visible: true, hour: h, count, pct, quarters, qMax, topDets, loadingDets: false };
+      } catch(e) { polarDetail.value.loadingDets = false; }
     }
 
-    function buildNarrative(byHour, rowsMin, totalDet, maxVal, peakH, multiMode, sp) {
+    function renderPolarChart(chart, byHour, totalDet, maxVal, peakH) {
+      const sectorColors = byHour.map((v,i) => {
+        const p = v / maxVal;
+        if (i === peakH) return 'rgba(200,168,75,0.95)';
+        if (i === 5 || i === 6 || i === 20 || i === 21) return 'rgba(200,168,75,' + (0.28 + p * 0.55) + ')';
+        if (i >= 6 && i <= 20) return 'rgba(90,158,58,' + (0.22 + p * 0.65) + ')';
+        return 'rgba(74,138,181,' + (0.18 + p * 0.65) + ')';
+      });
+      const labelColors = byHour.map((v, i) => {
+        if (i === peakH) return '#c8a84b';
+        if (i === 5 || i === 6 || i === 19 || i === 20 || i === 21) return '#d4a840';
+        if (i >= 6 && i <= 19) return '#8abf8a';
+        return '#5a7ab5';
+      });
+      chart.setOption({
+        backgroundColor: 'transparent',
+        graphic: [{ type: 'text', left: 'center', top: 'middle', style: { text: totalDet.toLocaleString() + '\n' + t('detections').toLowerCase(), textAlign: 'center', fill: '#9abf9a', fontSize: 13, fontFamily: 'Lora, serif', lineHeight: 18 } }],
+        tooltip: { trigger: 'item', backgroundColor: 'rgba(10,20,12,0.92)', borderColor: 'rgba(90,158,58,.4)', borderWidth: 1, textStyle: { color: '#c8e6c0', fontFamily: 'Lora, serif', fontSize: 13 },
+          formatter: function(p) { const pct = totalDet ? Math.round(p.value / totalDet * 100) : 0; return '<b>' + p.name + '</b><br>' + t('analyses_tooltip_det', {n: p.value.toLocaleString(), pct}) + (p.dataIndex === peakH ? '<br>⭐ ' + t('analyses_peak_hour') : ''); }
+        },
+        angleAxis: { type: 'category', data: Array.from({length: 24}, (_, i) => i + 'h'), startAngle: 90, clockwise: true, boundaryGap: false, axisLine: { show: false }, axisTick: { show: false },
+          axisLabel: { color: (val, idx) => labelColors[idx], fontWeight: (val, idx) => idx === peakH ? 'bold' : 'normal', fontSize: 12, fontFamily: 'Lora, serif', margin: 10 }
+        },
+        radiusAxis: { type: 'value', min: 0, max: maxVal, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } } },
+        polar: { radius: ['6%', '85%'], center: ['50%', '50%'] },
+        series: [{ type: 'bar', coordinateSystem: 'polar', barMaxWidth: '100%',
+          data: byHour.map((v, i) => ({ value: v, name: i + 'h', itemStyle: { color: sectorColors[i], borderRadius: [2, 2, 0, 0] } })),
+          emphasis: { itemStyle: { opacity: 1, borderColor: '#c8a84b', borderWidth: 1 } }
+        }]
+      });
+    }
+
+    function buildNarrative(byHour, rowsMin, totalDet, maxVal, peakH) {
       if (!totalDet) return '<p>'+t('narr_no_data')+'</p>';
-      var threshold = maxVal*0.10;
-      var peakM = rowsMin.length ? rowsMin[0].m : 0;
-      var peakLabel = (peakH<10?'0':'')+peakH+'h'+(peakM>0?(peakM<10?'0':'')+peakM:'');
-      var startH=-1, endH=-1;
-      for (var h=0;  h<24; h++) { if (byHour[h]>=threshold) { startH=h; break; } }
-      for (var h=23; h>=0; h--) { if (byHour[h]>=threshold) { endH=h;   break; } }
-      var startLabel = startH>=0 ? (startH<10?'0':'')+startH+'h' : '—';
-      var endLabel   = endH>=0   ? (endH<10?'0':'')+endH+'h'     : '—';
-      if (rowsMin.length) {
-        var ss = rowsMin.filter(function(r){return r.h===startH;}).sort(function(a,b){return a.m-b.m;});
-        var es = rowsMin.filter(function(r){return r.h===endH;}).sort(function(a,b){return b.m-a.m;});
-        if (ss.length) startLabel=(startH<10?'0':'')+startH+'h'+(ss[0].m>0?(ss[0].m<10?'0':'')+ss[0].m:'');
-        if (es.length) endLabel  =(endH<10?'0':'')+endH+'h'+(es[0].m>0?(es[0].m<10?'0':'')+es[0].m:'');
+      const ctx = selCtx.value;
+      const chip = (v,cls) => '<span class="stat-chip '+(cls||'')+'">'+v+'</span>';
+      const from = fmtDate(fromDate.value), to = fmtDate(toDate.value);
+
+      let html = '';
+      // Multi-species group intro
+      if (ctx.type !== 'single' && ctx.type !== 'none') {
+        const label = ctx.name || (ctx.count + ' ' + t('species').toLowerCase());
+        html += '<p>' + t('grp_narr_period', {
+          from: chip(from,'amber'), to: chip(to,'amber'),
+          name: '<strong>'+escHtml(label)+'</strong>',
+          species: chip(selectedSpecies.value.length),
+          total: chip(totalDet.toLocaleString())
+        }) + '</p>';
+        if (breakdown.value.length) {
+          const dom = breakdown.value[0];
+          html += '<p>' + t('grp_narr_dominant', { species: escHtml(spName(dom.name, dom.sci)), pct: dom.pct }) + '</p>';
+        }
+        html += '<p>' + t('grp_narr_peak', { time: chip(peakH + 'h') }) + '</p>';
+        return html;
       }
-      var durationH  = endH-startH;
-      var durLabel   = t(durationH>0?'narr_duration':'narr_duration_short',{n:durationH});
-      var habitKey;
+
+      // Single species narrative
+      const sp = mainSpecies.value;
+      const threshold = maxVal*0.10;
+      const peakM = rowsMin.length ? rowsMin[0].m : 0;
+      const peakLabel = zeroPad(peakH)+'h'+(peakM>0?zeroPad(peakM):'');
+      let startH=-1, endH=-1;
+      for (let h=0; h<24; h++) { if (byHour[h]>=threshold) { startH=h; break; } }
+      for (let h=23; h>=0; h--) { if (byHour[h]>=threshold) { endH=h; break; } }
+      let startLabel = startH>=0 ? zeroPad(startH)+'h' : '—';
+      let endLabel   = endH>=0   ? zeroPad(endH)+'h' : '—';
+      if (rowsMin.length) {
+        const ss = rowsMin.filter(r => r.h===startH).sort((a,b) => a.m-b.m);
+        const es = rowsMin.filter(r => r.h===endH).sort((a,b) => b.m-a.m);
+        if (ss.length) startLabel = zeroPad(startH)+'h'+(ss[0].m>0?zeroPad(ss[0].m):'');
+        if (es.length) endLabel   = zeroPad(endH)+'h'+(es[0].m>0?zeroPad(es[0].m):'');
+      }
+      const durationH = endH-startH;
+      const durLabel  = t(durationH>0?'narr_duration':'narr_duration_short',{n:durationH});
+      let habitKey;
       if      (peakH>=5 &&peakH<=9)  habitKey='narr_habit_morning';
       else if (peakH>=10&&peakH<=14) habitKey='narr_habit_midday';
       else if (peakH>=15&&peakH<=19) habitKey='narr_habit_afternoon';
       else if (peakH>=20||peakH<=4)  habitKey='narr_habit_night';
       else                            habitKey='narr_habit_day';
-      var sorted2 = byHour.map(function(v,h){return{h:h,v:v};})
-        .filter(function(x){return x.h!==peakH&&x.v>=maxVal*0.40;})
-        .sort(function(a,b){return b.v-a.v;});
-      var secondaryLabel = sorted2.length ? (sorted2[0].h<10?'0':'')+sorted2[0].h+'h' : null;
-      var peakPct  = Math.round(byHour[peakH]/totalDet*100);
-      var nightDet = byHour.slice(21).concat(byHour.slice(0,5)).reduce(function(a,b){return a+b;},0);
-      var nightPct = Math.round(nightDet/totalDet*100);
-      var chip = function(v,cls){return '<span class="stat-chip '+(cls||'')+'">'+v+'</span>';};
-      var from = fmtDate(fromDate.value), to = fmtDate(toDate.value);
-      var html = '';
-      if (multiMode) {
-        var spDisplay = spName(sp, sciFor(sp));
-        html += '<p style="margin-bottom:.5rem;padding:.4rem .65rem;background:var(--bg-card2);border-radius:var(--radius);font-size:.8rem;color:var(--text-muted);border-left:3px solid var(--accent-dim);">'
-          +t('narr_multi_intro',{n:selectedSpecies.value.length,species:'<strong>'+escHtml(spDisplay)+'</strong>'})
-          +'<br><span style="font-size:.75rem;opacity:.8;">'+t('narr_multi_hint',{species:escHtml(spDisplay)})+'</span></p>';
-      }
-      var spDisplay = spName(sp, sciFor(sp));
+      const sorted2 = byHour.map((v,h)=>({h,v})).filter(x=>x.h!==peakH&&x.v>=maxVal*0.40).sort((a,b)=>b.v-a.v);
+      const secondaryLabel = sorted2.length ? zeroPad(sorted2[0].h)+'h' : null;
+      const peakPct  = Math.round(byHour[peakH]/totalDet*100);
+      const nightDet = byHour.slice(21).concat(byHour.slice(0,5)).reduce((a,b)=>a+b,0);
+      const nightPct = Math.round(nightDet/totalDet*100);
+      const spDisplay = spName(sp, sciFor(sp));
       html += '<p>'+t('narr_period',{from:chip(from,'amber'),to:chip(to,'amber')})
         +' <strong>'+escHtml(spDisplay)+'</strong> '+t('narr_is')+' <em>'+t(habitKey)+'</em>.'
         +' '+t('narr_peak_at',{time:chip(peakLabel),pct:chip(peakPct+'%')})+'</p>';
-      if (startH>=0&&endH>=0) {
-        html += '<p>'+t('narr_activity_range',{start:chip(startLabel),end:chip(endLabel),duration:chip(durLabel,'blue')})+'</p>';
-      }
-      if (secondaryLabel) {
-        html += '<p>'+t('narr_second_peak',{time:chip(secondaryLabel)})+'</p>';
-      } else if (nightPct>10) {
-        html += '<p>'+t('narr_night_pct',{pct:chip(nightPct+'%','amber')})+'</p>';
-      }
-      html += '<p style="margin-top:.3rem;font-size:.78rem;color:var(--text-muted);">'
-        +t('narr_total',{n:'<strong>'+totalDet.toLocaleString()+'</strong>',h:'<strong>'+byHour.filter(function(v){return v>0;}).length+'</strong>'})+'</p>';
+      if (startH>=0&&endH>=0) html += '<p>'+t('narr_activity_range',{start:chip(startLabel),end:chip(endLabel),duration:chip(durLabel,'blue')})+'</p>';
+      if (secondaryLabel) html += '<p>'+t('narr_second_peak',{time:chip(secondaryLabel)})+'</p>';
+      else if (nightPct>10) html += '<p>'+t('narr_night_pct',{pct:chip(nightPct+'%','amber')})+'</p>';
+      html += '<p style="margin-top:.3rem;font-size:.78rem;color:var(--text-muted);">'+t('narr_total',{n:'<strong>'+totalDet.toLocaleString()+'</strong>',h:'<strong>'+byHour.filter(v=>v>0).length+'</strong>'})+'</p>';
       return html;
     }
 
     async function loadSeriesChart() {
-      var species = selectedSpecies.value;
-      var conf    = confSlider.value/100;
+      const species = selectedSpecies.value;
+      const conf    = confSlider.value/100;
       if (!species.length) return;
-      var PALETTE = ['#4a8ab5','#5a9e3a','#c8a84b','#e06c4a','#9a5eb5','#2ab8c8','#d45a8a','#7a9e3a','#d4a040','#5a7ad4'];
+      const PALETTE = ['#4a8ab5','#5a9e3a','#c8a84b','#e06c4a','#9a5eb5','#2ab8c8','#d45a8a','#7a9e3a','#d4a040','#5a7ad4'];
       try {
-        var daysDiff = (new Date(toDate.value)-new Date(fromDate.value))/86400000;
-        var byMonth  = resample.value==='daily' ? false : daysDiff>90;
-        var labels   = [];
-        var datasetsPromises = species.map(function(sp,idx) {
-          var color = PALETTE[idx%PALETTE.length];
-          return (async function() {
-            var data;
+        const daysDiff = (new Date(toDate.value)-new Date(fromDate.value))/86400000;
+        const byMonth  = resample.value==='daily' ? false : daysDiff>90;
+        let labels = [];
+
+        // For many species (>10) from same order: group by family
+        const ctx = selCtx.value;
+        const groupByFamily = species.length > 10 && (ctx.type === 'order' || ctx.type === 'family');
+        let datasets;
+
+        if (groupByFamily) {
+          // Group species by family
+          const famGroups = {};
+          for (const name of species) {
+            const tax = taxonomyData.value.find(t => t.comName === name);
+            const key = tax ? tax.familySci : 'other';
+            const label = tax ? tax.familyCom : 'Other';
+            if (!famGroups[key]) famGroups[key] = { label, sciNames: [] };
+            const sp = speciesList.value.find(s => s.name === name);
+            if (sp) famGroups[key].sciNames.push(sp.sci);
+          }
+          const families = Object.values(famGroups);
+          const dsPromises = families.map((fam, idx) => (async () => {
+            const fph = sqlInClause(fam.sciNames);
+            let data;
             if (!byMonth) {
-              var rows = await birdQuery(
-                'SELECT Date, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC',
-                [sp, fromDate.value, toDate.value, conf]
-              );
-              var map = {}; rows.forEach(function(r){map[r.Date]=r.n;});
-              if (idx===0) {
-                labels=[];
-                var cur=new Date(fromDate.value), end=new Date(toDate.value);
-                while(cur<=end){
-                  var mo=t('months_short')[cur.getMonth()];
-                  labels.push(cur.getDate()+' '+mo+' '+cur.getFullYear().toString().slice(2));
-                  cur.setDate(cur.getDate()+1);
-                }
-              }
-              var cur2=new Date(fromDate.value), end2=new Date(toDate.value); data=[];
-              while(cur2<=end2){data.push(map[cur2.toISOString().slice(0,10)]||0);cur2.setDate(cur2.getDate()+1);}
+              const rows = await birdQuery('SELECT Date, COUNT(*) as n FROM detections WHERE Sci_Name IN ('+fph+') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC', [...fam.sciNames, fromDate.value, toDate.value, conf]);
+              const map = {}; rows.forEach(r => { map[r.Date] = r.n; });
+              if (idx === 0) { labels = []; let cur=new Date(fromDate.value), end=new Date(toDate.value); while(cur<=end){ labels.push(cur.getDate()+' '+t('months_short')[cur.getMonth()]+' '+cur.getFullYear().toString().slice(2)); cur.setDate(cur.getDate()+1); } }
+              data = []; let cur2=new Date(fromDate.value), end2=new Date(toDate.value); while(cur2<=end2){ data.push(map[cur2.toISOString().slice(0,10)]||0); cur2.setDate(cur2.getDate()+1); }
             } else {
-              var rows = await birdQuery(
-                'SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY ym ORDER BY ym ASC',
-                [sp, fromDate.value, toDate.value, conf]
-              );
-              if (idx===0) labels=rows.map(function(r){var p=r.ym.split('-');return t('months_short')[parseInt(p[1])-1]+' '+p[0].slice(2);});
-              data=rows.map(function(r){return r.n;});
+              const rows = await birdQuery('SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections WHERE Sci_Name IN ('+fph+') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY ym ORDER BY ym ASC', [...fam.sciNames, fromDate.value, toDate.value, conf]);
+              if (idx === 0) labels = rows.map(r => { const p=r.ym.split('-'); return t('months_short')[parseInt(p[1])-1]+' '+p[0].slice(2); });
+              data = rows.map(r => r.n);
             }
-            var isSingle=species.length===1;
-            var hex=PALETTE[idx%PALETTE.length];
-            var rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
-            return {
-              label:spName(sp, sciFor(sp)), data:data,
-              backgroundColor:isSingle&&!byMonth?'rgba(74,138,181,.40)':'rgba('+rr+','+gg+','+bb+',.35)',
-              borderColor:hex, borderWidth:isSingle&&!byMonth?1:1.5,
-              borderRadius:!byMonth?2:0, fill:byMonth&&isSingle,
-              pointRadius:!byMonth?0:(isSingle?2:1.5), tension:0.3
-            };
-          })();
-        });
-        var datasets = await Promise.all(datasetsPromises);
+            const hex = PALETTE[idx%PALETTE.length]; const rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
+            return { label: fam.label, data, backgroundColor:'rgba('+rr+','+gg+','+bb+',.35)', borderColor:hex, borderWidth:1.5, pointRadius:byMonth?2:0, tension:0.3, fill:false };
+          })());
+          datasets = await Promise.all(dsPromises);
+        } else {
+          // Per-species lines/bars
+          const dsPromises = species.map((sp, idx) => (async () => {
+            let data;
+            if (!byMonth) {
+              const rows = await birdQuery('SELECT Date, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC', [sp, fromDate.value, toDate.value, conf]);
+              const map = {}; rows.forEach(r => { map[r.Date] = r.n; });
+              if (idx === 0) { labels = []; let cur=new Date(fromDate.value), end=new Date(toDate.value); while(cur<=end){ labels.push(cur.getDate()+' '+t('months_short')[cur.getMonth()]+' '+cur.getFullYear().toString().slice(2)); cur.setDate(cur.getDate()+1); } }
+              data = []; let cur2=new Date(fromDate.value), end2=new Date(toDate.value); while(cur2<=end2){ data.push(map[cur2.toISOString().slice(0,10)]||0); cur2.setDate(cur2.getDate()+1); }
+            } else {
+              const rows = await birdQuery('SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY ym ORDER BY ym ASC', [sp, fromDate.value, toDate.value, conf]);
+              if (idx === 0) labels = rows.map(r => { const p=r.ym.split('-'); return t('months_short')[parseInt(p[1])-1]+' '+p[0].slice(2); });
+              data = rows.map(r => r.n);
+            }
+            const isSingle = species.length===1;
+            const hex = PALETTE[idx%PALETTE.length]; const rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
+            return { label: spName(sp, sciFor(sp)), data, backgroundColor:isSingle&&!byMonth?'rgba(74,138,181,.40)':'rgba('+rr+','+gg+','+bb+',.35)', borderColor:hex, borderWidth:isSingle&&!byMonth?1:1.5, borderRadius:!byMonth?2:0, fill:byMonth&&isSingle, pointRadius:!byMonth?0:(isSingle?2:1.5), tension:0.3 };
+          })());
+          datasets = await Promise.all(dsPromises);
+        }
+
         await nextTick();
-        var canvas=elSeries.value; if (!canvas) return;
+        const canvas = elSeries.value; if (!canvas) return;
         if (_chartSeries) _chartSeries.destroy();
+        const multi = species.length > 1 || groupByFamily;
         _chartSeries = new Chart(canvas.getContext('2d'), {
-          type: byMonth?'line':(species.length>1?'line':'bar'),
-          data: {labels:labels, datasets:datasets},
+          type: byMonth||multi ? 'line' : 'bar',
+          data: { labels, datasets },
           options: {
             responsive:true, maintainAspectRatio:false,
             interaction:{mode:'index',intersect:false},
             plugins:{
-              legend:{display:species.length>1,labels:{color:'var(--text-muted)',font:{family:'Lora',size:11},boxWidth:12}},
-              tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+' : '+c.raw.toLocaleString()+' '+t('detections').toLowerCase();}}}
+              legend:{display:multi,labels:{color:'var(--text-muted)',font:{family:'Lora',size:11},boxWidth:12}},
+              tooltip:{callbacks:{label:c => ' '+c.dataset.label+' : '+c.raw.toLocaleString()+' '+t('detections').toLowerCase()}}
             },
             scales:{
               x:{ticks:{maxTicksLimit:18,color:'#7a9a7a',font:{size:9}},grid:{color:'rgba(255,255,255,.03)'}},
@@ -705,97 +815,124 @@ const app = createApp({
     }
 
     async function loadDailyHeatmap() {
-      var sp   = mainSpecies.value;
-      var conf = confSlider.value/100;
-      heatmapLoading.value=true;
+      const sciNames = selectedSciNames();
+      if (!sciNames.length) return;
+      const conf = confSlider.value / 100;
+      const ph = sqlInClause(sciNames);
+      heatmapLoading.value = true;
       try {
-        var daysDiff=(new Date(toDate.value)-new Date(fromDate.value))/86400000;
-        var from=daysDiff>120?daysAgo(89):fromDate.value;
-        var rows=await birdQuery(
-          'SELECT Date, CAST(SUBSTR(Time,1,2) AS INTEGER)*4+CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER) as slot, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date, slot ORDER BY Date ASC, slot ASC',
-          [sp,from,toDate.value,conf]
+        const daysDiff = (new Date(toDate.value)-new Date(fromDate.value))/86400000;
+        const from = daysDiff > 120 ? daysAgo(89) : fromDate.value;
+        const rows = await birdQuery(
+          'SELECT Date, CAST(SUBSTR(Time,1,2) AS INTEGER)*4+CAST(CAST(SUBSTR(Time,4,2) AS INTEGER)/15 AS INTEGER) as slot, COUNT(*) as n FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date, slot ORDER BY Date ASC, slot ASC',
+          [...sciNames, from, toDate.value, conf]
         );
         if (!rows.length) {
-          heatmapHtml.value='<p style="color:var(--text-faint);font-size:.8rem;padding:.5rem;">'+t('analyses_no_data_period')+'</p>';
-          heatmapLoading.value=false; return;
+          heatmapHtml.value = '<p style="color:var(--text-faint);font-size:.8rem;padding:.5rem;">' + t('analyses_no_data_period') + '</p>';
+          heatmapLoading.value = false; return;
         }
-        var datesSet=new Set(rows.map(function(r){return r.Date;}));
-        var dates=Array.from(datesSet).sort();
-        var grid={};
-        rows.forEach(function(r){if(!grid[r.Date])grid[r.Date]={};grid[r.Date][r.slot]=r.n;});
-        var maxV=Math.max.apply(null,rows.map(function(r){return r.n;}));
-        function heatClass(v){
-          if(!v)return 'dhm-0'; var p=v/maxV;
-          if(p<.15)return 'dhm-1'; if(p<.35)return 'dhm-2';
-          if(p<.60)return 'dhm-3'; if(p<.85)return 'dhm-4'; return 'dhm-5';
-        }
-        var displayDates=dates.slice(-60);
-        var html='<table class="dhm-table"><thead><tr><th style="text-align:left;min-width:55px;">'+t('date')+'</th>';
-        var use12h = lang.value==='en';
-        for(var h=0;h<24;h++){
-          var lbl = use12h ? (h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p') : h+'h';
-          html+='<th style="'+(h%3===0?'':'color:transparent;')+'">'+lbl+'</th>';
-        }
-        html+='</tr></thead><tbody>';
-        displayDates.forEach(function(date){
-          var d=new Date(date); var mo=t('months_short')[d.getMonth()];
-          html+='<tr><th style="text-align:left;color:var(--text-muted);font-weight:400;padding-right:.4rem;">'+d.getDate()+' '+mo+'</th>';
-          for(var h=0;h<24;h++){
-            var total=0; for(var s=0;s<4;s++) total+=(grid[date]&&grid[date][h*4+s])||0;
-            var cls=heatClass(total);
-            var title=total?date+' '+(h<10?'0':'')+h+'h : '+total:'';
-            html+='<td class="'+cls+'" title="'+title+'"></td>';
-          }
-          html+='</tr>';
+        const datesSet = new Set(rows.map(r => r.Date));
+        const dates = Array.from(datesSet).sort();
+        const grid = {};
+        rows.forEach(r => { if (!grid[r.Date]) grid[r.Date] = {}; grid[r.Date][r.slot] = (grid[r.Date][r.slot]||0) + r.n; });
+        const maxV = Math.max(...rows.map(r => r.n));
+        function heatClass(v) { if(!v) return 'dhm-0'; const p=v/maxV; if(p<.15) return 'dhm-1'; if(p<.35) return 'dhm-2'; if(p<.60) return 'dhm-3'; if(p<.85) return 'dhm-4'; return 'dhm-5'; }
+        const displayDates = dates.slice(-60);
+        const use12h = lang.value === 'en';
+        let html = '<table class="dhm-table"><thead><tr><th style="text-align:left;min-width:55px;">'+t('date')+'</th>';
+        for (let h=0;h<24;h++) { const lbl=use12h?(h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p'):h+'h'; html+='<th style="'+(h%3===0?'':'color:transparent;')+'">'+lbl+'</th>'; }
+        html += '</tr></thead><tbody>';
+        displayDates.forEach(date => {
+          const d=new Date(date); const mo=t('months_short')[d.getMonth()];
+          html += '<tr><th style="text-align:left;color:var(--text-muted);font-weight:400;padding-right:.4rem;">'+d.getDate()+' '+mo+'</th>';
+          for (let h=0;h<24;h++) { let total=0; for(let s=0;s<4;s++) total+=(grid[date]&&grid[date][h*4+s])||0; html+='<td class="'+heatClass(total)+'" title="'+(total?date+' '+zeroPad(h)+'h : '+total:'')+'"></td>'; }
+          html += '</tr>';
         });
-        html+='</tbody></table>';
-        if(dates.length>60){html='<p style="font-size:.72rem;color:var(--text-faint);margin-bottom:.3rem;">'+t('analyses_last_60d',{total:dates.length})+'</p>'+html;}
-        heatmapHtml.value=html;
-      } catch(e){console.error('[analyses-heatmap]',e);heatmapHtml.value='<div class="error-msg">'+t('error')+'</div>';}
-      heatmapLoading.value=false;
+        html += '</tbody></table>';
+        if (dates.length > 60) html = '<p style="font-size:.72rem;color:var(--text-faint);margin-bottom:.3rem;">'+t('analyses_last_60d',{total:dates.length})+'</p>'+html;
+        heatmapHtml.value = html;
+      } catch(e) { console.error('[analyses-heatmap]',e); heatmapHtml.value='<div class="error-msg">'+t('error')+'</div>'; }
+      heatmapLoading.value = false;
     }
 
-    watch(lang, function() { if (mainSpecies.value) loadSpeciesData(); });
+    // ── Watchers ───────────────────────────────────────────────────────────
+    watch(lang, async () => {
+      const tax = await BIRDASH_UTILS.loadTaxonomy(lang.value);
+      taxonomyData.value = tax.species || [];
+      if (selectedSpecies.value.length) loadAnalysis();
+    });
 
     function onResize() { if (_chartPolar) _chartPolar.resize(); }
 
-    onMounted(async function() {
-      // Load taxonomy
-      const tax = await BIRDASH_UTILS.loadTaxonomy();
+    const spSearchInput = ref(null);
+    function onKeydown(e) {
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT' && document.activeElement.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        pickerOpen.value = true;
+        nextTick(() => { if (spSearchInput.value) spSearchInput.value.focus(); });
+      }
+    }
+
+    onMounted(async () => {
+      document.addEventListener('keydown', onKeydown);
+      const tax = await BIRDASH_UTILS.loadTaxonomy(lang.value);
       taxonomyData.value = tax.species || [];
       try {
-        var r=(await birdQuery('SELECT MIN(Date) as f, MAX(Date) as l FROM detections'))[0];
-        if (r) { fromDate.value=r.f; toDate.value=r.l; quickActive.value=0; }
+        const r = (await birdQuery('SELECT MIN(Date) as f, MAX(Date) as l FROM detections'))[0];
+        if (r) { fromDate.value = r.f; toDate.value = r.l; quickActive.value = 0; }
       } catch(e) {}
       await applyFilters();
       window.addEventListener('resize', onResize);
     });
-    onUnmounted(function() {
-      window.removeEventListener('resize', onResize);
-      if (_chartPolar)  { _chartPolar.dispose();  _chartPolar=null;  }
-      if (_chartSeries) { _chartSeries.destroy(); _chartSeries=null; }
-    });
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
-    function zeroPad(n) { return n < 10 ? '0' + n : '' + n; }
-    function fmtTimeFull(t) { return t ? t.substring(0, 5) : '—'; }
-    function toggleAudioFile(fileName) {
-      const url = buildAudioUrl(fileName);
-      if (url) toggleAudio(fileName);
+    async function exportCsv() {
+      const sciNames = selectedSciNames();
+      if (!sciNames.length) return;
+      const conf = confSlider.value / 100;
+      const ph = sqlInClause(sciNames);
+      try {
+        const data = await birdQuery(
+          'SELECT Date, Time, Com_Name, Sci_Name, ROUND(Confidence*100,1) as Confidence FROM detections WHERE Sci_Name IN (' + ph + ') AND Date>=? AND Date<=? AND Confidence>=? ORDER BY Date DESC, Time DESC LIMIT 10000',
+          [...sciNames, fromDate.value, toDate.value, conf]
+        );
+        if (!data.length) return;
+        const headers = ['Date','Time','Species','Scientific_Name','Confidence'];
+        const csvRows = [headers.join(',')];
+        for (const r of data) {
+          csvRows.push([
+            r.Date, r.Time,
+            '"' + (r.Com_Name || '').replace(/"/g, '""') + '"',
+            '"' + (r.Sci_Name || '').replace(/"/g, '""') + '"',
+            r.Confidence + '%'
+          ].join(','));
+        }
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'birdash-analyses-' + localDateStr() + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch(e) { console.error('[export]', e); }
     }
 
+    onUnmounted(() => {
+      document.removeEventListener('keydown', onKeydown);
+      window.removeEventListener('resize', onResize);
+      if (_chartPolar)  { _chartPolar.dispose(); _chartPolar = null; }
+      if (_chartSeries) { _chartSeries.destroy(); _chartSeries = null; }
+    });
+
     return {
-      lang,t,spName,sciFor,
-      fromDate,toDate,resample,confSlider,quickActive,
-      fOrder,fFamily,taxonomyOrders,taxonomyAllFamilies,onTaxChange,
-      speciesList,selectedSpecies,mainSpecies,spSearch,pickerOpen,topN,
-      loading,kpis,narrativeHtml,narrativeLoading,heatmapHtml,heatmapLoading,
-      thumbUrl,elPolar,elSeries,
-      polarDetail,
-      speciesLabel,polarTitle,seriesTitle,heatmapTitle,filteredSpeciesList,
-      playingFile, fmtTime,
-      zeroPad, fmtTimeFull, toggleAudioFile,
-      setRange,setAll,applyFilters,toggleSpecies,removeTag,selectTopN,clearSelection,
+      lang, t, spName, sciFor,
+      fromDate, toDate, resample, confSlider, quickActive,
+      fOrder, fFamily, taxonomyOrders, availableFamilies, onOrderChange, onFamilyChange,
+      speciesList, selectedSpecies, mainSpecies, spSearch, spSearchInput, pickerOpen, topN,
+      filteredSpeciesList, selCtx, headerTitle,
+      loading, kpis, breakdown, narrativeHtml, narrativeLoading, heatmapHtml, heatmapLoading,
+      thumbUrl, elPolar, elSeries, polarDetail,
+      speciesLabel, polarTitle, seriesTitle, heatmapTitle,
+      playingFile, fmtTime, zeroPad, fmtTimeFull, toggleAudioFile,
+      setRange, setAll, applyFilters, toggleSpecies, removeTag, selectTopN, selectAllFiltered, clearSelection, exportCsv,
     };
   }
 });
