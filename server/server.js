@@ -1121,6 +1121,73 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/apprise ────────────────────────────────────────────────
+  // Returns the content of apprise.txt (notification service URLs)
+  if (req.method === 'GET' && pathname === '/api/apprise') {
+    (async () => {
+      const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
+      try {
+        const content = await fsp.readFile(appriseFile, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ urls: content.trim() }));
+      } catch(e) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ urls: '' }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : POST /api/apprise ─────────────────────────────────────────────
+  // Saves apprise notification URLs to apprise.txt
+  if (req.method === 'POST' && pathname === '/api/apprise') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { urls } = JSON.parse(body);
+        if (typeof urls !== 'string') throw new Error('urls must be a string');
+        const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
+        await fsp.writeFile(appriseFile, urls.trim() + '\n');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch(e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // ── Route : POST /api/apprise/test ────────────────────────────────────────
+  // Sends a test notification via Apprise
+  if (req.method === 'POST' && pathname === '/api/apprise/test') {
+    (async () => {
+      try {
+        const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
+        const appriseBin = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
+        const { execFile } = require('child_process');
+        const result = await new Promise((resolve, reject) => {
+          execFile(appriseBin, [
+            '-vv',
+            '-t', 'BIRDASH Test',
+            '-b', 'This is a test notification from BIRDASH. If you see this, notifications are working!',
+            '--config=' + appriseFile
+          ], { timeout: 15000 }, (err, stdout, stderr) => {
+            if (err) reject(new Error(stderr || err.message));
+            else resolve(stdout + stderr);
+          });
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, output: result }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    })();
+    return;
+  }
+
   // ── Route : GET /api/services ───────────────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/services') {
     (async () => {

@@ -325,6 +325,37 @@
         <!-- ═══ Notifications ═══ -->
         <div class="card">
           <div class="section-title">🔔 {{t('set_notifications')}}</div>
+
+          <!-- Apprise URLs -->
+          <div class="set-row" style="flex-direction:column;align-items:stretch;">
+            <label class="set-label" style="margin-bottom:.3rem;">{{t('set_notif_urls')}}</label>
+            <textarea v-model="appriseUrls" rows="3"
+                      style="width:100%;box-sizing:border-box;font-family:monospace;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.4rem .5rem;resize:vertical;"
+                      placeholder="ntfy://ntfy.sh/my-birds&#10;tgram://bottoken/chatid&#10;mailto://user:pass@gmail.com"></textarea>
+            <div style="font-size:.68rem;color:var(--text-faint);margin-top:.25rem;line-height:1.5;">
+              {{t('set_notif_urls_help')}}<br>
+              <code style="color:var(--accent);">ntfy://ntfy.sh/my-topic</code> ·
+              <code style="color:var(--accent);">tgram://bottoken/chatid</code> ·
+              <code style="color:var(--accent);">discord://webhook_id/webhook_token</code><br>
+              <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener" style="color:var(--accent);font-size:.68rem;">Apprise Wiki — 80+ services</a>
+            </div>
+            <div v-if="!appriseUrls.trim()" style="margin-top:.4rem;padding:.3rem .5rem;background:rgba(251,191,36,.1);border-left:3px solid var(--amber);border-radius:3px;font-size:.72rem;color:var(--amber);">
+              {{t('set_notif_no_urls')}}
+            </div>
+            <div style="display:flex;gap:.5rem;margin-top:.4rem;">
+              <button class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;" @click="saveApprise" :disabled="savingApprise">
+                {{savingApprise ? '…' : t('set_save')}}
+              </button>
+              <button class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;" @click="testApprise" :disabled="testingApprise || !appriseUrls.trim()">
+                {{testingApprise ? t('set_notif_testing') : '🔔 ' + t('set_notif_test')}}
+              </button>
+              <span v-if="appriseMsg" style="font-size:.72rem;align-self:center;" :style="{color:appriseErr?'var(--danger)':'var(--accent)'}">{{appriseMsg}}</span>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0;">
+
+          <!-- Notification triggers -->
           <div class="set-row">
             <label class="set-check">
               <input type="checkbox" v-model="conf.APPRISE_NOTIFY_EACH_DETECTION" true-value="1" false-value="0">
@@ -348,6 +379,31 @@
               <input type="checkbox" v-model="conf.APPRISE_WEEKLY_REPORT" true-value="1" false-value="0">
               <span>{{t('set_weekly_report')}}</span>
             </label>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0;">
+
+          <!-- Title & Body templates -->
+          <div class="set-row" style="flex-direction:column;align-items:stretch;">
+            <label class="set-label" style="margin-bottom:.2rem;">{{t('set_notif_title')}}</label>
+            <input type="text" v-model="conf.APPRISE_NOTIFICATION_TITLE"
+                   style="width:100%;box-sizing:border-box;font-size:.8rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.3rem .5rem;">
+          </div>
+          <div class="set-row" style="flex-direction:column;align-items:stretch;margin-top:.4rem;">
+            <label class="set-label" style="margin-bottom:.2rem;">{{t('set_notif_body')}}</label>
+            <input type="text" v-model="conf.APPRISE_NOTIFICATION_BODY"
+                   placeholder="A $comname ($sciname) was detected with confidence $confidence"
+                   style="width:100%;box-sizing:border-box;font-size:.8rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.3rem .5rem;">
+            <div style="font-size:.68rem;color:var(--text-faint);margin-top:.2rem;">
+              {{t('set_notif_body_help')}}
+            </div>
+          </div>
+
+          <!-- Cooldown -->
+          <div class="set-row" style="margin-top:.5rem;">
+            <label class="set-label" style="flex:1;">{{t('set_notif_cooldown')}}</label>
+            <input type="number" v-model="conf.APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES" min="0" max="86400" step="1"
+                   style="width:80px;font-size:.8rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.3rem .5rem;text-align:right;">
           </div>
         </div>
 
@@ -728,6 +784,51 @@ const app = createApp({
     const includeList = ref('');
     const excludeList = ref('');
     const savingLists = ref(false);
+
+    // ── Apprise notification URLs ──────────────────────────────
+    const appriseUrls    = ref('');
+    const savingApprise  = ref(false);
+    const testingApprise = ref(false);
+    const appriseMsg     = ref('');
+    const appriseErr     = ref(false);
+
+    async function loadApprise() {
+      try {
+        const res = await fetch(API + '/apprise');
+        const data = await res.json();
+        appriseUrls.value = data.urls || '';
+      } catch(e) {}
+    }
+
+    async function saveApprise() {
+      savingApprise.value = true;
+      appriseMsg.value = '';
+      try {
+        const res = await fetch(API + '/apprise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls: appriseUrls.value }),
+        });
+        const data = await res.json();
+        if (data.ok) { appriseMsg.value = '✓'; appriseErr.value = false; }
+        else { appriseMsg.value = data.error; appriseErr.value = true; }
+      } catch(e) { appriseMsg.value = e.message; appriseErr.value = true; }
+      savingApprise.value = false;
+    }
+
+    async function testApprise() {
+      testingApprise.value = true;
+      appriseMsg.value = '';
+      // Save first to ensure apprise.txt is up to date
+      await saveApprise();
+      try {
+        const res = await fetch(API + '/apprise/test', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) { appriseMsg.value = t('set_notif_test_ok'); appriseErr.value = false; }
+        else { appriseMsg.value = t('set_notif_test_fail', { error: data.error || 'unknown' }); appriseErr.value = true; }
+      } catch(e) { appriseMsg.value = t('set_notif_test_fail', { error: e.message }); appriseErr.value = true; }
+      testingApprise.value = false;
+    }
 
     // ── Backup configuration ──────────────────────────────────────
     const bkp = reactive({
@@ -1397,13 +1498,14 @@ const app = createApp({
       return html;
     });
 
-    onMounted(reload);
+    onMounted(() => { reload(); loadApprise(); });
 
     return {
       t, lang, conf, models, languages, services,
       tabs, activeTab, switchTab,
       loading, saving, svcLoading, saveMsg, saveErr,
       includeList, excludeList, savingLists,
+      appriseUrls, savingApprise, testingApprise, appriseMsg, appriseErr, saveApprise, testApprise,
       modelLabel, modelDescription,
       reload, save, restartService, saveSpeciesLists,
       helpKey, helpTitle, helpBody,
