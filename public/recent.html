@@ -556,7 +556,7 @@ function encodeWav(pcm, sr) {
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
-        localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, fetchSpeciesImage,
+        localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, fetchCachedPhoto,
         navigateTo } = BIRDASH;
 
 // PCM brut conservé entre loadDetection et applyClean (non réactif)
@@ -694,13 +694,11 @@ const app = createApp({
                   MAX(Time) as last_time, MAX(Confidence) as max_conf
            FROM detections WHERE Date=? AND Confidence>=?
            GROUP BY Com_Name ORDER BY n DESC`, [selDate.value, minConf.value]);
-        speciesList.value = rows.map(r => ({ ...r, imgUrl: null }));
+        speciesList.value = rows.map(r => ({
+          ...r,
+          imgUrl: BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(r.sci || r.Com_Name),
+        }));
         if (rows.length > 0 && !selected.value) selectSpecies(speciesList.value[0]);
-        rows.slice(0, 20).forEach((r, i) => {
-          fetchSpeciesImage(r.sci || r.Com_Name).then(url => {
-            if (url && speciesList.value[i]) speciesList.value[i].imgUrl = url;
-          });
-        });
       } catch(e) { console.error('species:', e); }
       loadingList.value = false;
     }
@@ -729,7 +727,7 @@ const app = createApp({
            FROM detections WHERE Date=? AND Com_Name=? AND Confidence>=?
            ORDER BY Time DESC`, [selDate.value, sp.Com_Name, minConf.value]);
         selectedDets.value = rows;
-        if (!sp.imgUrl && sp.sci) fetchSpeciesImage(sp.sci).then(url => { if (url) sp.imgUrl = url; });
+        if (!sp.imgUrl && sp.sci) sp.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sp.sci);
         await loadDetection(0);
       } catch(e) { console.error('selectSpecies:', e); }
     }
