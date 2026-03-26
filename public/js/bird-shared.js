@@ -29,6 +29,14 @@
     });
   }
 
+  // ── Authenticated fetch (for write operations) ──────────────────────────
+  // Automatically adds Authorization header if BIRD_CONFIG.apiToken is set.
+  function authHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    if (BIRD_CONFIG.apiToken) h['Authorization'] = `Bearer ${BIRD_CONFIG.apiToken}`;
+    return h;
+  }
+
   // ── Formatting ───────────────────────────────────────────────────────────
 
   function fmtDate(dateStr) {
@@ -404,6 +412,7 @@
     chartDefaults: chartDefaults,
     escHtml: escHtml,
     safeHtml: safeHtml,
+    authHeaders: authHeaders,
     spinnerHTML: spinnerHTML,
     shortModel: shortModel,
     loadTaxonomy: loadTaxonomy,

@@ -925,7 +925,7 @@
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, MODEL_LABELS,
         birdQuery, fmtDate, fmtTime, freshnessLabel,
-        localDateStr, daysAgo, chartDefaults, navigateTo } = BIRDASH;
+        localDateStr, daysAgo, chartDefaults, navigateTo, authHeaders } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -1068,7 +1068,7 @@ const app = createApp({
 
     async function svcAction(name, action) {
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/${action}`, { method: 'POST' });
+        await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/${action}`, { method: 'POST', headers: authHeaders() });
         // Reload services list and detail after action
         await loadServices();
         if (svcExpanded.value === name) {

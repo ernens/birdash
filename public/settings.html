@@ -841,7 +841,7 @@
 
 <script>
 const { createApp, ref, reactive, onMounted, computed } = Vue;
-const { useI18n, useTheme, useNav, registerComponents, safeHtml } = BIRDASH;
+const { useI18n, useTheme, useNav, registerComponents, safeHtml, authHeaders } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -896,7 +896,7 @@ const app = createApp({
       try {
         const res = await fetch(API + '/apprise', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ urls: appriseUrls.value }),
         });
         const data = await res.json();
@@ -952,7 +952,7 @@ const app = createApp({
         };
         const res = await fetch(API + '/settings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ updates }),
         });
         const data = await res.json();
@@ -968,7 +968,7 @@ const app = createApp({
       // Save first to ensure apprise.txt is up to date
       await saveApprise();
       try {
-        const res = await fetch(API + '/apprise/test', { method: 'POST' });
+        const res = await fetch(API + '/apprise/test', { method: 'POST', headers: authHeaders() });
         const data = await res.json();
         if (data.ok) { appriseMsg.value = t('set_notif_test_ok'); appriseErr.value = false; }
         else { appriseMsg.value = t('set_notif_test_fail', { error: data.error || 'unknown' }); appriseErr.value = true; }
@@ -1109,7 +1109,7 @@ const app = createApp({
 
     async function pauseBackup() {
       try {
-        const res = await fetch(API + '/backup-pause', { method: 'POST' });
+        const res = await fetch(API + '/backup-pause', { method: 'POST', headers: authHeaders() });
         const data = await res.json();
         if (data.ok) {
           if (data.action === 'pause') bkpProgress.state = 'paused';
@@ -1121,7 +1121,7 @@ const app = createApp({
     async function stopBackup() {
       if (!confirm(t('set_backup_stop_confirm'))) return;
       try {
-        const res = await fetch(API + '/backup-stop', { method: 'POST' });
+        const res = await fetch(API + '/backup-stop', { method: 'POST', headers: authHeaders() });
         const data = await res.json();
         if (data.ok) {
           bkpProgress.state = 'stopped';
@@ -1137,7 +1137,7 @@ const app = createApp({
       savingBkp.value = true;
       try {
         const res = await fetch(API + '/backup-config', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: authHeaders(),
           body: JSON.stringify({ ...bkp }),
         });
         const data = await res.json();
@@ -1153,10 +1153,10 @@ const app = createApp({
       try {
         // Save config first
         await fetch(API + '/backup-config', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: authHeaders(),
           body: JSON.stringify({ ...bkp }),
         });
-        const res = await fetch(API + '/backup-run', { method: 'POST' });
+        const res = await fetch(API + '/backup-run', { method: 'POST', headers: authHeaders() });
         const data = await res.json();
         if (data.ok) {
           saveMsg.value = '';
@@ -1239,7 +1239,7 @@ const app = createApp({
       try {
         const res = await fetch(API + '/settings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ updates: { ...conf } }),
         });
         const data = await res.json();
@@ -1251,7 +1251,7 @@ const app = createApp({
             for (const svc of ['birdnet_analysis', 'birdnet_recording']) {
               await fetch(API + '/services/restart', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ service: svc }),
               });
             }
@@ -1275,7 +1275,7 @@ const app = createApp({
       try {
         await fetch(API + '/services/restart', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ service: name }),
         });
       } catch(e) { console.error(e); }
@@ -1290,12 +1290,12 @@ const app = createApp({
         await Promise.all([
           fetch(API + '/species-lists', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ list: 'include', species: inc }),
           }),
           fetch(API + '/species-lists', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ list: 'exclude', species: exc }),
           }),
         ]);

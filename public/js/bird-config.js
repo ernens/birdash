@@ -21,6 +21,9 @@ const BIRD_CONFIG = {
   apiUrl:   '/birds/api',
   audioUrl: '/birds/audio',
 
+  // Optional API token for write operations (set in birdash-local.js)
+  apiToken: _local.apiToken ?? '',
+
   // Paramètres analyse (surchargeables via birdash-local.js)
   defaultConfidence: _local.defaultConfidence ?? 0.7,
   topSpeciesCount:   10,

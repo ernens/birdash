@@ -33,6 +33,25 @@ const SONGS_DIR = process.env.BIRDASH_SONGS_DIR || path.join(
 const PHOTO_CACHE_DIR = path.join(process.env.HOME, 'birdash', 'photo-cache');
 const AUDIO_RATE = 48000;
 
+// ── Security ─────────────────────────────────────────────────────────────────
+// Optional API token for write operations (POST/DELETE).
+// If set, mutating endpoints require: Authorization: Bearer <token>
+const API_TOKEN = process.env.BIRDASH_API_TOKEN || '';
+
+// Content-Security-Policy — restrict what the browser can load
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  "font-src 'self'",
+  "media-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 // ── BirdNET-Pi Settings helpers ──────────────────────────────────────────────
 const BIRDNET_CONF = '/etc/birdnet/birdnet.conf';
 const BIRDNET_DIR = path.join(process.env.HOME, 'BirdNET-Pi');
@@ -702,12 +721,25 @@ function rateLimit(req) {
   return bucket.count > RATE_MAX;
 }
 
+// ── Auth helper: check Bearer token for write operations ─────────────────────
+function requireAuth(req, res) {
+  if (!API_TOKEN) return true; // no token configured → open access
+  const auth = req.headers['authorization'] || '';
+  const url  = new URL(req.url, 'http://localhost');
+  const qToken = url.searchParams.get('token');
+  if (auth === `Bearer ${API_TOKEN}` || qToken === API_TOKEN) return true;
+  res.writeHead(401, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Unauthorized — set Authorization: Bearer <token> header' }));
+  return false;
+}
+
 // --- Handler HTTP
 const server = http.createServer((req, res) => {
   // Headers de sécurité
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy', CSP);
 
   // CORS — restrictif par défaut
   const allowedOrigin = getCorsOrigin(req);
@@ -716,7 +748,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -1263,6 +1295,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/settings ──────────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/settings') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -1325,6 +1358,7 @@ const server = http.createServer((req, res) => {
   // ── Route : POST /api/apprise ─────────────────────────────────────────────
   // Saves apprise notification URLs to apprise.txt
   if (req.method === 'POST' && pathname === '/api/apprise') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', c => body += c);
     req.on('end', async () => {
@@ -1439,6 +1473,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/services/restart ──────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/services/restart') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -1593,6 +1628,7 @@ const server = http.createServer((req, res) => {
   // ── Route : POST /api/services/:name/:action (start|stop) ────────────────────
   const svcActionMatch = pathname.match(/^\/api\/services\/([^/]+)\/(start|stop)$/);
   if (req.method === 'POST' && svcActionMatch) {
+    if (!requireAuth(req, res)) return;
     const svcName = svcActionMatch[1];
     const action = svcActionMatch[2];
     if (!ALLOWED_SERVICES.includes(svcName)) {
@@ -1899,6 +1935,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/species-lists ─────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/species-lists') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -1966,6 +2003,7 @@ const server = http.createServer((req, res) => {
   // ── Route : DELETE /api/detections ─────────────────────────────────────────
   // Delete a single detection by composite key (Date + Time + Com_Name)
   if (req.method === 'DELETE' && pathname === '/api/detections') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -2023,6 +2061,7 @@ const server = http.createServer((req, res) => {
   // ── Route : DELETE /api/detections/species ─────────────────────────────────
   // Bulk-delete ALL detections for a species (requires typed confirmation)
   if (req.method === 'DELETE' && pathname === '/api/detections/species') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -2241,6 +2280,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/backup-config ─────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/backup-config') {
+    if (!requireAuth(req, res)) return;
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
@@ -2307,6 +2347,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/backup-run ────────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/backup-run') {
+    if (!requireAuth(req, res)) return;
     (async () => {
       try {
         const cfgPath = path.join(__dirname, '..', 'config', 'backup.json');
@@ -2366,22 +2407,87 @@ const server = http.createServer((req, res) => {
           }
         } catch(e) {}
 
-        // If no new-style backup is running, detect legacy backup-biloute.sh or new script
+        // If no new-style backup is running, detect legacy backup-biloute.sh
         if (status.state === 'idle' || status.state === 'completed' || status.state === 'failed' || status.state === 'stopped') {
           try {
             const psOut = await execCmd('pgrep', ['-af', 'backup-biloute\\.sh']);
             if (psOut.trim()) {
-              let step = 'projects', detail = 'backup-biloute.sh (legacy)';
-              let percent = 50;
+              // Legacy backup has 4 steps: db(0-5%), config(5-10%), projects(10-25%), audio(25-100%)
+              let step = 'init', detail = 'backup-biloute.sh (legacy)', percent = 2;
+
+              // Detect current step from log file
+              // Use grep to find last step marker (log can be huge with rsync output)
               try {
-                const rsyncPs = await execCmd('pgrep', ['-af', 'rsync.*BirdSongs']);
-                if (rsyncPs.trim()) { step = 'audio'; detail = 'BirdSongs rsync (legacy)'; percent = 75; }
-              } catch(e2) {
+                // Find the last "Étape N" line in the log
+                let lastStep = '';
                 try {
-                  const rsyncPs2 = await execCmd('pgrep', ['-af', 'rsync.*/mnt/backup']);
-                  if (rsyncPs2.trim()) { step = 'projects'; detail = 'Sync projets (legacy)'; percent = 50; }
-                } catch(e3) {}
+                  lastStep = await execCmd('bash', ['-c', "grep -n 'tape [1-4]' /var/log/backup-biloute.log | tail -1"]);
+                } catch(eG) {}
+                // Also check completion markers
+                let completionLines = '';
+                try {
+                  completionLines = await execCmd('tail', ['-5', '/var/log/backup-biloute.log']);
+                } catch(eT) {}
+
+                if (/tape 4/i.test(lastStep) || /BirdSongs/i.test(lastStep)) {
+                  step = 'audio'; detail = 'BirdSongs rsync (legacy)'; percent = 25;
+                  // Parse rsync progress from the last lines of the log
+                  // Multiple rsync instances may interleave — take the max percentage
+                  try {
+                    const logTail = await execCmd('tail', ['-50', '/var/log/backup-biloute.log']);
+                    const pctMatches = logTail.match(/\b(\d{1,3})%/g);
+                    if (pctMatches && pctMatches.length) {
+                      const allPcts = pctMatches.map(m => parseInt(m)).filter(n => !isNaN(n) && n >= 0 && n <= 100);
+                      if (allPcts.length) {
+                        const maxPct = Math.max(...allPcts);
+                        percent = 25 + Math.round(maxPct * 73 / 100); // Scale 0-100% into 25-98%
+                        // Extract last synced filename from log lines (lines without %)
+                        const fileLines = logTail.split('\n').filter(l => l.trim() && !/\d+%/.test(l) && !l.startsWith('['));
+                        const lastFile = fileLines.length ? fileLines[fileLines.length - 1].trim() : '';
+                        if (lastFile) {
+                          // Show just the filename, not the full path
+                          const shortName = lastFile.split('/').pop();
+                          detail = shortName;
+                        } else {
+                          detail = 'Synchronisation BirdSongs…';
+                        }
+                      }
+                    }
+                  } catch(eR) {}
+                  // If finished
+                  if (/BirdSongs OK/i.test(completionLines)) { percent = 98; detail = 'Finalisation...'; }
+                } else if (/tape 3/i.test(lastStep)) {
+                  step = 'projects'; detail = 'Sync projets (legacy)'; percent = 15;
+                  // Extract current file from log
+                  try {
+                    const logTail3 = await execCmd('tail', ['-20', '/var/log/backup-biloute.log']);
+                    const fileLines3 = logTail3.split('\n').filter(l => l.trim() && !/\d+%/.test(l) && !l.startsWith('[') && !/rsync error/i.test(l));
+                    if (fileLines3.length) {
+                      const shortName = fileLines3[fileLines3.length - 1].trim().split('/').pop();
+                      if (shortName) detail = shortName;
+                    }
+                  } catch(eF) {}
+                  if (/Projets OK/i.test(completionLines)) { percent = 24; }
+                } else if (/tape 2/i.test(lastStep)) {
+                  step = 'config'; detail = 'Configuration (legacy)'; percent = 8;
+                  if (/Configurations OK/i.test(completionLines)) { percent = 10; }
+                } else if (/tape 1/i.test(lastStep)) {
+                  step = 'db'; detail = 'Bases de données (legacy)'; percent = 3;
+                  if (/Bases de donn.*OK/i.test(completionLines)) { percent = 5; }
+                }
+              } catch(eLog) {
+                // Fallback: detect step from running processes
+                try {
+                  const rsyncPs = await execCmd('pgrep', ['-af', 'rsync.*BirdSongs']);
+                  if (rsyncPs.trim()) { step = 'audio'; detail = 'BirdSongs rsync (legacy)'; percent = 50; }
+                } catch(e2) {
+                  try {
+                    const rsyncPs2 = await execCmd('pgrep', ['-af', 'rsync.*/mnt/backup']);
+                    if (rsyncPs2.trim()) { step = 'projects'; detail = 'Sync projets (legacy)'; percent = 15; }
+                  } catch(e3) {}
+                }
               }
+
               let startedAt = null;
               try {
                 const pid = psOut.trim().split('\n')[0].trim().split(/\s+/)[0];
@@ -2429,8 +2535,60 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/backup-history ──────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/backup-history') {
+    (async () => {
+      const histPath = path.join(__dirname, '..', 'config', 'backup-history.json');
+      try {
+        const raw = await fsp.readFile(histPath, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(raw);
+      } catch(e) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end('[]');
+      }
+    })();
+    return;
+  }
+
+  // ── Route : GET /api/backup-schedule ───────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/backup-schedule') {
+    (async () => {
+      try {
+        const cronOut = await execCmd('crontab', ['-l']);
+        const line = cronOut.split('\n').find(l => l.includes('BIRDASH_BACKUP') && !l.startsWith('#'));
+        let schedule = null;
+        if (line) {
+          const parts = line.trim().split(/\s+/);
+          const min = parts[0], hour = parts[1], dow = parts[4];
+          const time = (hour.length === 1 ? '0' : '') + hour + ':' + (min.length === 1 ? '0' : '') + min;
+          const type = dow === '*' ? 'daily' : 'weekly';
+          const now = new Date();
+          const next = new Date(now);
+          next.setHours(parseInt(hour), parseInt(min), 0, 0);
+          if (type === 'weekly') {
+            const targetDay = parseInt(dow);
+            let daysUntil = (targetDay - now.getDay() + 7) % 7;
+            if (daysUntil === 0 && next <= now) daysUntil = 7;
+            next.setDate(now.getDate() + daysUntil);
+          } else {
+            if (next <= now) next.setDate(next.getDate() + 1);
+          }
+          schedule = { type, time, nextRun: next.toISOString(), cronLine: line.trim() };
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ schedule }));
+      } catch(e) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ schedule: null }));
+      }
+    })();
+    return;
+  }
+
   // ── Route : POST /api/backup-pause ────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/backup-pause') {
+    if (!requireAuth(req, res)) return;
     (async () => {
       try {
         // Find backup process (new or legacy)
@@ -2493,6 +2651,7 @@ const server = http.createServer((req, res) => {
 
   // ── Route : POST /api/backup-stop ─────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/backup-stop') {
+    if (!requireAuth(req, res)) return;
     (async () => {
       try {
         let pids = [];

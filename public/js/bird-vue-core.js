@@ -1492,6 +1492,7 @@
     birdQuery:        U.birdQuery,
     escHtml:          U.escHtml,
     safeHtml:         U.safeHtml,
+    authHeaders:      U.authHeaders,
     fmtDate:          U.fmtDate,
     fmtTime:          U.fmtTime,
     fmtConf:          U.fmtConf,

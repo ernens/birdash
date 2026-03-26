@@ -295,7 +295,7 @@ const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
-        buildSpeciesLinks, fetchSpeciesImage, chartDefaults, shortModel } = BIRDASH;
+        buildSpeciesLinks, fetchSpeciesImage, chartDefaults, shortModel, authHeaders } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -768,7 +768,7 @@ const app = createApp({
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/detections`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ date: d.Date, time: d.Time, comName: sp.value.name }),
         });
         const data = await res.json();
@@ -794,7 +794,7 @@ const app = createApp({
         const targetName = bulkTargetName.value;
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/detections/species`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ comName: targetName, confirmName: bulkConfirmName.value }),
         });
         const data = await res.json();
