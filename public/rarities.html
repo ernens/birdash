@@ -95,7 +95,7 @@
                 <div v-else class="det-thumb-ph">🐦</div>
                 <div style="font-size:.85rem;flex:1;min-width:0;">
                   <span style="color:var(--danger);margin-right:.25rem;">💎</span>
-                  <strong style="color:var(--text-main);">{{spName(r.Com_Name, r.sci)}}</strong>
+                  <strong style="color:var(--text-main);">{{spName(r.Com_Name, r.sci)}}</strong> <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button>
                   <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{r.sci}}</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
@@ -129,7 +129,7 @@
                    class="dl-btn" :title="t('download')" @click.stop>⬇</a>
                 <div class="det-time">{{fmtDate(d.Date)}}</div>
                 <div style="flex:1;min-width:0;">
-                  <div style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(d.Com_Name, d.Sci_Name)}}</div>
+                  <div style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(d.Com_Name, d.Sci_Name)}} <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">&#x1F50A;</button></div>
                   <div class="det-sci">{{d.Sci_Name}}</div>
                 </div>
                 <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':'conf-mid')">{{fmtConf(d.Confidence)}}</span>
@@ -161,7 +161,7 @@
                   <bird-img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" ></bird-img>
                   <div v-else class="det-thumb-ph">🐦</div>
                 </td>
-                <td><span style="margin-right:.3rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</span><strong>{{spName(r.Com_Name, r.sci)}}</strong></td>
+                <td><span style="margin-right:.3rem;">{{r.n===1?'💎':r.n<=3?'🔶':'🔹'}}</span><strong>{{spName(r.Com_Name, r.sci)}}</strong> <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button></td>
                 <td style="font-style:italic;color:var(--text-muted);font-size:.8rem;" class="hide-sm">{{r.sci}}</td>
                 <td style="text-align:center;"><span :class="'conf-badge '+(r.n===1?'conf-low':r.n<=5?'conf-mid':'conf-high')">{{r.n}}</span></td>
                 <td style="font-size:.8rem;">{{fmtDate(r.first_date)}}</td>
@@ -180,7 +180,7 @@
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtConf, localDateStr, daysAgo,
-        navigateTo, buildAudioUrl, fetchCachedPhoto } = BIRDASH;
+        navigateTo, buildAudioUrl, fetchCachedPhoto, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -317,6 +317,7 @@ const app = createApp({
       kpis,once,recent,table,
       playingFile,toggleAudio,buildAudioUrl,
       fmtDate,fmtConf,navigateTo,spName,load,
+      quickPlay(comName) { quickPlaySpecies(comName); },
     };
   }
 });

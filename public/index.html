@@ -235,6 +235,7 @@
             <div v-else class="det-thumb-ph">💎</div>
             <div class="det-species">
               <a class="species-link" @click="navigateTo('species.html',{species:r.Com_Name})">{{spName(r.Com_Name, r.Sci_Name)}}</a>
+              <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button>
               <div class="det-sci">{{r.Sci_Name}} — {{r.totalDet}}× {{t('all_time').toLowerCase()}}</div>
             </div>
             <span class="rare-badge">💎 {{r.n}}×</span>
@@ -276,6 +277,7 @@
               <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">
                 {{spName(d.Com_Name, d.Sci_Name)}}
               </a>
+              <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">&#x1F50A;</button>
               <div class="det-sci">{{d.Sci_Name}}</div>
             </div>
             <!-- Badge rareté -->
@@ -351,7 +353,7 @@ const { createApp, ref, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo,
-        buildAudioUrl, fetchCachedPhoto, shortModel } = BIRDASH;
+        buildAudioUrl, fetchCachedPhoto, shortModel, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -692,6 +694,7 @@ const app = createApp({
       cleanMode, cleanStrength, cleanProcessing, toggleClean, reapplyClean,
       fmtDate, fmtTime, fmtConf, freshnessLabel, navigateTo, shortModel,
       canvas7d, canvasTop, canvasHourly,
+      quickPlay(comName) { quickPlaySpecies(comName); },
     };
   }
 });

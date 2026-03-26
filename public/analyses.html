@@ -29,6 +29,18 @@
       <!-- ── Filter panel (sidebar) ──────────────────────────────── -->
       <div class="filter-panel" @click.stop>
 
+        <!-- Guild quick-select buttons -->
+        <div v-if="taxonomyOrders.length">
+          <span class="fp-label">{{t('guild_filter')}}</span>
+          <div class="fp-quick-btns" style="flex-wrap:wrap;">
+            <button class="fp-quick-btn" :class="{active:!fGuild}" @click="fGuild=''" style="font-size:.72rem;">{{t('guild_all')}}</button>
+            <button v-for="g in guildOptions" :key="g.key" class="fp-quick-btn" :class="{active:fGuild===g.key}"
+                    @click="selectGuild(g.key)" :title="g.label" style="font-size:.72rem;">
+              {{g.icon}} {{g.label}}
+            </button>
+          </div>
+        </div>
+
         <!-- Ordre -->
         <div v-if="taxonomyOrders.length">
           <span class="fp-label">{{t('filter_order')}}</span>
@@ -322,6 +334,7 @@ const app = createApp({
 
     const fOrder  = ref('');
     const fFamily = ref('');
+    const fGuild  = ref('');
 
     const speciesList     = ref([]);   // all species for the period
     const selectedSpecies = ref([]);
@@ -365,13 +378,35 @@ const app = createApp({
       return Object.values(map).sort((a, b) => a.com.localeCompare(b.com));
     });
 
-    // Set of comNames allowed by current taxonomy filters
+    // Guild options and helpers
+    const GUILDS = BIRDASH_UTILS.ECOLOGICAL_GUILDS;
+    const guildOptions = computed(() => {
+      return Object.keys(GUILDS).filter(k => k !== 'other').concat(['other']).map(key => ({
+        key, icon: GUILDS[key].icon, label: t('guild_' + key)
+      }));
+    });
+
+    function selectGuild(key) {
+      fGuild.value = fGuild.value === key ? '' : key;
+      fOrder.value = ''; fFamily.value = '';
+      // Auto-select all species matching this guild
+      if (fGuild.value) {
+        const matching = filteredSpeciesList.value.map(s => s.name);
+        selectedSpecies.value = matching;
+      }
+    }
+
+    // Set of comNames allowed by current taxonomy + guild filters
     const taxonomyAllowed = computed(() => {
-      if (!fOrder.value && !fFamily.value) return null; // no filter
+      if (!fOrder.value && !fFamily.value && !fGuild.value) return null; // no filter
       const set = new Set();
       for (const s of taxonomyData.value) {
         if (fOrder.value && s.order !== fOrder.value) continue;
         if (fFamily.value && s.familySci !== fFamily.value) continue;
+        if (fGuild.value) {
+          const guild = BIRDASH_UTILS.getSpeciesGuild(s.order, s.familySci);
+          if (guild !== fGuild.value) continue;
+        }
         set.add(s.comName);
       }
       return set;
@@ -479,9 +514,9 @@ const app = createApp({
 
     // ── Filter actions ─────────────────────────────────────────────────────
     function onOrderChange() {
-      fFamily.value = '';
+      fFamily.value = ''; fGuild.value = '';
     }
-    function onFamilyChange() {}
+    function onFamilyChange() { fGuild.value = ''; }
 
     function setRange(days) {
       quickActive.value = days;
@@ -498,7 +533,7 @@ const app = createApp({
     }
 
     function resetDefaults() {
-      fOrder.value = ''; fFamily.value = '';
+      fOrder.value = ''; fFamily.value = ''; fGuild.value = '';
       selectedSpecies.value = [];
       fromDate.value = localDateStr(); toDate.value = localDateStr();
       quickActive.value = 1; resample.value = '15min'; confSlider.value = 70;
@@ -1035,7 +1070,7 @@ const app = createApp({
     return {
       lang, t, spName, sciFor,
       fromDate, toDate, resample, confSlider, quickActive,
-      fOrder, fFamily, taxonomyOrders, availableFamilies, onOrderChange, onFamilyChange,
+      fOrder, fFamily, fGuild, guildOptions, selectGuild, taxonomyOrders, availableFamilies, onOrderChange, onFamilyChange,
       speciesList, selectedSpecies, mainSpecies, spSearch, spSearchInput, pickerOpen, topN,
       filteredSpeciesList, selCtx, headerTitle,
       loading, kpis, breakdown, narrativeHtml, narrativeLoading, heatmapHtml, heatmapLoading, safeHtml,

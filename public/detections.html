@@ -25,7 +25,15 @@
 
       <!-- Panneau filtres -->
       <div class="filter-panel">
-        <!-- Taxonomy cascade first -->
+        <!-- Ecological guild filter -->
+        <div v-if="taxonomyOrders.length">
+          <span class="fp-label">{{t('guild_filter')}}</span>
+          <select class="fp-select" v-model="fGuild" @change="onGuildChange" :aria-label="t('guild_filter')">
+            <option value="">{{t('guild_all')}}</option>
+            <option v-for="g in guildOptions" :key="g.key" :value="g.key">{{g.icon}} {{g.label}}</option>
+          </select>
+        </div>
+        <!-- Taxonomy cascade -->
         <div v-if="taxonomyOrders.length">
           <span class="fp-label">{{t('filter_order')}}</span>
           <select class="fp-select" v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')">
@@ -242,6 +250,7 @@ const app = createApp({
     // Taxonomy filters
     const fOrder  = ref('');
     const fFamily = ref('');
+    const fGuild  = ref('');
     const taxonomyData = ref([]);  // [{sciName, comName, order, familySci, familyCom}]
     const taxonomyOrders = computed(() => {
       const set = new Set(taxonomyData.value.map(s => s.order).filter(Boolean));
@@ -256,16 +265,30 @@ const app = createApp({
       }
       return Object.values(map).sort((a, b) => a.com.localeCompare(b.com));
     });
+
+    // Guild options for dropdown
+    const GUILDS = BIRDASH_UTILS.ECOLOGICAL_GUILDS;
+    const guildOptions = computed(() => {
+      return Object.keys(GUILDS).filter(k => k !== 'other').concat(['other']).map(key => ({
+        key, icon: GUILDS[key].icon, label: t('guild_' + key)
+      }));
+    });
+
     function onOrderChange() { fFamily.value = ''; }
     function onFamilyChange() {}
+    function onGuildChange() { fOrder.value = ''; fFamily.value = ''; }
 
-    // Set of species allowed by taxonomy filters
+    // Set of species allowed by taxonomy + guild filters
     const taxonomyAllowed = computed(() => {
-      if (!fOrder.value && !fFamily.value) return null;
+      if (!fOrder.value && !fFamily.value && !fGuild.value) return null;
       const set = new Set();
       for (const s of taxonomyData.value) {
         if (fOrder.value && s.order !== fOrder.value) continue;
         if (fFamily.value && s.familySci !== fFamily.value) continue;
+        if (fGuild.value) {
+          const guild = BIRDASH_UTILS.getSpeciesGuild(s.order, s.familySci);
+          if (guild !== fGuild.value) continue;
+        }
         set.add(s.comName);
       }
       return set;
@@ -490,7 +513,7 @@ const app = createApp({
     function resetFilters() {
       fSpecies.value=[]; fDateFrom.value=daysAgo(BIRD_CONFIG.recentDays);
       fDateTo.value=localDateStr(); fConf.value=BIRD_CONFIG.defaultConfidence;
-      fOrder.value=''; fFamily.value='';
+      fOrder.value=''; fFamily.value=''; fGuild.value='';
       uniqueMode.value=false; activeQuick.value=-1; spSearch.value='';
       page.value=1; loadDetections();
     }
@@ -533,7 +556,7 @@ const app = createApp({
     return {
       lang,t,
       fSpecies,fDateFrom,fDateTo,fConf,uniqueMode,
-      fOrder,fFamily,taxonomyOrders,taxonomyAllFamilies,onOrderChange,onFamilyChange,spSearchInput,
+      fOrder,fFamily,fGuild,guildOptions,onGuildChange,taxonomyOrders,taxonomyAllFamilies,onOrderChange,onFamilyChange,spSearchInput,
       activeQuick,quickDates,applyQuick,speciesList,
       spSearch,spDropdownOpen,filteredSpeciesList,
       closeSpDropdown,removeSpecies,

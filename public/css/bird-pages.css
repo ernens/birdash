@@ -1632,3 +1632,43 @@
       .filter-apply, .filter-default { width:100%; }
       .filter-sep { display:none; }
     }
+
+/* ── Quick play button ───────────────────────────────────────────── */
+    .qplay-btn {
+      font-size: .7rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: .5;
+      padding: 0 .15rem;
+      vertical-align: middle;
+      transition: opacity .15s;
+    }
+    .qplay-btn:hover { opacity: .8; }
+
+    /* ── Validation buttons on detection rows ──────────────────────── */
+    .det-row.validation-rejected { opacity: .45; }
+    .val-btns { display: flex; gap: .2rem; margin-left: auto; flex-shrink: 0; }
+    .val-btn {
+      width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; font-size: .7rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, border-color .15s, transform .1s;
+      padding: 0; color: var(--text-muted);
+    }
+    .val-btn:hover { transform: scale(1.15); }
+    .val-btn.val-confirmed { color: #4caf50; border-color: #4caf50; }
+    .val-btn.val-confirmed.active { background: #4caf50; color: #fff; }
+    .val-btn.val-doubtful { color: #ff9800; border-color: #ff9800; }
+    .val-btn.val-doubtful.active { background: #ff9800; color: #fff; }
+    .val-btn.val-rejected { color: #f44336; border-color: #f44336; }
+    .val-btn.val-rejected.active { background: #f44336; color: #fff; }
+    .hide-rejected-toggle {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; color: var(--text-muted); cursor: pointer;
+      padding: .15rem .5rem; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; transition: background .15s, color .15s;
+    }
+    .hide-rejected-toggle.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }

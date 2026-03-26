@@ -101,7 +101,7 @@
                 </div>
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</span>
+                    <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}} <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button></span>
                     <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.n.toLocaleString()}}</span>
                   </div>
                   <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
@@ -126,7 +126,7 @@
                 </div>
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}}</span>
+                    <span style="font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}} <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button></span>
                     <span style="font-size:.78rem;color:var(--accent);margin-left:.5rem;flex-shrink:0;">{{r.avg_conf}}%</span>
                   </div>
                   <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
@@ -193,7 +193,7 @@
 <script>
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
-        birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, fetchCachedPhoto } = BIRDASH;
+        birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, fetchCachedPhoto, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -415,6 +415,7 @@ const app = createApp({
       kpis, topCount, topConf, records,
       canvasMonthly, canvasConf, canvasYearly,
       fmtDate, navigateTo, chartColor, loadAll, resetDefaults, exportCsv,
+      quickPlay(comName) { quickPlaySpecies(comName); },
     };
   }
 });

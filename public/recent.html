@@ -345,17 +345,32 @@
           <!-- Liste des détections du jour pour cette espèce -->
           <div v-if="selectedDets.length > 1"
                style="border-top:1px solid var(--border);">
-            <div style="padding:.45rem .75rem;font-size:.75rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border);">
-              {{t('detections')}} du jour — {{selectedDets.length}}
+            <div style="padding:.45rem .75rem;font-size:.75rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <span>{{t('detections')}} du jour — {{visibleDets.length}}<template v-if="hideRejected && rejectedCount > 0"> / {{selectedDets.length}}</template></span>
+              <button class="hide-rejected-toggle" :class="{active:hideRejected}" @click="hideRejected=!hideRejected">
+                {{t('hide_rejected')}}
+              </button>
             </div>
             <div class="det-scroll">
-              <div v-for="(d,i) in selectedDets" :key="d.Time+d.File_Name"
-                   class="det-row" :class="{active:i===currentDetIdx}"
-                   @click="loadDetection(i)">
+              <div v-for="(d,i) in visibleDets" :key="d._origIdx"
+                   class="det-row"
+                   :class="{active:d._origIdx===currentDetIdx, 'validation-rejected':getValidationStatus(d)==='rejected'}"
+                   @click="loadDetection(d._origIdx)">
                 <span style="font-family:monospace;color:var(--text-muted);min-width:42px;">{{fmtTime(d.Time)}}</span>
                 <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':'conf-mid')"
                       style="font-size:.7rem;">{{fmtConf(d.Confidence)}}</span>
                 <span v-if="!d.File_Name" style="font-size:.68rem;color:var(--text-faint);">—</span>
+                <div class="val-btns" @click.stop>
+                  <button class="val-btn val-confirmed" :class="{active:getValidationStatus(d)==='confirmed'}"
+                          :title="t('validation_confirmed')"
+                          @click="setValidation(d,'confirmed')">&#10003;</button>
+                  <button class="val-btn val-doubtful" :class="{active:getValidationStatus(d)==='doubtful'}"
+                          :title="t('validation_doubtful')"
+                          @click="setValidation(d,'doubtful')">?</button>
+                  <button class="val-btn val-rejected" :class="{active:getValidationStatus(d)==='rejected'}"
+                          :title="t('validation_rejected')"
+                          @click="setValidation(d,'rejected')">&#10007;</button>
+                </div>
               </div>
             </div>
           </div>
@@ -709,6 +724,69 @@ const app = createApp({
     // Blob URL exposé au template pour le téléchargement clean
     const cleanBlobForDownload = computed(() => cleanMode.value ? _cleanBlobUrl : null);
     const currentDet = computed(() => selectedDets.value[currentDetIdx.value] || {});
+
+    // ── Validation state ──────────────────────────────────────────
+    const validations     = ref({});   // key: "date|time|sciName" → status
+    const hideRejected    = ref(false);
+
+    function valKey(d) {
+      return (d.Date || selDate.value) + '|' + d.Time + '|' + (selected.value?.sci || '');
+    }
+    function getValidationStatus(d) {
+      return validations.value[valKey(d)] || 'unreviewed';
+    }
+    const visibleDets = computed(() => {
+      const dets = selectedDets.value.map((d, i) => ({ ...d, _origIdx: i }));
+      if (!hideRejected.value) return dets;
+      return dets.filter(d => getValidationStatus(d) !== 'rejected');
+    });
+    const rejectedCount = computed(() => {
+      return selectedDets.value.filter(d => getValidationStatus(d) === 'rejected').length;
+    });
+
+    async function loadValidations() {
+      if (!selected.value?.sci) return;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/validations?species=' + encodeURIComponent(selected.value.sci));
+        if (!resp.ok) return;
+        const rows = await resp.json();
+        const map = {};
+        for (const r of rows) {
+          map[r.date + '|' + r.time + '|' + r.sci_name] = r.status;
+        }
+        validations.value = map;
+      } catch(e) { console.error('loadValidations:', e); }
+    }
+
+    async function setValidation(d, status) {
+      if (!selected.value?.sci) return;
+      const key = valKey(d);
+      const current = validations.value[key] || 'unreviewed';
+      // Toggle: clicking the same status resets to unreviewed
+      const newStatus = (current === status) ? 'unreviewed' : status;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/validations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     ...(localStorage.getItem('birdash_token') ? { 'Authorization': 'Bearer ' + localStorage.getItem('birdash_token') } : {}) },
+          body: JSON.stringify({
+            date: d.Date || selDate.value,
+            time: d.Time,
+            sciName: selected.value.sci,
+            status: newStatus,
+          }),
+        });
+        if (resp.ok) {
+          const updated = { ...validations.value };
+          if (newStatus === 'unreviewed') {
+            delete updated[key];
+          } else {
+            updated[key] = newStatus;
+          }
+          validations.value = updated;
+        }
+      } catch(e) { console.error('setValidation:', e); }
+    }
     const filteredSpecies = computed(() => {
       let list = speciesList.value;
       if (lifersOnly.value) {
@@ -830,6 +908,7 @@ const app = createApp({
         selectedDets.value = rows;
         if (!sp.imgUrl && sp.sci) sp.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sp.sci);
         await loadDetection(0);
+        loadValidations();
       } catch(e) { console.error('selectSpecies:', e); }
     }
 
@@ -1049,6 +1128,7 @@ const app = createApp({
       spectroCanvas, spectro,
       isPlaying, audioProgress, audioCurrentTime, audioDuration,
       cleanMode, cleanStrength, processingClean, cleanBlobForDownload,
+      validations, hideRejected, getValidationStatus, setValidation, visibleDets, rejectedCount,
       buildAudioUrl,
       fmtDate, fmtTime, fmtConf, fmtDuration, fmtDateLong,
       navigateTo, loadAll, selectSpecies, loadDetection,

@@ -173,6 +173,13 @@
       grp_narr_period:'Sur la période {from} → {to}, le groupe <strong>{name}</strong> compte {species} espèces pour {total} détections.',
       grp_narr_dominant:'L\'espèce dominante est <strong>{species}</strong> avec {pct}% des détections.',
       grp_narr_peak:'Le pic d\'activité du groupe se situe à {time}.',
+      // Ecological guilds
+      guild_filter:'Guilde écologique', guild_all:'Toutes les guildes',
+      guild_raptors:'Rapaces', guild_waterbirds:'Oiseaux d\'eau', guild_woodpeckers:'Pics',
+      guild_passerines_forest:'Passereaux forestiers', guild_passerines_open:'Passereaux milieux ouverts',
+      guild_thrushes_chats:'Grives et gobemouches', guild_warblers:'Fauvettes et pouillots',
+      guild_corvids:'Corvidés', guild_swifts_swallows:'Martinets et hirondelles',
+      guild_pigeons_doves:'Pigeons et tourterelles', guild_other:'Autres',
       sys_api_label:'API bird-server', sys_latency:'Latence', sys_port:'Port',
       sys_species_distinct:'Espèces distinctes', sys_days_recorded:'Jours enregistrés',
       sys_conf_range:'Confiance moy. / min / max', sys_last_det:'Dernière détection',
@@ -322,6 +329,11 @@
       // Morning summary
       morning_summary:'Quoi de neuf', new_today:'Nouvelles aujourd\'hui', best_detection:'Meilleure détection',
       vs_yesterday:'vs hier', no_new_species:'Aucune nouvelle espèce',
+      // Phenology & quick play
+      phenology:'Phénologie', first_arrival:'Première arrivée', last_departure:'Dernier départ', quick_play:'Écoute rapide',
+      // Validation
+      validation_confirmed:'Confirmée', validation_doubtful:'Douteuse', validation_rejected:'Rejetée', validation_unreviewed:'Non vérifiée',
+      hide_rejected:'Masquer rejetées', validation_stats:'Statistiques de validation',
     },
 
     en: {
@@ -462,6 +474,13 @@
       grp_narr_period:'Over the period {from} → {to}, the group <strong>{name}</strong> has {species} species with {total} detections.',
       grp_narr_dominant:'The dominant species is <strong>{species}</strong> with {pct}% of detections.',
       grp_narr_peak:'The group\'s peak activity is at {time}.',
+      // Ecological guilds
+      guild_filter:'Ecological guild', guild_all:'All guilds',
+      guild_raptors:'Raptors', guild_waterbirds:'Waterbirds', guild_woodpeckers:'Woodpeckers',
+      guild_passerines_forest:'Forest passerines', guild_passerines_open:'Open-land passerines',
+      guild_thrushes_chats:'Thrushes & chats', guild_warblers:'Warblers',
+      guild_corvids:'Corvids', guild_swifts_swallows:'Swifts & swallows',
+      guild_pigeons_doves:'Pigeons & doves', guild_other:'Other',
       sys_api_label:'API bird-server', sys_latency:'Latency', sys_port:'Port',
       sys_species_distinct:'Distinct species', sys_days_recorded:'Days recorded',
       sys_conf_range:'Confidence avg / min / max', sys_last_det:'Last detection',
@@ -596,6 +615,11 @@
       // Morning summary
       morning_summary:'What\'s new', new_today:'New today', best_detection:'Best detection',
       vs_yesterday:'vs yesterday', no_new_species:'No new species',
+      // Phenology & quick play
+      phenology:'Phenology', first_arrival:'First arrival', last_departure:'Last departure', quick_play:'Quick play',
+      // Validation
+      validation_confirmed:'Confirmed', validation_doubtful:'Doubtful', validation_rejected:'Rejected', validation_unreviewed:'Unreviewed',
+      hide_rejected:'Hide rejected', validation_stats:'Validation stats',
     },
 
     de: {
@@ -736,6 +760,13 @@
       grp_narr_period:'Im Zeitraum {from} → {to} zählt die Gruppe <strong>{name}</strong> {species} Arten mit {total} Erkennungen.',
       grp_narr_dominant:'Die dominante Art ist <strong>{species}</strong> mit {pct}% der Erkennungen.',
       grp_narr_peak:'Der Aktivitätshöhepunkt der Gruppe liegt um {time}.',
+      // Ecological guilds
+      guild_filter:'Ökologische Gilde', guild_all:'Alle Gilden',
+      guild_raptors:'Greifvögel', guild_waterbirds:'Wasservögel', guild_woodpeckers:'Spechte',
+      guild_passerines_forest:'Waldsingvögel', guild_passerines_open:'Offenlandsingvögel',
+      guild_thrushes_chats:'Drosseln & Schmätzer', guild_warblers:'Grasmücken & Laubsänger',
+      guild_corvids:'Rabenvögel', guild_swifts_swallows:'Segler & Schwalben',
+      guild_pigeons_doves:'Tauben', guild_other:'Andere',
       sys_api_label:'API bird-server', sys_latency:'Latenz', sys_port:'Port',
       sys_species_distinct:'Verschiedene Arten', sys_days_recorded:'Aufnahmetage',
       sys_conf_range:'Konfidenz Ø / Min. / Max.', sys_last_det:'Letzte Erkennung',
@@ -870,6 +901,11 @@
       // Morning summary
       morning_summary:'Was gibt\'s Neues', new_today:'Neu heute', best_detection:'Beste Erkennung',
       vs_yesterday:'vs gestern', no_new_species:'Keine neuen Arten',
+      // Phenology & quick play
+      phenology:'Phänologie', first_arrival:'Erste Ankunft', last_departure:'Letzter Abflug', quick_play:'Schnellwiedergabe',
+      // Validation
+      validation_confirmed:'Bestätigt', validation_doubtful:'Zweifelhaft', validation_rejected:'Abgelehnt', validation_unreviewed:'Ungeprüft',
+      hide_rejected:'Abgelehnte ausblenden', validation_stats:'Validierungsstatistiken',
     },
 
     nl: {
@@ -1010,6 +1046,13 @@
       grp_narr_period:'In de periode {from} → {to} telt de groep <strong>{name}</strong> {species} soorten met {total} detecties.',
       grp_narr_dominant:'De dominante soort is <strong>{species}</strong> met {pct}% van de detecties.',
       grp_narr_peak:'De piekactiviteit van de groep is om {time}.',
+      // Ecological guilds
+      guild_filter:'Ecologische gilde', guild_all:'Alle gilden',
+      guild_raptors:'Roofvogels', guild_waterbirds:'Watervogels', guild_woodpeckers:'Spechten',
+      guild_passerines_forest:'Boszangvogels', guild_passerines_open:'Openlandvogels',
+      guild_thrushes_chats:'Lijsters & vliegenvangers', guild_warblers:'Zangers',
+      guild_corvids:'Kraaiachtigen', guild_swifts_swallows:'Gierzwaluwen & zwaluwen',
+      guild_pigeons_doves:'Duiven', guild_other:'Overig',
       sys_api_label:'API bird-server', sys_latency:'Latentie', sys_port:'Poort',
       sys_species_distinct:'Distincte soorten', sys_days_recorded:'Opgenomen dagen',
       sys_conf_range:'Betrouwbaarheid gem. / min / max', sys_last_det:'Laatste detectie',
@@ -1144,6 +1187,11 @@
       // Morning summary
       morning_summary:'Wat is er nieuw', new_today:'Nieuw vandaag', best_detection:'Beste detectie',
       vs_yesterday:'vs gisteren', no_new_species:'Geen nieuwe soorten',
+      // Phenology & quick play
+      phenology:'Fenologie', first_arrival:'Eerste aankomst', last_departure:'Laatste vertrek', quick_play:'Snel afspelen',
+      // Validation
+      validation_confirmed:'Bevestigd', validation_doubtful:'Twijfelachtig', validation_rejected:'Afgewezen', validation_unreviewed:'Niet beoordeeld',
+      hide_rejected:'Afgewezen verbergen', validation_stats:'Validatiestatistieken',
     },
   };
 
@@ -1666,6 +1714,7 @@
     chartDefaults:    U.chartDefaults,
     spinnerHTML:      U.spinnerHTML,
     shortModel:       U.shortModel,
+    quickPlaySpecies: U.quickPlaySpecies,
     // Direct access to translations
     TRANSLATIONS: _TRANSLATIONS,
   };

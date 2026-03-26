@@ -355,6 +355,28 @@ dbWrite.pragma('busy_timeout = 5000');
 
 console.log(`[BIRDASH] birds.db ouvert : ${DB_PATH}`);
 
+// ── Birdash validation database ──────────────────────────────────────────────
+const BIRDASH_DB_PATH = path.join(process.env.HOME, 'birdash', 'birdash.db');
+let birdashDb;
+try {
+  birdashDb = new Database(BIRDASH_DB_PATH);
+  birdashDb.pragma('journal_mode = WAL');
+  birdashDb.pragma('busy_timeout = 5000');
+  birdashDb.exec(`CREATE TABLE IF NOT EXISTS validations (
+    date       TEXT,
+    time       TEXT,
+    sci_name   TEXT,
+    status     TEXT DEFAULT 'unreviewed',
+    notes      TEXT DEFAULT '',
+    updated_at TEXT,
+    PRIMARY KEY(date, time, sci_name)
+  )`);
+  console.log(`[BIRDASH] birdash.db ouvert : ${BIRDASH_DB_PATH}`);
+} catch(e) {
+  console.error('[BIRDASH] birdash.db error:', e.message);
+  birdashDb = null;
+}
+
 // ── Taxonomy database ─────────────────────────────────────────────────────────
 const TAXONOMY_DB_PATH = path.join(__dirname, '..', 'config', 'taxonomy.db');
 const TAXONOMY_CSV_URL = 'https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=csv&cat=species';
@@ -2864,6 +2886,107 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/validations ──────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/validations') {
+    if (!birdashDb) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'birdash.db not available' }));
+      return;
+    }
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      const date    = url.searchParams.get('date');
+      const species = url.searchParams.get('species');
+      let sql = 'SELECT date, time, sci_name, status, notes, updated_at FROM validations';
+      const conditions = [];
+      const params = [];
+      if (date) { conditions.push('date = ?'); params.push(date); }
+      if (species) { conditions.push('sci_name = ?'); params.push(species); }
+      if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
+      sql += ' ORDER BY date DESC, time DESC';
+      const rows = birdashDb.prepare(sql).all(...params);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(rows));
+    } catch (err) {
+      console.error('[validations GET]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // ── Route : POST /api/validations ─────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/validations') {
+    if (!requireAuth(req, res)) return;
+    if (!birdashDb) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'birdash.db not available' }));
+      return;
+    }
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { date, time, sciName, status, notes } = JSON.parse(body);
+        if (!date || !time || !sciName) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'date, time, sciName required' }));
+          return;
+        }
+        const validStatuses = ['confirmed', 'doubtful', 'rejected', 'unreviewed'];
+        if (status && !validStatuses.includes(status)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid status. Must be: ' + validStatuses.join(', ') }));
+          return;
+        }
+        const now = new Date().toISOString();
+        // If status is 'unreviewed', delete the row (reset)
+        if (status === 'unreviewed') {
+          birdashDb.prepare('DELETE FROM validations WHERE date = ? AND time = ? AND sci_name = ?')
+            .run(date, time, sciName);
+        } else {
+          birdashDb.prepare(`INSERT INTO validations (date, time, sci_name, status, notes, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date, time, sci_name) DO UPDATE SET
+              status = excluded.status,
+              notes = COALESCE(excluded.notes, notes),
+              updated_at = excluded.updated_at`)
+            .run(date, time, sciName, status || 'unreviewed', notes || '', now);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        console.error('[validations POST]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // ── Route : GET /api/validation-stats ─────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/validation-stats') {
+    if (!birdashDb) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'birdash.db not available' }));
+      return;
+    }
+    try {
+      const rows = birdashDb.prepare(
+        'SELECT status, COUNT(*) as count FROM validations GROUP BY status'
+      ).all();
+      const stats = { confirmed: 0, doubtful: 0, rejected: 0 };
+      for (const r of rows) stats[r.status] = r.count;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(stats));
+    } catch (err) {
+      console.error('[validation-stats]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
   // Route : GET /api/health
   if (req.method === 'GET' && pathname === '/api/health') {
     try {
@@ -2887,5 +3010,5 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`[BIRDASH] API démarrée sur http://127.0.0.1:${PORT}`);
 });
 
-process.on('SIGTERM', () => { db.close(); if (taxonomyDb) taxonomyDb.close(); process.exit(0); });
-process.on('SIGINT',  () => { db.close(); if (taxonomyDb) taxonomyDb.close(); process.exit(0); });
+process.on('SIGTERM', () => { db.close(); if (taxonomyDb) taxonomyDb.close(); if (birdashDb) birdashDb.close(); process.exit(0); });
+process.on('SIGINT',  () => { db.close(); if (taxonomyDb) taxonomyDb.close(); if (birdashDb) birdashDb.close(); process.exit(0); });

@@ -393,6 +393,49 @@
     return _taxonomyCache.species.find(s => s.sciName === sciName) || null;
   }
 
+  // ── Quick play species (best detection audio) ──────────────────────────
+
+  async function quickPlaySpecies(comName) {
+    const rows = await birdQuery(
+      "SELECT File_Name FROM detections WHERE Com_Name=? AND File_Name IS NOT NULL ORDER BY Confidence DESC LIMIT 1",
+      [comName]
+    );
+    if (!rows.length) return null;
+    var url = buildAudioUrl(rows[0].File_Name);
+    if (!url) return null;
+    // Use a shared audio element
+    if (!window._birdashQuickAudio) window._birdashQuickAudio = new Audio();
+    var audio = window._birdashQuickAudio;
+    if (audio.src === url && !audio.paused) { audio.pause(); return audio; }
+    audio.src = url;
+    audio.play();
+    return audio;
+  }
+
+  // ── Ecological Guilds ───────────────────────────────────────────────
+  const ECOLOGICAL_GUILDS = {
+    raptors:          { icon: '\uD83E\uDD85', orders: ['Accipitriformes', 'Falconiformes', 'Strigiformes'] },
+    waterbirds:       { icon: '\uD83E\uDD86', orders: ['Anseriformes', 'Podicipediformes', 'Pelecaniformes', 'Charadriiformes', 'Gruiformes', 'Gaviiformes', 'Suliformes'] },
+    woodpeckers:      { icon: '\uD83E\uDEB6', orders: ['Piciformes'] },
+    passerines_forest:{ icon: '\uD83C\uDF32', families: ['Paridae', 'Sittidae', 'Certhiidae', 'Regulidae', 'Troglodytidae'] },
+    passerines_open:  { icon: '\uD83C\uDF3E', families: ['Alaudidae', 'Motacillidae', 'Emberizidae', 'Fringillidae'] },
+    thrushes_chats:   { icon: '\uD83D\uDC26', families: ['Turdidae', 'Muscicapidae'] },
+    warblers:         { icon: '\uD83C\uDFB5', families: ['Sylviidae', 'Phylloscopidae', 'Acrocephalidae'] },
+    corvids:          { icon: '\u2B1B',        families: ['Corvidae'] },
+    swifts_swallows:  { icon: '\u2708\uFE0F',  families: ['Apodidae', 'Hirundinidae'] },
+    pigeons_doves:    { icon: '\uD83D\uDD4A\uFE0F', orders: ['Columbiformes'] },
+    other:            { icon: '\uD83D\uDC24' }
+  };
+
+  function getSpeciesGuild(order, family) {
+    for (const [key, guild] of Object.entries(ECOLOGICAL_GUILDS)) {
+      if (key === 'other') continue;
+      if (guild.orders && guild.orders.includes(order)) return key;
+      if (guild.families && guild.families.includes(family)) return key;
+    }
+    return 'other';
+  }
+
   // ── Export ─────────────────────────────────────────────────────────────
 
   window.BIRDASH_UTILS = {
@@ -417,6 +460,9 @@
     shortModel: shortModel,
     loadTaxonomy: loadTaxonomy,
     getTaxonomy: getTaxonomy,
+    quickPlaySpecies: quickPlaySpecies,
+    ECOLOGICAL_GUILDS: ECOLOGICAL_GUILDS,
+    getSpeciesGuild: getSpeciesGuild,
   };
 
 })(BIRD_CONFIG);
