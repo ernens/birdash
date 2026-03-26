@@ -464,6 +464,25 @@
             </label></div>
           </div>
 
+          <!-- Smart bird alerts -->
+          <div style="margin-bottom:.8rem;">
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.4rem;padding-bottom:.25rem;border-bottom:1px solid var(--border);">
+              🐦 {{t('set_notif_cat_bird_smart')}}
+            </div>
+            <div class="set-row"><label class="set-check">
+              <input type="checkbox" v-model="alertThresholds.alert_influx" true-value="1" false-value="0">
+              <span>📈 {{t('set_alert_influx')}}</span>
+            </label></div>
+            <div class="set-row"><label class="set-check">
+              <input type="checkbox" v-model="alertThresholds.alert_missing" true-value="1" false-value="0">
+              <span>🔍 {{t('set_alert_missing')}}</span>
+            </label></div>
+            <div class="set-row"><label class="set-check">
+              <input type="checkbox" v-model="alertThresholds.alert_rare_visitor" true-value="1" false-value="0">
+              <span>🦅 {{t('set_alert_rare_visitor')}}</span>
+            </label></div>
+          </div>
+
           <button class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;" @click="saveAlertThresholds" :disabled="savingAlerts">
             {{savingAlerts ? '…' : t('set_save')}}
           </button>
@@ -914,6 +933,7 @@ const app = createApp({
     const alertThresholds = reactive({
       temp_warn:70, temp_crit:80, disk_warn:85, disk_crit:95, ram_warn:90, backlog_warn:50, no_detection_hours:4, service_down:1,
       alert_temp:1, alert_temp_crit:1, alert_disk:1, alert_ram:1, alert_backlog:1, alert_no_det:1,
+      alert_influx:0, alert_missing:0, alert_rare_visitor:0,
     });
     const savingAlerts = ref(false);
     const alertSaveMsg = ref('');
@@ -953,6 +973,9 @@ const app = createApp({
           BIRDASH_ALERT_ON_RAM: String(alertThresholds.alert_ram || 0),
           BIRDASH_ALERT_ON_BACKLOG: String(alertThresholds.alert_backlog || 0),
           BIRDASH_ALERT_ON_NO_DET: String(alertThresholds.alert_no_det || 0),
+          BIRDASH_ALERT_ON_INFLUX: String(alertThresholds.alert_influx || 0),
+          BIRDASH_ALERT_ON_MISSING: String(alertThresholds.alert_missing || 0),
+          BIRDASH_ALERT_ON_RARE_VISITOR: String(alertThresholds.alert_rare_visitor || 0),
         };
         const res = await fetch(API + '/settings', {
           method: 'POST',

@@ -436,6 +436,32 @@
     return 'other';
   }
 
+  // ── Species frequency ranges (kHz) for spectrogram overlay ──────────
+
+  const SPECIES_FREQ_RANGES = {
+    // Common European species — frequency ranges in kHz (approximate)
+    'Turdus merula': { min: 1.5, max: 6.5, label: 'Blackbird' },
+    'Erithacus rubecula': { min: 2, max: 8, label: 'Robin' },
+    'Parus major': { min: 3, max: 8, label: 'Great Tit' },
+    'Cyanistes caeruleus': { min: 4, max: 10, label: 'Blue Tit' },
+    'Phylloscopus collybita': { min: 3, max: 7, label: 'Chiffchaff' },
+    'Sylvia atricapilla': { min: 2, max: 7, label: 'Blackcap' },
+    'Fringilla coelebs': { min: 2, max: 8, label: 'Chaffinch' },
+    'Pica pica': { min: 1, max: 5, label: 'Magpie' },
+    'Columba palumbus': { min: 0.3, max: 1.5, label: 'Wood Pigeon' },
+    'Strix aluco': { min: 0.5, max: 4, label: 'Tawny Owl' },
+    'Dendrocopos major': { min: 1, max: 8, label: 'Great Spotted Woodpecker' },
+    'Garrulus glandarius': { min: 1.5, max: 6, label: 'Jay' },
+    'Troglodytes troglodytes': { min: 3, max: 10, label: 'Wren' },
+    'Sitta europaea': { min: 2, max: 8, label: 'Nuthatch' },
+    'Corvus corone': { min: 0.5, max: 3, label: 'Carrion Crow' },
+    'Sturnus vulgaris': { min: 1, max: 8, label: 'Starling' },
+    'Passer domesticus': { min: 2, max: 6, label: 'House Sparrow' },
+    'Carduelis carduelis': { min: 3, max: 9, label: 'Goldfinch' },
+    'Aegithalos caudatus': { min: 5, max: 10, label: 'Long-tailed Tit' },
+    'Certhia brachydactyla': { min: 4, max: 9, label: 'Short-toed Treecreeper' },
+  };
+
   // ── Export ─────────────────────────────────────────────────────────────
 
   window.BIRDASH_UTILS = {
@@ -463,6 +489,7 @@
     quickPlaySpecies: quickPlaySpecies,
     ECOLOGICAL_GUILDS: ECOLOGICAL_GUILDS,
     getSpeciesGuild: getSpeciesGuild,
+    SPECIES_FREQ_RANGES: SPECIES_FREQ_RANGES,
   };
 
 })(BIRD_CONFIG);

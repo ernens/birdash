@@ -158,6 +158,9 @@ const SETTINGS_VALIDATORS = {
   BIRDASH_ALERT_ON_RAM:       v => v == 0 || v == 1,
   BIRDASH_ALERT_ON_BACKLOG:   v => v == 0 || v == 1,
   BIRDASH_ALERT_ON_NO_DET:    v => v == 0 || v == 1,
+  BIRDASH_ALERT_ON_INFLUX:    v => v == 0 || v == 1,
+  BIRDASH_ALERT_ON_MISSING:   v => v == 0 || v == 1,
+  BIRDASH_ALERT_ON_RARE_VISITOR: v => v == 0 || v == 1,
   IMAGE_PROVIDER:  v => ['WIKIPEDIA','FLICKR'].includes(v),
   RARE_SPECIES_THRESHOLD: v => !isNaN(v) && v >= 1 && v <= 365,
   RAW_SPECTROGRAM: v => v == 0 || v == 1,
@@ -232,6 +235,9 @@ let _backupSizeCache = 0, _backupSizeRefreshing = false;
 const BW_TTL = 5 * 60 * 1000;
 let _ebirdCache = null;
 let _ebirdCacheTs = 0;
+let _weatherCache = null;
+let _weatherCacheTs = 0;
+const WEATHER_TTL = 3600 * 1000; // 1 heure
 const _speciesNamesCache = {}; // lang → { sci: comName }
 let _detectedSpeciesCache = null; // [sci, sci, …]
 const EBIRD_TTL = 3600 * 1000; // 1 heure
@@ -544,6 +550,12 @@ const ALERT_I18N = {
     backlog_body:      (count, th) => `${count} files pending analysis (threshold: ${th}). The analysis pipeline may be stuck or overloaded.`,
     no_det_title:      '🔇 BIRDASH — No detections',
     no_det_body:       (hours, th) => `No bird detections in the last ${hours} hours (threshold: ${th}h). Recording or analysis may be offline.`,
+    bird_influx_title: '📈 BIRDASH — Unusual activity',
+    bird_influx_body:  (species, count, avg) => `Unusual activity: ${species} - ${count} detections today (avg: ${avg}/day)`,
+    bird_missing_title:'🔍 BIRDASH — Missing common species',
+    bird_missing_body: (species, avg) => `Missing today: ${species} (usually ${avg}/day)`,
+    bird_rare_title:   '🦅 BIRDASH — Rare visitor',
+    bird_rare_body:    (species, total) => `Rare visitor: ${species} detected (only ${total} records total)`,
   },
   fr: {
     temp_crit_title:   '🔥 BIRDASH — Température critique !',
@@ -564,6 +576,12 @@ const ALERT_I18N = {
     backlog_body:      (count, th) => `${count} fichiers en attente d'analyse (seuil : ${th}). Le pipeline d'analyse est peut-être bloqué ou surchargé.`,
     no_det_title:      '🔇 BIRDASH — Aucune détection',
     no_det_body:       (hours, th) => `Aucune détection d'oiseaux depuis ${hours} heures (seuil : ${th}h). L'enregistrement ou l'analyse est peut-être hors ligne.`,
+    bird_influx_title: '📈 BIRDASH — Activité inhabituelle',
+    bird_influx_body:  (species, count, avg) => `Activité inhabituelle : ${species} - ${count} détections aujourd'hui (moy. : ${avg}/jour)`,
+    bird_missing_title:'🔍 BIRDASH — Espèce commune absente',
+    bird_missing_body: (species, avg) => `Absente aujourd'hui : ${species} (habituellement ${avg}/jour)`,
+    bird_rare_title:   '🦅 BIRDASH — Visiteur rare',
+    bird_rare_body:    (species, total) => `Visiteur rare : ${species} détecté (seulement ${total} observations au total)`,
   },
   de: {
     temp_crit_title:   '🔥 BIRDASH — Kritische Temperatur!',
@@ -584,6 +602,12 @@ const ALERT_I18N = {
     backlog_body:      (count, th) => `${count} Dateien warten auf Analyse (Schwellenwert: ${th}). Die Analysepipeline ist möglicherweise blockiert oder überlastet.`,
     no_det_title:      '🔇 BIRDASH — Keine Erkennungen',
     no_det_body:       (hours, th) => `Keine Vogelerkennungen in den letzten ${hours} Stunden (Schwellenwert: ${th}h). Aufnahme oder Analyse ist möglicherweise offline.`,
+    bird_influx_title: '📈 BIRDASH — Ungewöhnliche Aktivität',
+    bird_influx_body:  (species, count, avg) => `Ungewöhnliche Aktivität: ${species} - ${count} Erkennungen heute (Durchschnitt: ${avg}/Tag)`,
+    bird_missing_title:'🔍 BIRDASH — Häufige Art fehlt',
+    bird_missing_body: (species, avg) => `Heute fehlend: ${species} (normalerweise ${avg}/Tag)`,
+    bird_rare_title:   '🦅 BIRDASH — Seltener Besucher',
+    bird_rare_body:    (species, total) => `Seltener Besucher: ${species} entdeckt (nur ${total} Einträge insgesamt)`,
   },
   nl: {
     temp_crit_title:   '🔥 BIRDASH — Kritieke temperatuur!',
@@ -604,6 +628,12 @@ const ALERT_I18N = {
     backlog_body:      (count, th) => `${count} bestanden wachten op analyse (drempel: ${th}). De analysepijplijn is mogelijk vastgelopen of overbelast.`,
     no_det_title:      '🔇 BIRDASH — Geen detecties',
     no_det_body:       (hours, th) => `Geen vogeldetecties in de afgelopen ${hours} uur (drempel: ${th}u). Opname of analyse is mogelijk offline.`,
+    bird_influx_title: '📈 BIRDASH — Ongebruikelijke activiteit',
+    bird_influx_body:  (species, count, avg) => `Ongebruikelijke activiteit: ${species} - ${count} detecties vandaag (gem.: ${avg}/dag)`,
+    bird_missing_title:'🔍 BIRDASH — Veelvoorkomende soort afwezig',
+    bird_missing_body: (species, avg) => `Vandaag afwezig: ${species} (normaal ${avg}/dag)`,
+    bird_rare_title:   '🦅 BIRDASH — Zeldzame bezoeker',
+    bird_rare_body:    (species, total) => `Zeldzame bezoeker: ${species} gedetecteerd (slechts ${total} waarnemingen totaal)`,
   },
 };
 
@@ -630,6 +660,8 @@ const ALERT_DEFAULTS = {
   // Per-alert enable/disable (1=on, 0=off)
   alert_temp: 1, alert_temp_crit: 1, alert_disk: 1,
   alert_ram: 1, alert_backlog: 1, alert_no_det: 1,
+  // Bird smart alerts (1=on, 0=off)
+  alert_influx: 0, alert_missing: 0, alert_rare_visitor: 0,
 };
 
 function getAlertThresholds() {
@@ -651,6 +683,10 @@ function getAlertThresholds() {
     if (match('BIRDASH_ALERT_ON_RAM'))       t.alert_ram = parseInt(match('BIRDASH_ALERT_ON_RAM'));
     if (match('BIRDASH_ALERT_ON_BACKLOG'))   t.alert_backlog = parseInt(match('BIRDASH_ALERT_ON_BACKLOG'));
     if (match('BIRDASH_ALERT_ON_NO_DET'))    t.alert_no_det = parseInt(match('BIRDASH_ALERT_ON_NO_DET'));
+    // Bird smart alerts
+    if (match('BIRDASH_ALERT_ON_INFLUX'))       t.alert_influx = parseInt(match('BIRDASH_ALERT_ON_INFLUX'));
+    if (match('BIRDASH_ALERT_ON_MISSING'))      t.alert_missing = parseInt(match('BIRDASH_ALERT_ON_MISSING'));
+    if (match('BIRDASH_ALERT_ON_RARE_VISITOR')) t.alert_rare_visitor = parseInt(match('BIRDASH_ALERT_ON_RARE_VISITOR'));
   } catch(e) {}
   return t;
 }
@@ -776,11 +812,100 @@ async function checkSystemAlerts() {
   }
 }
 
+const BIRD_ALERT_INTERVAL = 900000; // 15 minutes
+
+async function checkBirdAlerts() {
+  const th = getAlertThresholds();
+  const t = getAlertLang();
+  if (!db) return;
+  if (!th.alert_influx && !th.alert_missing && !th.alert_rare_visitor) return;
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+
+    // ── Unusual influx: today's count > 3x 30-day daily average ──
+    if (th.alert_influx) {
+      try {
+        const rows = db.prepare(`
+          SELECT t.Com_Name, t.cnt AS today_count, COALESCE(h.avg_count, 0) AS avg_count
+          FROM (
+            SELECT Com_Name, COUNT(*) AS cnt
+            FROM detections WHERE Date = ?
+            GROUP BY Com_Name
+          ) t
+          LEFT JOIN (
+            SELECT Com_Name, CAST(COUNT(*) AS REAL) / 30.0 AS avg_count
+            FROM detections WHERE Date >= ? AND Date < ?
+            GROUP BY Com_Name
+          ) h ON t.Com_Name = h.Com_Name
+          WHERE t.cnt > 3 * MAX(h.avg_count, 1)
+        `).all(today, thirtyDaysAgo, today);
+        for (const r of rows) {
+          await sendAlert('bird_influx_' + r.Com_Name, t.bird_influx_title,
+            t.bird_influx_body(r.Com_Name, r.today_count, r.avg_count.toFixed(1)));
+        }
+      } catch(e) { console.error('[ALERT] bird influx error:', e.message); }
+    }
+
+    // ── Missing common species (only after noon) ──
+    if (th.alert_missing && new Date().getHours() >= 12) {
+      try {
+        const rows = db.prepare(`
+          SELECT top5.Com_Name, top5.avg_count
+          FROM (
+            SELECT Com_Name, CAST(COUNT(*) AS REAL) / 30.0 AS avg_count
+            FROM detections WHERE Date >= ? AND Date < ?
+            GROUP BY Com_Name ORDER BY COUNT(*) DESC LIMIT 5
+          ) top5
+          LEFT JOIN (
+            SELECT DISTINCT Com_Name FROM detections WHERE Date = ?
+          ) today ON top5.Com_Name = today.Com_Name
+          WHERE today.Com_Name IS NULL
+        `).all(thirtyDaysAgo, today, today);
+        for (const r of rows) {
+          await sendAlert('bird_missing_' + r.Com_Name, t.bird_missing_title,
+            t.bird_missing_body(r.Com_Name, r.avg_count.toFixed(1)));
+        }
+      } catch(e) { console.error('[ALERT] bird missing error:', e.message); }
+    }
+
+    // ── Rare visitor: species with <= 3 total historical detections ──
+    if (th.alert_rare_visitor) {
+      try {
+        const rows = db.prepare(`
+          SELECT d.Com_Name, h.total
+          FROM (SELECT DISTINCT Com_Name FROM detections WHERE Date = ?) d
+          JOIN (
+            SELECT Com_Name, COUNT(*) AS total
+            FROM detections GROUP BY Com_Name HAVING COUNT(*) <= 3
+          ) h ON d.Com_Name = h.Com_Name
+        `).all(today);
+        for (const r of rows) {
+          await sendAlert('bird_rare_' + r.Com_Name, t.bird_rare_title,
+            t.bird_rare_body(r.Com_Name, r.total));
+        }
+      } catch(e) { console.error('[ALERT] bird rare visitor error:', e.message); }
+    }
+
+  } catch(e) {
+    console.error('[ALERT] checkBirdAlerts error:', e.message);
+  }
+}
+
 // Start monitoring loop after 30s (let services stabilize)
+let _birdAlertTick = 0;
 setTimeout(() => {
-  console.log('[BIRDASH] System alerts monitoring started (every 60s)');
-  setInterval(checkSystemAlerts, ALERT_CHECK_INTERVAL);
+  console.log('[BIRDASH] System alerts monitoring started (every 60s, bird alerts every 15min)');
+  setInterval(() => {
+    checkSystemAlerts();
+    _birdAlertTick++;
+    if (_birdAlertTick % Math.round(BIRD_ALERT_INTERVAL / ALERT_CHECK_INTERVAL) === 0) {
+      checkBirdAlerts();
+    }
+  }, ALERT_CHECK_INTERVAL);
   checkSystemAlerts(); // Initial check
+  checkBirdAlerts();   // Initial bird check
 }, 30000);
 
 // --- Validation de sécurité
@@ -1250,6 +1375,71 @@ const server = http.createServer((req, res) => {
       } catch(e) {
         console.error('[eBird]', e.message);
         res.writeHead(500); res.end(JSON.stringify({ error: 'ebird_error' }));
+      }
+    })();
+    return;
+  }
+
+  // ── Route : GET /api/weather?days=30 ─────────────────────────────────────
+  // Proxy Open-Meteo free API — daily weather data for the station location
+  // Cached for 1 hour (WEATHER_TTL)
+  if (req.method === 'GET' && pathname === '/api/weather') {
+    (async () => {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const days = Math.min(90, Math.max(1, parseInt(params.get('days') || '30')));
+
+        // Serve from cache if valid
+        if (_weatherCache && _weatherCache._days === days && (Date.now() - _weatherCacheTs) < WEATHER_TTL) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
+          res.end(JSON.stringify(_weatherCache));
+          return;
+        }
+
+        // Read lat/lon from birdnet.conf
+        const conf = await parseBirdnetConf();
+        const lat = conf.LATITUDE  || conf.LAT || '50.85';
+        const lon = conf.LONGITUDE || conf.LON || '4.35';
+
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&past_days=${days}&timezone=auto`;
+
+        const data = await new Promise((resolve, reject) => {
+          https.get(url, (resp) => {
+            let body = '';
+            resp.on('data', chunk => { body += chunk; });
+            resp.on('end', () => {
+              try { resolve(JSON.parse(body)); }
+              catch(e) { reject(new Error('Invalid JSON from Open-Meteo')); }
+            });
+            resp.on('error', reject);
+          }).on('error', reject);
+        });
+
+        if (data.error) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'open_meteo_error', detail: data.reason || data.error }));
+          return;
+        }
+
+        const result = {
+          daily: data.daily || {},
+          daily_units: data.daily_units || {},
+          latitude: data.latitude,
+          longitude: data.longitude,
+          timezone: data.timezone,
+          fetchedAt: new Date().toISOString(),
+          _days: days,
+        };
+
+        _weatherCache = result;
+        _weatherCacheTs = Date.now();
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'MISS' });
+        res.end(JSON.stringify(result));
+      } catch(e) {
+        console.error('[weather]', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'weather_error', message: e.message }));
       }
     })();
     return;

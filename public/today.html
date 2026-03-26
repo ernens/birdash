@@ -167,6 +167,18 @@
               <span class="spectro-freq-label">3</span>
               <span class="spectro-freq-label">0</span>
             </div>
+            <!-- Frequency range overlay -->
+            <div v-if="speciesFreqRange && spectro.state==='ready'"
+                 :style="{position:'absolute', left:'0', right:'0', zIndex:2, pointerEvents:'none',
+                          top: ((1 - speciesFreqRange.max/12)*100)+'%',
+                          bottom: ((speciesFreqRange.min/12)*100)+'%',
+                          background:'rgba(52,211,153,.12)', borderTop:'1.5px dashed rgba(52,211,153,.55)',
+                          borderBottom:'1.5px dashed rgba(52,211,153,.55)'}">
+              <span style="position:absolute;right:4px;top:2px;font-size:.6rem;color:rgba(52,211,153,.85);
+                           font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;">
+                {{t('freq_range')}}: {{speciesFreqRange.min}}–{{speciesFreqRange.max}} kHz
+              </span>
+            </div>
             <!-- Badge mode nettoyé -->
             <div v-if="cleanMode && spectro.state==='ready'"
                  style="position:absolute;top:6px;left:8px;z-index:3;
@@ -567,6 +579,13 @@ const app = createApp({
 
     const currentDet = computed(() => selectedDets.value[currentDetIdx.value] || {});
 
+    // Frequency range overlay for spectrogram
+    const speciesFreqRange = computed(() => {
+      const sci = selected.value?.sci;
+      if (!sci) return null;
+      return BIRDASH_UTILS.SPECIES_FREQ_RANGES[sci] || null;
+    });
+
     const filteredSpecies = computed(() => {
       const q = searchQ.value.toLowerCase().trim();
       if (!q) return speciesList.value;
@@ -833,7 +852,7 @@ const app = createApp({
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx,
-      spectroCanvas, spectro,
+      spectroCanvas, spectro, speciesFreqRange,
       isPlaying, audioProgress, audioCurrentTime, audioDuration,
       cleanMode, cleanStrength, processingClean,
       fmtDate, fmtTime, fmtConf, fmtDuration, fmtDateLong,
