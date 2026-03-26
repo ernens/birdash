@@ -136,13 +136,22 @@
           <!-- Colonne gauche : liste espèces -->
           <div>
         <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.4rem;flex-wrap:wrap;">
             <div class="card-title" style="margin:0;">
               {{t('species')}} — {{speciesList.length}}
             </div>
-            <input type="text" v-model="searchQ" class="bird-input"
-                   :placeholder="'🔍 '+t('search_filter_ph')"
-                   style="width:120px;padding:.2rem .5rem;font-size:.78rem;">
+            <div style="display:flex;align-items:center;gap:.35rem;">
+              <button @click="lifersOnly = !lifersOnly"
+                      style="padding:.15rem .55rem;font-size:.7rem;font-weight:600;border-radius:999px;border:1px solid;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;"
+                      :style="lifersOnly
+                        ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
+                        : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+                🆕 {{t('lifers_label')}}
+              </button>
+              <input type="text" v-model="searchQ" class="bird-input"
+                     :placeholder="'🔍 '+t('search_filter_ph')"
+                     style="width:120px;padding:.2rem .5rem;font-size:.78rem;">
+            </div>
           </div>
 
           <div v-if="loadingList" class="spinner" style="padding:2rem;"><div></div><div></div><div></div></div>
@@ -159,7 +168,11 @@
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
-                <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}}</div>
+                <div class="sp-name-row">
+                  {{spName(s.Com_Name, s.sci)}}
+                  <span v-if="liferDates[s.Com_Name] && liferDates[s.Com_Name] >= dateRange()[0] && liferDates[s.Com_Name] <= dateRange()[1]"
+                        style="font-size:.65rem;vertical-align:middle;margin-left:.2rem;" title="Lifer">🆕</span>
+                </div>
                 <div class="sp-sci-row">{{s.sci}}</div>
               </div>
               <div class="sp-meta">
@@ -655,6 +668,8 @@ const app = createApp({
     const hourlyData   = ref(null);
 
     const searchQ = ref('');
+    const lifersOnly = ref(false);
+    const liferDates = ref({});
     const newSpList = ref([]);
     const newSpOpen = ref(false);
     function toggleNewSp(e) {
@@ -695,9 +710,17 @@ const app = createApp({
     const cleanBlobForDownload = computed(() => cleanMode.value ? _cleanBlobUrl : null);
     const currentDet = computed(() => selectedDets.value[currentDetIdx.value] || {});
     const filteredSpecies = computed(() => {
+      let list = speciesList.value;
+      if (lifersOnly.value) {
+        const [dFrom, dTo] = dateRange();
+        list = list.filter(s => {
+          const fd = liferDates.value[s.Com_Name];
+          return fd && fd >= dFrom && fd <= dTo;
+        });
+      }
       const q = searchQ.value.toLowerCase().trim();
-      if (!q) return speciesList.value;
-      return speciesList.value.filter(s =>
+      if (!q) return list;
+      return list.filter(s =>
         s.Com_Name.toLowerCase().includes(q) || (s.sci||'').toLowerCase().includes(q)
       );
     });
@@ -713,9 +736,20 @@ const app = createApp({
       return -1;
     });
 
+    async function loadLiferDates() {
+      try {
+        const rows = await birdQuery(
+          `SELECT Com_Name, MIN(Date) as first_date FROM detections WHERE Confidence >= ? GROUP BY Com_Name`,
+          [minConf.value]);
+        const map = {};
+        rows.forEach(r => { map[r.Com_Name] = r.first_date; });
+        liferDates.value = map;
+      } catch(e) { console.error('liferDates:', e); }
+    }
+
     async function loadAll() {
       loadingList.value = true;
-      await Promise.all([loadKpis(), loadSpecies(), loadHourlyData()]);
+      await Promise.all([loadKpis(), loadSpecies(), loadHourlyData(), loadLiferDates()]);
     }
 
     async function loadKpis() {
@@ -1008,7 +1042,7 @@ const app = createApp({
       prevDay, nextDay, goToday, goYesterday, goQuick, onDateChange,
       minConf, confEditing, confEditVal, confInput, startConfEdit, commitConfEdit,
       canvasHourly,
-      searchQ,
+      searchQ, lifersOnly, liferDates, dateRange,
       kpis, freshness, newSpList, newSpOpen, toggleNewSp,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx,

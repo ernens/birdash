@@ -125,6 +125,7 @@
       analyses_polar_title:'Activité horaire · {species}',
       analyses_series_title:'Détections dans le temps · {species}',
       analyses_heatmap_title:'Heatmap journalière · {species}',
+      circadian_comparison:'Comparaison circadienne',
       analyses_multi_polar:'Activité horaire · {species} (principale)',
       analyses_multi_series:'Comparaison {n} espèces',
       analyses_no_data_period:'Aucune donnée pour cette période.',
@@ -300,6 +301,7 @@
       select_species_prompt:'Sélectionnez une espèce', listen_spectro_hint:'pour écouter et voir le spectrogramme',
       next_det_audio:'Prochaine détection avec audio →',
       download:'Télécharger', download_audio:'Télécharger l\'audio',
+      ebird_export:'Export eBird',
       click_to_edit_value:'Cliquer pour saisir une valeur',
       search_filter_ph:'filtrer…', search_species_ph:'Rechercher… (appuyez /)',
       fft_analysis:'Analyse FFT…',
@@ -315,6 +317,11 @@
       detected_locally:'Également détecté localement', not_detected_locally:'Pas détecté localement',
       no_rarities_detected:'Aucune rareté détectée récemment',
       search_placeholder:'Rechercher une espèce\u2026',
+      // Lifers
+      lifers_label:'Lifers', no_lifers:'Aucun lifer pour cette date',
+      // Morning summary
+      morning_summary:'Quoi de neuf', new_today:'Nouvelles aujourd\'hui', best_detection:'Meilleure détection',
+      vs_yesterday:'vs hier', no_new_species:'Aucune nouvelle espèce',
     },
 
     en: {
@@ -408,6 +415,7 @@
       analyses_polar_title:'Hourly activity · {species}',
       analyses_series_title:'Detections over time · {species}',
       analyses_heatmap_title:'Daily heatmap · {species}',
+      circadian_comparison:'Circadian comparison',
       analyses_multi_polar:'Hourly activity · {species} (primary)',
       analyses_multi_series:'Comparing {n} species',
       analyses_no_data_period:'No data for this period.',
@@ -568,6 +576,7 @@
       select_species_prompt:'Select a species', listen_spectro_hint:'to listen and view the spectrogram',
       next_det_audio:'Next detection with audio →',
       download:'Download', download_audio:'Download audio',
+      ebird_export:'eBird export',
       click_to_edit_value:'Click to enter a value',
       search_filter_ph:'filter…', search_species_ph:'Search… (press /)',
       fft_analysis:'FFT analysis…',
@@ -582,6 +591,11 @@
       detected_locally:'Also detected locally', not_detected_locally:'Not detected locally',
       no_rarities_detected:'No rarities detected recently',
       search_placeholder:'Search species\u2026',
+      // Lifers
+      lifers_label:'Lifers', no_lifers:'No lifers for this date',
+      // Morning summary
+      morning_summary:'What\'s new', new_today:'New today', best_detection:'Best detection',
+      vs_yesterday:'vs yesterday', no_new_species:'No new species',
     },
 
     de: {
@@ -675,6 +689,7 @@
       analyses_polar_title:'Stundenaktivität · {species}',
       analyses_series_title:'Erkennungen im Zeitverlauf · {species}',
       analyses_heatmap_title:'Tages-Heatmap · {species}',
+      circadian_comparison:'Zirkadianer Vergleich',
       analyses_multi_polar:'Stundenaktivität · {species} (Hauptart)',
       analyses_multi_series:'{n} Arten vergleichen',
       analyses_no_data_period:'Keine Daten für diesen Zeitraum.',
@@ -835,6 +850,7 @@
       select_species_prompt:'Art auswählen', listen_spectro_hint:'zum Anhören und Spektrogramm anzeigen',
       next_det_audio:'Nächste Erkennung mit Audio →',
       download:'Herunterladen', download_audio:'Audio herunterladen',
+      ebird_export:'eBird-Export',
       click_to_edit_value:'Klicken, um Wert einzugeben',
       search_filter_ph:'filtern…', search_species_ph:'Suchen… (Taste /)',
       fft_analysis:'FFT-Analyse…',
@@ -849,6 +865,11 @@
       detected_locally:'Auch lokal erkannt', not_detected_locally:'Nicht lokal erkannt',
       no_rarities_detected:'Keine Seltenheiten kürzlich erkannt',
       search_placeholder:'Art suchen\u2026',
+      // Lifers
+      lifers_label:'Erstbeobachtungen', no_lifers:'Keine Erstbeobachtungen für dieses Datum',
+      // Morning summary
+      morning_summary:'Was gibt\'s Neues', new_today:'Neu heute', best_detection:'Beste Erkennung',
+      vs_yesterday:'vs gestern', no_new_species:'Keine neuen Arten',
     },
 
     nl: {
@@ -942,6 +963,7 @@
       analyses_polar_title:'Uuractiviteit · {species}',
       analyses_series_title:'Detecties in de tijd · {species}',
       analyses_heatmap_title:'Dagelijkse heatmap · {species}',
+      circadian_comparison:'Circadiane vergelijking',
       analyses_multi_polar:'Uuractiviteit · {species} (hoofdsoort)',
       analyses_multi_series:'{n} soorten vergelijken',
       analyses_no_data_period:'Geen gegevens voor deze periode.',
@@ -1102,6 +1124,7 @@
       select_species_prompt:'Selecteer een soort', listen_spectro_hint:'om te luisteren en het spectrogram te bekijken',
       next_det_audio:'Volgende detectie met audio →',
       download:'Downloaden', download_audio:'Audio downloaden',
+      ebird_export:'eBird-export',
       click_to_edit_value:'Klik om waarde in te voeren',
       search_filter_ph:'filteren…', search_species_ph:'Zoeken… (druk /)',
       fft_analysis:'FFT-analyse…',
@@ -1116,6 +1139,11 @@
       detected_locally:'Ook lokaal gedetecteerd', not_detected_locally:'Niet lokaal gedetecteerd',
       no_rarities_detected:'Geen zeldzaamheden recent gedetecteerd',
       search_placeholder:'Soort zoeken\u2026',
+      // Lifers
+      lifers_label:'Lifers', no_lifers:'Geen lifers voor deze datum',
+      // Morning summary
+      morning_summary:'Wat is er nieuw', new_today:'Nieuw vandaag', best_detection:'Beste detectie',
+      vs_yesterday:'vs gisteren', no_new_species:'Geen nieuwe soorten',
     },
   };
 

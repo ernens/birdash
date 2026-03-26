@@ -2807,6 +2807,63 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Route : GET /api/export/ebird
+  if (req.method === 'GET' && pathname === '/api/export/ebird') {
+    try {
+      const qp   = new URL(req.url, 'http://localhost').searchParams;
+      const from = qp.get('from') || '2000-01-01';
+      const to   = qp.get('to')   || '2099-12-31';
+      const conf = parseFloat(qp.get('conf') || '0');
+
+      const rows = db.prepare(
+        'SELECT Com_Name, Sci_Name, Date, COUNT(*) as cnt FROM detections WHERE Date BETWEEN ? AND ? AND Confidence >= ? GROUP BY Date, Com_Name ORDER BY Date, Com_Name'
+      ).all(from, to, conf);
+
+      const bConf = await parseBirdnetConf();
+      const lat = bConf.LATITUDE  || '';
+      const lon = bConf.LONGITUDE || '';
+
+      const csvHeaders = 'Common Name,Genus,Species,Number,Date,Start Time,State/Province,Country,Location,Latitude,Longitude,Protocol,Duration,All Obs Reported';
+      const csvLines = [csvHeaders];
+      for (const r of rows) {
+        const parts = (r.Sci_Name || '').split(' ');
+        const genus   = parts[0] || '';
+        const species = parts.slice(1).join(' ') || '';
+        // Convert YYYY-MM-DD to MM/DD/YYYY
+        const dp = (r.Date || '').split('-');
+        const dateFmt = dp.length === 3 ? dp[1] + '/' + dp[2] + '/' + dp[0] : r.Date;
+        csvLines.push([
+          '"' + (r.Com_Name || '').replace(/"/g, '""') + '"',
+          '"' + genus.replace(/"/g, '""') + '"',
+          '"' + species.replace(/"/g, '""') + '"',
+          r.cnt,
+          dateFmt,
+          '',
+          '',
+          '',
+          '',
+          lat,
+          lon,
+          'Stationary',
+          '',
+          'N',
+        ].join(','));
+      }
+
+      const csv = csvLines.join('\n');
+      res.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="birdash-ebird-' + from + '-to-' + to + '.csv"',
+      });
+      res.end(csv);
+    } catch (err) {
+      console.error('[ebird-export]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
   // Route : GET /api/health
   if (req.method === 'GET' && pathname === '/api/health') {
     try {

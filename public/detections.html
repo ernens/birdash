@@ -132,6 +132,7 @@
           </span>
           <span style="display:flex;align-items:center;gap:.6rem;">
             <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;">⬇ CSV</button>
+            <button @click="exportEbird" class="dl-btn" :title="t('ebird_export')" style="font-size:.72rem;">⬇ eBird</button>
             <span v-if="!uniqueMode">{{t('page')}} {{page}} {{t('of')}} {{totalPages}}</span>
           </span>
         </div>
@@ -480,6 +481,11 @@ const app = createApp({
       } catch(e) { console.error('[export]', e); }
     }
 
+    function exportEbird() {
+      const url = BIRD_CONFIG.apiUrl + '/export/ebird?from=' + encodeURIComponent(fDateFrom.value) + '&to=' + encodeURIComponent(fDateTo.value) + '&conf=' + encodeURIComponent(fConf.value);
+      window.open(url, '_blank');
+    }
+
     function applyFilters() { page.value=1; loadDetections(); }
     function resetFilters() {
       fSpecies.value=[]; fDateFrom.value=daysAgo(BIRD_CONFIG.recentDays);
@@ -536,7 +542,7 @@ const app = createApp({
       displayRows,displayTotal,
       playingFile,toggleAudio, buildAudioUrl,
       fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,
-      applyFilters,resetFilters,goPage,exportCsv,
+      applyFilters,resetFilters,goPage,exportCsv,exportEbird,
     };
   }
 });

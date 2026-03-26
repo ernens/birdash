@@ -65,6 +65,72 @@
       </div>
     </div>
 
+    <!-- Morning summary — What's new -->
+    <div v-if="morning.loaded" class="card" style="margin-bottom:1rem;">
+      <div class="card-title">{{t('morning_summary')}}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+        <!-- New today -->
+        <div style="padding:.6rem .8rem;background:var(--bg-deep);border-radius:var(--radius);">
+          <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">
+            {{t('new_today')}}
+          </div>
+          <div v-if="morning.newSpecies.length">
+            <div v-for="sp in morning.newSpecies.slice(0,5)" :key="sp"
+                 style="font-size:.82rem;margin-bottom:.15rem;">
+              <a class="species-link" @click="navigateTo('species.html',{species:sp})"
+                 style="cursor:pointer;">{{spName(sp)}}</a>
+            </div>
+            <div v-if="morning.newSpecies.length > 5"
+                 style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">
+              +{{morning.newSpecies.length - 5}} {{t('species').toLowerCase()}}
+            </div>
+          </div>
+          <div v-else style="font-size:.8rem;color:var(--text-faint);font-style:italic;">
+            {{t('no_new_species')}}
+          </div>
+        </div>
+        <!-- Best detection -->
+        <div style="padding:.6rem .8rem;background:var(--bg-deep);border-radius:var(--radius);">
+          <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">
+            {{t('best_detection')}}
+          </div>
+          <div v-if="morning.bestDet">
+            <a class="species-link" @click="navigateTo('species.html',{species:morning.bestDet.Com_Name})"
+               style="cursor:pointer;font-size:.88rem;font-weight:600;">
+              {{spName(morning.bestDet.Com_Name, morning.bestDet.Sci_Name)}}
+            </a>
+            <div style="display:flex;align-items:center;gap:.4rem;margin-top:.2rem;">
+              <span :class="'conf-badge '+(parseFloat(morning.bestDet.Confidence)>=0.8?'conf-high':'conf-mid')">
+                {{fmtConf(morning.bestDet.Confidence)}}
+              </span>
+              <span style="font-size:.72rem;color:var(--text-faint);font-family:monospace;">
+                {{fmtTime(morning.bestDet.Time)}}
+              </span>
+            </div>
+          </div>
+          <div v-else style="font-size:.8rem;color:var(--text-faint);font-style:italic;">—</div>
+        </div>
+        <!-- Activity vs yesterday -->
+        <div style="padding:.6rem .8rem;background:var(--bg-deep);border-radius:var(--radius);">
+          <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem;">
+            {{t('detections')}} {{t('vs_yesterday')}}
+          </div>
+          <div style="display:flex;align-items:baseline;gap:.5rem;">
+            <span style="font-size:1.3rem;font-weight:700;color:var(--accent);">{{morning.todayCount}}</span>
+            <span style="font-size:.78rem;color:var(--text-muted);">
+              {{t('vs_yesterday')}} {{morning.yesterdayCount}}
+            </span>
+          </div>
+          <div v-if="morning.yesterdayCount > 0"
+               style="font-size:.78rem;margin-top:.2rem;"
+               :style="'color:' + (morning.todayCount >= morning.yesterdayCount ? 'var(--accent)' : 'var(--danger)')">
+            {{morning.todayCount >= morning.yesterdayCount ? '▲' : '▼'}}
+            {{Math.abs(Math.round((morning.todayCount - morning.yesterdayCount) / morning.yesterdayCount * 100))}}%
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid-2">
 
       <!-- Dernière détection -->
@@ -317,6 +383,7 @@ const app = createApp({
     const lastDet = ref({ loading:true, row:null, photoUrl:null });
     const feed    = ref({ loading:true, rows:[] });
     const rareSpeciesToday = ref([]);
+    const morning = ref({ newSpecies: [], bestDet: null, todayCount: 0, yesterdayCount: 0, loaded: false });
     const data7d     = ref(null);
     const dataTop    = ref(null);
     const dataHourly = ref(null);
@@ -335,10 +402,35 @@ const app = createApp({
     let _rawPcm = null, _rawSr = 22050;
 
     // ── Data loading ───────────────────────────────────────────────
+    async function loadMorningSummary() {
+      try {
+        const yesterday = daysAgo(1);
+        // Species seen today but not yesterday
+        const newRows = await birdQuery(
+          `SELECT DISTINCT Com_Name FROM detections WHERE Date=?
+           AND Com_Name NOT IN (SELECT DISTINCT Com_Name FROM detections WHERE Date=?)`,
+          [today, yesterday]);
+        // Best confidence detection today
+        const [best] = await birdQuery(
+          `SELECT Com_Name, Sci_Name, Confidence, Time FROM detections
+           WHERE Date=? ORDER BY Confidence DESC LIMIT 1`, [today]);
+        // Counts
+        const [tc] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=?`, [today]);
+        const [yc] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=?`, [yesterday]);
+        morning.value = {
+          newSpecies: (newRows || []).map(r => r.Com_Name),
+          bestDet: best || null,
+          todayCount: tc ? tc.n : 0,
+          yesterdayCount: yc ? yc.n : 0,
+          loaded: true,
+        };
+      } catch(e) { console.error('morning:', e); }
+    }
+
     async function loadAll() {
       await Promise.all([loadKpis(), loadLastDet(), loadFeed(),
                          load7dData(), loadTopData(), loadHourlyData(),
-                         loadRareSpeciesToday()]);
+                         loadRareSpeciesToday(), loadMorningSummary()]);
     }
 
     async function loadKpis() {
@@ -593,7 +685,7 @@ const app = createApp({
 
     return {
       lang, t, spName,
-      today, kpis, lastDet, feed, rareSpeciesToday, rarePanelOpen, toggleRarePanel,
+      today, kpis, lastDet, feed, rareSpeciesToday, rarePanelOpen, toggleRarePanel, morning,
       playingFile, toggleAudio,
       richPlaying, richProgress, richDuration, toggleRichPlay, seekRich,
       spectroCanvas, spectroState, loadSpectro,
