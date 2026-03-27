@@ -462,6 +462,113 @@
     'Certhia brachydactyla': { min: 4, max: 9, label: 'Short-toed Treecreeper' },
   };
 
+  // ── FFT & Spectrogram helpers (shared across pages) ────────────────────
+
+  /**
+   * Cooley-Tukey in-place FFT.
+   * @param {Float32Array} re — real part (length must be power of 2)
+   * @param {Float32Array} im — imaginary part (same length)
+   */
+  function fftInPlace(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const half = len >> 1;
+      const wc = Math.cos(-Math.PI/half), ws = Math.sin(-Math.PI/half);
+      for (let i = 0; i < n; i += len) {
+        let wR = 1, wI = 0;
+        for (let k = 0; k < half; k++) {
+          const uR=re[i+k],uI=im[i+k],vR=re[i+k+half]*wR-im[i+k+half]*wI,vI=re[i+k+half]*wI+im[i+k+half]*wR;
+          re[i+k]=uR+vR; im[i+k]=uI+vI; re[i+k+half]=uR-vR; im[i+k+half]=uI-vI;
+          const nwR=wR*wc-wI*ws; wI=wR*ws+wI*wc; wR=nwR;
+        }
+      }
+    }
+  }
+
+  /**
+   * Build a 256-entry plasma colormap LUT (Uint8Array of 256*3 bytes).
+   */
+  function buildColorLUT() {
+    const lut = new Uint8Array(256*3);
+    const stops = [
+      [0,[0,0,0]],[0.1,[20,0,50]],[0.25,[80,0,100]],
+      [0.42,[180,20,80]],[0.58,[230,70,20]],[0.75,[255,155,0]],
+      [0.90,[255,230,70]],[1.0,[255,255,255]],
+    ];
+    for (let i = 0; i < 256; i++) {
+      const v = i/255; let s = 0;
+      while (s < stops.length-2 && stops[s+1][0] <= v) s++;
+      const [v0,c0]=stops[s],[v1,c1]=stops[s+1];
+      const t = Math.min(1,(v-v0)/(v1-v0+1e-9));
+      lut[i*3]=Math.round(c0[0]+t*(c1[0]-c0[0]));
+      lut[i*3+1]=Math.round(c0[1]+t*(c1[1]-c0[1]));
+      lut[i*3+2]=Math.round(c0[2]+t*(c1[2]-c0[2]));
+    }
+    return lut;
+  }
+
+  /** Singleton color LUT (built once). */
+  const _COLOR_LUT = buildColorLUT();
+
+  /**
+   * Render a spectrogram onto a canvas from raw PCM data.
+   * @param {Float32Array} pcm — mono audio samples
+   * @param {number} sr — sample rate
+   * @param {HTMLCanvasElement} canvas — target canvas
+   * @param {object} [opts] — { fftSize:1024, maxHz:12000 }
+   */
+  function renderSpectrogram(pcm, sr, canvas, opts) {
+    opts = opts || {};
+    const FFT  = opts.fftSize || 1024;
+    const HOP  = FFT / 2;
+    const HALF = FFT / 2;
+    const maxHz  = opts.maxHz || 12000;
+    const maxBin = Math.min(HALF, Math.floor(maxHz / sr * FFT));
+    const hann   = new Float32Array(FFT);
+    for (let i = 0; i < FFT; i++) hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FFT - 1));
+
+    const frames = [];
+    for (let off = 0; off + FFT <= pcm.length; off += HOP) {
+      const re = new Float32Array(FFT), im = new Float32Array(FFT);
+      for (let i = 0; i < FFT; i++) re[i] = pcm[off + i] * hann[i];
+      fftInPlace(re, im);
+      const mag = new Float32Array(maxBin);
+      for (let i = 1; i < maxBin; i++)
+        mag[i] = 20 * Math.log10(Math.sqrt(re[i] * re[i] + im[i] * im[i]) / HALF + 1e-9);
+      frames.push(mag);
+    }
+    if (frames.length === 0) return;
+
+    const all = []; frames.forEach(f => f.forEach(v => all.push(v))); all.sort((a, b) => a - b);
+    const lo  = all[Math.floor(all.length * 0.05)] || -80;
+    const hi  = all[Math.floor(all.length * 0.995)] || -10;
+    const rng = hi - lo || 1;
+
+    const W = canvas.width, H = canvas.height;
+    canvas.width = W; // clear
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(W, H);
+    const d   = img.data;
+    const lut = _COLOR_LUT;
+    for (let px = 0; px < W; px++) {
+      const frame = frames[Math.min(Math.floor(px / W * frames.length), frames.length - 1)];
+      for (let py = 0; py < H; py++) {
+        const bin = Math.floor((H - 1 - py) / H * maxBin);
+        const v   = Math.max(0, Math.min(1, (frame[bin] - lo) / rng));
+        const ci  = Math.min(255, Math.floor(v * 255)) * 3;
+        const pi  = (py * W + px) * 4;
+        d[pi] = lut[ci]; d[pi + 1] = lut[ci + 1]; d[pi + 2] = lut[ci + 2]; d[pi + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
   // ── Export ─────────────────────────────────────────────────────────────
 
   window.BIRDASH_UTILS = {
@@ -490,6 +597,10 @@
     ECOLOGICAL_GUILDS: ECOLOGICAL_GUILDS,
     getSpeciesGuild: getSpeciesGuild,
     SPECIES_FREQ_RANGES: SPECIES_FREQ_RANGES,
+    fftInPlace: fftInPlace,
+    buildColorLUT: buildColorLUT,
+    COLOR_LUT: _COLOR_LUT,
+    renderSpectrogram: renderSpectrogram,
   };
 
 })(BIRD_CONFIG);

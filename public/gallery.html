@@ -87,14 +87,16 @@
           <div v-for="(det, di) in group.dets" :key="di"
                class="gallery-det-row" :data-audio="det.audioUrl" ref="detRows">
             <canvas class="gallery-spectro" width="200" height="60"
-                    :data-audio-url="det.audioUrl" :data-rendered="det.rendered?'1':'0'"></canvas>
+                    :data-audio-url="det.audioUrl" :data-rendered="det.rendered?'1':'0'"
+                    style="cursor:pointer"
+                    @click="openModal(group, det)"></canvas>
             <div class="gallery-det-meta">
               <span class="gallery-conf-badge" :style="confStyle(det.conf)">{{Math.round(det.conf*100)}}%</span>
               <span class="gallery-det-date">{{det.date}} {{det.time}}</span>
             </div>
-            <button class="gallery-play-btn" :class="{playing: playingUrl===det.audioUrl}"
-                    @click="togglePlay(det)" :title="playingUrl===det.audioUrl ? 'Stop' : 'Play'">
-              {{playingUrl===det.audioUrl ? '⏹' : '▶'}}
+            <button class="gallery-play-btn"
+                    @click="openModal(group, det)" title="Play">
+              ▶
             </button>
           </div>
         </div>
@@ -349,6 +351,19 @@ const app = createApp({
       return 'background:#f44336;color:#fff';
     }
 
+    // ── Open spectrogram modal ──────────────────────────────────────
+    function openModal(group, det) {
+      stopPlay();
+      BIRDASH.openSpectroModal({
+        fileName: det.fileName,
+        speciesName: group.name,
+        sciName: group.sci,
+        confidence: det.conf,
+        date: det.date,
+        time: det.time
+      });
+    }
+
     onMounted(() => { loadGallery(); });
 
     return {
@@ -356,7 +371,7 @@ const app = createApp({
       loading, activePeriod, minConf, searchQuery,
       allGroups, filteredGroups, playingUrl,
       setPeriod, loadGallery, filterSpecies,
-      togglePlay, confStyle,
+      togglePlay, confStyle, openModal,
     };
   }
 });

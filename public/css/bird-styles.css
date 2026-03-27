@@ -1011,3 +1011,69 @@ a:hover { opacity: .85; }
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SPECTROGRAM MODAL
+   ══════════════════════════════════════════════════════════════════════════════ */
+.spectro-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.spectro-modal {
+  background: var(--bg-card); border-radius: var(--radius);
+  border: 1px solid var(--border); max-width: 900px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4); overflow: hidden;
+}
+.spectro-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+}
+.spectro-modal-species { font-size: 1.1rem; font-weight: 700; font-family: var(--font-display); }
+.spectro-modal-sci { font-size: .8rem; color: var(--text-muted); font-style: italic; }
+.spectro-modal-meta { display: flex; gap: .5rem; align-items: center; margin-top: .3rem; font-size: .75rem; color: var(--text-faint); }
+.spectro-modal-close {
+  background: none; border: none; font-size: 1.5rem; color: var(--text-muted);
+  cursor: pointer; padding: .2rem .5rem; line-height: 1;
+}
+.spectro-modal-close:hover { color: var(--text-main); }
+.spectro-modal-canvas-wrap { background: var(--bg-spectro, #111); position: relative; overflow: hidden; }
+.spectro-modal-canvas-wrap canvas { display: block; width: 100%; height: 200px; }
+.spectro-modal-loading {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 1rem;
+}
+.spectro-cursor {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: var(--accent); opacity: .8; pointer-events: none;
+  transition: left .05s linear;
+}
+.spectro-freq-labels {
+  position: absolute; top: 0; bottom: 0; right: 4px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  pointer-events: none; padding: 4px 0;
+}
+.spectro-freq-labels span {
+  font-size: .55rem; color: rgba(255,255,255,.35); font-family: monospace; text-align: right;
+}
+.spectro-modal-controls {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .65rem 1rem; border-top: 1px solid var(--border);
+}
+.spectro-modal-dl {
+  font-size: 1.1rem; color: var(--text-muted); text-decoration: none;
+  padding: .2rem; transition: color .1s;
+}
+.spectro-modal-dl:hover { color: var(--accent); }
+.spectro-modal-filters {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  padding: .65rem 1rem; border-top: 1px solid var(--border);
+}
+.spectro-modal-filter-group { display: flex; align-items: center; gap: .4rem; }
+
+@media (max-width: 600px) {
+  .spectro-modal { max-width: 100%; border-radius: 0; }
+  .spectro-modal-overlay { padding: 0; align-items: flex-end; }
+  .spectro-modal-filters { gap: .5rem; padding: .5rem .75rem; }
+}
