@@ -87,8 +87,13 @@
             <tr><th>Espèce</th><th>N</th><th>Conf.</th></tr>
             <tr v-for="s in data.unique[m]" :key="s.Sci_Name">
               <td>
-                <strong>{{ s.Com_Name }}</strong>
-                <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
+                <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;cursor:pointer;" @mouseenter="$event.currentTarget.style.color='var(--accent)'" @mouseleave="$event.currentTarget.style.color='inherit'">
+                  <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">
+                  <div>
+                    <strong>{{ s.Com_Name }}</strong>
+                    <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
+                  </div>
+                </a>
               </td>
               <td>{{ s.n }}</td>
               <td>
@@ -112,8 +117,13 @@
           </tr>
           <tr v-for="s in data.overlap" :key="s.Sci_Name">
             <td>
-              <strong>{{ s.Com_Name }}</strong>
-              <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
+              <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;cursor:pointer;" @mouseenter="$event.currentTarget.style.color='var(--accent)'" @mouseleave="$event.currentTarget.style.color='inherit'">
+                <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">
+                <div>
+                  <strong>{{ s.Com_Name }}</strong>
+                  <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
+                </div>
+              </a>
             </td>
             <td>
               {{ s.n1 }}
