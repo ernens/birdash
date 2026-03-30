@@ -142,6 +142,7 @@ const SETTINGS_VALIDATORS = {
   NOTIFY_RARE_THRESHOLD: v => !isNaN(v) && v >= 1 && v <= 1000,
   NOTIFY_FIRST_SEASON: v => v == 0 || v == 1,
   NOTIFY_SEASON_DAYS: v => !isNaN(v) && v >= 7 && v <= 365,
+  AUDIO_RETENTION_DAYS: v => !isNaN(v) && v >= 7 && v <= 365,
   NOTIFY_ENABLED: v => v == 0 || v == 1,
   REC_CARD:        v => typeof v === 'string' && v.length <= 200,
   RTSP_STREAM:     v => typeof v === 'string' && v.length <= 500,
@@ -3220,6 +3221,87 @@ const server = http.createServer((req, res) => {
 
   // ══════════════════════════════════════════════════════════════════════════
   // ══════════════════════════════════════════════════════════════════════════
+  // ── Route : GET /api/model-comparison ────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/model-comparison') {
+    (async () => {
+      try {
+        const qs = new URLSearchParams(req.url.split('?')[1] || '');
+        const days = Math.min(parseInt(qs.get('days') || '7'), 90);
+        const minDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+
+        // Models active in period
+        const models = db.prepare(`
+          SELECT DISTINCT Model FROM detections WHERE Date >= ?
+        `).all(minDate).map(r => r.Model);
+
+        // Per-model stats
+        const stats = {};
+        for (const m of models) {
+          const row = db.prepare(`
+            SELECT COUNT(*) as total, COUNT(DISTINCT Sci_Name) as species,
+                   round(AVG(Confidence),3) as avg_conf
+            FROM detections WHERE Date >= ? AND Model = ?
+          `).get(minDate, m);
+          stats[m] = row;
+        }
+
+        // Species unique to each model
+        const unique = {};
+        for (const m of models) {
+          const others = models.filter(o => o !== m);
+          if (others.length === 0) continue;
+          const placeholders = others.map(() => '?').join(',');
+          const rows = db.prepare(`
+            SELECT d.Sci_Name, d.Com_Name, COUNT(*) as n, round(AVG(d.Confidence),3) as avg_conf
+            FROM detections d
+            WHERE d.Date >= ? AND d.Model = ?
+            AND d.Sci_Name NOT IN (
+              SELECT DISTINCT Sci_Name FROM detections
+              WHERE Date >= ? AND Model IN (${placeholders})
+            )
+            GROUP BY d.Sci_Name ORDER BY n DESC
+          `).all(minDate, m, minDate, ...others);
+          unique[m] = rows;
+        }
+
+        // Species detected by ALL models (overlap)
+        let overlap = [];
+        if (models.length >= 2) {
+          const m1 = models[0], m2 = models[1];
+          overlap = db.prepare(`
+            SELECT a.Sci_Name, a.Com_Name,
+              a.n as n1, a.avg_conf as conf1,
+              b.n as n2, b.avg_conf as conf2
+            FROM (
+              SELECT Sci_Name, Com_Name, COUNT(*) as n, round(AVG(Confidence),3) as avg_conf
+              FROM detections WHERE Date >= ? AND Model = ? GROUP BY Sci_Name
+            ) a
+            INNER JOIN (
+              SELECT Sci_Name, COUNT(*) as n, round(AVG(Confidence),3) as avg_conf
+              FROM detections WHERE Date >= ? AND Model = ? GROUP BY Sci_Name
+            ) b ON a.Sci_Name = b.Sci_Name
+            ORDER BY (a.n + b.n) DESC
+            LIMIT 30
+          `).all(minDate, m1, minDate, m2);
+        }
+
+        // Daily detection counts per model
+        const daily = db.prepare(`
+          SELECT Date, Model, COUNT(*) as n
+          FROM detections WHERE Date >= ?
+          GROUP BY Date, Model ORDER BY Date
+        `).all(minDate);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ models, stats, unique, overlap, daily, since: minDate }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
   // ── Shared helpers ──────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════
   function readJsonFile(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }

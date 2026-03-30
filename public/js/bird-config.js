@@ -59,6 +59,7 @@ const BIRD_CONFIG = {
     { id: 'stats',        icon: '📊', file: 'stats.html'        },
     { id: 'gallery',      icon: '🎶', file: 'gallery.html'       },
     { id: 'analyses',     icon: '🔬', file: 'analyses.html'     },
+    { id: 'models',       icon: '🤖', file: 'models.html'      },
     { id: 'review',       icon: '🔍', file: 'review.html'      },
     { id: 'system',       icon: '⚙️',  file: 'system.html'      },
     { id: 'settings',     icon: '🔧', file: 'settings.html'    },

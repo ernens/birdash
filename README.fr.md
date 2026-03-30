@@ -3,237 +3,103 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Dashboard ornithologique moderne pour [Nachtzuster/BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi).
-Interface Vue 3 (CDN) avec backend Node.js, multilingue (FR/EN/NL/DE + 36 langues pour les noms d'espèces).
+Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Remplace [BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) avec une architecture dual-modele plus rapide et plus precise.
 
-> **Birdash n'est pas un fork** — c'est un dashboard de remplacement pour l'interface web native de BirdNET-Pi.
+> [English](README.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md)
 
-> [English](README.md) · [Nederlands](README.nl.md) · [Deutsch](README.de.md) · [Contributing](CONTRIBUTING.md)
+## Architecture
 
-## Captures d'écran
+```
+Raspberry Pi 5 + SSD
+├── RODE AI-Micro (USB)
+│     ↓
+├── BirdEngine (Python)
+│   ├── Enregistrement (arecord → WAV 45s)
+│   ├── BirdNET V2.4    (~2s/fichier, primaire)
+│   ├── Perch V2 INT8   (~12s/fichier, secondaire)
+│   ├── Extraction MP3 + spectrogrammes
+│   ├── Upload BirdWeather
+│   └── Notifications intelligentes (ntfy.sh)
+│
+├── Birdash (Node.js)
+│   ├── API Dashboard (port 7474)
+│   ├── Spectrogramme live (flux PCM + MP3)
+│   ├── Module configuration audio
+│   ├── Revue des detections + auto-flagging
+│   └── Comparaison de modeles
+│
+├── Caddy (reverse proxy :80)
+├── ttyd (terminal web)
+└── SQLite (1M+ detections)
+```
 
-| Vue d'ensemble | Fiche espèce |
-|:-:|:-:|
-| ![Dashboard](screenshots/dashboard.png) | ![Species](screenshots/species.png) |
+## Fonctionnalites
 
-| Enregistrements | Détections |
-|:-:|:-:|
-| ![Recordings](screenshots/recordings.png) | ![Detections](screenshots/detections.png) |
+### Moteur de detection (BirdEngine)
+- 🤖 **Inference dual-modele** — BirdNET V2.4 (rapide, ~2s) + Perch V2 INT8 (precis, ~12s) en parallele
+- 🎙️ **Enregistrement local** — RODE AI-Micro via ALSA avec gain configurable
+- 📡 **BirdWeather** — upload automatique des paysages sonores + detections
+- 🔔 **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece (pas chaque moineau)
+- ⚡ **Post-traitement async** — extraction MP3, spectrogrammes, sync DB ne bloquent pas l'inference
 
-| Biodiversité | Raretés |
-|:-:|:-:|
-| ![Biodiversity](screenshots/biodiversity.png) | ![Rarities](screenshots/rarities.png) |
-
-| Spectrogramme | Statistiques |
-|:-:|:-:|
-| ![Spectrogram](screenshots/spectrogram.png) | ![Stats](screenshots/stats.png) |
-
-## Fonctionnalités
-
-- 📊 Vue d'ensemble temps réel avec 6 KPIs et graphiques (activité du jour + tendance 7 jours avec trendline)
-- 🎙️ Feed des détections avec lecture audio intégrée
-- 🦜 Fiches espèces détaillées avec carrousel photos (iNaturalist + Wikipedia)
-- 🧬 Infos taxonomiques, statut de conservation IUCN, envergure
-- 🗓️ Matrice biodiversité (heures x espèces)
-- 💎 Espèces rares et alertes
+### Dashboard
+- 📊 Vue d'ensemble avec KPIs, graphiques, resume matinal
+- 🎵 **Spectrogramme live** — audio en temps reel du micro avec noms d'oiseaux
+- 🎧 Fil de detections avec lecture audio integree
+- 🦜 Fiches especes avec photos (iNaturalist + Wikipedia), statut UICN
+- 🧬 Matrice biodiversite, indice de Shannon, taxonomie
+- 💎 Suivi des especes rares
 - 📈 Statistiques et classements
-- 🎵 Spectrogramme audio avec nettoyage DSP
-- 🏆 Meilleurs enregistrements avec photos uniformes et lecteur
-- 🖥️ État du système (CPU, RAM, disque, température)
-- 🔬 Analyses avancées
-- 🔧 **Page réglages** — sélecteur de modèle, paramètres d'analyse, gestion des services, infobulles ⓘ sur chaque paramètre
-- 🤖 **Support Perch v2** — modèle Google Research (10 340 espèces d'oiseaux) avec softmax à température, filtre oiseaux uniquement et filtre géographique MData
-- 🔄 **Comparaison de modèles** — comparaison côte à côte par période avec espèces gagnées/perdues, tableau par espèce, monitoring nocturne
-- 🏷️ **Suivi du modèle** — chaque détection enregistre quel modèle IA l'a identifiée (affiché sur toutes les pages)
-- 🗑️ **Gestion des détections** — supprimer des détections individuelles ou en masse pour une espèce (avec confirmation par saisie du nom)
-- 💾 **Gestion des sauvegardes** — backup multi-destination (USB/Local, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV) avec sélection du contenu (DB, audio, config), planification (manuel/quotidien/hebdomadaire), barre de progression en temps réel, contrôles pause/reprise/arrêt, suivi de l'espace disque, et détection automatique des scripts legacy
-- ⚡ Service Worker pour cache offline
-- ♿ Accessibilité (WCAG AA, navigation clavier, skip-link)
-- 🎨 5 thèmes modernes (Forest, Night, Paper, Ocean, Dusk)
-- 🌍 4 langues d'interface (FR / EN / NL / DE) + noms d'espèces traduits automatiquement dans 36 langues via les labels BirdNET
+- 🏆 Galerie des meilleurs enregistrements
+- 🔬 Analyses avancees (diagrammes polaires, heatmaps, series temporelles)
 
-## Testé avec
+### Comparaison de modeles
+- 🤖 **Cote a cote** — detections par modele, couverture d'especes, confiance
+- 📊 **Graphique journalier** — tendances de detection par modele
+- 🎯 **Especes exclusives** — ce que chaque modele detecte que l'autre rate
+- 📋 **Tableau de recouvrement** — especes communes avec ratio de detection
 
-| BirdNET-Pi | Matériel | Statut |
-|------------|----------|--------|
-| [Nachtzuster/BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) | Raspberry Pi 4/5 | ✅ Testé |
+### Revue des detections
+- 🔍 **Auto-flagging** — especes nocturnes de jour, migrateurs hors saison, confiance faible isolee, especes non-europeennes
+- ✅ **Actions en masse** — confirmer/rejeter par regle
+- 🎵 Lecture audio par detection pour verification manuelle
 
-## Prérequis
+### Configuration audio
+- 🎙️ Detection et selection du peripherique (RODE AI-Micro en surbrillance)
+- 🎛️ 6 profils d'environnement (jardin, foret, bord de route, ville, nuit, test)
+- ⚖️ Assistant de calibration inter-canaux pour micros EM272
+- 📊 VU-metres en temps reel via SSE
 
-- [Nachtzuster/BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) en fonctionnement (`~/BirdNET-Pi/scripts/birds.db` présent)
-- Node.js >= 18 (`node --version`)
-- Caddy (voir section Configuration Caddy ci-dessous)
+### Reglages et systeme
+- 🔧 Interface complete — modeles, parametres d'analyse, notifications, audio, sauvegarde
+- 🖥️ Sante systeme — CPU, RAM, disque, temperature, services
+- 💻 **Terminal web** — bash complet dans le navigateur, supporte Claude Code
+- 💾 **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
+- 🎨 5 themes (Foret, Nuit, Papier, Ocean, Crepuscule)
+- 🌍 4 langues UI (FR/EN/NL/DE) + 36 langues pour les noms d'especes
+
+## Modele quantifie
+
+Nous publions le premier modele **Perch V2 INT8** quantifie pour le deploiement edge :
+
+**[ernensbjorn/perch-v2-int8-tflite](https://huggingface.co/ernensbjorn/perch-v2-int8-tflite)** sur HuggingFace
+
+~30% plus rapide sur Raspberry Pi 5 avec couverture identique (14 795 classes).
+
+## Materiel
+
+| Composant | Recommande |
+|-----------|------------|
+| SBC | Raspberry Pi 5 (8 Go) |
+| Stockage | SSD NVMe (500 Go+) |
+| Audio | RODE AI-Micro + 2x Clippy EM272 |
+| Reseau | Ethernet ou WiFi |
 
 ## Installation
 
-```bash
-# 1. Cloner le dépôt
-cd ~
-git clone https://github.com/ernens/birdash.git
-cd birdash
-
-# 2. Installer les dépendances
-npm install
-
-# 3. Configuration locale
-cp config/birdash-local.example.js public/js/birdash-local.js
-nano public/js/birdash-local.js
-
-# 4. Tester le serveur
-node server/server.js
-# -> [BIRDASH] API démarrée sur http://127.0.0.1:7474
-# Test : curl http://127.0.0.1:7474/api/health
-
-# 5. Lancer les tests
-npm test
-
-# 6. Installer le service systemd
-sudo cp config/birdash.service /etc/systemd/system/
-sudo systemctl edit birdash
-#    [Service]
-#    Environment=EBIRD_API_KEY=votre_clé
-#    Environment=BW_STATION_ID=votre_station
-sudo systemctl daemon-reload
-sudo systemctl enable birdash
-sudo systemctl start birdash
-```
-
-## Configuration Caddy
-
-Birdash utilise Caddy comme reverse proxy pour servir l'API, les fichiers
-audio et les pages statiques sous un même chemin `/birds/`.
-
-### 1. Installer Caddy (si pas déjà installé)
-
-```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
-```
-
-### 2. Configurer le Caddyfile
-
-Éditez `/etc/caddy/Caddyfile` et ajoutez le bloc Birdash :
-
-```
-VOTRE_HOSTNAME {
-    encode zstd gzip
-
-    # API : proxy vers le backend Node.js
-    handle /birds/api/* {
-        uri strip_prefix /birds
-        reverse_proxy 127.0.0.1:7474
-    }
-
-    # Audio : fichiers audio extraits par BirdNET-Pi
-    handle /birds/audio/* {
-        uri strip_prefix /birds/audio
-        root * /home/{USER}/BirdSongs/Extracted
-        file_server
-    }
-
-    # Pages statiques du dashboard
-    handle /birds* {
-        uri strip_prefix /birds
-        root * /home/{USER}/birdash/public
-        file_server
-    }
-}
-```
-
-Remplacez `{USER}` par votre nom d'utilisateur système.
-
-### 3. Appliquer
-
-```bash
-caddy validate --config /etc/caddy/Caddyfile
-sudo systemctl reload caddy
-```
-
-## Vérification
-
-```bash
-# Tester l'API
-curl http://127.0.0.1:7474/api/health
-
-# Lancer les tests backend
-npm test
-
-# Ouvrir le dashboard
-# http://VOTRE_HOSTNAME/birds/
-```
-
-## Structure du projet
-
-```
-birdash/
-├── server/
-│   └── server.js              # Backend Node.js (API HTTP + SQLite)
-├── tests/
-│   └── server.test.js         # Tests backend
-├── public/                    # Fichiers statiques servis par Caddy
-│   ├── *.html                 # 13 pages (dashboard, espèces, réglages...)
-│   ├── js/                    # JavaScript client
-│   │   ├── bird-config.js     # Configuration centralisée
-│   │   ├── bird-core.js       # Utilitaires partagés
-│   │   ├── bird-vue-core.js   # Composables Vue 3 (shell, thèmes)
-│   │   └── bird-i18n.js       # Moteur i18n
-│   ├── css/                   # Feuilles de styles + 5 thèmes
-│   ├── i18n/                  # Fichiers de traduction (fr/en/nl)
-│   ├── img/                   # Assets SVG
-│   └── sw.js                  # Service Worker (cache offline)
-├── scripts/
-│   └── backup.sh              # Script de sauvegarde (rsync incrémental)
-├── config/
-│   ├── birdash.service        # Service systemd
-│   ├── birdash-local.example.js  # Template config locale
-│   └── backup.json            # Configuration de sauvegarde
-├── screenshots/
-├── CONTRIBUTING.md
-├── LICENSE
-├── package.json
-├── README.md                  # English (défaut GitHub)
-├── README.fr.md               # Français
-├── README.nl.md               # Nederlands
-└── README.de.md               # Deutsch
-```
-
-## Variables d'environnement
-
-| Variable | Défaut | Description |
-|----------|--------|-------------|
-| `BIRDASH_PORT` | `7474` | Port du serveur API |
-| `BIRDASH_DB` | `~/BirdNET-Pi/scripts/birds.db` | Chemin vers la base SQLite |
-| `EBIRD_API_KEY` | — | Clé API eBird (optionnelle) |
-| `BW_STATION_ID` | — | ID station BirdWeather (optionnelle) |
-
-## Sécurité
-
-- 🛡️ Rate limiting : 120 requêtes/min par IP
-- 🔒 Validation SQL stricte (lecture seule, pas de multi-requêtes)
-- 🔐 Headers de sécurité (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
-- 🌐 CORS restreint aux origines configurées
-- ✅ SRI (Subresource Integrity) sur les scripts CDN
-- 🧹 Protection XSS (échappement HTML)
-- 🙈 Masquage des erreurs SQL dans les réponses API
-
-## Contribuer
-
-Les contributions sont les bienvenues ! Consultez le [guide de contribution](CONTRIBUTING.md).
-
-## Mise à jour
-
-```bash
-cd ~/birdash
-git pull
-npm install
-sudo systemctl restart birdash
-```
+Voir le [README principal](README.md) pour les instructions detaillees.
 
 ## Licence
 
-[MIT](LICENSE) © ernens
+[MIT](LICENSE)

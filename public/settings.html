@@ -776,6 +776,11 @@
             <input v-model="conf.PURGE_THRESHOLD" type="range" min="50" max="99" step="1" class="set-range" :aria-label="t('set_purge_threshold')">
           </div>
           <div class="set-row">
+            <span class="set-label">Rétention audio (jours)</span>
+            <span class="set-range-val">{{conf.AUDIO_RETENTION_DAYS}} j</span>
+            <input v-model="conf.AUDIO_RETENTION_DAYS" type="range" min="7" max="365" step="1" class="set-range">
+          </div>
+          <div class="set-row">
             <span class="set-label">{{t('set_max_files')}} <button class="info-btn" @click="helpKey='max_files'">i</button></span>
             <input v-model="conf.MAX_FILES_SPECIES" type="number" min="0" class="set-input" style="width:80px;">
           </div>
