@@ -1,11 +1,11 @@
 [Unit]
-Description=BirdEngine Recording — RODE AI-Micro capture
+Description=BirdEngine Recording — Audio capture
 After=sound.target
 
 [Service]
 Type=simple
-User=bjorn
-ExecStart=/home/bjorn/birdengine/record.sh
+User=BIRDASH_USER
+ExecStart=BIRDASH_HOME/birdash/engine/record.sh
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

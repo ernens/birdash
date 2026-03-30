@@ -1,10 +1,10 @@
 [Unit]
-Description=BirdEngine Web Terminal (ttyd)
+Description=Birdash Web Terminal (ttyd)
 After=network.target
 
 [Service]
 Type=simple
-User=bjorn
+User=BIRDASH_USER
 ExecStart=/usr/local/bin/ttyd --port 7681 --base-path /birds/terminal --writable --interface lo bash
 Restart=on-failure
 RestartSec=5

@@ -1,0 +1,53 @@
+[station]
+name = "My Station"
+latitude = 0.0
+longitude = 0.0
+language = "en"
+
+[audio]
+# Source: "local" (local mic) or "rsync" (pull WAV files from remote)
+source = "local"
+# Remote host for rsync mode (optional)
+remote_host = ""
+remote_path = ""
+# Local directories (relative to $HOME)
+incoming_dir = "BIRDASH_HOME/birdash/engine/audio/incoming"
+processed_dir = "BIRDASH_HOME/birdash/engine/audio/processed"
+# Rsync interval in seconds
+rsync_interval = 30
+
+[detection]
+# Primary model (fast, runs synchronously)
+model = "BirdNET_GLOBAL_6K_V2.4_Model_FP16"
+# Secondary model (runs in background thread). Set to "" to disable.
+secondary_model = "Perch_v2_int8"
+# Minimum confidence threshold (0.0 - 1.0)
+confidence = 0.65
+# Sensitivity (0.5 - 1.5)
+sensitivity = 1.3
+# Overlap between chunks in seconds
+overlap = 0.5
+# Species occurrence frequency threshold (for geographic filter)
+sf_thresh = 0.03
+# MData model version (1 or 2)
+mdata_version = 2
+
+[notifications]
+# ntfy.sh topic URL for push notifications (leave empty to disable)
+ntfy_url = ""
+# Notify on first detection of a species each day
+notify_new_species_daily = true
+# Minimum seconds between notifications for the same species
+cooldown_seconds = 300
+
+[birdweather]
+# BirdWeather station ID (from app.birdweather.com, leave empty to disable)
+station_id = ""
+enabled = false
+
+[output]
+# Local database path
+local_db = "BIRDASH_HOME/BirdNET-Pi/scripts/birds.db"
+# Sync results to a remote host (optional)
+sync_to_biloute = false
+biloute_db = ""

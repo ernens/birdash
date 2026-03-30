@@ -12,3 +12,8 @@ deploy.sh
 photo-cache/
 birdash.db
 .claude/
+engine/venv/
+engine/audio/
+engine/models/
+engine/config.toml
+engine/__pycache__/

@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=bjorn
-WorkingDirectory=/home/bjorn/birdengine
-ExecStart=/home/bjorn/birdengine/venv/bin/python /home/bjorn/birdengine/engine.py
+User=BIRDASH_USER
+WorkingDirectory=BIRDASH_HOME/birdash/engine
+ExecStart=BIRDASH_HOME/birdash/engine/venv/bin/python BIRDASH_HOME/birdash/engine/engine.py
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=60

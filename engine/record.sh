@@ -6,7 +6,7 @@ DEVICE="rode"
 CHANNELS=2
 SAMPLE_RATE=48000
 RECORDING_LENGTH=45
-OUTPUT_DIR="/home/bjorn/birdengine/audio/incoming"
+OUTPUT_DIR="$HOME/birdash/engine/audio/incoming"
 
 mkdir -p "$OUTPUT_DIR"
 

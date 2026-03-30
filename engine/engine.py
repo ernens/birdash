@@ -676,7 +676,8 @@ def extract_clip(wav_path, det, config):
         # Sync clip + spectrogram to biloute (for biloute's birdash)
         if config["output"].get("sync_to_biloute", False):
             remote_host = config["audio"]["remote_host"]
-            remote_dir = f"/home/bjorn/BirdSongs/Extracted/By_Date/{det['date']}/{com_name_safe}"
+            remote_user = remote_host.split("@")[0] if "@" in remote_host else "bjorn"
+            remote_dir = f"/home/{remote_user}/BirdSongs/Extracted/By_Date/{det['date']}/{com_name_safe}"
             try:
                 subprocess.run(["ssh", remote_host, f"mkdir -p '{remote_dir}'"],
                                capture_output=True, timeout=10)

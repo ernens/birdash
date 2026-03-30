@@ -127,34 +127,13 @@ cd ~
 git clone https://github.com/ernens/birdash.git
 cd birdash
 
-# 2. Install dashboard (Node.js)
-npm install
-cp config/birdash-local.example.js public/js/birdash-local.js
-nano public/js/birdash-local.js  # Set location, API keys
+# 2. Run the installer (sets up Node.js, Python venv, downloads models)
+chmod +x install.sh
+./install.sh
 
-# 3. Install BirdEngine (Python)
-python3 -m venv engine/venv
-engine/venv/bin/pip install ai-edge-litert numpy soundfile resampy toml watchdog
-
-# 4. Download models
-mkdir -p engine/models
-# BirdNET V2.4 (~25 MB)
-# Download from https://github.com/Nachtzuster/BirdNET-Pi or your BirdNET-Pi installation
-# Perch V2 INT8 (~389 MB)
-wget -O engine/models/Perch_v2_int8.tflite \
-  https://huggingface.co/ernensbjorn/perch-v2-int8-tflite/resolve/main/Perch_v2_int8.tflite
-
-# 5. Configure engine
-cp engine/config.toml engine/config.toml.local
-nano engine/config.toml.local  # Set station location, BirdWeather ID
-
-# 6. Install services
-sudo cp config/birdash.service /etc/systemd/system/
-sudo cp engine/birdengine.service /etc/systemd/system/
-sudo cp engine/birdengine-recording.service /etc/systemd/system/
-sudo cp engine/ttyd.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now birdengine-recording birdengine birdash caddy
+# 3. Configure
+nano engine/config.toml          # Station location, BirdWeather ID, ntfy URL
+nano public/js/birdash-local.js  # Location, eBird API key
 
 # 5. Configure Caddy (see below)
 ```
