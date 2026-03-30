@@ -1418,7 +1418,8 @@ const server = http.createServer((req, res) => {
         // Serve from cache if valid
         if (_weatherCache && _weatherCache._days === days && (Date.now() - _weatherCacheTs) < WEATHER_TTL) {
           res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
-          res.end(JSON.stringify(_weatherCache));
+          const { _days: _, ...cached } = _weatherCache;
+          res.end(JSON.stringify(cached));
           return;
         }
 
@@ -1461,7 +1462,8 @@ const server = http.createServer((req, res) => {
         _weatherCacheTs = Date.now();
 
         res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'MISS' });
-        res.end(JSON.stringify(result));
+        const { _days, ...responseData } = result;
+        res.end(JSON.stringify(responseData));
       } catch(e) {
         console.error('[weather]', e.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -1505,11 +1507,11 @@ const server = http.createServer((req, res) => {
               '-v', 'quiet', '-print_format', 'json',
               '-show_format', '-show_streams', filePath
             ]);
-            let out = '';
+            let out = '', done = false;
             ff.stdout.on('data', d => out += d);
-            ff.on('close', code => code === 0 ? resolve(JSON.parse(out)) : reject(new Error('ffprobe ' + code)));
-            ff.on('error', reject);
-            setTimeout(() => { try { ff.kill(); } catch(e) {} reject(new Error('timeout')); }, 5000);
+            ff.on('close', code => { if (!done) { done = true; clearTimeout(timer); code === 0 ? resolve(JSON.parse(out)) : reject(new Error('ffprobe ' + code)); } });
+            ff.on('error', e => { if (!done) { done = true; clearTimeout(timer); reject(e); } });
+            const timer = setTimeout(() => { if (!done) { done = true; try { ff.kill(); } catch{} reject(new Error('timeout')); } }, 5000);
           });
           const stream = probeData.streams && probeData.streams.find(s => s.codec_type === 'audio');
           if (stream) {
@@ -1598,10 +1600,7 @@ const server = http.createServer((req, res) => {
             currentFf = null;
             resolve();
           });
-          req.on('close', () => {
-            try { ff.kill(); } catch(e) {}
-            resolve();
-          });
+          // Outer req.on('close') at line 1549 handles cleanup via aborted flag
         });
       }
 
@@ -3250,7 +3249,7 @@ const server = http.createServer((req, res) => {
       try {
         const qs = new URLSearchParams(req.url.split('?')[1] || '');
         const days = Math.min(parseInt(qs.get('days') || '7'), 90);
-        const minDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+        const minDate = qs.get('dateFrom') || new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
         // Models active in period
         const models = db.prepare(`

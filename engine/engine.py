@@ -584,6 +584,9 @@ def upload_to_birdweather(wav_path, detections, config):
 
     try:
         # Convert WAV to FLAC for upload
+        if not os.path.exists(wav_path):
+            log.debug("BirdWeather: WAV not found (purged?): %s", wav_path)
+            return
         data, sr = sf.read(wav_path, dtype="float32")
         if data.ndim > 1:
             data = data.mean(axis=1)
