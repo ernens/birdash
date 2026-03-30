@@ -126,22 +126,33 @@ We publish the first **Perch V2 INT8** quantized model for edge deployment:
 cd ~
 git clone https://github.com/ernens/birdash.git
 cd birdash
-npm install
 
-# 2. Configure
+# 2. Install dashboard (Node.js)
+npm install
 cp config/birdash-local.example.js public/js/birdash-local.js
 nano public/js/birdash-local.js  # Set location, API keys
 
-# 3. Install BirdEngine
-cd ~/birdengine
-python3 -m venv venv
-venv/bin/pip install ai-edge-litert numpy soundfile resampy toml watchdog
-# Copy models to ~/birdengine/models/
+# 3. Install BirdEngine (Python)
+python3 -m venv engine/venv
+engine/venv/bin/pip install ai-edge-litert numpy soundfile resampy toml watchdog
 
-# 4. Install services
-sudo cp ~/birdash/config/birdash.service /etc/systemd/system/
-sudo cp ~/birdengine/birdengine.service /etc/systemd/system/
-sudo cp ~/birdengine/birdengine-recording.service /etc/systemd/system/
+# 4. Download models
+mkdir -p engine/models
+# BirdNET V2.4 (~25 MB)
+# Download from https://github.com/Nachtzuster/BirdNET-Pi or your BirdNET-Pi installation
+# Perch V2 INT8 (~389 MB)
+wget -O engine/models/Perch_v2_int8.tflite \
+  https://huggingface.co/ernensbjorn/perch-v2-int8-tflite/resolve/main/Perch_v2_int8.tflite
+
+# 5. Configure engine
+cp engine/config.toml engine/config.toml.local
+nano engine/config.toml.local  # Set station location, BirdWeather ID
+
+# 6. Install services
+sudo cp config/birdash.service /etc/systemd/system/
+sudo cp engine/birdengine.service /etc/systemd/system/
+sudo cp engine/birdengine-recording.service /etc/systemd/system/
+sudo cp engine/ttyd.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now birdengine-recording birdengine birdash caddy
 
@@ -180,34 +191,44 @@ sudo systemctl enable --now birdengine-recording birdengine birdash caddy
 ## Project Structure
 
 ```
-birdash/                           # Dashboard (Node.js)
-├── server/server.js               # API backend (~3500 lines)
-├── public/                        # Static frontend
-│   ├── *.html                     # 15 pages
-│   ├── js/                        # Vue 3 composables, config, shared utils
+birdash/
+├── server/
+│   └── server.js                  # Node.js API backend (~3500 lines)
+├── public/                        # Static frontend (Vue 3 CDN)
+│   ├── index.html                 # Dashboard overview
+│   ├── spectrogram.html           # Live spectrogram + clip playback
+│   ├── models.html                # Model comparison
+│   ├── review.html                # Detection review + auto-flagging
+│   ├── settings.html              # Full settings (6 tabs)
+│   ├── system.html                # System health + terminal
+│   ├── *.html                     # 9 more pages
+│   ├── js/                        # Config, shared utils, Vue composables
 │   ├── css/                       # Styles + 5 themes
-│   └── sw.js                      # Service Worker
+│   └── sw.js                      # Service Worker (offline cache)
+├── engine/                        # BirdEngine (Python detection engine)
+│   ├── engine.py                  # Dual-model inference (~1100 lines)
+│   ├── config.toml                # Engine configuration
+│   ├── record.sh                  # Audio capture (arecord)
+│   ├── purge_audio.sh             # Disk space management
+│   ├── quantize_perch_mac.py      # Perch V2 INT8 quantization script
+│   ├── birdengine.service         # systemd: detection engine
+│   ├── birdengine-recording.service # systemd: audio capture
+│   ├── ttyd.service               # systemd: web terminal
+│   └── models/                    # TFLite models (not in git)
 ├── config/
+│   ├── birdash.service            # systemd: dashboard
 │   ├── audio_config.json          # Audio device config
-│   ├── audio_profiles.json        # Environment profiles
+│   ├── audio_profiles.json        # 6 environment profiles
 │   ├── detection_rules.json       # Auto-flagging rules
-│   └── birdash.service            # systemd service
-├── scripts/backup.sh              # Incremental backup (rsync)
-└── tests/server.test.js
-
-birdengine/                        # Detection engine (Python)
-├── engine.py                      # Main engine (~1100 lines)
-├── config.toml                    # Engine configuration
-├── record.sh                      # Audio capture script
-├── purge_audio.sh                 # Disk management
-├── models/                        # TFLite models
-│   ├── BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite
-│   ├── Perch_v2.tflite
-│   ├── Perch_v2_int8.tflite
-│   └── *_Labels.txt, l18n/
-├── birdengine.service             # systemd service
-├── birdengine-recording.service   # systemd recording service
-└── ttyd.service                   # Web terminal service
+│   └── birdash-local.example.js   # Local config template
+├── scripts/
+│   └── backup.sh                  # Incremental backup (rsync)
+├── tests/
+│   └── server.test.js             # Backend tests
+├── README.md                      # English
+├── README.fr.md                   # Francais
+├── README.nl.md                   # Nederlands
+└── README.de.md                   # Deutsch
 ```
 
 ## Environment Variables

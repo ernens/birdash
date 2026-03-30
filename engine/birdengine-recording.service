@@ -1,0 +1,15 @@
+[Unit]
+Description=BirdEngine Recording — RODE AI-Micro capture
+After=sound.target
+
+[Service]
+Type=simple
+User=bjorn
+ExecStart=/home/bjorn/birdengine/record.sh
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

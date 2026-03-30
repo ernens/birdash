@@ -1,0 +1,53 @@
+[station]
+name = "Heinsch, Belgium"
+latitude = 49.6967
+longitude = 5.7445
+language = "fr"
+
+[audio]
+# Source: "rsync" (pull WAV files from biloute) or "local" (local mic)
+source = "local"
+# Remote host for rsync mode
+remote_host = "bjorn@biloute.local"
+remote_path = "/home/bjorn/BirdSongs/StreamData/"
+# Local directories
+incoming_dir = "/home/bjorn/birdengine/audio/incoming"
+processed_dir = "/home/bjorn/birdengine/audio/processed"
+# Rsync interval in seconds
+rsync_interval = 30
+
+[detection]
+# Primary model (fast, runs synchronously)
+model = "BirdNET_GLOBAL_6K_V2.4_Model_FP16"
+# Secondary model (runs in background thread). Set to "" to disable.
+secondary_model = "Perch_v2"
+# Minimum confidence threshold (0.0 - 1.0)
+confidence = 0.65
+# Sensitivity (0.5 - 1.5)
+sensitivity = 1.3
+# Overlap between chunks in seconds
+overlap = 0.5
+# Species occurrence frequency threshold (for geographic filter)
+sf_thresh = 0.03
+# MData model version (1 or 2)
+mdata_version = 2
+
+[notifications]
+# ntfy.sh topic URL for push notifications
+ntfy_url = "https://ntfy.sh/birdash-biloute"
+# Notify on first detection of a species each day
+notify_new_species_daily = true
+# Minimum seconds between notifications for the same species
+cooldown_seconds = 300
+
+[birdweather]
+# BirdWeather station ID (from app.birdweather.com)
+station_id = "awr5FSuom2rnr6P14C33xRkQ"
+enabled = true
+
+[output]
+# Local database path (same as birdash reads)
+local_db = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
+# Write results to biloute's birds.db via SSH
+sync_to_biloute = true
+biloute_db = "/home/bjorn/BirdNET-Pi/scripts/birds.db"

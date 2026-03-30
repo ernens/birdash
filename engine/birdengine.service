@@ -1,0 +1,19 @@
+[Unit]
+Description=BirdEngine — Bird detection engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bjorn
+WorkingDirectory=/home/bjorn/birdengine
+ExecStart=/home/bjorn/birdengine/venv/bin/python /home/bjorn/birdengine/engine.py
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60
+UMask=0022
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
