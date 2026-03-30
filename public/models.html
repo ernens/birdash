@@ -88,7 +88,7 @@
             <tr v-for="s in data.unique[m]" :key="s.Sci_Name">
               <td>
                 <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;cursor:pointer;" @mouseenter="$event.currentTarget.style.color='var(--accent)'" @mouseleave="$event.currentTarget.style.color='inherit'">
-                  <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">
+                  <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23888%22><text y=%2218%22 font-size=%2218%22>🐦</text></svg>';this.onerror=null;">
                   <div>
                     <strong>{{ s.Com_Name }}</strong>
                     <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
@@ -118,7 +118,7 @@
           <tr v-for="s in data.overlap" :key="s.Sci_Name">
             <td>
               <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;cursor:pointer;" @mouseenter="$event.currentTarget.style.color='var(--accent)'" @mouseleave="$event.currentTarget.style.color='inherit'">
-                <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">
+                <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23888%22><text y=%2218%22 font-size=%2218%22>🐦</text></svg>';this.onerror=null;">
                 <div>
                   <strong>{{ s.Com_Name }}</strong>
                   <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
