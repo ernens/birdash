@@ -61,8 +61,7 @@ const BIRD_CONFIG = {
     { id: 'analyses',     icon: '🔬', file: 'analyses.html'     },
     { id: 'models',       icon: '🤖', file: 'models.html'      },
     { id: 'review',       icon: '🔍', file: 'review.html'      },
-    { id: 'system',       icon: '⚙️',  file: 'system.html'      },
-    { id: 'settings',     icon: '🔧', file: 'settings.html'    },
+    { id: 'settings',     icon: '⚙️', file: 'settings.html'    },
   ],
 
   // Couleurs Chart.js

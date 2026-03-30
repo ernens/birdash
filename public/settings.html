@@ -149,7 +149,20 @@
       </div>
 
       <!-- ════════════════════════════════════════════════════════════
-           TAB 1: DETECTION
+           TAB: TERMINAL
+           ════════════════════════════════════════════════════════════ -->
+      <div v-if="activeTab==='terminal'">
+        <div class="card" style="padding:.5rem;">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+            <span style="font-size:.85rem;opacity:.7;">Bash — supporte Claude Code (<code style="font-size:.8em;">claude</code>)</span>
+            <button class="btn-outline" style="font-size:.72rem;margin-left:auto;" @click="terminalKey++">Nouveau</button>
+          </div>
+          <iframe :key="terminalKey" src="terminal/" style="width:100%;height:calc(100vh - 200px);border:1px solid var(--border);border-radius:.4rem;background:#000;"></iframe>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           TAB: DETECTION
            ════════════════════════════════════════════════════════════ -->
       <div v-if="activeTab==='detection'">
 
@@ -757,7 +770,7 @@
       <!-- ════════════════════════════════════════════════════════════
            TAB 3: SYSTEM
            ════════════════════════════════════════════════════════════ -->
-      <div v-if="activeTab==='system'">
+      <div v-if="activeTab==='services'">
       <div class="settings-grid">
 
         <!-- ═══ Disk Management ═══ -->
@@ -1245,16 +1258,25 @@ const app = createApp({
 
     // ── Tab navigation ──────────────────────────────────────────
     const tabs = [
+      { id: 'health',    icon: '📡', label: 'Santé', href: 'system.html' },
       { id: 'detection', icon: '🤖', labelKey: 'set_tab_detection' },
-      { id: 'station',   icon: '📍', labelKey: 'set_tab_station' },
       { id: 'audio',     icon: '🎙️', label: 'Audio' },
       { id: 'notif',     icon: '🔔', label: 'Notifications' },
-      { id: 'system',    icon: '🔧', labelKey: 'set_tab_system' },
+      { id: 'station',   icon: '📍', labelKey: 'set_tab_station' },
+      { id: 'services',  icon: '🔧', label: 'Services' },
+      { id: 'data',      icon: '📊', label: 'Données', href: 'system.html#data' },
+      { id: 'external',  icon: '🌍', label: 'Externe', href: 'system.html#external' },
       { id: 'backup',    icon: '💾', labelKey: 'set_tab_backup' },
+      { id: 'terminal',  icon: '💻', label: 'Terminal' },
     ];
     const activeTab = ref(localStorage.getItem('birdash-settings-tab') || 'detection');
 
     function switchTab(id) {
+      const tab = tabs.find(t => t.id === id);
+      if (tab && tab.href) {
+        window.location.href = tab.href;
+        return;
+      }
       activeTab.value = id;
       localStorage.setItem('birdash-settings-tab', id);
     }
@@ -2075,6 +2097,8 @@ const app = createApp({
     });
 
     // ── Audio config ──────────────────────────────────────────────────────────
+    const terminalKey = ref(0);
+
     const audioConf = reactive({
       device_id: '', device_name: '', input_channels: 2,
       capture_sample_rate: 48000, bit_depth: 16, output_sample_rate: 32000,
@@ -2292,7 +2316,7 @@ const app = createApp({
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
       appriseEnabled, toggleAllApprise,
-      notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr,
+      notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       reload, save, restartService, saveSpeciesLists,
       helpKey, helpTitle, helpBody,
       bkp, backupDests, savingBkp, runningBkp, bkpProgress,
