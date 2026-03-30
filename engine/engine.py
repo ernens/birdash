@@ -12,6 +12,7 @@ import math
 import operator
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -361,7 +362,13 @@ def init_db(db_path):
 
 
 def write_detection(conn, det):
-    """Insert a detection row (excludes internal _fields)."""
+    """Insert a detection row if not already present (avoids duplicates on restart)."""
+    existing = conn.execute(
+        "SELECT 1 FROM detections WHERE Date=? AND Time=? AND Sci_Name=? AND Model=? LIMIT 1",
+        (det["date"], det["time"], det["sci_name"], det["model"])
+    ).fetchone()
+    if existing:
+        return False
     conn.execute(
         "INSERT INTO detections VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (det["date"], det["time"], det["sci_name"], det["com_name"],
@@ -370,6 +377,7 @@ def write_detection(conn, det):
          det["model"])
     )
     conn.commit()
+    return True
 
 
 def _det_to_sql(det):
@@ -763,6 +771,7 @@ class BirdEngine:
         self.base_dir = os.path.dirname(os.path.abspath(config_path))
         self.models_dir = os.path.join(self.base_dir, "models")
         self.shutdown = False
+        self._shutdown_event = threading.Event()
 
         det = self.config["detection"]
         sensitivity = det.get("sensitivity", 1.0)
@@ -824,6 +833,7 @@ class BirdEngine:
         self.detections_total = 0
         self.processed_files = set()
         self._db_lock = threading.Lock()
+        self._post_threads = []  # Track post-processing threads for clean shutdown
 
     def _analyze_with_model(self, model, file_path, file_date, week, tag,
                             raw_sig=None, raw_sr=None):
@@ -1018,7 +1028,7 @@ class BirdEngine:
             processed_dir = self.config["audio"]["processed_dir"]
             os.makedirs(processed_dir, exist_ok=True)
             dest = os.path.join(processed_dir, basename)
-            os.rename(file_path, dest)
+            shutil.move(file_path, dest)
 
             # Post-processing in background thread (uses dest path, after file move)
             if detections:
@@ -1028,8 +1038,8 @@ class BirdEngine:
                             remote_host = cfg["audio"]["remote_host"]
                             remote_db = cfg["output"]["biloute_db"]
                             sync_detections_to_remote(dets, remote_host, remote_db)
-                            for d in dets:
-                                extract_clip(fpath, d, cfg)
+                        for d in dets:
+                            extract_clip(fpath, d, cfg)
                         for d in dets:
                             notifier.check_and_notify(d)
                         upload_to_birdweather(fpath, dets, cfg)
@@ -1040,6 +1050,8 @@ class BirdEngine:
                                      args=(detections, dest, self.config, self.notifier),
                                      daemon=True)
                 t.start()
+                self._post_threads = [pt for pt in self._post_threads if pt.is_alive()]
+                self._post_threads.append(t)
 
             # Queue for secondary model with raw audio (avoids re-reading file)
             if self.secondary_model and self._secondary_queue is not None:
@@ -1068,14 +1080,14 @@ class BirdEngine:
             conf = self._read_birdnet_conf()
             det = self.config["detection"]
             sens = det.get("sensitivity", 1.0)
-            sf = det.get("sf_thresh", 0.03)
+            sf_val = det.get("sf_thresh", 0.03)
             mdv = det.get("mdata_version", 2)
 
             # Check primary model
             new_primary = conf.get("MODEL", self.primary_model.name)
             if new_primary != self.primary_model.name:
                 log.info("Primary model change: %s -> %s", self.primary_model.name, new_primary)
-                self.primary_model = get_model(new_primary, self.models_dir, sens, sf, mdv)
+                self.primary_model = get_model(new_primary, self.models_dir, sens, sf_val, mdv)
                 log.info("Primary model reloaded: %s (sr=%d, chunk=%ds)",
                          new_primary, self.primary_model.sample_rate,
                          self.primary_model.chunk_duration)
@@ -1088,7 +1100,7 @@ class BirdEngine:
                 current_name = self.secondary_model.name if self.secondary_model else ""
                 if new_secondary != current_name:
                     log.info("Secondary model change: %s -> %s", current_name or "none", new_secondary)
-                    self.secondary_model = get_model(new_secondary, self.models_dir, sens, sf, mdv)
+                    self.secondary_model = get_model(new_secondary, self.models_dir, sens, sf_val, mdv)
                     if not self._secondary_queue:
                         from queue import Queue
                         self._secondary_queue = Queue()
@@ -1167,7 +1179,7 @@ class BirdEngine:
                     self._purge_processed()
                     self._check_model_change()
                     purge_counter = 0
-                time.sleep(rsync_interval)
+                self._shutdown_event.wait(timeout=rsync_interval)
         except KeyboardInterrupt:
             log.info("Interrupted")
         finally:
@@ -1178,6 +1190,12 @@ class BirdEngine:
                 log.info("Waiting for secondary model to finish...")
                 self._secondary_queue.put(None)
                 self._secondary_thread.join(timeout=120)
+            # Wait for post-processing threads
+            active = [t for t in self._post_threads if t.is_alive()]
+            if active:
+                log.info("Waiting for %d post-processing threads...", len(active))
+                for t in active:
+                    t.join(timeout=10)
             self.db.close()
             log.info("Shutdown complete. Processed %d files, %d detections.",
                      self.files_processed, self.detections_total)
@@ -1198,6 +1216,7 @@ def main():
     def handle_signal(sig, frame):
         log.info("Received signal %d, shutting down...", sig)
         engine.shutdown = True
+        engine._shutdown_event.set()
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)

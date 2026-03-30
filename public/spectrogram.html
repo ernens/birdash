@@ -864,7 +864,9 @@ const app = createApp({
     // ── Live Mic mode ───────────────────────────────────────────────
     let _liveMicAudio = null;
     let _liveMicReader = null;
+    let _liveMicSource = null;
     let _liveMicDetInterval = null;
+    let _liveRafId = null;
 
     async function startLiveMic() {
       status.value = 'connecting';
@@ -926,7 +928,7 @@ const app = createApp({
       }
 
       status.value = 'live';
-      nowPlaying.value = { Com_Name: 'Live Micro', Sci_Name: '' };
+      nowPlaying.value = { name: 'Live Micro', conf: '', time: '', color: '#4caf50' };
 
       // Render loop using AnalyserNode (same as BirdNET-Pi)
       const CVS = mainCanvas.value;
@@ -1001,29 +1003,7 @@ const app = createApp({
         } catch {}
       }, 5000);
 
-      // Poll detections every 5s for overlay labels
-      _liveMicDetInterval = setInterval(async () => {
-        try {
-          const today = localDateStr();
-          const nowTime = new Date().toTimeString().substring(0, 8);
-          const tenSecAgo = new Date(Date.now() - 30000).toTimeString().substring(0, 8);
-          const rows = await birdQuery(
-            'SELECT Com_Name, Confidence, Time FROM detections WHERE Date = ? AND Time >= ? ORDER BY Time DESC LIMIT 5',
-            [today, tenSecAgo]
-          );
-          for (const r of rows) {
-            const label = r.Com_Name + ' ' + Math.round(r.Confidence * 100) + '%';
-            const exists = detLabels.value.some(d => d.text === label && d.col > _colsDrawn - 100);
-            if (!exists) {
-              detLabels.value.push({
-                text: label,
-                col: _colsDrawn,
-                row: Math.floor(Math.random() * (_H || 300) * 0.6) + 20,
-              });
-            }
-          }
-        } catch {}
-      }, 5000);
+      // (detection polling is already started above)
     }
 
     function stopLiveMic() {

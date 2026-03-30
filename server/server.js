@@ -745,8 +745,7 @@ async function checkSystemAlerts() {
     // ── Disk ──
     if (th.alert_disk) {
       try {
-        const { execSync } = require('child_process');
-        const dfOut = execSync("df -B1 / | tail -1", { encoding: 'utf8' });
+        const dfOut = await execCmd('df', ['-B1', '/']).then(o => o.split('\n')[1] || '');
         const parts = dfOut.trim().split(/\s+/);
         const diskPct = parseInt(parts[4]);
         if (diskPct >= th.disk_crit) {
@@ -775,8 +774,7 @@ async function checkSystemAlerts() {
       const criticalServices = ['birdengine', 'birdengine-recording'];
       for (const svc of criticalServices) {
         try {
-          const { execSync } = require('child_process');
-          const state = execSync(`systemctl is-active ${svc} 2>/dev/null`, { encoding: 'utf8' }).trim();
+          const state = (await execCmd('systemctl', ['is-active', svc])).trim();
           if (state === 'failed' || state === 'inactive') {
             await sendAlert('svc_' + svc, t.svc_state_title(svc, state), t.svc_state_body(svc, state));
           }
@@ -985,7 +983,22 @@ function requireAuth(req, res) {
 }
 
 // --- Handler HTTP
+const MAX_BODY_SIZE = 1024 * 1024; // 1 MB max for POST bodies
+
 const server = http.createServer((req, res) => {
+  // Body size limit for POST requests
+  if (req.method === 'POST') {
+    let bodySize = 0;
+    req.on('data', (chunk) => {
+      bodySize += chunk.length;
+      if (bodySize > MAX_BODY_SIZE) {
+        req.destroy();
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body too large' }));
+      }
+    });
+  }
+
   // Headers de sécurité
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
