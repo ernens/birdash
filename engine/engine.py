@@ -1007,7 +1007,7 @@ class BirdEngine:
             file_date = datetime.datetime.strptime(
                 f"{date_match.group(1)}T{time_match.group(1)}", "%Y-%m-%dT%H:%M:%S"
             )
-            week = file_date.isocalendar()[1]
+            week = min(48, file_date.isocalendar()[1])  # BirdNET MData expects 1-48
 
             # Read raw audio once (shared between models)
             raw_sig, raw_sr = sf.read(file_path, dtype="float32", always_2d=False)

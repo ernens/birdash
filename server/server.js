@@ -247,6 +247,7 @@ let _weatherCacheTs = 0;
 const WEATHER_TTL = 3600 * 1000; // 1 heure
 const _speciesNamesCache = {}; // lang → { sci: comName }
 let _detectedSpeciesCache = null; // [sci, sci, …]
+let _detectedSpeciesCacheTs = 0;
 const EBIRD_TTL = 3600 * 1000; // 1 heure
 
 // Créer le répertoire cache photos si absent
@@ -900,9 +901,10 @@ async function checkBirdAlerts() {
 
 // Start monitoring loop after 30s (let services stabilize)
 let _birdAlertTick = 0;
+let _alertIntervalId = null;
 setTimeout(() => {
   console.log('[BIRDASH] System alerts monitoring started (every 60s, bird alerts every 15min)');
-  setInterval(() => {
+  _alertIntervalId = setInterval(() => {
     checkSystemAlerts();
     _birdAlertTick++;
     if (_birdAlertTick % Math.round(BIRD_ALERT_INTERVAL / ALERT_CHECK_INTERVAL) === 0) {
@@ -951,7 +953,7 @@ const _rateBuckets = new Map();
 const RATE_WINDOW  = 60 * 1000; // 1 minute
 const RATE_MAX     = 120;       // max requêtes par minute par IP
 // Nettoyage périodique des buckets expirés
-setInterval(() => {
+const _rateBucketCleanup = setInterval(() => {
   const now = Date.now();
   for (const [ip, b] of _rateBuckets) {
     if (now - b.ts > RATE_WINDOW * 2) _rateBuckets.delete(ip);
@@ -1133,9 +1135,12 @@ const server = http.createServer((req, res) => {
     }
 
     // Only return species that exist in our DB (not all 7000)
+    // Invalidate cache after 1 hour
+    if (_detectedSpeciesCache && (Date.now() - _detectedSpeciesCacheTs) > 3600000) _detectedSpeciesCache = null;
     const detected = _detectedSpeciesCache || (function() {
       const rows = db.prepare('SELECT DISTINCT Sci_Name FROM detections').all();
       _detectedSpeciesCache = rows.map(r => r.Sci_Name);
+      _detectedSpeciesCacheTs = Date.now();
       return _detectedSpeciesCache;
     })();
 
@@ -1158,7 +1163,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && pathname === '/api/species-info') {
     const spParams = new URL(req.url, 'http://localhost').searchParams;
     const sciName = spParams.get('sci');
-    const infoLang = spParams.get('lang') || 'fr';
+    let infoLang = spParams.get('lang') || 'fr';
+    if (!/^[a-z]{2}$/.test(infoLang)) infoLang = 'en'; // SSRF guard
     if (!sciName || !/^[a-zA-Z ]+$/.test(sciName)) {
       res.writeHead(400); res.end(JSON.stringify({ error: 'sci param required' })); return;
     }
@@ -1313,7 +1319,7 @@ const server = http.createServer((req, res) => {
     const locale   = /^[a-z]{2}$/.test(qp.get('locale') || '')   ? qp.get('locale')   : 'fr';
     const limit    = Math.min(20, Math.max(1, parseInt(qp.get('limit') || '10') || 10));
     const cacheKey = `${endpoint}_${period}`;
-    if (_bwCache && _bwCache[cacheKey] && (Date.now() - _bwCacheTs) < BW_TTL) {
+    if (_bwCache && _bwCache[cacheKey] && _bwCache[cacheKey]._ts && (Date.now() - _bwCache[cacheKey]._ts) < BW_TTL) {
       res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
       res.end(JSON.stringify(_bwCache[cacheKey]));
       return;
@@ -1331,8 +1337,8 @@ const server = http.createServer((req, res) => {
         // Injecter l'ID de station dans la réponse stats pour que le client l'affiche
         if (endpoint === 'stats') data.stationId = BW_STATION_ID;
         if (!_bwCache) _bwCache = {};
+        data._ts = Date.now();
         _bwCache[cacheKey] = data;
-        _bwCacheTs = Date.now();
         res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'MISS' });
         res.end(JSON.stringify(data));
       } catch(e) {
@@ -1478,6 +1484,10 @@ const server = http.createServer((req, res) => {
     }
     const species = m[1], date = m[2];
     const filePath = path.join(SONGS_DIR, date, species, fileName);
+    // Path traversal guard
+    if (!filePath.startsWith(SONGS_DIR)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"invalid path"}'); return;
+    }
 
     (async () => {
       try {
@@ -3826,8 +3836,8 @@ const server = http.createServer((req, res) => {
       'Cache-Control': 'no-cache, no-store',
       'Connection': 'keep-alive',
       'Transfer-Encoding': 'chunked',
-      'Access-Control-Allow-Origin': '*',
     });
+    // CORS already set globally via getCorsOrigin()
 
     // arecord → ffmpeg (mp3 encode) → HTTP response
     const proc = require('child_process').spawn('ffmpeg', [
@@ -3925,6 +3935,12 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`[BIRDASH] API démarrée sur http://127.0.0.1:${PORT}`);
 });
 
-function gracefulShutdown() { try { db.close(); } catch{} try { dbWrite.close(); } catch{} try { if (taxonomyDb) taxonomyDb.close(); } catch{} try { if (birdashDb) birdashDb.close(); } catch{} process.exit(0); }
+function gracefulShutdown() {
+  if (_alertIntervalId) clearInterval(_alertIntervalId);
+  if (_rateBucketCleanup) clearInterval(_rateBucketCleanup);
+  try { db.close(); } catch{} try { dbWrite.close(); } catch{}
+  try { if (taxonomyDb) taxonomyDb.close(); } catch{} try { if (birdashDb) birdashDb.close(); } catch{}
+  process.exit(0);
+}
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT',  gracefulShutdown);
