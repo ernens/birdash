@@ -550,7 +550,7 @@
           </div>
 
           <div class="card">
-            <div class="section-title">Chevauchement des fenêtres</div>
+            <div class="section-title">{{t('audio_overlap') || 'Chevauchement des fenêtres'}}</div>
             <input type="range" v-model.number="audioConf.hop_size_s" min="1.0" max="5.0" step="0.5"
                    style="width:100%;">
             <div style="display:flex;justify-content:space-between;font-size:.82em;">
@@ -736,7 +736,7 @@
 
         <!-- ═══ Notifications oiseaux ═══ -->
         <div class="card">
-          <div class="section-title">Alertes oiseaux</div>
+          <div class="section-title">{{t('notif_bird_alerts') || 'Alertes oiseaux'}}</div>
 
           <div class="set-row"><label class="set-check">
             <input type="checkbox" v-model="conf.NOTIFY_RARE_SPECIES" true-value="1" false-value="0">
@@ -754,7 +754,7 @@
             <span>🌱 <strong>Première de saison</strong> — Pas vue depuis N jours</span>
           </label></div>
           <div v-if="conf.NOTIFY_FIRST_SEASON == 1" style="margin-left:1.5rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem;">
-            <span style="font-size:.82em;">Absence depuis :</span>
+            <span style="font-size:.82em;">{{t('notif_season_days_label') || 'Absence depuis'}} :</span>
             <input type="number" v-model.number="conf.NOTIFY_SEASON_DAYS" min="7" max="365" step="1"
                    style="width:60px;font-size:.82em;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
             <span style="font-size:.78em;color:var(--text-muted);">jours</span>
@@ -791,9 +791,9 @@
           </div>
         </div>
 
-        <!-- ═══ Alertes système ═══ -->
+        <!-- ═══ {{t('notif_sys_alerts') || 'Alertes système'}} ═══ -->
         <div class="card">
-          <div class="section-title">Alertes système</div>
+          <div class="section-title">{{t('notif_sys_alerts') || 'Alertes système'}}</div>
           <div class="set-row" style="gap:.4rem;">
             <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_temp" true-value="1" false-value="0">
               <span>🌡️ {{t('set_alert_temp_warn')}}</span></label>
@@ -835,12 +835,12 @@
           </label></div>
         </div>
 
-        <!-- ═══ Rapport hebdomadaire ═══ -->
+        <!-- ═══ {{t('notif_report')}} hebdomadaire ═══ -->
         <div class="card">
-          <div class="section-title">Rapport</div>
+          <div class="section-title">{{t('notif_report')}}</div>
           <div class="set-row"><label class="set-check">
             <input type="checkbox" v-model="conf.APPRISE_WEEKLY_REPORT" true-value="1" false-value="0">
-            <span>📊 Rapport hebdomadaire</span>
+            <span>📊 {{t('notif_report')}} hebdomadaire</span>
           </label></div>
         </div>
 

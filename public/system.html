@@ -203,7 +203,7 @@
               <span class="sys-value" style="font-weight:600;color:var(--accent);">{{analysis.modelLabel}}</span>
             </div>
             <div v-if="analysis.secondaryLabel" class="sys-row">
-              <span class="sys-label">Modèle secondaire</span>
+              <span class="sys-label">{{t('secondary_model')}}</span>
               <span class="sys-value">{{analysis.secondaryLabel}} <span style="opacity:.6;">({{analysis.secondaryInference || '—'}})</span></span>
             </div>
             <div class="sys-row">
@@ -935,7 +935,7 @@
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
           <span style="font-size:.85rem;opacity:.7;">Bash sur Raspberry Pi — supporte Claude Code (<code style="font-size:.8em;">claude</code>)</span>
           <button class="btn-outline" style="font-size:.72rem;margin-left:auto;"
-                  @click="terminalKey++">Nouveau terminal</button>
+                  @click="terminalKey++">{{t('db_new')}}</button>
         </div>
         <iframe :key="terminalKey" src="terminal/"
                 style="width:100%;height:calc(100vh - 180px);border:1px solid var(--border);border-radius:.4rem;background:#000;">
