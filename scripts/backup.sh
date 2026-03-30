@@ -351,7 +351,7 @@ if should_backup "config"; then
     [ -e "$conf" ] && cp -r "$conf" "$BACKUP_BASE/config/etc/" 2>/dev/null || true
   done
 
-  crontab -l > "$BACKUP_BASE/config/crontab-bjorn.txt" 2>/dev/null || true
+  crontab -l > "$BACKUP_BASE/config/crontab-$(whoami).txt" 2>/dev/null || true
   sudo crontab -l > "$BACKUP_BASE/config/crontab-root.txt" 2>/dev/null || true
 
   cp "$BIRDASH_DIR/public/js/birdash-local.js" "$BACKUP_BASE/config/" 2>/dev/null || true
