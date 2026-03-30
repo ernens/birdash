@@ -21,8 +21,12 @@ rsync_interval = 30
 model = "BirdNET_GLOBAL_6K_V2.4_Model_FP16"
 # Secondary model (runs in background thread). Set to "" to disable.
 secondary_model = "Perch_v2_int8"
-# Minimum confidence threshold (0.0 - 1.0)
-confidence = 0.65
+# BirdNET confidence threshold (sigmoid, 0.0-1.0)
+birdnet_confidence = 0.65
+# Perch confidence threshold (softmax on birds only, much lower)
+perch_confidence = 0.15
+# Perch minimum margin top1-top2 (reject ambiguous detections)
+perch_min_margin = 0.05
 # Sensitivity (0.5 - 1.5)
 sensitivity = 1.3
 # Overlap between chunks in seconds
