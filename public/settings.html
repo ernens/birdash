@@ -194,12 +194,16 @@
                     placeholder="SELECT * FROM detections ORDER BY Date DESC, Time DESC LIMIT 20"
                     @keydown.ctrl.enter="dbExec"
                     @keydown.meta.enter="dbExec"></textarea>
+          <div v-if="dbSqlWarning" style="margin-top:.4rem;padding:.4rem .6rem;border-radius:.3rem;background:rgba(229,62,62,.1);border:1px solid rgba(229,62,62,.3);font-size:.78rem;color:var(--danger);">
+            {{dbSqlWarning}}
+          </div>
           <div style="display:flex;gap:.5rem;align-items:center;margin-top:.4rem;">
-            <button class="btn-accent" @click="dbExec" :disabled="dbLoading" style="font-size:.82rem;">
+            <button class="btn-accent" @click="dbExec" :disabled="dbLoading || !!dbSqlWarning" style="font-size:.82rem;">
               {{dbLoading ? 'Exécution...' : 'Exécuter'}} <span style="opacity:.5;font-size:.72rem;">(Ctrl+Enter)</span>
             </button>
-            <span v-if="dbError" style="color:var(--danger);font-size:.78rem;">{{dbError}}</span>
-            <span v-else-if="dbRows.length" style="font-size:.78rem;opacity:.6;">
+            <span style="font-size:.7rem;opacity:.4;">Lecture seule — SELECT, PRAGMA, WITH uniquement</span>
+            <span v-if="dbError" style="color:var(--danger);font-size:.78rem;margin-left:.5rem;">{{dbError}}</span>
+            <span v-else-if="dbRows.length" style="font-size:.78rem;opacity:.6;margin-left:.5rem;">
               {{dbRows.length}} ligne{{dbRows.length > 1 ? 's' : ''}} ({{dbExecTime}}ms)
             </span>
           </div>
@@ -2214,6 +2218,21 @@ const app = createApp({
     const dbError = ref('');
     const dbExecTime = ref(0);
 
+    const dbSqlWarning = computed(() => {
+      const sql = (dbSql.value || '').trim();
+      if (!sql) return '';
+      const stripped = sql.replace(/'[^']*'/g, '').replace(/"[^"]*"/g, '');
+      if (!/^\s*(SELECT|PRAGMA|WITH)\s/i.test(sql))
+        return 'Seules les requêtes SELECT, PRAGMA et WITH sont autorisées.';
+      if (/\b(DROP|DELETE|INSERT|UPDATE|CREATE|ALTER|ATTACH|DETACH)\b/i.test(stripped))
+        return 'Requête bloquée : opération d\'écriture détectée (DROP, DELETE, INSERT, UPDATE, CREATE, ALTER).';
+      if (/;/.test(stripped))
+        return 'Les requêtes multiples (;) ne sont pas autorisées.';
+      if (sql.length > 4000)
+        return 'Requête trop longue (max 4000 caractères).';
+      return '';
+    });
+
     async function dbQuery(sql) {
       const resp = await fetch(BIRD_CONFIG.apiUrl + '/query', {
         method: 'POST',
@@ -2253,6 +2272,7 @@ const app = createApp({
     }
 
     async function dbExec() {
+      if (dbSqlWarning.value) return;
       dbLoading.value = true;
       dbError.value = '';
       dbColumns.value = [];
@@ -2498,7 +2518,7 @@ const app = createApp({
       modelLabel, modelDescription, secondaryModelOptions,
       appriseEnabled, toggleAllApprise,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
-      dbTables, dbSelectedTable, dbSchema, dbSql, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
+      dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,
       reload, save, restartService, saveSpeciesLists,
       helpKey, helpTitle, helpBody,
