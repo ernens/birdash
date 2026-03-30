@@ -172,5 +172,5 @@ except Exception as e:
 
 shutil.rmtree(tmp_saved, ignore_errors=True)
 
-print(f"\nCopy to bird:")
-print(f"   scp {OUTPUT_PATH} bjorn@bird.local:/home/bjorn/birdengine/models/")
+print(f"\nCopy to your Pi:")
+print(f"   scp {OUTPUT_PATH} user@yourpi.local:~/birdash/engine/models/")

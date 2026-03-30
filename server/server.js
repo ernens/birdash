@@ -702,8 +702,8 @@ async function sendAlert(type, title, body) {
   const now = Date.now();
   if (_alertLastSent[type] && (now - _alertLastSent[type]) < ALERT_COOLDOWN) return;
 
-  const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
-  const appriseBin = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
+  const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
+  const appriseBin = path.join(process.env.HOME, 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
 
   // Check apprise.txt exists and has content
   try {
@@ -790,7 +790,7 @@ async function checkSystemAlerts() {
     // ── Analysis backlog ──
     if (th.alert_backlog) {
       try {
-        const streamDir = path.join(process.env.HOME || '/home/bjorn', 'BirdSongs', 'StreamData');
+        const streamDir = path.join(process.env.HOME, 'BirdSongs', 'StreamData');
         const files = (await fsp.readdir(streamDir)).filter(f => f.endsWith('.wav'));
         if (files.length >= th.backlog_warn) {
           await sendAlert('backlog', t.backlog_title, t.backlog_body(files.length, th.backlog_warn));
@@ -1658,7 +1658,7 @@ const server = http.createServer((req, res) => {
   // Returns the content of apprise.txt (notification service URLs)
   if (req.method === 'GET' && pathname === '/api/apprise') {
     (async () => {
-      const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
+      const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
       try {
         const content = await fsp.readFile(appriseFile, 'utf8');
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1681,7 +1681,7 @@ const server = http.createServer((req, res) => {
       try {
         const { urls } = JSON.parse(body);
         if (typeof urls !== 'string') throw new Error('urls must be a string');
-        const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
+        const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
         await fsp.writeFile(appriseFile, urls.trim() + '\n');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
@@ -1698,8 +1698,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/api/apprise/test') {
     (async () => {
       try {
-        const appriseFile = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'apprise.txt');
-        const appriseBin = path.join(process.env.HOME || '/home/bjorn', 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
+        const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
+        const appriseBin = path.join(process.env.HOME, 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
         const { execFile } = require('child_process');
         const result = await new Promise((resolve, reject) => {
           execFile(appriseBin, [
