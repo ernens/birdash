@@ -85,11 +85,16 @@
                     @click="openModal(group, det)"></canvas>
             <div class="gallery-det-meta">
               <span class="gallery-conf-badge" :style="confStyle(det.conf)">{{Math.round(det.conf*100)}}%</span>
-              <span class="gallery-det-date">{{det.date}} {{det.time}}</span>
+              <span class="gallery-det-date">{{det.date}} {{det.timeShort}}</span>
             </div>
             <button class="gallery-play-btn"
                     @click="openModal(group, det)" title="Play">
               ▶
+            </button>
+            <button class="gallery-del-btn"
+                    @click.stop="deleteDet(group, det, di)"
+                    :title="t('gallery_delete') || 'Delete'">
+              🗑️
             </button>
           </div>
         </div>
@@ -254,7 +259,8 @@ const app = createApp({
           const audioUrl = buildAudioUrl(r.File_Name);
           map[r.Com_Name].dets.push({
             date: r.Date,
-            time: (r.Time || '').slice(0, 5),
+            time: r.Time || '',
+            timeShort: (r.Time || '').slice(0, 5),
             conf: r.Confidence,
             fileName: r.File_Name,
             audioUrl: audioUrl,
@@ -348,6 +354,30 @@ const app = createApp({
       });
     }
 
+    // ── Delete detection ──────────────────────────────────────────
+    async function deleteDet(group, det, detIdx) {
+      const name = spName(group.name, group.sci);
+      if (!confirm(`${t('gallery_delete_confirm') || 'Delete this detection?'}\n\n${name} — ${det.date} ${det.timeShort} (${Math.round(det.conf*100)}%)`)) return;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/detections', {
+          method: 'DELETE',
+          headers: BIRDASH.authHeaders(),
+          body: JSON.stringify({ date: det.date, time: det.time, comName: group.name }),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          // Remove from UI
+          group.dets.splice(detIdx, 1);
+          if (group.dets.length === 0) {
+            const idx = allGroups.value.indexOf(group);
+            if (idx >= 0) allGroups.value.splice(idx, 1);
+          }
+        } else {
+          alert(data.error || 'Error');
+        }
+      } catch (e) { alert(e.message); }
+    }
+
     onMounted(() => { loadGallery(); });
 
     return {
@@ -355,7 +385,7 @@ const app = createApp({
       fp, fc,
       loading, searchQuery,
       allGroups, filteredGroups, playingUrl,
-      loadGallery,
+      loadGallery, deleteDet,
       togglePlay, confStyle, openModal,
     };
   }
