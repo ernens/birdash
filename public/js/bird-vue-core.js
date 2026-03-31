@@ -1723,6 +1723,10 @@
       const { lang, t, setLang, langs } = useI18n();
       const { theme, themes, setTheme } = useTheme();
       const { navItems, navSections, siteName } = useNav(props.page);
+      // Open the section containing the current page by default
+      const openSection = ref(
+        (BIRD_CONFIG.nav || []).findIndex(sec => sec.items.some(p => p.id === props.page))
+      );
       const { spName, spNamesReady }    = useSpeciesNames();
       const langOpen = ref(false);
       const themeOpen = ref(false);
@@ -1832,7 +1836,7 @@
         }
       }
 
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch };
     },
     directives: {
       'click-outside': {
@@ -1918,17 +1922,23 @@
       </div>
     </div>
   </header>
-  <nav class="app-nav" aria-label="Navigation principale"><div id="main-nav">
-    <template v-for="(sec, si) in navSections" :key="si">
-      <span v-if="si > 0" class="nav-sep"></span>
-      <span class="nav-section-title">{{sec.section}}</span>
-      <a v-for="p in sec.items" :key="p.id" :href="p.file"
+  <nav class="app-nav" aria-label="Navigation principale">
+    <div class="nav-sections">
+      <button v-for="(sec, si) in navSections" :key="si"
+              class="nav-section-btn"
+              :class="{active: openSection === si, 'has-active-page': sec.items.some(p => p.active)}"
+              @click="openSection = openSection === si ? -1 : si">
+        {{sec.section}}
+      </button>
+    </div>
+    <div v-if="openSection >= 0 && navSections[openSection]" class="nav-pages">
+      <a v-for="p in navSections[openSection].items" :key="p.id" :href="p.file"
          class="nav-link" :class="{active:p.active}" :aria-current="p.active?'page':null">
         <span class="nav-icon" aria-hidden="true">{{p.icon}}</span>
         <span class="nav-label">{{p.label}}</span>
       </a>
-    </template>
-  </div></nav>
+    </div>
+  </nav>
   <main id="birdash-main" class="app-main" role="main">
     <h1 v-if="title" class="sr-only">{{title}}</h1>
     <slot></slot>

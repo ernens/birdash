@@ -360,23 +360,61 @@ a:hover { opacity: .85; }
 .app-nav {
   background:    var(--bg-deep);
   border-bottom: 1px solid var(--border);
-  padding:       0 1rem;
-  overflow-x:    auto;
 }
 
-#main-nav {
-  display:   flex;
-  gap:       .15rem;
-  min-width: max-content;
+/* Section tabs (top row) */
+.nav-sections {
+  display:     flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-section-btn {
+  flex:           1;
+  display:        flex;
+  align-items:    center;
+  justify-content:center;
+  gap:            .4rem;
+  padding:        .55rem .5rem;
+  background:     none;
+  border:         none;
+  border-bottom:  2px solid transparent;
+  color:          var(--text-muted);
+  font-size:      .78rem;
+  font-weight:    600;
+  cursor:         pointer;
+  transition:     all .15s;
+  white-space:    nowrap;
+}
+
+.nav-section-btn:hover {
+  color:          var(--text-main);
+  background:     var(--bg-card);
+}
+
+.nav-section-btn.active {
+  color:          var(--accent);
+  border-color:   var(--accent);
+}
+
+.nav-section-btn.has-active-page {
+  color:          var(--accent);
+}
+
+/* Page links (sub-row, shown for open section) */
+.nav-pages {
+  display:        flex;
+  gap:            .1rem;
+  padding:        0 .5rem;
+  overflow-x:     auto;
 }
 
 .nav-link {
   display:       flex;
   align-items:   center;
-  gap:           .35rem;
-  padding:       .6rem .85rem;
+  gap:           .3rem;
+  padding:       .5rem .7rem;
   color:         var(--text-muted);
-  font-size:     .82rem;
+  font-size:     .8rem;
   font-weight:   500;
   border-bottom: 2px solid transparent;
   transition:    all .15s;
@@ -393,27 +431,7 @@ a:hover { opacity: .85; }
   border-color: var(--accent);
 }
 
-.nav-icon { font-size: .95rem; }
-
-.nav-sep {
-  width:      1px;
-  background: var(--border);
-  margin:     .4rem .2rem;
-  flex-shrink: 0;
-}
-
-.nav-section-title {
-  display:     flex;
-  align-items: center;
-  padding:     .5rem .4rem .5rem .6rem;
-  font-size:   .62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color:       var(--text-faint);
-  white-space: nowrap;
-  user-select: none;
-}
+.nav-icon { font-size: .9rem; }
 
 /* ── Contenu principal ───────────────────────────────────────────────────── */
 .app-main {
@@ -889,8 +907,9 @@ a:hover { opacity: .85; }
   .brand-sub, .brand-model { display: none; }
   .brand-logo { height: 40px; }
   .brand-name { font-size: 1.4rem; }
+  .nav-section-btn { font-size: .7rem; padding: .45rem .3rem; }
   .nav-label { display: none; }
-  .nav-link  { padding: .55rem .5rem; }
+  .nav-link  { padding: .45rem .4rem; }
   .kpi-grid  { grid-template-columns: repeat(2, 1fr); }
   .hdr-label { display: none; }
   .header-dropdowns { flex-direction: row; gap: .3rem; }
