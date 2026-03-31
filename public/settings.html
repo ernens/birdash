@@ -450,14 +450,14 @@
                   class="set-tab-btn" :class="{active: audioSubTab === st.id}"
                   @click="audioSubTab = st.id"
                   style="font-size:.78em;padding:.4rem .7rem;">
-            <span>{{st.icon}}</span> <span>{{st.label}}</span>
+            <span>{{st.icon}}</span> <span>{{st.labelKey ? t(st.labelKey) : st.label}}</span>
           </button>
         </div>
 
         <!-- ── Sub-tab: Périphérique ── -->
         <div v-if="audioSubTab==='device'">
           <div class="card">
-            <div class="section-title">Périphériques audio détectés
+            <div class="section-title">{{t('audio_detected')}}
               <button class="btn-outline" @click="loadAudioDevices" style="margin-left:.5rem;font-size:.75em;">Rafraîchir</button>
             </div>
             <div v-if="audioDevices.length === 0" style="padding:1rem;color:var(--text-muted);">
@@ -530,7 +530,7 @@
             <div class="section-title">{{t('audio_highpass')}}</div>
             <div style="display:flex;align-items:center;gap:.8rem;">
               <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-                <input type="checkbox" v-model="audioConf.highpass_enabled"> Activé
+                <input type="checkbox" v-model="audioConf.highpass_enabled"> {{t('audio_enabled')}}
               </label>
               <div v-if="audioConf.highpass_enabled" style="flex:1;">
                 <input type="range" v-model.number="audioConf.highpass_cutoff_hz" min="50" max="300" step="10"
@@ -567,7 +567,7 @@
             <div class="section-title">{{t('audio_rms')}}</div>
             <div style="display:flex;align-items:center;gap:.8rem;">
               <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-                <input type="checkbox" v-model="audioConf.rms_normalize"> Activé
+                <input type="checkbox" v-model="audioConf.rms_normalize"> {{t('audio_enabled')}}
               </label>
               <div v-if="audioConf.rms_normalize" style="flex:1;">
                 <input type="range" v-model.number="audioConf.rms_target" min="0.01" max="0.20" step="0.01"
@@ -594,7 +594,7 @@
             </div>
             <div v-else>
               <div v-if="audioConf.cal_date" style="margin-bottom:1rem;">
-                <div>Dernière calibration : <strong>{{ audioConf.cal_date?.split('T')[0] }}</strong></div>
+                <div>{{t('audio_last_cal')}} : <strong>{{ audioConf.cal_date?.split('T')[0] }}</strong></div>
                 <div style="font-size:.85em;opacity:.7;">
                   CH0: gain ×{{ audioConf.cal_gain_ch0 }} &nbsp;|&nbsp; CH1: gain ×{{ audioConf.cal_gain_ch1 }}
                 </div>
@@ -623,12 +623,12 @@
                 <table style="width:100%;font-size:.85em;margin-bottom:.8rem;">
                   <tr><th>Canal</th><th>RMS mesuré</th><th>Gain compensatoire</th></tr>
                   <tr>
-                    <td>Canal 0 (CH0)</td>
+                    <td>{{t('audio_ch0')}}</td>
                     <td>{{ calResult.rms_ch0_db }} dBFS</td>
                     <td>×{{ calResult.gain_ch0 }}</td>
                   </tr>
                   <tr>
-                    <td>Canal 1 (CH1)</td>
+                    <td>{{t('audio_ch1')}}</td>
                     <td>{{ calResult.rms_ch1_db }} dBFS</td>
                     <td>×{{ calResult.gain_ch1 }}</td>
                   </tr>
@@ -651,11 +651,11 @@
             <div class="section-title">{{t('audio_levels')}}
               <button class="btn-outline" style="margin-left:.5rem;font-size:.75em;"
                       @click="audioMonitoring ? stopMonitor() : startMonitor()">
-                {{ audioMonitoring ? 'Arrêter' : 'Démarrer' }}
+                {{ audioMonitoring ? t('audio_stop') : t('audio_start') }}
               </button>
             </div>
             <div v-if="!audioMonitoring" style="opacity:.6;padding:1rem;text-align:center;">
-              Cliquez sur Démarrer pour afficher les niveaux audio en temps réel.
+              {{t('audio_click_start')}}
             </div>
             <div v-else style="display:flex;gap:2rem;justify-content:center;padding:1rem;">
               <div v-for="ch in (audioConf.input_channels === 2 ? [0,1] : [0])" :key="ch"
@@ -2313,16 +2313,16 @@ const app = createApp({
     const audioProfiles = ref({});
     const audioSubTab = ref('device');
     const audioSubTabs = [
-      { id: 'device', icon: '🔌', label: 'Périphérique' },
-      { id: 'profile', icon: '🎛️', label: 'Profil & Paramètres' },
-      { id: 'calibration', icon: '⚖️', label: 'Calibration' },
-      { id: 'monitoring', icon: '📊', label: 'Monitoring' },
+      { id: 'device', icon: '🔌', labelKey: 'audio_sub_device' },
+      { id: 'profile', icon: '🎛️', labelKey: 'audio_sub_profile' },
+      { id: 'calibration', icon: '⚖️', labelKey: 'audio_sub_cal' },
+      { id: 'monitoring', icon: '📊', labelKey: 'audio_sub_monitor' },
     ];
-    const channelStrategies = [
-      { id: 'sum', label: 'Sommation', desc: 'Combine les deux signaux (gain SNR +3dB)' },
-      { id: 'max', label: 'Maximum', desc: 'Retient le score le plus élevé des deux canaux (maximise le rappel)' },
-      { id: 'vote', label: 'Vote', desc: 'Exige la détection sur les deux canaux (réduit les faux positifs)' },
-    ];
+    const channelStrategies = computed(() => [
+      { id: 'sum', label: t('audio_sum'), desc: t('audio_sum_desc') },
+      { id: 'max', label: t('audio_max'), desc: t('audio_max_desc') },
+      { id: 'vote', label: t('audio_vote'), desc: t('audio_vote_desc') },
+    ]);
     const audioSaveMsg = ref('');
     const calRunning = ref(false);
     const calResult = ref(null);
