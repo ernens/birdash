@@ -998,6 +998,69 @@ function requireAuth(req, res) {
 }
 if (!API_TOKEN) console.warn('[BIRDASH] WARNING: No BIRDASH_API_TOKEN set — write endpoints are unprotected. Set Environment=BIRDASH_API_TOKEN=... in birdash.service for production.');
 
+// --- Adaptive gain state & logic (module-level for background collector access)
+const AG_DEFAULTS = {
+  enabled: false, mode: 'balanced', observer_only: true,
+  min_db: -6, max_db: 9, step_up_db: 0.5, step_down_db: 1.5,
+  update_interval_s: 10, history_s: 30, noise_percentile: 20,
+  target_floor_dbfs: -42, clip_guard_dbfs: -3, activity_hold_s: 15,
+};
+const _agState = {
+  current_gain_db: 0, recommended_gain_db: 0, last_update_ts: 0, hold_until_ts: 0,
+  noise_floor_dbfs: null, activity_dbfs: null, peak_dbfs: null,
+  reason: 'init', history: [],
+};
+function _agPercentile(arr, p) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a,b) => a - b);
+  return s[Math.min(s.length - 1, Math.max(0, Math.floor(p / 100 * s.length)))];
+}
+function _agClamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+function agPushSample(rms_dbfs, peak_dbfs) {
+  _agState.history.push({ ts: Date.now(), rms_dbfs, peak_dbfs });
+  if (_agState.history.length > 2000) _agState.history.splice(0, _agState.history.length - 1500);
+}
+function agUpdate(cfg) {
+  const c = { ...AG_DEFAULTS, ...cfg };
+  const now = Date.now();
+  if (!c.enabled) { _agState.reason = 'disabled'; return _agState; }
+  const windowMs = c.history_s * 1000;
+  _agState.history = _agState.history.filter(x => now - x.ts <= windowMs);
+  if (_agState.history.length < 5) { _agState.reason = 'not_enough_data'; return _agState; }
+  const rms = _agState.history.map(x => x.rms_dbfs).filter(Number.isFinite);
+  const peaks = _agState.history.map(x => x.peak_dbfs).filter(Number.isFinite);
+  if (!rms.length || !peaks.length) { _agState.reason = 'invalid'; return _agState; }
+  const nf = _agPercentile(rms, c.noise_percentile);
+  const act = _agPercentile(rms, 80);
+  const pk = Math.max(...peaks);
+  _agState.noise_floor_dbfs = Math.round(nf * 10) / 10;
+  _agState.activity_dbfs = Math.round(act * 10) / 10;
+  _agState.peak_dbfs = Math.round(pk * 10) / 10;
+  if (pk >= c.clip_guard_dbfs) {
+    _agState.recommended_gain_db = _agClamp(_agState.recommended_gain_db - c.step_down_db, c.min_db, c.max_db);
+    _agState.reason = 'clip_guard';
+  } else if ((act - nf) >= 10) {
+    _agState.hold_until_ts = now + c.activity_hold_s * 1000;
+    _agState.reason = 'activity_hold';
+  } else if (now < _agState.hold_until_ts) {
+    _agState.reason = 'activity_hold';
+  } else {
+    const desired = _agClamp(c.target_floor_dbfs - nf, c.min_db, c.max_db);
+    if (desired > _agState.recommended_gain_db) {
+      _agState.recommended_gain_db = Math.min(_agState.recommended_gain_db + c.step_up_db, desired);
+      _agState.reason = 'step_up';
+    } else if (desired < _agState.recommended_gain_db) {
+      _agState.recommended_gain_db = Math.max(_agState.recommended_gain_db - c.step_down_db, desired);
+      _agState.reason = 'step_down';
+    } else { _agState.reason = 'stable'; }
+  }
+  _agState.recommended_gain_db = Math.round(_agClamp(_agState.recommended_gain_db, c.min_db, c.max_db) * 10) / 10;
+  if (!c.observer_only) _agState.current_gain_db = _agState.recommended_gain_db;
+  else _agState.reason = 'observer';
+  _agState.last_update_ts = now;
+  return _agState;
+}
+
 // --- Shared JSON helpers (used by multiple routes)
 function readJsonFile(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
 function writeJsonFileAtomic(p, data) {
@@ -3547,76 +3610,7 @@ const server = http.createServer((req, res) => {
   const AUDIO_PROFILES_PATH = path.join(__dirname, '..', 'config', 'audio_profiles.json');
   const AG_CONFIG_PATH = path.join(__dirname, '..', 'config', 'adaptive_gain.json');
 
-  // ── Adaptive gain normalization ─────────────────────────────────────────
-  const AG_DEFAULTS = {
-    enabled: false, mode: 'balanced', observer_only: true,
-    min_db: -6, max_db: 9, step_up_db: 0.5, step_down_db: 1.5,
-    update_interval_s: 10, history_s: 30, noise_percentile: 20,
-    target_floor_dbfs: -42, clip_guard_dbfs: -3, activity_hold_s: 15,
-  };
-  const _agState = {
-    current_gain_db: 0, recommended_gain_db: 0, last_update_ts: 0, hold_until_ts: 0,
-    noise_floor_dbfs: null, activity_dbfs: null, peak_dbfs: null,
-    reason: 'init', history: [],
-  };
-  function _agPercentile(arr, p) {
-    if (!arr.length) return null;
-    const s = [...arr].sort((a,b) => a - b);
-    return s[Math.min(s.length - 1, Math.max(0, Math.floor(p / 100 * s.length)))];
-  }
-  function _agClamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-  function agPushSample(rms_dbfs, peak_dbfs) {
-    _agState.history.push({ ts: Date.now(), rms_dbfs, peak_dbfs });
-    if (_agState.history.length > 2000) _agState.history.splice(0, _agState.history.length - 1500);
-  }
-  function agUpdate(cfg) {
-    const c = { ...AG_DEFAULTS, ...cfg };
-    const now = Date.now();
-    if (!c.enabled) { _agState.reason = 'disabled'; return _agState; }
-    const windowMs = c.history_s * 1000;
-    _agState.history = _agState.history.filter(x => now - x.ts <= windowMs);
-    if (_agState.history.length < 5) { _agState.reason = 'not_enough_data'; return _agState; }
-    const rms = _agState.history.map(x => x.rms_dbfs).filter(Number.isFinite);
-    const peaks = _agState.history.map(x => x.peak_dbfs).filter(Number.isFinite);
-    if (!rms.length || !peaks.length) { _agState.reason = 'invalid'; return _agState; }
-    const nf = _agPercentile(rms, c.noise_percentile);
-    const act = _agPercentile(rms, 80);
-    const pk = Math.max(...peaks);
-    _agState.noise_floor_dbfs = Math.round(nf * 10) / 10;
-    _agState.activity_dbfs = Math.round(act * 10) / 10;
-    _agState.peak_dbfs = Math.round(pk * 10) / 10;
-    // Clip guard
-    if (pk >= c.clip_guard_dbfs) {
-      _agState.recommended_gain_db = _agClamp(_agState.recommended_gain_db - c.step_down_db, c.min_db, c.max_db);
-      _agState.reason = 'clip_guard';
-    }
-    // Activity hold
-    else if ((act - nf) >= 10) {
-      _agState.hold_until_ts = now + c.activity_hold_s * 1000;
-      _agState.reason = 'activity_hold';
-    }
-    else if (now < _agState.hold_until_ts) {
-      _agState.reason = 'activity_hold';
-    }
-    // Normal adjustment
-    else {
-      const desired = _agClamp(c.target_floor_dbfs - nf, c.min_db, c.max_db);
-      if (desired > _agState.recommended_gain_db) {
-        _agState.recommended_gain_db = Math.min(_agState.recommended_gain_db + c.step_up_db, desired);
-        _agState.reason = 'step_up';
-      } else if (desired < _agState.recommended_gain_db) {
-        _agState.recommended_gain_db = Math.max(_agState.recommended_gain_db - c.step_down_db, desired);
-        _agState.reason = 'step_down';
-      } else {
-        _agState.reason = 'stable';
-      }
-    }
-    _agState.recommended_gain_db = Math.round(_agClamp(_agState.recommended_gain_db, c.min_db, c.max_db) * 10) / 10;
-    if (!c.observer_only) _agState.current_gain_db = _agState.recommended_gain_db;
-    else _agState.reason = 'observer';
-    _agState.last_update_ts = now;
-    return _agState;
-  }
+  // (Adaptive gain: state, agPushSample, agUpdate defined at module level)
 
   // ── Route : GET /api/audio/devices ──────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/audio/devices') {
@@ -3706,6 +3700,9 @@ const server = http.createServer((req, res) => {
         const current = readJsonFile(AG_CONFIG_PATH) || {};
         Object.assign(current, filtered);
         writeJsonFileAtomic(AG_CONFIG_PATH, current);
+        // Start/stop collector based on enabled state
+        if (current.enabled) startAgCollector();
+        else stopAgCollector();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, config: { ...AG_DEFAULTS, ...current } }));
       } catch (e) {
@@ -4140,6 +4137,69 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[BIRDASH] API démarrée sur http://127.0.0.1:${PORT}`);
 });
+
+// ── Module-level adaptive gain collector ──────────────────────────────────
+const _AG_CFG_PATH = path.join(__dirname, '..', 'config', 'adaptive_gain.json');
+const _AG_AUDIO_CFG_PATH = path.join(__dirname, '..', 'config', 'audio_config.json');
+let _agBgProc = null, _agBgInterval = null;
+function _agBgStart() {
+  if (_agBgProc) return;
+  try {
+    const audioCfg = JSON.parse(fs.readFileSync(_AG_AUDIO_CFG_PATH, 'utf8'));
+    const device = audioCfg.device_id || 'default';
+    const channels = audioCfg.input_channels || 2;
+    _agBgProc = require('child_process').spawn('arecord', [
+      '-D', device, '-f', 'S16_LE', '-r', '48000', '-c', String(channels), '-t', 'raw',
+    ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const chunkBytes = 48000 * channels * 2 * 0.5; // 500ms
+    let buf = Buffer.alloc(0);
+    _agBgProc.stdout.on('data', d => {
+      buf = Buffer.concat([buf, d]);
+      while (buf.length >= chunkBytes) {
+        const chunk = buf.subarray(0, chunkBytes);
+        buf = buf.subarray(chunkBytes);
+        const samplesPerCh = chunkBytes / 2 / channels;
+        let rmsSum = 0, pk = 0;
+        for (let i = 0; i < chunkBytes; i += 2 * channels) {
+          const s = chunk.readInt16LE(i) / 32768.0;
+          rmsSum += s * s;
+          if (Math.abs(s) > pk) pk = Math.abs(s);
+        }
+        const rmsDb = rmsSum > 0 ? Math.round(10 * Math.log10(rmsSum / samplesPerCh) * 10) / 10 : -60;
+        const peakDb = pk > 0 ? Math.round(20 * Math.log10(pk) * 10) / 10 : -60;
+        // Push via the request-scoped function won't work — we need a global reference
+        // Use the _agState directly (it's closure-accessible from the createServer scope)
+        // Actually _agState is also in request scope. We'll use a global bridge.
+        agPushSample(rmsDb, peakDb);
+      }
+    });
+    _agBgProc.stderr.on('data', () => {});
+    _agBgProc.on('close', () => { _agBgProc = null; });
+    console.log('[adaptive-gain] Background collector started (device: ' + device + ')');
+  } catch (e) {
+    console.warn('[adaptive-gain] Failed to start collector:', e.message);
+  }
+}
+function _agBgStop() {
+  if (_agBgProc) { try { _agBgProc.kill(); } catch{} _agBgProc = null; }
+  if (_agBgInterval) { clearInterval(_agBgInterval); _agBgInterval = null; }
+}
+// Check config and auto-start/stop every 30s
+_agBgInterval = setInterval(() => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(_AG_CFG_PATH, 'utf8'));
+    if (cfg.enabled && !_agBgProc) _agBgStart();
+    else if (!cfg.enabled && _agBgProc) _agBgStop();
+    if (cfg.enabled) agUpdate(cfg);
+  } catch {}
+}, 30000);
+// Initial check after 5s
+setTimeout(() => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(_AG_CFG_PATH, 'utf8'));
+    if (cfg.enabled) _agBgStart();
+  } catch {}
+}, 5000);
 
 function gracefulShutdown() {
   if (_alertIntervalId) clearInterval(_alertIntervalId);
