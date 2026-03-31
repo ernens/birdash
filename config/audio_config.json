@@ -8,7 +8,7 @@
   "channel_strategy": "max",
   "hop_size_s": 2.5,
   "highpass_enabled": true,
-  "highpass_cutoff_hz": 80,
+  "highpass_cutoff_hz": 100,
   "rms_normalize": true,
   "rms_target": 0.05,
   "cal_gain_ch0": 1,
