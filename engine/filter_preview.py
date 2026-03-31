@@ -129,7 +129,11 @@ def main():
     if raw.ndim > 1:
         raw = raw.mean(axis=1)
 
-    filtered = apply_filters(raw, sr, config)
+    # Disable RMS normalize for preview — it re-amplifies after denoise,
+    # hiding the noise reduction effect visually
+    preview_config = {k: v for k, v in config.items()}
+    preview_config["rms_normalize"] = False
+    filtered = apply_filters(raw, sr, preview_config)
 
     # Compute dB range from raw signal — apply to both for honest comparison
     from scipy.signal import stft as _stft
