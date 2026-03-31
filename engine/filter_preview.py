@@ -37,9 +37,12 @@ _CMAP = LinearSegmentedColormap.from_list("birdash_plasma", [
 MAX_HZ = 12000
 
 
-def make_spectrogram_png(samples, sr, title="", width=480, height=216):
-    """Generate a spectrogram PNG as bytes using percentile normalization.
+def make_spectrogram_png(samples, sr, title="", width=480, height=216,
+                         vmin=None, vmax=None):
+    """Generate a spectrogram PNG as bytes.
 
+    If vmin/vmax are provided, uses them directly (shared scale mode).
+    Otherwise computes percentile 5%-99.5% from the signal.
     Renders pixel-by-pixel with imshow (matching JS canvas rendering).
     """
     f, t, Zxx = stft(samples, fs=sr, nperseg=1024, noverlap=768)
@@ -49,13 +52,14 @@ def make_spectrogram_png(samples, sr, title="", width=480, height=216):
     max_bin = int(MAX_HZ / (sr / 2) * len(f))
     mag_db = mag_db[:max_bin, :]
 
-    # Percentile normalization (matching JS: 5th-99.5th)
-    flat = mag_db.ravel().copy()
-    flat.sort()
-    vmin = flat[int(len(flat) * 0.05)]
-    vmax = flat[int(len(flat) * 0.995)]
-    if vmax <= vmin:
-        vmax = vmin + 1
+    # Percentile normalization if no shared scale provided
+    if vmin is None or vmax is None:
+        flat = mag_db.ravel().copy()
+        flat.sort()
+        vmin = flat[int(len(flat) * 0.05)]
+        vmax = flat[int(len(flat) * 0.995)]
+        if vmax <= vmin:
+            vmax = vmin + 1
 
     # Flip vertically so low freq is at bottom (origin='lower' in imshow)
     dpi = 96
@@ -127,8 +131,20 @@ def main():
 
     filtered = apply_filters(raw, sr, config)
 
-    before_png = make_spectrogram_png(raw, sr, "Before")
-    after_png = make_spectrogram_png(filtered, sr, "After")
+    # Compute dB range from raw signal — apply to both for honest comparison
+    from scipy.signal import stft as _stft
+    _, _, Zxx_raw = _stft(raw, fs=sr, nperseg=1024, noverlap=768)
+    raw_db = 20 * np.log10(np.abs(Zxx_raw) + 1e-10)
+    max_bin = int(MAX_HZ / (sr / 2) * raw_db.shape[0])
+    raw_db = raw_db[:max_bin, :].ravel().copy()
+    raw_db.sort()
+    shared_vmin = raw_db[int(len(raw_db) * 0.05)]
+    shared_vmax = raw_db[int(len(raw_db) * 0.995)]
+    if shared_vmax <= shared_vmin:
+        shared_vmax = shared_vmin + 1
+
+    before_png = make_spectrogram_png(raw, sr, "Before", vmin=shared_vmin, vmax=shared_vmax)
+    after_png = make_spectrogram_png(filtered, sr, "After", vmin=shared_vmin, vmax=shared_vmax)
 
     result = {
         "before": "data:image/png;base64," + base64.b64encode(before_png).decode(),
