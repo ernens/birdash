@@ -714,7 +714,7 @@
                      :checked="notifGlobalEnabled"
                      @change="toggleNotifGlobal($event.target.checked)">
               <span :style="{color: notifGlobalEnabled ? 'var(--accent)' : 'var(--text-muted)'}">
-                {{ notifGlobalEnabled ? '{{t('notif_on')}}' : '{{t('notif_off')}}' }}
+                {{ notifGlobalEnabled ? t('notif_on') : t('notif_off') }}
               </span>
             </label>
           </div>
