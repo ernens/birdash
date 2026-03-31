@@ -53,6 +53,37 @@ def read_audio(path, sample_rate):
     return data
 
 
+def apply_adaptive_gain(samples, api_url="http://127.0.0.1:7474"):
+    """Apply adaptive gain from birdash server if enabled and not in observer mode.
+
+    Returns (gained_samples, gain_db). If disabled/observer, returns (samples, 0).
+    """
+    try:
+        import urllib.request
+        resp = urllib.request.urlopen(f"{api_url}/api/audio/adaptive-gain/state", timeout=2)
+        data = json.loads(resp.read())
+        state = data.get("state", {})
+        config = data.get("config", {})
+
+        if not config.get("enabled", False) or config.get("observer_only", True):
+            return samples, 0.0
+
+        gain_db = state.get("current_gain_db", 0.0)
+        if gain_db == 0.0:
+            return samples, 0.0
+
+        # Apply gain: linear = 10^(dB/20)
+        linear_gain = 10.0 ** (gain_db / 20.0)
+        gained = samples * linear_gain
+
+        # Soft clip to prevent overdriving (tanh limiter)
+        gained = np.tanh(gained)
+
+        return gained.astype(np.float32), gain_db
+    except Exception:
+        return samples, 0.0
+
+
 def split_signal(sig, rate, overlap, seconds=3.0, minlen=1.5):
     """Split audio signal into overlapping chunks."""
     chunks = []
@@ -1018,6 +1049,11 @@ class BirdEngine:
             raw_sig, raw_sr = sf.read(file_path, dtype="float32", always_2d=False)
             if raw_sig.ndim > 1:
                 raw_sig = raw_sig.mean(axis=1)
+
+            # Apply adaptive gain if enabled (Phase 2)
+            raw_sig, gain_applied = apply_adaptive_gain(raw_sig)
+            if gain_applied != 0:
+                log.info("Adaptive gain applied: %+.1f dB", gain_applied)
 
             # Primary model (fast, synchronous)
             detections = self._analyze_with_model(
