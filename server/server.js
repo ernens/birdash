@@ -54,7 +54,9 @@ const CSP = [
 
 // ── Settings helpers ────────────────────────────────────────────────────────
 const BIRDNET_CONF = '/etc/birdnet/birdnet.conf';
-const BIRDNET_DIR = path.join(process.env.HOME, 'birdash', 'engine');
+const _birdashEngine = path.join(process.env.HOME, 'birdash', 'engine');
+const _birdengine = path.join(process.env.HOME, 'birdengine');
+const BIRDNET_DIR = fs.existsSync(path.join(_birdashEngine, 'models')) ? _birdashEngine : _birdengine;
 
 // Parse birdnet.conf → { KEY: value }
 async function parseBirdnetConf() {
@@ -1218,10 +1220,13 @@ const server = http.createServer((req, res) => {
       delete _speciesNamesCache[oldest];
     }
     if (!_speciesNamesCache[lang]) {
-      const labelFile = path.join(
-        process.env.HOME, 'birdash', 'engine', 'models', 'l18n', `labels_${lang}.json`
-      );
+      const candidates = [
+        path.join(process.env.HOME, 'birdash', 'engine', 'models', 'l18n', `labels_${lang}.json`),
+        path.join(process.env.HOME, 'birdengine', 'models', 'l18n', `labels_${lang}.json`),
+      ];
+      const labelFile = candidates.find(f => fs.existsSync(f));
       try {
+        if (!labelFile) throw new Error('not found');
         const raw = fs.readFileSync(labelFile, 'utf8');
         _speciesNamesCache[lang] = JSON.parse(raw);
         console.log(`[species-names] Loaded ${Object.keys(_speciesNamesCache[lang]).length} names for ${lang}`);
