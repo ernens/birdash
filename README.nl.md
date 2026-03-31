@@ -13,6 +13,7 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - 🔍 **Detectie review** — auto-flagging + bulk acties
 - 🤖 **Model vergelijking** — zij-aan-zij analyse
 - 🎙️ **Audio configuratie** — apparaat, profielen, kalibratie
+- 🎚️ **Adaptieve normalisatie** — automatische softwaregain, clippingbescherming, observatiemodus
 - 🔔 **Slimme meldingen** — alleen zeldzame soorten (ntfy.sh)
 - 📡 **BirdWeather** — automatische upload
 - 💻 **Web terminal** — bash in browser, ondersteunt Claude Code

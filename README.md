@@ -54,6 +54,7 @@ Raspberry Pi 5 + SSD
 ### Detection Engine (BirdEngine)
 - 🤖 **Dual-model inference** — BirdNET V2.4 (fast, ~2s) + Perch V2 INT8 (precise, ~12s) in parallel
 - 🎙️ **Local recording** — any USB audio interface via ALSA with configurable gain
+- 🎚️ **Adaptive noise normalization** — automatic software gain based on ambient noise, with clip guard, activity hold, and observer mode
 - 📡 **BirdWeather** — automatic upload of soundscapes + detections
 - 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species (not every sparrow)
 - ⚡ **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
@@ -82,6 +83,7 @@ Raspberry Pi 5 + SSD
 
 ### Audio Configuration
 - 🎙️ Auto-detection of USB audio devices with one-click selection
+- 🎚️ **Adaptive gain** — noise floor estimation, clip guard, activity hold, observer/apply modes
 - 🎛️ 6 environment profiles (garden, forest, roadside, urban, night, test)
 - ⚖️ Inter-channel calibration wizard for dual EM272 microphones
 - 📊 Real-time VU meters via SSE

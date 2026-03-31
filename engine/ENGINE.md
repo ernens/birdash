@@ -176,6 +176,37 @@ arecord -D birdash -f S16_LE -c 2 -r 48000 -t wav --max-file-time 45
 - Duration: 45 seconds per file
 - Stereo is converted to mono in engine.py before inference
 
+### Adaptive Noise Normalization
+
+An optional software gain can be applied to the audio signal before inference, based on ambient noise estimation from the birdash server.
+
+**Architecture:**
+- Birdash server runs a background audio collector (arecord → RMS/peak analysis every 500ms)
+- Percentile-based noise floor estimation (P20 of RMS over 30s window)
+- Gain decision: slow step-up (+0.5 dB), fast step-down (-1.5 dB)
+- Protection: clip guard (-3 dBFS), activity hold (15s freeze during bird vocalizations)
+- BirdEngine reads the recommended gain via API (`/api/audio/adaptive-gain/state`)
+
+**Two modes:**
+- **Observer** (default): calculates and logs recommended gain, but doesn't modify audio
+- **Apply**: multiplies signal by `10^(gain_db/20)` with `tanh()` soft limiter
+
+**Gain is applied in `process_file()`** after audio read and mono conversion, before any model inference. Both primary and secondary models receive the same gained signal.
+
+**Settings** (configurable in UI → Audio → Adaptive Gain):
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `min_db` | -6 | Minimum gain (never below) |
+| `max_db` | +9 | Maximum gain (never above) |
+| `step_up_db` | 0.5 | Gain increase per cycle |
+| `step_down_db` | 1.5 | Gain decrease per cycle (faster) |
+| `target_floor_dbfs` | -42 | Target ambient noise floor |
+| `clip_guard_dbfs` | -3 | Emergency decrease if peak above |
+| `activity_hold_s` | 15 | Freeze gain during bird activity |
+| `update_interval_s` | 10 | Seconds between gain decisions |
+| `history_s` | 30 | Window for noise estimation |
+
 ### Resampling
 
 BirdNET expects 48 kHz, Perch expects 32 kHz. The engine reads at native 48 kHz and resamples for Perch using `resampy` (Kaiser filter).
