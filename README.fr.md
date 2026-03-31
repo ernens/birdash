@@ -4,7 +4,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
 
-Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Remplace [BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) avec une architecture dual-modele plus rapide et plus precise.
+Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Architecture dual-modele autonome avec BirdNET V2.4 + Perch V2.
 
 > [English](README.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md)
 

@@ -25,7 +25,7 @@ const https = require('https');
 // --- Configuration
 const PORT      = process.env.BIRDASH_PORT || 7474;
 const DB_PATH   = process.env.BIRDASH_DB   || path.join(
-  process.env.HOME, 'BirdNET-Pi', 'scripts', 'birds.db'
+  process.env.HOME, 'birdash', 'data', 'birds.db'
 );
 const SONGS_DIR = process.env.BIRDASH_SONGS_DIR || path.join(
   process.env.HOME, 'BirdSongs', 'Extracted', 'By_Date'
@@ -52,9 +52,9 @@ const CSP = [
   "form-action 'self'",
 ].join('; ');
 
-// ── BirdNET-Pi Settings helpers ──────────────────────────────────────────────
+// ── Settings helpers ────────────────────────────────────────────────────────
 const BIRDNET_CONF = '/etc/birdnet/birdnet.conf';
-const BIRDNET_DIR = path.join(process.env.HOME, 'BirdNET-Pi');
+const BIRDNET_DIR = path.join(process.env.HOME, 'birdash', 'engine');
 
 // Parse birdnet.conf → { KEY: value }
 async function parseBirdnetConf() {
@@ -716,8 +716,8 @@ async function sendAlert(type, title, body) {
   const now = Date.now();
   if (_alertLastSent[type] && (now - _alertLastSent[type]) < ALERT_COOLDOWN) return;
 
-  const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
-  const appriseBin = path.join(process.env.HOME, 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
+  const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
+  const appriseBin = path.join(process.env.HOME, 'birdash', 'engine', 'venv', 'bin', 'apprise');
 
   // Check apprise.txt exists and has content
   try {
@@ -1156,7 +1156,7 @@ const server = http.createServer((req, res) => {
     }
     if (!_speciesNamesCache[lang]) {
       const labelFile = path.join(
-        process.env.HOME, 'BirdNET-Pi', 'model', 'l18n', `labels_${lang}.json`
+        process.env.HOME, 'birdash', 'engine', 'models', 'l18n', `labels_${lang}.json`
       );
       try {
         const raw = fs.readFileSync(labelFile, 'utf8');
@@ -1715,7 +1715,7 @@ const server = http.createServer((req, res) => {
   // Returns the content of apprise.txt (notification service URLs)
   if (req.method === 'GET' && pathname === '/api/apprise') {
     (async () => {
-      const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
+      const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
       try {
         const content = await fsp.readFile(appriseFile, 'utf8');
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1738,7 +1738,7 @@ const server = http.createServer((req, res) => {
       try {
         const { urls } = JSON.parse(body);
         if (typeof urls !== 'string') throw new Error('urls must be a string');
-        const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
+        const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
         await fsp.writeFile(appriseFile, urls.trim() + '\n');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
@@ -1755,8 +1755,8 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/api/apprise/test') {
     (async () => {
       try {
-        const appriseFile = path.join(process.env.HOME, 'BirdNET-Pi', 'apprise.txt');
-        const appriseBin = path.join(process.env.HOME, 'BirdNET-Pi', 'birdnet', 'bin', 'apprise');
+        const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
+        const appriseBin = path.join(process.env.HOME, 'birdash', 'engine', 'venv', 'bin', 'apprise');
         const { execFile } = require('child_process');
         const result = await new Promise((resolve, reject) => {
           execFile(appriseBin, [
@@ -2266,7 +2266,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && pathname === '/api/models') {
     (async () => {
       try {
-        const modelDir = path.join(BIRDNET_DIR, 'model');
+        const modelDir = path.join(BIRDNET_DIR, 'models');
         const files = await fsp.readdir(modelDir);
         const models = files
           .filter(f => f.endsWith('.tflite'))
@@ -2285,7 +2285,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && pathname === '/api/languages') {
     (async () => {
       try {
-        const labelDir = path.join(BIRDNET_DIR, 'model', 'l18n');
+        const labelDir = path.join(BIRDNET_DIR, 'models', 'l18n');
         const files = await fsp.readdir(labelDir);
         const languages = files
           .filter(f => f.startsWith('labels_') && f.endsWith('.json'))

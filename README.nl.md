@@ -2,7 +2,7 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Vervangt [BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) met een snellere dual-model architectuur.
+Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-model architectuur met BirdNET V2.4 + Perch V2.
 
 > [English](README.md) | [Francais](README.fr.md) | [Deutsch](README.de.md)
 

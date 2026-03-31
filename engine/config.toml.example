@@ -51,7 +51,7 @@ enabled = false
 
 [output]
 # Local database path
-local_db = "BIRDASH_HOME/BirdNET-Pi/scripts/birds.db"
+local_db = "BIRDASH_HOME/birdash/data/birds.db"
 # Sync results to a remote host (optional)
 sync_to_biloute = false
 biloute_db = ""

@@ -17,7 +17,7 @@ set -e
 BIRDASH_USER=$(whoami)
 BIRDASH_HOME=$(eval echo ~$BIRDASH_USER)
 BIRDASH_DIR="$BIRDASH_HOME/birdash"
-DB_DIR="$BIRDASH_HOME/BirdNET-Pi/scripts"
+DB_DIR="$BIRDASH_HOME/birdash/data"
 DB_PATH="$DB_DIR/birds.db"
 SONGS_DIR="$BIRDASH_HOME/BirdSongs"
 
@@ -294,7 +294,7 @@ fi
 # BirdNET V2.4 (user must provide — CC-NC-SA license prevents redistribution)
 if [ ! -f "$MODELS_DIR/BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite" ]; then
     warn "BirdNET V2.4 model not found. You need to download it manually:"
-    echo "    - From an existing BirdNET-Pi installation: ~/BirdNET-Pi/model/"
+    echo "    - From: https://github.com/kahst/BirdNET-Analyzer"
     echo "    - Or from: https://github.com/kahst/BirdNET-Analyzer"
     echo "    Copy to: $MODELS_DIR/"
     echo "    Files needed: BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite"
@@ -305,7 +305,7 @@ fi
 # Labels l18n directory
 if [ ! -d "$MODELS_DIR/l18n" ]; then
     warn "Species translation labels (l18n/) not found."
-    echo "    Copy from an existing BirdNET-Pi: ~/BirdNET-Pi/model/l18n/"
+    echo "    Download from: https://github.com/kahst/BirdNET-Analyzer (model/l18n/)"
     echo "    To: $MODELS_DIR/l18n/"
 fi
 

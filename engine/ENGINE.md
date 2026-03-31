@@ -273,7 +273,7 @@ station_id = "my_station_id"
 enabled = true
 
 [output]
-local_db = "~/BirdNET-Pi/scripts/birds.db"
+local_db = "~/birdash/data/birds.db"
 sync_to_biloute = false
 ```
 

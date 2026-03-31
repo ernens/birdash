@@ -82,7 +82,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   exit 1
 fi
 
-# Parse JSON config using node (available on BirdNET-Pi)
+# Parse JSON config using node
 read_json() {
   node -e "const c=JSON.parse(require('fs').readFileSync('$CONFIG_FILE','utf8')); const v=$1; console.log(v===undefined||v===null?'':v);" 2>/dev/null
 }
@@ -91,7 +91,7 @@ DEST=$(read_json "c.destination")
 CONTENT=$(read_json "JSON.stringify(c.content||['all'])")
 RETENTION=$(read_json "c.retention||30")
 
-BIRDNET_DIR="$HOME/BirdNET-Pi"
+BIRDNET_DIR="$HOME/birdash/engine"
 SONGS_DIR="$HOME/BirdSongs"
 BIRDASH_DIR="$HOME/birdash"
 
@@ -378,7 +378,7 @@ if should_backup "projects"; then
   progress "running" "$PCT_START" "projects" "Synchronisation projets..."
   log "Step 3: Syncing projects..."
 
-  PROJECT_LIST=(BirdNET-Pi birdash web webBAK tig phpsysinfo)
+  PROJECT_LIST=(birdash)
   PROJECT_TOTAL=${#PROJECT_LIST[@]}
   PROJECT_IDX=0
 

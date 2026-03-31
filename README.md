@@ -5,7 +5,7 @@
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Modern bird detection dashboard and engine for Raspberry Pi 5. Replaces [BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) with a faster, dual-model architecture.
+Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-model architecture with BirdNET V2.4 + Perch V2.
 
 > [Francais](README.fr.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md) | [Contributing](CONTRIBUTING.md)
 
@@ -158,7 +158,7 @@ Your dashboard will be available at `http://yourpi.local/birds/`
 | 10 | Cron jobs (audio cleanup) |
 
 > **Note:** BirdNET V2.4 model must be copied manually due to its CC-NC-SA license.
-> Download from [BirdNET-Analyzer](https://github.com/kahst/BirdNET-Analyzer) or copy from an existing BirdNET-Pi.
+> Download from [BirdNET-Analyzer](https://github.com/kahst/BirdNET-Analyzer).
 
 ## Tests
 
@@ -218,7 +218,7 @@ birdash/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BIRDASH_PORT` | `7474` | API server port |
-| `BIRDASH_DB` | `~/BirdNET-Pi/scripts/birds.db` | SQLite database path |
+| `BIRDASH_DB` | `~/birdash/data/birds.db` | SQLite database path |
 | `EBIRD_API_KEY` | — | eBird API key (optional) |
 | `BW_STATION_ID` | — | BirdWeather station ID (optional) |
 

@@ -6,9 +6,9 @@ Thank you for your interest in contributing! 🐦
 
 ### Prerequisites
 
-- [Nachtzuster/BirdNET-Pi](https://github.com/Nachtzuster/BirdNET-Pi) installed and running
-- Node.js 18+ with `better-sqlite3`
-- Caddy (or other reverse proxy)
+- Raspberry Pi 5 with Raspberry Pi OS 64-bit
+- Run `./install.sh` to set up all dependencies
+- Node.js 18+, Python 3.11+, Caddy
 
 ### Local setup
 
@@ -129,7 +129,7 @@ Browser                    Raspberry Pi
                           │ server.js (port 7474)    │
                           │   └─ birds.db (SQLite)   │
                           │                          │
-                          │ BirdNET-Pi (analysis)    │
+                          │ BirdEngine (detection)   │
                           │   └─ BirdSongs/Extracted │
                           └──────────────────────────┘
 ```
