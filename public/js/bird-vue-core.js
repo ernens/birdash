@@ -1380,6 +1380,7 @@
     const navSections = computed(() =>
       (BIRD_CONFIG.nav || []).map(sec => ({
         section: t(sec.section),
+        icon: sec.icon || '',
         items: sec.items.map(p => ({
           ...p,
           label:  t(NAV_KEYS[p.id] || p.id),
@@ -1928,6 +1929,7 @@
               class="nav-section-btn"
               :class="{active: openSection === si, 'has-active-page': sec.items.some(p => p.active)}"
               @click="openSection = openSection === si ? -1 : si">
+        <span class="nav-section-icon">{{sec.icon}}</span>
         {{sec.section}}
       </button>
     </div>
