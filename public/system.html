@@ -743,7 +743,7 @@
                @click="navigateTo('rarities.html')">
             <div style="font-size:1.1rem;">{{r.n===1?'&#128142;':r.n<=3?'&#128310;':'&#128313;'}}</div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:.85rem;font-weight:600;color:var(--text-main);">{{r.Com_Name}}</div>
+              <div style="font-size:.85rem;font-weight:600;color:var(--text-main);">{{spName(r.Com_Name, r.sci)}}</div>
               <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{r.sci}}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
@@ -949,13 +949,14 @@
 
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useChart, MODEL_LABELS,
+const { useI18n, useTheme, useNav, useChart, useSpeciesNames, MODEL_LABELS,
         birdQuery, fmtDate, fmtTime, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo, authHeaders } = BIRDASH;
 
 const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
+    const { spName } = useSpeciesNames();
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('system');
     const { mountChart: mountAct }    = useChart();
@@ -1738,7 +1739,7 @@ const app = createApp({
     function openUrl(url) { window.open(url, '_blank'); }
 
     return {
-      lang, t,
+      lang, t, spName,
       // Tabs
       tabs, activeTab, tabLoaded, switchTab,
       // Health tab

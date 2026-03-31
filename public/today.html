@@ -98,7 +98,7 @@
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
-                <div class="sp-name-row">{{s.Com_Name}}</div>
+                <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}}</div>
                 <div class="sp-sci-row">{{s.sci}}</div>
               </div>
               <div class="sp-meta">
@@ -135,7 +135,7 @@
               <span v-else>🦜</span>
             </div>
             <div class="player-species">
-              <a class="player-name" @click="navigateTo('species.html',{species:selected.Com_Name})" style="cursor:pointer;text-decoration:none;color:inherit;" @mouseenter="$event.target.style.color='var(--accent)'" @mouseleave="$event.target.style.color='inherit'">{{selected.Com_Name}}</a>
+              <a class="player-name" @click="navigateTo('species.html',{species:selected.Com_Name})" style="cursor:pointer;text-decoration:none;color:inherit;" @mouseenter="$event.target.style.color='var(--accent)'" @mouseleave="$event.target.style.color='inherit'">{{spName(selected.Com_Name, selected.sci)}}</a>
               <div class="player-sci">{{selected.sci}}</div>
               <div class="player-meta">
                 <span class="conf-badge" :class="parseFloat(currentDet.Confidence)>=0.8?'conf-high':'conf-mid'">
@@ -535,7 +535,7 @@ function encodeWav(pcm, sr) {
 
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav,
+const { useI18n, useTheme, useNav, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, buildAudioUrl, buildSpeciesLinks,
         navigateTo } = BIRDASH;
@@ -548,6 +548,7 @@ let _cleanBlobUrl = null; // Blob URL à révoquer lors du changement
 const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
+    const { spName } = useSpeciesNames();
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('today');
 
@@ -862,7 +863,7 @@ const app = createApp({
     }
 
     return {
-      lang, t,
+      lang, t, spName,
       today, minConf, searchQ,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,

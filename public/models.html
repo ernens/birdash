@@ -90,7 +90,7 @@
                 <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;cursor:pointer;" @mouseenter="$event.currentTarget.style.color='var(--accent)'" @mouseleave="$event.currentTarget.style.color='inherit'">
                   <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23888%22><text y=%2218%22 font-size=%2218%22>🐦</text></svg>';this.onerror=null;">
                   <div>
-                    <strong>{{ s.Com_Name }}</strong>
+                    <strong>{{ spName(s.Com_Name, s.Sci_Name) }}</strong>
                     <div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div>
                   </div>
                 </a>
@@ -148,7 +148,7 @@
 
 <script>
 const { createApp, ref, onMounted, watch, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useFilterPeriod, registerComponents } = BIRDASH;
+const { useI18n, useTheme, useNav, useFilterPeriod, useSpeciesNames, registerComponents } = BIRDASH;
 const { birdQuery } = BIRDASH_UTILS;
 
 const MODEL_LABELS = {
@@ -162,6 +162,7 @@ const COLORS = ['#5a9e3a', '#4a7eb5', '#c8a84b', '#a85c3a'];
 const app = createApp({
   setup() {
     const { t, lang } = useI18n();
+    const { spName } = useSpeciesNames();
     useTheme();
     useNav();
 
@@ -231,7 +232,7 @@ const app = createApp({
     onMounted(loadData);
 
     return {
-      t, fp, data, loading, dailyChart,
+      t, spName, fp, data, loading, dailyChart,
       modelLabel,
     };
   }

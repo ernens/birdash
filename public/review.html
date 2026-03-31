@@ -92,7 +92,7 @@
           <!-- Info -->
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
-              <strong>{{ det.com_name }}</strong>
+              <strong>{{ spName(det.com_name, det.sci_name) }}</strong>
               <span style="font-size:.78rem;opacity:.6;">{{ det.sci_name }}</span>
               <span style="font-size:.78rem;font-weight:600;" :style="{color: det.confidence >= 0.8 ? 'var(--accent)' : det.confidence >= 0.7 ? '#dd6b20' : '#e53e3e'}">
                 {{ (det.confidence * 100).toFixed(0) }}%
@@ -126,13 +126,14 @@
 
 <script>
 const { createApp, ref, reactive, computed, onMounted } = Vue;
-const { useI18n, useTheme, useNav, useFilterPeriod, registerComponents } = BIRDASH;
+const { useI18n, useTheme, useNav, useFilterPeriod, useSpeciesNames, registerComponents } = BIRDASH;
 const { birdQuery, buildAudioUrl } = BIRDASH_UTILS;
 const API = BIRD_CONFIG.apiBase;
 
 const app = createApp({
   setup() {
     const { t, lang } = useI18n();
+    const { spName } = useSpeciesNames();
     useTheme();
     useNav();
 
@@ -264,7 +265,7 @@ const app = createApp({
     onMounted(loadFlagged);
 
     return {
-      t, fp, flagged, totalDets, loading,
+      t, spName, fp, flagged, totalDets, loading,
       selected, playingDet, reasonGroups,
       detKey, loadFlagged, validate, bulkAction,
       bulkRejectByReason, toggleSelect, selectAll, playAudio,
