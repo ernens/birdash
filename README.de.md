@@ -23,7 +23,38 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Ersetzt [BirdN
 
 **[ernensbjorn/perch-v2-int8-tflite](https://huggingface.co/ernensbjorn/perch-v2-int8-tflite)** auf HuggingFace
 
-Siehe [README.md](README.md) fur Installationsanweisungen.
+## Installation
+
+```bash
+cd ~
+git clone https://github.com/ernens/birdash.git
+cd birdash
+chmod +x install.sh
+./install.sh
+```
+
+Das Installationsskript erledigt alles automatisch. Bearbeiten Sie danach:
+1. `/etc/birdnet/birdnet.conf` — Koordinaten, Sprache
+2. `engine/config.toml` — Station, BirdWeather, ntfy
+3. `public/js/birdash-local.js` — Standort, eBird API Key
+
+Dienste starten:
+```bash
+sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
+```
+
+Dashboard: `http://ihr-pi.local/birds/`
+
+## Tests
+
+```bash
+npm test                    # 40 Node.js Tests
+cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python Tests
+```
+
+## Lizenz
+
+[MIT](LICENSE)
 
 ## Lizenz
 

@@ -113,58 +113,61 @@ We publish the first **Perch V2 INT8** quantized model for edge deployment:
 
 ## Prerequisites
 
-- Raspberry Pi 5 with Raspberry Pi OS (64-bit)
-- Node.js >= 18
-- Python 3.11+ with venv
-- ffmpeg
-- Caddy (reverse proxy)
+- Raspberry Pi 5 (4 or 8 GB) with Raspberry Pi OS 64-bit (Bookworm/Trixie)
+- Internet connection (for initial setup and model download)
+- Audio interface (e.g., RODE AI-Micro) + microphone(s)
+
+All other dependencies are installed automatically by the installer.
 
 ## Installation
 
 ```bash
-# 1. Clone
+# 1. Clone and install (everything is automated)
 cd ~
 git clone https://github.com/ernens/birdash.git
 cd birdash
-
-# 2. Run the installer (sets up Node.js, Python venv, downloads models)
 chmod +x install.sh
 ./install.sh
 
-# 3. Configure
-nano engine/config.toml          # Station location, BirdWeather ID, ntfy URL
-nano public/js/birdash-local.js  # Location, eBird API key
+# 2. Edit your station location
+sudo nano /etc/birdnet/birdnet.conf    # Set LATITUDE, LONGITUDE, DATABASE_LANG
+nano engine/config.toml                # Station name, BirdWeather ID, ntfy URL
+nano public/js/birdash-local.js        # Location for eBird integration
 
-# 5. Configure Caddy (see below)
+# 3. Start all services
+sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
 ```
 
-## Caddy Configuration
+The installer handles everything: system packages, Caddy, ttyd, databases, models, services, and cron jobs. See `install.sh` for details.
 
-```
-:80 {
-    handle /birds/api/* {
-        uri strip_prefix /birds
-        reverse_proxy localhost:7474 {
-            flush_interval -1
-        }
-    }
-    handle /birds/terminal/* {
-        reverse_proxy localhost:7681
-    }
-    handle /birds/audio/* {
-        encode zstd gzip
-        uri strip_prefix /birds/audio
-        root * /home/{USER}/BirdSongs/Extracted
-        file_server
-    }
-    handle /birds* {
-        encode zstd gzip
-        uri strip_prefix /birds
-        root * /home/{USER}/birdash/public
-        file_server
-    }
-    redir / /birds/ permanent
-}
+Your dashboard will be available at `http://yourpi.local/birds/`
+
+## What the Installer Does
+
+| Step | Action |
+|------|--------|
+| 1 | System packages (Node.js, Python, ffmpeg, alsa, sqlite3, Caddy, ttyd) |
+| 2 | Node.js dependencies |
+| 3 | Python venv + ML dependencies (ai-edge-litert, numpy, soundfile, resampy) |
+| 4 | Directory structure (audio, models, BirdSongs) |
+| 5 | Database bootstrap (birds.db + birdash.db with full schema) |
+| 6 | Configuration files (birdnet.conf, engine config, ALSA, Caddy) |
+| 7 | Model download (Perch V2 INT8 from HuggingFace) |
+| 8 | Systemd services (engine, recording, dashboard, terminal) |
+| 9 | Caddy reverse proxy |
+| 10 | Cron jobs (audio cleanup) |
+
+> **Note:** BirdNET V2.4 model must be copied manually due to its CC-NC-SA license.
+> Download from [BirdNET-Analyzer](https://github.com/kahst/BirdNET-Analyzer) or copy from an existing BirdNET-Pi.
+
+## Tests
+
+```bash
+# Node.js backend tests (40 tests)
+npm test
+
+# Python engine tests (13 tests)
+cd engine && ../engine/venv/bin/python -m unittest test_engine -v
 ```
 
 ## Project Structure

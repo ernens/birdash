@@ -23,7 +23,38 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Vervangt [BirdNET-
 
 **[ernensbjorn/perch-v2-int8-tflite](https://huggingface.co/ernensbjorn/perch-v2-int8-tflite)** op HuggingFace
 
-Zie [README.md](README.md) voor installatie-instructies.
+## Installatie
+
+```bash
+cd ~
+git clone https://github.com/ernens/birdash.git
+cd birdash
+chmod +x install.sh
+./install.sh
+```
+
+Het installatiescript regelt alles automatisch. Bewerk daarna:
+1. `/etc/birdnet/birdnet.conf` — coordinaten, taal
+2. `engine/config.toml` — station, BirdWeather, ntfy
+3. `public/js/birdash-local.js` — locatie, eBird API key
+
+Start de services:
+```bash
+sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
+```
+
+Dashboard: `http://jouw-pi.local/birds/`
+
+## Tests
+
+```bash
+npm test                    # 40 Node.js tests
+cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python tests
+```
+
+## Licentie
+
+[MIT](LICENSE)
 
 ## Licentie
 

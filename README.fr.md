@@ -98,7 +98,35 @@ Nous publions le premier modele **Perch V2 INT8** quantifie pour le deploiement 
 
 ## Installation
 
-Voir le [README principal](README.md) pour les instructions detaillees.
+```bash
+cd ~
+git clone https://github.com/ernens/birdash.git
+cd birdash
+chmod +x install.sh
+./install.sh
+```
+
+L'installateur gere tout automatiquement : paquets systeme, Caddy, ttyd, bases de donnees, modeles, services et cron. Editez ensuite :
+
+1. `/etc/birdnet/birdnet.conf` — coordonnees, langue
+2. `engine/config.toml` — station, BirdWeather, ntfy
+3. `public/js/birdash-local.js` — localisation, cle eBird
+
+Demarrez les services :
+```bash
+sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
+```
+
+Dashboard : `http://votre-pi.local/birds/`
+
+> Le modele BirdNET V2.4 doit etre copie manuellement (licence CC-NC-SA).
+
+## Tests
+
+```bash
+npm test                    # 40 tests Node.js
+cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 tests Python
+```
 
 ## Licence
 
