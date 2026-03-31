@@ -16,16 +16,20 @@ import matplotlib.pyplot as plt
 from scipy.signal import stft, butter, sosfilt
 
 
-def make_spectrogram_png(samples, sr, title="", width=4.0, height=1.8):
+def make_spectrogram_png(samples, sr, title="", width=4.0, height=1.8,
+                         vmin=None, vmax=None):
     """Generate a spectrogram PNG as bytes."""
     f, t, Zxx = stft(samples, fs=sr, nperseg=1024, noverlap=768)
-    mag = np.abs(Zxx)
-    mag_db = 20 * np.log10(mag + 1e-10)
-    vmin = max(mag_db.max() - 80, -100)
+    mag_db = 20 * np.log10(np.abs(Zxx) + 1e-10)
+
+    if vmin is None:
+        vmin = max(mag_db.max() - 80, -100)
+    if vmax is None:
+        vmax = mag_db.max()
 
     fig, ax = plt.subplots(1, 1, figsize=(width, height))
     ax.pcolormesh(t, f, mag_db, shading="gouraud", cmap="inferno",
-                  vmin=vmin, vmax=mag_db.max())
+                  vmin=vmin, vmax=vmax)
     ax.set_ylim(0, min(sr / 2, 15000))
     ax.set_ylabel("Hz", fontsize=7)
     ax.set_xlabel("s", fontsize=7)
@@ -39,6 +43,15 @@ def make_spectrogram_png(samples, sr, title="", width=4.0, height=1.8):
     plt.close(fig)
     buf.seek(0)
     return buf.read()
+
+
+def compute_db_range(samples, sr):
+    """Compute vmin/vmax from a signal for consistent color scaling."""
+    _, _, Zxx = stft(samples, fs=sr, nperseg=1024, noverlap=768)
+    mag_db = 20 * np.log10(np.abs(Zxx) + 1e-10)
+    vmax = float(mag_db.max())
+    vmin = max(vmax - 80, -100)
+    return vmin, vmax
 
 
 def apply_filters(samples, sr, config):
@@ -87,9 +100,13 @@ def main():
     if raw.ndim > 1:
         raw = raw.mean(axis=1)
 
-    before_png = make_spectrogram_png(raw, sr, "Before")
+    # Compute color scale from raw signal — used for both images
+    vmin, vmax = compute_db_range(raw, sr)
+
     filtered = apply_filters(raw, sr, config)
-    after_png = make_spectrogram_png(filtered, sr, "After")
+
+    before_png = make_spectrogram_png(raw, sr, "Before", vmin=vmin, vmax=vmax)
+    after_png = make_spectrogram_png(filtered, sr, "After", vmin=vmin, vmax=vmax)
 
     result = {
         "before": "data:image/png;base64," + base64.b64encode(before_png).decode(),
