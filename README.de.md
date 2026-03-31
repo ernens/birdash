@@ -15,6 +15,7 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 - 🎙️ **Audiokonfiguration** — Gerat, Profile, Kalibrierung
 - 🎚️ **Adaptive Normalisierung** — automatischer Software-Gain, Clipping-Schutz, Beobachtermodus
 - 🔇 **Audiofilter** — Hochpass + Tiefpass (Bandpass), spektrale Rauschunterdruckung, RMS-Normalisierung
+- 👁️ **Filtervorschau** — Vorher/Nachher-Spektrogramme vom Mikrofon zur Visualisierung der Filtereffekte
 - 🔔 **Intelligente Benachrichtigungen** — nur seltene Arten (ntfy.sh)
 - 📡 **BirdWeather** — automatischer Upload
 - 💻 **Web-Terminal** — Bash im Browser, unterstutzt Claude Code

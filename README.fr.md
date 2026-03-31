@@ -71,6 +71,7 @@ Raspberry Pi 5 + SSD
 - 🎙️ Detection automatique des peripheriques USB audio
 - 🎚️ **Gain adaptatif** — estimation bruit de fond, protection clipping, mode observateur/application
 - 🔇 **Bandpass + debruitage** — filtre passe-bas (4-15 kHz), reduction spectrale (noisereduce), activable par profil
+- 👁️ **Previsualisation filtres** — spectrogrammes avant/apres depuis le micro pour visualiser l'effet des filtres
 - 🎛️ 6 profils d'environnement (jardin, foret, bord de route, ville, nuit, test)
 - ⚖️ Assistant de calibration inter-canaux pour micros EM272
 - 📊 VU-metres en temps reel via SSE

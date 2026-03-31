@@ -86,6 +86,7 @@ Raspberry Pi 5 + SSD
 - 🎙️ Auto-detection of USB audio devices with one-click selection
 - 🎚️ **Adaptive gain** — noise floor estimation, clip guard, activity hold, observer/apply modes
 - 🔇 **Bandpass + denoise** — lowpass filter (4-15 kHz), spectral gating (noisereduce), all toggleable per profile
+- 👁️ **Filter preview** — before/after spectrograms from live mic to visualize filter effects
 - 🎛️ 6 environment profiles (garden, forest, roadside, urban, night, test)
 - ⚖️ Inter-channel calibration wizard for dual EM272 microphones
 - 📊 Real-time VU meters via SSE

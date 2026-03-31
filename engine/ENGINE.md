@@ -248,6 +248,12 @@ All filters degrade gracefully: if scipy or noisereduce is not installed, the fi
 | Spectral gating | `denoise_enabled`, `denoise_strength` | off, 0.5 | noisereduce |
 | RMS normalize | `rms_normalize`, `rms_target` | on, 0.05 | — |
 
+### Filter Preview
+
+The Audio settings page includes a **Preview** button that captures 3 seconds from the microphone, runs the current filter configuration through `engine/filter_preview.py`, and displays side-by-side before/after spectrograms. This lets users see the visual effect of each filter (highpass, lowpass, spectral gating, RMS normalize) without modifying the detection pipeline.
+
+The preview uses the same `apply_filters()` logic as the engine, ensuring what you see matches what the models will receive.
+
 ### Resampling
 
 BirdNET expects 48 kHz, Perch expects 32 kHz. The engine reads at native 48 kHz and resamples for Perch using `resampy` (Kaiser filter).
