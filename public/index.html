@@ -356,7 +356,7 @@ const { createApp, ref, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo,
-        buildAudioUrl, fetchCachedPhoto, shortModel, quickPlaySpecies } = BIRDASH;
+        buildAudioUrl, photoUrl, shortModel, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -465,8 +465,8 @@ const app = createApp({
       lastDet.value.loading = true;
       try {
         const [row] = await birdQuery(`SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model FROM detections ORDER BY Date DESC,Time DESC LIMIT 1`);
-        const photoUrl = row?.Sci_Name ? await fetchCachedPhoto(row.Sci_Name) : null;
-        lastDet.value = { loading:false, row:row||null, photoUrl };
+        const photo = row?.Sci_Name ? photoUrl(row.Sci_Name) : null;
+        lastDet.value = { loading:false, row:row||null, photoUrl: photo };
         // Charger le spectrogramme automatiquement
         if (row?.File_Name) await nextTick().then(loadSpectro);
       } catch(e) { lastDet.value = { loading:false, row:null, photoUrl:null }; }
@@ -494,11 +494,11 @@ const app = createApp({
         }
 
         // Photos + marquage rareté
-        await Promise.all(rows.map(async r => {
-          r.photoUrl  = r.Sci_Name ? await fetchCachedPhoto(r.Sci_Name) : null;
+        rows.forEach(r => {
+          r.photoUrl  = r.Sci_Name ? photoUrl(r.Sci_Name) : null;
           r.totalDet  = rarityMap[r.Com_Name] || 0;
           r.isRare    = r.totalDet > 0 && r.totalDet <= 5;
-        }));
+        });
 
         feed.value = { loading:false, rows };
       } catch(e) { feed.value = { loading:false, rows:[] }; }
@@ -608,9 +608,9 @@ const app = createApp({
            INNER JOIN (SELECT Com_Name, COUNT(*) as total FROM detections GROUP BY Com_Name HAVING total<=5) t
              ON d.Com_Name=t.Com_Name
            WHERE d.Date=? GROUP BY d.Com_Name ORDER BY t.total ASC, n DESC`,[today]);
-        await Promise.all(rows.map(async r => {
-          r.photoUrl = r.Sci_Name ? await fetchCachedPhoto(r.Sci_Name) : null;
-        }));
+        rows.forEach(r => {
+          r.photoUrl = r.Sci_Name ? photoUrl(r.Sci_Name) : null;
+        });
         rareSpeciesToday.value = rows;
       } catch(e) {}
     }

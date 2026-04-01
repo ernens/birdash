@@ -623,7 +623,7 @@ function encodeWav(pcm, sr) {
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames, useFilterConfidence,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
-        localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, fetchCachedPhoto,
+        localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, photoUrl,
         navigateTo } = BIRDASH;
 
 // PCM brut conservé entre loadDetection et applyClean (non réactif)

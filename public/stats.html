@@ -181,7 +181,7 @@
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         useFilterPeriod, useFilterConfidence, buildWhereClause,
-        birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, fetchCachedPhoto, quickPlaySpecies } = BIRDASH;
+        birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, photoUrl, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
@@ -253,17 +253,9 @@ const app = createApp({
       } catch(e) {}
     }
 
-    async function loadPhotosFor(targetRef, rows) {
-      const seen = new Set();
-      const tasks = rows.filter(r => { const s = r.Sci_Name; if (!s || seen.has(s)) return false; seen.add(s); return true; });
-      for (let i = 0; i < tasks.length; i += 4) {
-        await Promise.all(tasks.slice(i, i + 4).map(async r => {
-          const url = await fetchCachedPhoto(r.Sci_Name);
-          rows.forEach(d => { if (d.Sci_Name === r.Sci_Name) d.photoUrl = url; });
-        }));
-        // Force Vue reactivity
-        targetRef.value = { ...targetRef.value, rows: [...rows] };
-      }
+    function loadPhotosFor(targetRef, rows) {
+      rows.forEach(r => { r.photoUrl = photoUrl(r.Sci_Name); });
+      targetRef.value = { ...targetRef.value, rows: [...rows] };
     }
 
     async function loadTopCount() {

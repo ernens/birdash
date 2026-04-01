@@ -202,7 +202,7 @@ const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
         birdQuery, fmtDate, fmtTime, fmtConf,
         localDateStr, daysAgo, getUrlParam, navigateTo,
-        fetchCachedPhoto, buildAudioUrl, shortModel } = BIRDASH;
+        photoUrl, buildAudioUrl, shortModel } = BIRDASH;
 
 // Directive v-click-outside pour fermer le dropdown
 const vClickOutside = {
@@ -415,22 +415,10 @@ const app = createApp({
       loading.value = false;
     }
 
-    async function loadPhotos(data) {
-      const seen=new Set();
-      const tasks=data.filter(r => {
-        if (!r.Sci_Name || seen.has(r.Sci_Name)) return false;
-        seen.add(r.Sci_Name); return true;
-      });
-      for (let i=0; i<tasks.length; i+=5) {
-        await Promise.all(tasks.slice(i,i+5).map(async r => {
-          const url = await fetchCachedPhoto(r.Sci_Name);
-          data.forEach(d => { if (d.Sci_Name===r.Sci_Name) d.photoUrl=url; });
-        }));
-        // Forcer Vue à recalculer uniqueRows (les spreads {...src[i]} ne voient pas
-        // les mutations postérieures sur les objets originaux)
-        if (uniqueMode.value) {
-          allUniqueRows.value = [...allUniqueRows.value];
-        }
+    function loadPhotos(data) {
+      data.forEach(r => { r.photoUrl = photoUrl(r.Sci_Name); });
+      if (uniqueMode.value) {
+        allUniqueRows.value = [...allUniqueRows.value];
       }
     }
 

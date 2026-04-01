@@ -505,7 +505,7 @@ const app = createApp({
     function sqlInClause(arr) {
       return arr.map(() => '?').join(',');
     }
-    function photoUrl(sci) { return sci ? BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sci) : ''; }
+    // photoUrl imported from BIRDASH
     function zeroPad(n) { return n < 10 ? '0' + n : '' + n; }
     function fmtTimeFull(t) { return t ? t.substring(0, 5) : '—'; }
     function toggleAudioFile(fileName) {
