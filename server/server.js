@@ -102,6 +102,15 @@ async function writeBirdnetConf(updates) {
     }
     return line;
   });
+  // Append keys that weren't already in the file
+  for (const key of Object.keys(updates)) {
+    if (!written.has(key)) {
+      const val = updates[key];
+      const needsQuote = /[\s#"'$]/.test(String(val));
+      result.push(needsQuote ? `${key}="${val}"` : `${key}=${val}`);
+      written.add(key);
+    }
+  }
   // Write via temp file + sudo cp
   const tmpFile = '/tmp/birdnet.conf.tmp';
   await fsp.writeFile(tmpFile, result.join('\n'));
