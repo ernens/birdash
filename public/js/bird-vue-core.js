@@ -2448,6 +2448,7 @@
     freshnessLabel:   U.freshnessLabel,
     buildAudioUrl:    U.buildAudioUrl,
     fetchSpeciesImage:U.fetchSpeciesImage,
+    photoUrl: U.photoUrl,
     fetchCachedPhoto: U.fetchCachedPhoto,
     getUrlParam:      U.getUrlParam,
     navigateTo:       U.navigateTo,

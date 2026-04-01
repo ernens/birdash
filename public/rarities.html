@@ -268,9 +268,8 @@ const app = createApp({
                   ROUND(MAX(Confidence)*100,1) as max_conf
            FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING n<=?
            ORDER BY last_date DESC, n ASC`,[conf,maxDet]);
-        rows.forEach(r => { r.photoUrl = null; });
+        assignPhotos(rows, 'sci');
         table.value = { loading:false, rows };
-        loadPhotosFor(rows, 'sci');
       } catch(e) { table.value = { loading:false, rows:[] }; }
     }
 
