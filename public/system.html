@@ -119,6 +119,16 @@
                 {{health.temp}}°C
               </span>
             </div>
+            <div v-if="health.fan" class="sys-row">
+              <span class="sys-label">{{t('sys_fan')}}</span>
+              <span class="sys-value" style="display:flex;align-items:center;gap:.4rem;">
+                <div class="health-bar"><div class="health-fill" :style="{width: health.fan.percent+'%'}" :class="health.fan.percent === 0 ? 'bar-ok' : health.fan.percent > 75 ? 'bar-danger' : health.fan.percent > 40 ? 'bar-warn' : 'bar-ok'"></div></div>
+                <span class="health-pct">{{health.fan.percent}}%</span>
+              </span>
+            </div>
+            <div v-if="health.fan" class="sys-row" style="padding-left:1rem;">
+              <span class="sys-label" style="font-size:.72rem;color:var(--text-faint);">{{health.fan.rpm}} RPM</span>
+            </div>
             <div class="sys-row">
               <span class="sys-label">{{t('sys_uptime')}}</span>
               <span class="sys-value">{{fmtUptime(health.uptime)}}</span>
@@ -1046,7 +1056,7 @@ const app = createApp({
 
     // ── Health tab state ──────────────────────────────────────────
     const api   = ref({ loading:true, error:null, latency:0, total:0 });
-    const health = ref({ loading:true, error:null, cpu:{usage:0,cores:0}, ram:{used:0,total:0,pct:0}, disk:{used:0,total:0,pct:0}, temp:0, uptime:0, loadAvg:'' });
+    const health = ref({ loading:true, error:null, cpu:{usage:0,cores:0}, ram:{used:0,total:0,pct:0}, disk:{used:0,total:0,pct:0}, temp:0, fan:null, uptime:0, loadAvg:'' });
     const services = ref({ loading:true, error:null, list:[], refreshAt:'' });
     const hw = ref({ loading:true, error:null, piModel:'', cpuFreq:0, ramTotal:0, disks:[], soundCards:[], usbDevices:[] });
     const svcExpanded = ref(null);
@@ -1072,6 +1082,7 @@ const app = createApp({
           ram: { used: d.memory && d.memory.used || 0, total: d.memory && d.memory.total || 0, pct: d.memory && d.memory.percent || 0 },
           disk: { used: d.disk && d.disk.used || 0, total: d.disk && d.disk.total || 0, pct: d.disk && d.disk.percent || 0 },
           temp: d.temperature || 0,
+          fan: d.fan || null,
           uptime: d.uptime || 0,
           loadAvg: Array.isArray(d.loadAvg) ? d.loadAvg.map(v => v.toFixed(2)).join(', ') : ''
         };

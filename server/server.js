@@ -21,6 +21,7 @@ try {
 }
 
 const https = require('https');
+const SunCalc = require('suncalc');
 
 // --- Configuration
 const PORT      = process.env.BIRDASH_PORT || 7474;
@@ -60,8 +61,16 @@ const _birdengine = path.join(process.env.HOME, 'birdengine');
 const _hasModels = (dir) => { try { return fs.readdirSync(path.join(dir, 'models')).some(f => f.endsWith('.tflite')); } catch { return false; } };
 const BIRDNET_DIR = _hasModels(_birdengine) ? _birdengine : _hasModels(_birdashEngine) ? _birdashEngine : _birdengine;
 
-// Parse birdnet.conf → { KEY: value }
+// Parse birdnet.conf → { KEY: value } — cached 60s
+let _birdnetConfCache = null;
+let _birdnetConfTs = 0;
+const BIRDNET_CONF_TTL = 60 * 1000;
+
 async function parseBirdnetConf() {
+  const now = Date.now();
+  if (_birdnetConfCache && (now - _birdnetConfTs) < BIRDNET_CONF_TTL) {
+    return _birdnetConfCache;
+  }
   const raw = await fsp.readFile(BIRDNET_CONF, 'utf8');
   const conf = {};
   for (const line of raw.split('\n')) {
@@ -77,6 +86,8 @@ async function parseBirdnetConf() {
     }
     conf[key] = val;
   }
+  _birdnetConfCache = conf;
+  _birdnetConfTs = now;
   return conf;
 }
 
@@ -265,6 +276,11 @@ const _speciesNamesCache = {}; // lang → { sci: comName }
 let _detectedSpeciesCache = null; // [sci, sci, …]
 let _detectedSpeciesCacheTs = 0;
 const EBIRD_TTL = 3600 * 1000; // 1 heure
+let _whatsNewCache = null, _whatsNewCacheTs = 0;
+const WHATS_NEW_TTL = 5 * 60 * 1000; // 5 minutes
+let _timelineCache = {}, _timelineCacheTs = {};
+const TIMELINE_TTL_TODAY = 2 * 60 * 1000;  // 2 min pour aujourd'hui
+const TIMELINE_TTL_PAST  = 60 * 60 * 1000; // 60 min pour dates passées
 
 // Créer le répertoire cache photos si absent
 if (!fs.existsSync(PHOTO_CACHE_DIR)) {
@@ -338,6 +354,27 @@ async function resolvePhotoUrl(sciName) {
   return null;
 }
 
+// Cache a photo from external URL to disk, returns local path or null
+async function cacheExternalPhoto(sciName, externalUrl, index) {
+  if (!externalUrl) return null;
+  const key = photoCacheKey(sciName);
+  const suffix = index > 0 ? `_${index}` : '';
+  const jpgPath = path.join(PHOTO_CACHE_DIR, `${key}${suffix}.jpg`);
+  // Already cached?
+  try { await fsp.access(jpgPath); return `/birds/api/photo-idx?sci=${encodeURIComponent(sciName)}&idx=${index}`; } catch {}
+  // Download and cache
+  try {
+    const buf = await fetchBuffer(externalUrl);
+    if (buf && buf.length >= 512) {
+      await fsp.writeFile(jpgPath, buf);
+      const metaPath = path.join(PHOTO_CACHE_DIR, `${key}${suffix}.json`);
+      await fsp.writeFile(metaPath, JSON.stringify({ src: externalUrl.includes('inaturalist') ? 'iNaturalist' : 'Wikipedia', original: externalUrl }));
+      return `/birds/api/photo-idx?sci=${encodeURIComponent(sciName)}&idx=${index}`;
+    }
+  } catch(e) { console.error(`[photo-cache] Failed to cache ${sciName}#${index}:`, e.message); }
+  return null;
+}
+
 // ── Scan des MP3 récents ────────────────────────────────────────────────────
 // Retourne la liste des MP3 des dernières 48h, triés par mtime croissant
 async function getRecentMp3s() {
@@ -383,6 +420,8 @@ if (!fs.existsSync(DB_PATH)) {
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)');
+  initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
+  initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
   initDb.pragma('journal_mode = WAL');
   initDb.close();
   console.log('[BIRDASH] Empty birds.db created successfully');
@@ -395,6 +434,13 @@ const db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
 const dbWrite = new Database(DB_PATH, { fileMustExist: true });
 dbWrite.pragma('journal_mode = WAL');
 dbWrite.pragma('busy_timeout = 5000');
+
+// Ensure indexes exist on existing databases
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)');
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)');
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)');
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
 
 console.log(`[BIRDASH] birds.db ouvert : ${DB_PATH}`);
 
@@ -1210,6 +1256,40 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/photo-idx?sci=Pica+pica&idx=0 ──────────────────────────
+  // Serves cached indexed photos (multiple photos per species)
+  if (req.method === 'GET' && pathname === '/api/photo-idx') {
+    const idxParams = new URL(req.url, 'http://localhost').searchParams;
+    const sciName = idxParams.get('sci');
+    const idx = parseInt(idxParams.get('idx') || '0', 10);
+    if (!sciName || !/^[a-zA-Z ]+$/.test(sciName)) {
+      res.writeHead(400); res.end('sci param required'); return;
+    }
+    (async () => {
+      const key = photoCacheKey(sciName);
+      const suffix = idx > 0 ? `_${idx}` : '';
+      const jpgPath = path.join(PHOTO_CACHE_DIR, `${key}${suffix}.jpg`);
+      try {
+        await fsp.access(jpgPath);
+        res.writeHead(200, {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'public, max-age=2592000',
+        });
+        fs.createReadStream(jpgPath).pipe(res);
+      } catch {
+        const fallback = path.join(PHOTO_CACHE_DIR, `${key}.jpg`);
+        try {
+          await fsp.access(fallback);
+          res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000' });
+          fs.createReadStream(fallback).pipe(res);
+        } catch {
+          res.writeHead(404); res.end('photo not found');
+        }
+      }
+    })();
+    return;
+  }
+
   // ── Route : DELETE /api/photo?sci=Pica+pica ─────────────────────────────────
   // Delete cached photo so next GET re-fetches from iNaturalist/Wikipedia
   if (req.method === 'DELETE' && pathname === '/api/photo') {
@@ -1435,6 +1515,15 @@ const server = http.createServer((req, res) => {
           seen.add(key);
           return true;
         });
+
+        // Cache all photos locally and replace external URLs with local ones
+        const cachedPhotos = await Promise.all(
+          result.photos.map(async (p, i) => {
+            const localUrl = await cacheExternalPhoto(sciName, p.url, i);
+            return { url: localUrl || p.url, attr: p.attr, src: p.src };
+          })
+        );
+        result.photos = cachedPhotos;
 
         res.writeHead(200, {
           'Content-Type': 'application/json',
@@ -2040,12 +2129,23 @@ const server = http.createServer((req, res) => {
         const dfParts = dfLine.trim().split(/\s+/);
         const disk = { total: parseInt(dfParts[1]), used: parseInt(dfParts[2]), free: parseInt(dfParts[3]), percent: parseInt(dfParts[4]) };
 
+        // Fan (hwmon number can change across reboots, so we glob)
+        let fan = null;
+        try {
+          const fanDir = fs.readdirSync('/sys/devices/platform/cooling_fan/hwmon/')[0];
+          const base = `/sys/devices/platform/cooling_fan/hwmon/${fanDir}`;
+          const fanRpm = parseInt((await fsp.readFile(`${base}/fan1_input`, 'utf8')).trim());
+          const fanPwm = parseInt((await fsp.readFile(`${base}/pwm1`, 'utf8')).trim());
+          fan = { rpm: fanRpm, percent: Math.round(fanPwm / 255 * 100) };
+        } catch(e) {}
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           cpu: { cores, usage: Math.round(loadAvg[0] / cores * 100) },
           memory: { total: memTotal, used: memUsed, free: memAvail, percent: Math.round(memUsed / memTotal * 100) },
           disk,
           temperature,
+          fan,
           uptime: Math.floor(uptimeSecs),
           loadAvg
         }));
@@ -2053,6 +2153,1006 @@ const server = http.createServer((req, res) => {
         console.error('[system-health]', e.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Route : GET /api/whats-new ────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && pathname === '/api/whats-new') {
+    (async () => {
+      try {
+        // Cache check
+        if (_whatsNewCache && (Date.now() - _whatsNewCacheTs) < WHATS_NEW_TTL) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(_whatsNewCache));
+          return;
+        }
+
+        const DETECTION_RULES_PATH = path.join(__dirname, '..', 'config', 'detection_rules.json');
+        const rules = readJsonFile(DETECTION_RULES_PATH) || {};
+        const conf = await parseBirdnetConf();
+        const lat = parseFloat(conf.LATITUDE || conf.LAT || '0');
+        const lon = parseFloat(conf.LONGITUDE || conf.LON || '0');
+        const hasGPS = lat !== 0 || lon !== 0;
+
+        // ── DB stats ──
+        const dbStats = db.prepare(`
+          SELECT COUNT(DISTINCT Date) as total_days,
+                 MIN(Date) as first_date, MAX(Date) as last_date
+          FROM detections WHERE Date < DATE('now','localtime')
+        `).get();
+        const totalDays = dbStats.total_days || 0;
+
+        // ── Helper ──
+        function buildInsufficientCard(type, level, reason) {
+          return { type, level, active: false, insufficientData: true, insufficientDataReason: reason, data: null, link: null };
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // NIVEAU 1 — ALERTES
+        // ════════════════════════════════════════════════════════════════
+
+        // A1: out_of_season
+        let cardOutOfSeason = { type: 'out_of_season', level: 'alert', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: '/birds/review.html' };
+        try {
+          const oosRules = (rules.rules && rules.rules.out_of_season && rules.rules.out_of_season.species_months) || {};
+          const currentMonth = new Date().getMonth() + 1;
+          const oosSpecies = Object.entries(oosRules)
+            .filter(([, months]) => !months.includes(currentMonth))
+            .map(([sci]) => sci);
+          if (oosSpecies.length > 0) {
+            const placeholders = oosSpecies.map(() => '?').join(',');
+            const oosRows = db.prepare(`
+              SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
+              FROM detections
+              WHERE Date = DATE('now','localtime')
+                AND Sci_Name IN (${placeholders})
+                AND Confidence >= 0.7
+              ORDER BY Confidence DESC LIMIT 5
+            `).all(...oosSpecies);
+            if (oosRows.length > 0) {
+              cardOutOfSeason.active = true;
+              cardOutOfSeason.data = {
+                species: oosRows.map(r => ({
+                  commonName: r.Com_Name, sciName: r.Sci_Name,
+                  confidence: parseFloat(r.Confidence.toFixed(2)),
+                  detectedAt: r.Time ? r.Time.slice(0, 5) : '',
+                  audioFile: r.File_Name
+                })),
+                count: oosRows.length
+              };
+            }
+          }
+        } catch(e) { console.error('[whats-new] out_of_season:', e.message); }
+
+        // A2: activity_spike
+        let cardActivitySpike;
+        if (totalDays < 7) {
+          cardActivitySpike = buildInsufficientCard('activity_spike', 'alert', 'needsWeek');
+        } else {
+          cardActivitySpike = { type: 'activity_spike', level: 'alert', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+          try {
+            const spikeRows = db.prepare(`
+              WITH today AS (
+                SELECT Com_Name, COUNT(*) as count_today
+                FROM detections WHERE Date = DATE('now','localtime')
+                GROUP BY Com_Name
+              ),
+              baseline AS (
+                SELECT Com_Name, ROUND(AVG(daily_count), 1) as avg_7d
+                FROM (
+                  SELECT Com_Name, Date, COUNT(*) as daily_count
+                  FROM detections
+                  WHERE Date BETWEEN DATE('now','localtime','-7 days') AND DATE('now','localtime','-1 day')
+                  GROUP BY Com_Name, Date
+                ) GROUP BY Com_Name
+              )
+              SELECT t.Com_Name, t.count_today, b.avg_7d,
+                     ROUND(t.count_today * 1.0 / b.avg_7d, 1) as ratio
+              FROM today t JOIN baseline b ON t.Com_Name = b.Com_Name
+              WHERE b.avg_7d >= 3 AND t.count_today >= b.avg_7d * 2.0
+              ORDER BY ratio DESC LIMIT 3
+            `).all();
+            if (spikeRows.length > 0) {
+              cardActivitySpike.active = true;
+              cardActivitySpike.data = {
+                species: spikeRows.map(r => ({
+                  commonName: r.Com_Name,
+                  countToday: r.count_today,
+                  avg7d: r.avg_7d,
+                  ratio: r.ratio
+                }))
+              };
+            }
+          } catch(e) { console.error('[whats-new] activity_spike:', e.message); }
+        }
+
+        // A3: species_return
+        let cardSpeciesReturn;
+        if (totalDays < 15) {
+          cardSpeciesReturn = buildInsufficientCard('species_return', 'alert', 'needsTwoWeeks');
+        } else {
+          cardSpeciesReturn = { type: 'species_return', level: 'alert', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+          try {
+            const returnRows = db.prepare(`
+              WITH last AS (
+                SELECT Com_Name, MAX(Date) as last_date
+                FROM detections
+                WHERE Date < DATE('now','localtime') AND Date >= DATE('now','localtime', '-365 days')
+                GROUP BY Com_Name
+              ),
+              today AS (
+                SELECT DISTINCT Com_Name, Sci_Name
+                FROM detections
+                WHERE Date = DATE('now','localtime')
+              )
+              SELECT t.Com_Name, t.Sci_Name, l.last_date as last_seen_before,
+                     CAST(JULIANDAY('now','localtime') - JULIANDAY(l.last_date) AS INTEGER) as absent_days
+              FROM today t
+              JOIN last l ON t.Com_Name = l.Com_Name
+              WHERE CAST(JULIANDAY('now','localtime') - JULIANDAY(l.last_date) AS INTEGER) >= 10
+                AND CAST(JULIANDAY('now','localtime') - JULIANDAY(l.last_date) AS INTEGER) < 180
+              ORDER BY absent_days DESC LIMIT 3
+            `).all();
+            if (returnRows.length > 0) {
+              cardSpeciesReturn.active = true;
+              cardSpeciesReturn.data = {
+                species: returnRows.map(r => ({
+                  commonName: r.Com_Name, sciName: r.Sci_Name,
+                  absentDays: r.absent_days,
+                  lastSeenDate: r.last_seen_before
+                }))
+              };
+            }
+          } catch(e) { console.error('[whats-new] species_return:', e.message); }
+        }
+
+        const alerts = [cardOutOfSeason, cardActivitySpike, cardSpeciesReturn];
+
+        // ════════════════════════════════════════════════════════════════
+        // NIVEAU 2 — PHÉNOLOGIE
+        // ════════════════════════════════════════════════════════════════
+
+        // P1: first_of_year
+        let cardFirstOfYear = { type: 'first_of_year', level: 'phenology', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+        try {
+          const wnYearStart = new Date().getFullYear() + '-01-01';
+          const foyRows = db.prepare(`
+            WITH today AS (
+              SELECT Com_Name, Sci_Name, Confidence,
+                     MIN(Time) as first_time, File_Name
+              FROM detections
+              WHERE Date = DATE('now','localtime') AND Confidence >= 0.75
+              GROUP BY Com_Name
+            ),
+            prior AS (
+              SELECT DISTINCT Com_Name FROM detections
+              WHERE Date >= ? AND Date < DATE('now','localtime')
+            )
+            SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.first_time, t.File_Name
+            FROM today t
+            LEFT JOIN prior p ON t.Com_Name = p.Com_Name
+            WHERE p.Com_Name IS NULL
+            ORDER BY t.first_time ASC LIMIT 5
+          `).all(wnYearStart);
+          if (foyRows.length > 0) {
+            cardFirstOfYear.active = true;
+            cardFirstOfYear.data = {
+              species: foyRows.map(r => ({
+                commonName: r.Com_Name, sciName: r.Sci_Name,
+                firstTimeToday: r.first_time ? r.first_time.slice(0, 5) : '',
+                confidence: parseFloat(parseFloat(r.Confidence).toFixed(2)),
+                audioFile: r.File_Name
+              })),
+              count: foyRows.length
+            };
+          }
+        } catch(e) { console.error('[whats-new] first_of_year:', e.message); }
+
+        // P2: species_streak
+        let cardSpeciesStreak;
+        if (totalDays < 6) {
+          cardSpeciesStreak = buildInsufficientCard('species_streak', 'phenology', 'needsWeek');
+        } else {
+          cardSpeciesStreak = { type: 'species_streak', level: 'phenology', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+          try {
+            const streakRows = db.prepare(`
+              WITH daily_presence AS (
+                SELECT Com_Name, Date as day
+                FROM detections
+                WHERE Date <= DATE('now','localtime')
+                GROUP BY Com_Name, Date
+              ),
+              numbered AS (
+                SELECT Com_Name, day,
+                       JULIANDAY(DATE('now','localtime')) - JULIANDAY(day) as days_ago,
+                       ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY day DESC) as rn
+                FROM daily_presence
+              )
+              SELECT Com_Name, COUNT(*) as streak_days
+              FROM numbered
+              WHERE days_ago = rn - 1
+              GROUP BY Com_Name
+              HAVING COUNT(*) >= 5
+              ORDER BY streak_days DESC LIMIT 3
+            `).all();
+            if (streakRows.length > 0) {
+              cardSpeciesStreak.active = true;
+              cardSpeciesStreak.data = {
+                species: streakRows.map(r => ({
+                  commonName: r.Com_Name,
+                  streakDays: r.streak_days
+                }))
+              };
+            }
+          } catch(e) { console.error('[whats-new] species_streak:', e.message); }
+        }
+
+        // P3: seasonal_peak
+        let cardSeasonalPeak;
+        if (totalDays < 365) {
+          cardSeasonalPeak = buildInsufficientCard('seasonal_peak', 'phenology', 'needsSeason');
+        } else {
+          cardSeasonalPeak = { type: 'seasonal_peak', level: 'phenology', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+          try {
+            const peakRows = db.prepare(`
+              WITH current_week AS (
+                SELECT Com_Name, COUNT(*) as count_this_week
+                FROM detections WHERE Date >= DATE('now','localtime','-7 days')
+                GROUP BY Com_Name
+              ),
+              historical_week AS (
+                SELECT Com_Name, STRFTIME('%W', Date) as week_num,
+                       STRFTIME('%Y', Date) as year, COUNT(*) as count_that_week
+                FROM detections
+                WHERE STRFTIME('%W', Date) = STRFTIME('%W', 'now','localtime')
+                  AND Date < DATE('now','localtime','-7 days')
+                GROUP BY Com_Name, week_num, year
+              ),
+              max_historical AS (
+                SELECT Com_Name, MAX(count_that_week) as max_ever
+                FROM historical_week GROUP BY Com_Name
+              )
+              SELECT c.Com_Name, c.count_this_week, m.max_ever
+              FROM current_week c
+              JOIN max_historical m ON c.Com_Name = m.Com_Name
+              WHERE c.count_this_week >= m.max_ever AND c.count_this_week >= 10
+              ORDER BY c.count_this_week DESC LIMIT 3
+            `).all();
+            if (peakRows.length > 0) {
+              cardSeasonalPeak.active = true;
+              cardSeasonalPeak.data = {
+                species: peakRows.map(r => ({
+                  commonName: r.Com_Name,
+                  countThisWeek: r.count_this_week,
+                  maxEver: r.max_ever
+                }))
+              };
+            }
+          } catch(e) { console.error('[whats-new] seasonal_peak:', e.message); }
+        }
+
+        const phenology = [cardFirstOfYear, cardSpeciesStreak, cardSeasonalPeak];
+
+        // ════════════════════════════════════════════════════════════════
+        // NIVEAU 3 — CONTEXTE DU JOUR
+        // ════════════════════════════════════════════════════════════════
+
+        // C1: dawn_chorus
+        let cardDawnChorus = { type: 'dawn_chorus', level: 'context', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+        if (!hasGPS) {
+          cardDawnChorus.insufficientData = true;
+          cardDawnChorus.insufficientDataReason = 'needsGPS';
+        } else {
+          try {
+            const times = SunCalc.getTimes(new Date(), lat, lon);
+            const sunrise = times.sunrise;
+            const dawnEnd = new Date(sunrise.getTime() + 60 * 60 * 1000);
+            const sunriseTime = sunrise.toTimeString().slice(0, 5) + ':00';
+            const dawnEndTime = dawnEnd.toTimeString().slice(0, 5) + ':00';
+            const chorusRow = db.prepare(`
+              SELECT COUNT(DISTINCT Com_Name) as species_count,
+                     COUNT(*) as detection_count
+              FROM detections
+              WHERE Date = DATE('now','localtime')
+                AND Time BETWEEN ? AND ?
+            `).get(sunriseTime, dawnEndTime);
+            const sunset = times.sunset;
+            cardDawnChorus.active = true;
+            cardDawnChorus.data = {
+              speciesCount: chorusRow.species_count || 0,
+              detectionCount: chorusRow.detection_count || 0,
+              sunriseTime: sunrise.toTimeString().slice(0, 5),
+              sunsetTime: sunset.toTimeString().slice(0, 5),
+              windowEnd: dawnEnd.toTimeString().slice(0, 5)
+            };
+          } catch(e) { console.error('[whats-new] dawn_chorus:', e.message); }
+        }
+
+        // C2: acoustic_quality
+        // Uses per-detection Cutoff to account for different scoring systems
+        // (BirdNET classic 0.7 cutoff vs Perch V2 softmax 0.15 cutoff)
+        // "strong" = confidence >= 2× cutoff (comfortably above threshold)
+        let cardAcousticQuality = { type: 'acoustic_quality', level: 'context', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+        try {
+          const aqRow = db.prepare(`
+            SELECT COUNT(*) as total_detections,
+                   SUM(CASE WHEN Confidence >= Cutoff * 2.0 THEN 1 ELSE 0 END) as strong,
+                   SUM(CASE WHEN Confidence >= Cutoff * 1.5 THEN 1 ELSE 0 END) as acceptable,
+                   ROUND(AVG(Confidence / CASE WHEN Cutoff > 0 THEN Cutoff ELSE 0.15 END), 2) as avg_ratio
+            FROM detections WHERE Date = DATE('now','localtime')
+          `).get();
+          const total = aqRow.total_detections || 0;
+          if (total < 10) {
+            cardAcousticQuality.insufficientData = true;
+            cardAcousticQuality.insufficientDataReason = 'tooEarly';
+          } else {
+            const strong = aqRow.strong || 0;
+            const acceptable = aqRow.acceptable || 0;
+            const strongRate = strong / total;
+            const acceptableRate = acceptable / total;
+            let qualityLevel = 'good';
+            if (acceptableRate < 0.65) qualityLevel = 'poor';
+            else if (strongRate < 0.55) qualityLevel = 'moderate';
+            cardAcousticQuality.active = true;
+            cardAcousticQuality.data = {
+              totalDetections: total,
+              strong,
+              acceptable,
+              acceptanceRate: parseFloat(acceptableRate.toFixed(3)),
+              strongRate: parseFloat(strongRate.toFixed(3)),
+              avgRatio: aqRow.avg_ratio || 0,
+              qualityLevel
+            };
+          }
+        } catch(e) { console.error('[whats-new] acoustic_quality:', e.message); }
+
+        // C3: species_richness
+        let cardSpeciesRichness = { type: 'species_richness', level: 'context', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+        if (totalDays < 28) {
+          cardSpeciesRichness.insufficientData = true;
+          cardSpeciesRichness.insufficientDataReason = 'needsMonth';
+        } else {
+          try {
+            const richRow = db.prepare(`
+              WITH today_richness AS (
+                SELECT COUNT(DISTINCT Com_Name) as today_count
+                FROM detections WHERE Date = DATE('now','localtime')
+              ),
+              historical_avg AS (
+                SELECT ROUND(AVG(species_count), 1) as avg_count
+                FROM (
+                  SELECT Date, COUNT(DISTINCT Com_Name) as species_count
+                  FROM detections
+                  WHERE STRFTIME('%w', Date) = STRFTIME('%w', 'now','localtime')
+                    AND Date BETWEEN DATE('now','localtime','-28 days') AND DATE('now','localtime','-1 day')
+                  GROUP BY Date
+                )
+              )
+              SELECT t.today_count, h.avg_count,
+                     CASE WHEN h.avg_count > 0
+                       THEN ROUND((t.today_count - h.avg_count) * 100.0 / h.avg_count, 0)
+                       ELSE 0 END as delta_pct
+              FROM today_richness t, historical_avg h
+            `).get();
+            const todayCount = richRow.today_count || 0;
+            const avgCount = richRow.avg_count || 0;
+            const deltaPct = richRow.delta_pct || 0;
+            let trend = 'normal';
+            if (deltaPct > 15) trend = 'above';
+            else if (deltaPct < -15) trend = 'below';
+            cardSpeciesRichness.active = true;
+            cardSpeciesRichness.data = {
+              todayCount, historicalAvg: avgCount, deltaPct, trend
+            };
+          } catch(e) { console.error('[whats-new] species_richness:', e.message); }
+        }
+
+        // C4: moon_phase
+        let cardMoonPhase = { type: 'moon_phase', level: 'context', active: true, insufficientData: false, insufficientDataReason: null, data: null, link: null };
+        try {
+          const moonIllum = SunCalc.getMoonIllumination(new Date());
+          const phase = moonIllum.phase;
+          const illumination = parseFloat(moonIllum.fraction.toFixed(2));
+          let phaseName;
+          if (phase <= 0.05 || phase >= 0.95) phaseName = 'new_moon';
+          else if (phase < 0.25) phaseName = 'waxing_crescent';
+          else if (phase < 0.27) phaseName = 'first_quarter';
+          else if (phase < 0.48) phaseName = 'waxing_gibbous';
+          else if (phase < 0.52) phaseName = 'full_moon';
+          else if (phase < 0.73) phaseName = 'waning_gibbous';
+          else if (phase < 0.75) phaseName = 'last_quarter';
+          else phaseName = 'waning_crescent';
+          let migrationContext = 'limited';
+          if (illumination > 0.7) migrationContext = 'favorable';
+          else if (illumination >= 0.3) migrationContext = 'moderate';
+          cardMoonPhase.data = {
+            phase: parseFloat(phase.toFixed(2)),
+            phaseName, illumination, migrationContext
+          };
+        } catch(e) { console.error('[whats-new] moon_phase:', e.message); }
+
+        const context = {
+          dawn_chorus: cardDawnChorus,
+          acoustic_quality: cardAcousticQuality,
+          species_richness: cardSpeciesRichness,
+          moon_phase: cardMoonPhase
+        };
+
+        const result = {
+          generatedAt: new Date().toISOString(),
+          alerts,
+          phenology,
+          context
+        };
+
+        // Cache
+        _whatsNewCache = result;
+        _whatsNewCacheTs = Date.now();
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch(e) {
+        console.error('[whats-new] Error:', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to compute whats-new data' }));
+      }
+    })();
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── Route : GET /api/timeline?date=YYYY-MM-DD ─────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  if (req.method === 'GET' && pathname === '/api/timeline') {
+    (async () => {
+      try {
+        const params = new URL(req.url, 'http://localhost').searchParams;
+        const todayStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        const dateStr = params.get('date') || todayStr;
+        const isToday = dateStr === todayStr;
+
+        // ── Cache check ──
+        const ttl = isToday ? TIMELINE_TTL_TODAY : TIMELINE_TTL_PAST;
+        if (_timelineCache[dateStr] && (Date.now() - (_timelineCacheTs[dateStr] || 0)) < ttl) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(_timelineCache[dateStr]));
+          return;
+        }
+
+        // ── Astronomy ──
+        const conf = await parseBirdnetConf();
+        const lat = parseFloat(conf.LATITUDE || conf.LAT || '0');
+        const lon = parseFloat(conf.LONGITUDE || conf.LON || '0');
+        const hasGPS = lat !== 0 || lon !== 0;
+
+        let astronomy = {};
+        if (hasGPS) {
+          const d = new Date(dateStr + 'T12:00:00Z');
+          const times = SunCalc.getTimes(d, lat, lon);
+          const moon = SunCalc.getMoonIllumination(d);
+          const toDecimal = dt => dt.getHours() + dt.getMinutes() / 60 + dt.getSeconds() / 3600;
+          const fmt = dt => dt.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
+          astronomy = {
+            astronomicalDawn: toDecimal(times.nightEnd),
+            nauticalDawn:     toDecimal(times.nauticalDawn),
+            civilDawn:        toDecimal(times.dawn),
+            sunrise:          toDecimal(times.sunrise),
+            solarNoon:        toDecimal(times.solarNoon),
+            sunset:           toDecimal(times.sunset),
+            civilDusk:        toDecimal(times.dusk),
+            nauticalDusk:     toDecimal(times.nauticalDusk),
+            astronomicalDusk: toDecimal(times.night),
+            moonPhase:        moon.phase,
+            moonIllumination: moon.fraction,
+            sunriseStr:       fmt(times.sunrise),
+            sunsetStr:        fmt(times.sunset),
+          };
+        }
+
+        // ── Detection rules ──
+        const DETECTION_RULES_PATH_TL = path.join(__dirname, '..', 'config', 'detection_rules.json');
+        const rules = readJsonFile(DETECTION_RULES_PATH_TL) || {};
+        const nocturnalSpecies = (rules.rules?.nocturnal_day?.species) || [];
+        const outOfSeasonMap = (rules.rules?.out_of_season?.species_months) || {};
+
+        // ── Basic stats ──
+        const statsRow = db.prepare(`
+          SELECT COUNT(*) as totalDetections,
+                 COUNT(DISTINCT Com_Name) as totalSpecies
+          FROM detections WHERE Date = ?
+        `).get(dateStr);
+
+        // ── Density (48 half-hour slots) ──
+        const densityRows = db.prepare(`
+          SELECT
+            CAST(CAST(SUBSTR(Time,1,2) AS INT) * 2
+              + CASE WHEN CAST(SUBSTR(Time,4,2) AS INT) >= 30 THEN 1 ELSE 0 END
+            AS INT) as slot,
+            COUNT(*) as count
+          FROM detections WHERE Date = ?
+          GROUP BY slot ORDER BY slot
+        `).all(dateStr);
+
+        // ── Events selection ──
+        const events = [];
+        const sunriseTime = hasGPS ? astronomy.sunriseStr : '06:30';
+        const sunriseDecimal = hasGPS ? astronomy.sunrise : 6.5;
+        const sunsetDecimal = hasGPS ? astronomy.sunset : 19.5;
+
+        // 1. Nocturnal species
+        if (nocturnalSpecies.length > 0) {
+          const placeholders = nocturnalSpecies.map(() => '?').join(',');
+          const noctRows = db.prepare(`
+            SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                   MIN(Time) as Time, File_Name
+            FROM detections
+            WHERE Date = ?
+              AND (CAST(SUBSTR(Time,1,2) AS INT) < 6 OR CAST(SUBSTR(Time,1,2) AS INT) >= 21)
+              AND Confidence >= 0.75
+              AND Sci_Name IN (${placeholders})
+            GROUP BY Com_Name
+            ORDER BY MIN(Time) ASC
+          `).all(dateStr, ...nocturnalSpecies);
+          for (const r of noctRows) {
+            const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+            events.push({
+              id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+              type: 'nocturnal', time: r.Time.substr(0, 5),
+              timeDecimal: h + m / 60,
+              commonName: r.Com_Name, sciName: r.Sci_Name,
+              confidence: r.Confidence,
+              tags: ['nocturnal'],
+              photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+              photoFallback: '🦉',
+              audioFile: r.File_Name,
+              priority: 2,
+            });
+          }
+        }
+
+        // 2. Out-of-season species
+        const currentMonth = new Date(dateStr).getMonth() + 1;
+        const oosSciNames = Object.keys(outOfSeasonMap).filter(sci => {
+          const months = outOfSeasonMap[sci];
+          return months && !months.includes(currentMonth);
+        });
+        if (oosSciNames.length > 0) {
+          const ph = oosSciNames.map(() => '?').join(',');
+          const oosRows = db.prepare(`
+            SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                   MIN(Time) as Time, File_Name
+            FROM detections
+            WHERE Date = ? AND Sci_Name IN (${ph}) AND Confidence >= 0.7
+            GROUP BY Com_Name ORDER BY Confidence DESC
+          `).all(dateStr, ...oosSciNames);
+          for (const r of oosRows) {
+            if (events.some(e => e.sciName === r.Sci_Name)) continue;
+            const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+            events.push({
+              id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+              type: 'out_of_season', time: r.Time.substr(0, 5),
+              timeDecimal: h + m / 60,
+              commonName: r.Com_Name, sciName: r.Sci_Name,
+              confidence: r.Confidence,
+              tags: ['out_of_season'],
+              photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+              photoFallback: '⚠️',
+              audioFile: r.File_Name,
+              priority: 1,
+            });
+          }
+        }
+
+        // 3. Rare species (seen ≤3 times in past year)
+        const rareRows = db.prepare(`
+          WITH hist AS (
+            SELECT Com_Name, COUNT(*) as cnt
+            FROM detections
+            WHERE Date < ? AND Date >= DATE(?, '-365 days')
+            GROUP BY Com_Name
+          ),
+          today AS (
+            SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                   MIN(Time) as Time, File_Name
+            FROM detections
+            WHERE Date = ? AND Confidence >= 0.80
+            GROUP BY Com_Name
+          )
+          SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name,
+                 COALESCE(h.cnt, 0) as historical_count
+          FROM today t
+          LEFT JOIN hist h ON t.Com_Name = h.Com_Name
+          WHERE COALESCE(h.cnt, 0) <= 3
+          ORDER BY t.Confidence DESC
+          LIMIT 5
+        `).all(dateStr, dateStr, dateStr);
+        for (const r of rareRows) {
+          if (events.some(e => e.sciName === r.Sci_Name)) continue;
+          const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+            type: 'rare', time: r.Time.substr(0, 5),
+            timeDecimal: h + m / 60,
+            commonName: r.Com_Name, sciName: r.Sci_Name,
+            confidence: r.Confidence,
+            tags: ['rare'],
+            photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+            photoFallback: '⭐',
+            audioFile: r.File_Name,
+            priority: 1,
+          });
+        }
+
+        // 4. First of the year
+        const yearStart = dateStr.substring(0, 4) + '-01-01';
+        const foyRows = db.prepare(`
+          WITH today AS (
+            SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                   MIN(Time) as Time, File_Name
+            FROM detections
+            WHERE Date = ? AND Confidence >= 0.75
+            GROUP BY Com_Name
+          ),
+          prior AS (
+            SELECT DISTINCT Com_Name FROM detections
+            WHERE Date >= ? AND Date < ?
+          )
+          SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name
+          FROM today t
+          LEFT JOIN prior p ON t.Com_Name = p.Com_Name
+          WHERE p.Com_Name IS NULL
+          ORDER BY t.Time ASC
+          LIMIT 5
+        `).all(dateStr, yearStart, dateStr);
+        for (const r of foyRows) {
+          if (events.some(e => e.sciName === r.Sci_Name)) continue;
+          const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+            type: 'firstyear', time: r.Time.substr(0, 5),
+            timeDecimal: h + m / 60,
+            commonName: r.Com_Name, sciName: r.Sci_Name,
+            confidence: r.Confidence,
+            tags: ['firstyear'],
+            photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+            photoFallback: '🪶',
+            audioFile: r.File_Name,
+            priority: 2,
+          });
+        }
+
+        // 5. First diurnal detection of the day
+        const firstDiurnal = db.prepare(`
+          SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
+          FROM detections
+          WHERE Date = ? AND Time >= ? AND Confidence >= 0.8
+          ORDER BY Time ASC LIMIT 1
+        `).get(dateStr, sunriseTime);
+        if (firstDiurnal && !events.some(e => e.sciName === firstDiurnal.Sci_Name && e.time === firstDiurnal.Time.substr(0, 5))) {
+          const h = parseInt(firstDiurnal.Time.substr(0, 2)), m = parseInt(firstDiurnal.Time.substr(3, 2));
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_${firstDiurnal.Time.replace(/:/g, '')}_${firstDiurnal.Sci_Name.replace(/ /g, '-')}`,
+            type: 'firstday', time: firstDiurnal.Time.substr(0, 5),
+            timeDecimal: h + m / 60,
+            commonName: firstDiurnal.Com_Name, sciName: firstDiurnal.Sci_Name,
+            confidence: firstDiurnal.Confidence,
+            tags: ['firstday'],
+            photoUrl: `/birds/api/photo?sci=${encodeURIComponent(firstDiurnal.Sci_Name)}`,
+            photoFallback: '🐦',
+            audioFile: firstDiurnal.File_Name,
+            priority: 3,
+          });
+        }
+
+        // 6. Best detection of the day
+        const bestDet = db.prepare(`
+          SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
+          FROM detections
+          WHERE Date = ? ORDER BY Confidence DESC LIMIT 1
+        `).get(dateStr);
+        if (bestDet && !events.some(e => e.sciName === bestDet.Sci_Name && e.time === bestDet.Time.substr(0, 5))) {
+          const h = parseInt(bestDet.Time.substr(0, 2)), m = parseInt(bestDet.Time.substr(3, 2));
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_${bestDet.Time.replace(/:/g, '')}_${bestDet.Sci_Name.replace(/ /g, '-')}`,
+            type: 'best', time: bestDet.Time.substr(0, 5),
+            timeDecimal: h + m / 60,
+            commonName: bestDet.Com_Name, sciName: bestDet.Sci_Name,
+            confidence: bestDet.Confidence,
+            tags: ['best'],
+            photoUrl: `/birds/api/photo?sci=${encodeURIComponent(bestDet.Sci_Name)}`,
+            photoFallback: '🎵',
+            audioFile: bestDet.File_Name,
+            priority: 3,
+          });
+        }
+
+        // 7. Species return (absent >= 10 days, back today)
+        try {
+          const returnRows = db.prepare(`
+            WITH last AS (
+              SELECT Com_Name, MAX(Date) as last_date
+              FROM detections
+              WHERE Date < ? AND Date >= DATE(?, '-90 days')
+              GROUP BY Com_Name
+            ),
+            today AS (
+              SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                     MIN(Time) as Time, File_Name
+              FROM detections
+              WHERE Date = ? AND Confidence >= 0.7
+              GROUP BY Com_Name
+            )
+            SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name,
+                   l.last_date as last_seen
+            FROM today t
+            JOIN last l ON t.Com_Name = l.Com_Name
+            WHERE l.last_date <= DATE(?, '-10 days')
+            ORDER BY t.Confidence DESC
+            LIMIT 5
+          `).all(dateStr, dateStr, dateStr, dateStr);
+          for (const r of returnRows) {
+            if (events.some(e => e.sciName === r.Sci_Name)) continue;
+            const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+            const absentDays = r.last_seen ? Math.round((new Date(dateStr) - new Date(r.last_seen)) / 86400000) : 0;
+            events.push({
+              id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+              type: 'species_return', time: r.Time.substr(0, 5),
+              timeDecimal: h + m / 60,
+              commonName: r.Com_Name, sciName: r.Sci_Name,
+              confidence: r.Confidence,
+              tags: ['species_return'],
+              photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+              photoFallback: '🔄',
+              audioFile: r.File_Name,
+              priority: 2, absentDays,
+            });
+          }
+        } catch(e) { console.error('[timeline species_return]', e.message); }
+
+        // 8. Activity spike (species with 2x+ their daily average today)
+        try {
+          const spikeRows = db.prepare(`
+            WITH today AS (
+              SELECT Com_Name, Sci_Name, COUNT(*) as today_count,
+                     MIN(Time) as Time, MAX(Confidence) as Confidence, File_Name
+              FROM detections
+              WHERE Date = ? AND Confidence >= 0.7
+              GROUP BY Com_Name
+            ),
+            baseline AS (
+              SELECT Com_Name,
+                     CAST(COUNT(*) AS FLOAT) / COUNT(DISTINCT Date) as avg_count
+              FROM detections
+              WHERE Date < ? AND Date >= DATE(?, '-30 days')
+              GROUP BY Com_Name
+            )
+            SELECT t.Com_Name, t.Sci_Name, t.today_count, b.avg_count,
+                   ROUND(CAST(t.today_count AS FLOAT) / b.avg_count, 1) as ratio,
+                   t.Time, t.Confidence, t.File_Name
+            FROM today t
+            JOIN baseline b ON t.Com_Name = b.Com_Name
+            WHERE b.avg_count >= 2 AND t.today_count >= b.avg_count * 2
+            ORDER BY ratio DESC
+            LIMIT 3
+          `).all(dateStr, dateStr, dateStr);
+          for (const r of spikeRows) {
+            if (events.some(e => e.sciName === r.Sci_Name)) continue;
+            const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+            events.push({
+              id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+              type: 'activity_spike', time: r.Time.substr(0, 5),
+              timeDecimal: h + m / 60,
+              commonName: r.Com_Name, sciName: r.Sci_Name,
+              confidence: r.Confidence,
+              tags: ['activity_spike'],
+              photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+              photoFallback: '📈',
+              audioFile: r.File_Name,
+              priority: 3, spikeRatio: r.ratio,
+            });
+          }
+        } catch(e) { console.error('[timeline activity_spike]', e.message); }
+
+        // 9. Dawn chorus — top species detected in first hour after sunrise
+        if (hasGPS) {
+          try {
+            const chorusEnd = `${String(Math.floor(sunriseDecimal + 1)).padStart(2, '0')}:${String(Math.round(((sunriseDecimal + 1) % 1) * 60)).padStart(2, '0')}`;
+            const chorusRows = db.prepare(`
+              SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
+                     MIN(Time) as Time, File_Name
+              FROM detections
+              WHERE Date = ? AND Time >= ? AND Time <= ? AND Confidence >= 0.75
+              GROUP BY Com_Name
+              ORDER BY MIN(Time) ASC
+              LIMIT 5
+            `).all(dateStr, sunriseTime, chorusEnd);
+            for (const r of chorusRows) {
+              if (events.some(e => e.sciName === r.Sci_Name)) continue;
+              const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+              events.push({
+                id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+                type: 'firstday', time: r.Time.substr(0, 5),
+                timeDecimal: h + m / 60,
+                commonName: r.Com_Name, sciName: r.Sci_Name,
+                confidence: r.Confidence,
+                tags: ['firstday'],
+                photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+                photoFallback: '🐦',
+                audioFile: r.File_Name,
+                priority: 3,
+              });
+            }
+          } catch(e) { console.error('[timeline dawn_chorus]', e.message); }
+        }
+
+        // 10. Top species — fill gaps with most-detected species of the day
+        const MAX_BIRD_EVENTS = 12;
+        if (events.length < MAX_BIRD_EVENTS) {
+          try {
+            const topRows = db.prepare(`
+              SELECT Com_Name, Sci_Name, COUNT(*) as n, MIN(Time) as Time,
+                     MAX(Confidence) as Confidence, File_Name
+              FROM detections
+              WHERE Date = ? AND Confidence >= 0.7
+              GROUP BY Com_Name
+              ORDER BY COUNT(*) DESC
+              LIMIT 12
+            `).all(dateStr);
+            for (const r of topRows) {
+              if (events.length >= MAX_BIRD_EVENTS) break;
+              if (events.some(e => e.sciName === r.Sci_Name)) continue;
+              const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
+              events.push({
+                id: `evt_${dateStr.replace(/-/g, '')}_${r.Time.replace(/:/g, '')}_${r.Sci_Name.replace(/ /g, '-')}`,
+                type: 'top_species', time: r.Time.substr(0, 5),
+                timeDecimal: h + m / 60,
+                commonName: r.Com_Name, sciName: r.Sci_Name,
+                confidence: r.Confidence,
+                tags: ['top_species'],
+                photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+                photoFallback: '🐦',
+                audioFile: r.File_Name,
+                priority: 3, detectionCount: r.n,
+              });
+            }
+          } catch(e) { console.error('[timeline top_species]', e.message); }
+        }
+
+        // ── Add astronomical events ──
+        if (hasGPS) {
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_sunrise`,
+            type: 'astro', time: astronomy.sunriseStr,
+            timeDecimal: astronomy.sunrise,
+            commonName: 'Lever du soleil', sciName: '',
+            confidence: 1, tags: [], photoFallback: '🌅',
+            isAstro: true, priority: 0,
+          });
+          events.push({
+            id: `evt_${dateStr.replace(/-/g, '')}_sunset`,
+            type: 'astro', time: astronomy.sunsetStr,
+            timeDecimal: astronomy.sunset,
+            commonName: 'Coucher du soleil', sciName: '',
+            confidence: 1, tags: [], photoFallback: '🌇',
+            isAstro: true, priority: 0,
+          });
+        }
+
+        // ── Clustering: group ≥3 events within 30 min window ──
+        const sortedEvents = events.filter(e => !e.isAstro).sort((a, b) => a.timeDecimal - b.timeDecimal);
+        const clusters = [];
+        let i = 0;
+        while (i < sortedEvents.length) {
+          let j = i + 1;
+          while (j < sortedEvents.length && sortedEvents[j].timeDecimal - sortedEvents[i].timeDecimal < 0.5) {
+            j++;
+          }
+          const group = sortedEvents.slice(i, j);
+          // Only cluster non-P1 events
+          const p1Events = group.filter(e => e.priority === 1);
+          const clusterableEvents = group.filter(e => e.priority > 1);
+          if (clusterableEvents.length >= 3) {
+            // Keep P1 events standalone, cluster the rest
+            p1Events.forEach(e => clusters.push(e));
+            const avgTime = clusterableEvents.reduce((s, e) => s + e.timeDecimal, 0) / clusterableEvents.length;
+            const h = Math.floor(avgTime), m = Math.round((avgTime - h) * 60);
+            clusters.push({
+              id: `cluster_${dateStr.replace(/-/g, '')}_${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`,
+              type: 'cluster',
+              time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+              timeDecimal: avgTime,
+              count: clusterableEvents.length,
+              species: clusterableEvents.map(e => ({ commonName: e.commonName, sciName: e.sciName, type: e.type, photoFallback: e.photoFallback, photoUrl: e.photoUrl, confidence: e.confidence, time: e.time, tags: e.tags })),
+              colors: clusterableEvents.map(e => {
+                const typeColors = { nocturnal: '#818cf8', rare: '#f43f5e', firstyear: '#fbbf24', firstday: '#34d399', best: '#60a5fa' };
+                return typeColors[e.type] || '#8b949e';
+              }),
+              priority: 3,
+            });
+          } else {
+            group.forEach(e => clusters.push(e));
+          }
+          i = j;
+        }
+
+        // Re-add astro events
+        const astroEvents = events.filter(e => e.isAstro);
+        const allEvents = [...clusters, ...astroEvents].sort((a, b) => a.timeDecimal - b.timeDecimal);
+
+        // ── Assign above/below positions ──
+        let lastPos = 'below';
+        for (const ev of allEvents) {
+          if (ev.isAstro || ev.type === 'cluster') continue;
+          if (ev.priority === 1) {
+            ev.position = 'above';
+          } else {
+            ev.position = lastPos === 'above' ? 'below' : 'above';
+          }
+          lastPos = ev.position;
+          ev.vOff = 62 + Math.floor(Math.random() * 28);
+        }
+
+        // ── Notable count ──
+        const notableCount = allEvents.filter(e => !e.isAstro && e.type !== 'cluster' && e.priority <= 2).length;
+
+        // ── Navigation ──
+        const prevRow = db.prepare(`SELECT MAX(Date) as prev_date FROM detections WHERE Date < ?`).get(dateStr);
+        const nextRow = db.prepare(`SELECT MIN(Date) as next_date FROM detections WHERE Date > ?`).get(dateStr);
+
+        // ── Moon phase name ──
+        let moonPhaseName = '';
+        if (hasGPS) {
+          const p = astronomy.moonPhase;
+          if (p < 0.0625) moonPhaseName = 'new_moon';
+          else if (p < 0.1875) moonPhaseName = 'waxing_crescent';
+          else if (p < 0.3125) moonPhaseName = 'first_quarter';
+          else if (p < 0.4375) moonPhaseName = 'waxing_gibbous';
+          else if (p < 0.5625) moonPhaseName = 'full_moon';
+          else if (p < 0.6875) moonPhaseName = 'waning_gibbous';
+          else if (p < 0.8125) moonPhaseName = 'last_quarter';
+          else if (p < 0.9375) moonPhaseName = 'waning_crescent';
+          else moonPhaseName = 'new_moon';
+        }
+
+        const result = {
+          date: dateStr,
+          meta: {
+            totalDetections: statsRow?.totalDetections || 0,
+            totalSpecies: statsRow?.totalSpecies || 0,
+            notableCount,
+            sunrise: hasGPS ? astronomy.sunriseStr : null,
+            sunset: hasGPS ? astronomy.sunsetStr : null,
+            sunriseDecimal: hasGPS ? astronomy.sunrise : null,
+            sunsetDecimal: hasGPS ? astronomy.sunset : null,
+            moonPhase: hasGPS ? astronomy.moonPhase : null,
+            moonIllumination: hasGPS ? astronomy.moonIllumination : null,
+            moonPhaseName,
+            isToday,
+            hasPrevDay: !!prevRow?.prev_date,
+            hasNextDay: !!nextRow?.next_date,
+            astronomy: hasGPS ? astronomy : null,
+          },
+          events: allEvents,
+          density: densityRows,
+          navigation: {
+            prevDate: prevRow?.prev_date || null,
+            nextDate: nextRow?.next_date || null,
+          },
+        };
+
+        _timelineCache[dateStr] = result;
+        _timelineCacheTs[dateStr] = Date.now();
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (e) {
+        console.error('[timeline] Error:', e.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to compute timeline data' }));
       }
     })();
     return;

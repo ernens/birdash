@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <title>BIRDASH — Timeline</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" crossorigin="anonymous"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+</head>
+<body>
+<div id="app">
+  <birdash-shell page="timeline" :title="t('tl_title')">
+
+    <!-- Header with navigation -->
+    <div class="tl-page-header">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <button class="tp-nav-btn" :disabled="!data?.navigation?.prevDate" @click="navigateDay(-1)">‹</button>
+        <h1>{{formatDate(selectedDate)}}</h1>
+        <button class="tp-nav-btn" :disabled="!data?.navigation?.nextDate" @click="navigateDay(1)">›</button>
+        <input type="date" v-model="selectedDate" @change="load" :max="todayStr"
+               style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-main);border-radius:6px;padding:4px 8px;font-size:.82rem;" />
+        <button v-if="viewStart !== 0 || viewEnd !== 24" class="tp-nav-btn tl-reset-btn" @click="resetZoom()">↺ 24h</button>
+        <span v-if="viewStart !== 0 || viewEnd !== 24" style="font-size:.8rem;color:var(--text-muted);">
+          {{String(Math.floor(viewStart)).padStart(2,'0')}}:{{String(Math.round((viewStart%1)*60)).padStart(2,'0')}}
+          — {{String(Math.floor(viewEnd)).padStart(2,'0')}}:{{String(Math.round((viewEnd%1)*60)).padStart(2,'0')}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="tl-stats-row" v-if="data">
+      <span><strong>{{data.meta.totalSpecies}}</strong> {{t('tl_species')}}</span>
+      <span><strong>{{data.meta.totalDetections}}</strong> {{t('tl_detections')}}</span>
+      <span v-if="data.meta.sunrise">🌅 {{data.meta.sunrise}}</span>
+      <span v-if="data.meta.sunset">🌇 {{data.meta.sunset}}</span>
+      <span v-if="data.meta.moonPhaseName">{{moonIcon(data.meta.moonPhaseName)}} {{t('wn_moon_'+data.meta.moonPhaseName)}}</span>
+    </div>
+
+    <!-- Filters -->
+    <div class="tl-filters" v-if="data">
+      <button v-for="tp in eventTypes" :key="tp" class="tl-filter-btn"
+              :class="{active: activeFilters.includes(tp)}" @click="toggleFilter(tp)">
+        {{t('tl_type_'+tp)}}
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div class="tp-loading" v-if="loading">
+      <span class="tp-spinner">⟳</span> {{t('tl_loading')}}
+    </div>
+
+    <template v-if="data && !loading">
+      <!-- Density bar — click to zoom, double-click to reset -->
+      <div class="tp-density-label">{{t('tl_density_label')}} <span style="font-size:.7rem;color:var(--text-faint);margin-left:.5rem;">{{t('tl_drag_hint')}}</span></div>
+      <div class="tl-density-zone" ref="densityWrapRef" @click="onDensityClick" @dblclick.prevent="resetZoom">
+        <div style="position:relative;">
+          <canvas ref="densityRef" height="36" style="width:100%;display:block;border-radius:3px;cursor:pointer;"></canvas>
+          <div v-if="viewStart !== 0 || viewEnd !== 24" class="tl-density-view"
+               :style="{left: (viewStart/24*100)+'%', width: ((viewEnd-viewStart)/24*100)+'%'}"></div>
+        </div>
+      </div>
+
+      <!-- Sky timeline -->
+      <div class="tp-scroll" ref="scrollRef" style="margin:0 0 .5rem;">
+        <div class="tp-inner" ref="innerRef">
+          <canvas ref="skyRef" class="tp-sky-canvas"></canvas>
+          <canvas ref="starsRef" class="tp-stars-canvas"></canvas>
+          <div class="tp-ground" style="height:64px;"></div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="tl-legend">
+        <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#818cf8"></div>{{t('tl_tag_nocturnal')}}</div>
+        <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#f43f5e"></div>{{t('tl_tag_rare')}}</div>
+        <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fbbf24"></div>{{t('tl_tag_firstyear')}}</div>
+        <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#34d399"></div>{{t('tl_tag_firstday')}}</div>
+        <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa"></div>{{t('tl_tag_best')}}</div>
+      </div>
+
+      <!-- Chronological event list -->
+      <div class="tl-event-list" v-if="filteredEvents.length">
+        <h3>{{t('tl_chronology')}}</h3>
+        <div v-for="ev in filteredEvents" :key="ev.id" class="tl-event-row" @click="openPopup(ev)">
+          <div class="tl-er-time">{{ev.time}}</div>
+          <div class="tl-er-photo">
+            <img v-if="ev.photoUrl" :src="ev.photoUrl" :alt="ev.commonName"
+                 @error="$event.target.style.display='none'" />
+            <span v-if="!ev.photoUrl">{{ev.photoFallback}}</span>
+          </div>
+          <div>
+            <span class="tl-er-name">{{ev.commonName}}</span>
+            <span class="tl-er-sci">{{ev.sciName}}</span>
+          </div>
+          <div class="tl-er-tags">
+            <span v-for="tag in ev.tags" :key="tag" class="tl-er-tag">{{t('tl_tag_'+tag) || tag}}</span>
+          </div>
+          <div class="tl-er-conf">{{Math.round(ev.confidence * 100)}}%</div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Popup -->
+    <div class="tl-popup-overlay" v-if="popupEvent" @click.self="popupEvent = null">
+      <div class="tl-popup">
+        <button class="tl-popup-close" @click="popupEvent = null">✕</button>
+        <div class="tl-popup-header">
+          <div class="tl-popup-photo">
+            <img v-if="popupEvent.photoUrl" :src="popupEvent.photoUrl" :alt="popupEvent.commonName"
+                 @error="$event.target.style.display='none'" />
+            <span v-if="!popupEvent.photoUrl">{{popupEvent.photoFallback}}</span>
+          </div>
+          <div>
+            <div class="tl-popup-name">{{popupEvent.commonName}}</div>
+            <div class="tl-popup-sci">{{popupEvent.sciName}}</div>
+            <div class="tl-popup-time">🕐 {{popupEvent.time}}</div>
+          </div>
+        </div>
+        <div class="tl-popup-tags">
+          <span v-for="tag in popupEvent.tags" :key="tag" class="tl-popup-tag"
+            {{t('tl_tag_'+tag)}}
+          </span>
+        </div>
+        <div class="tl-popup-conf">{{t('tl_confidence')}} : <span>{{Math.round(popupEvent.confidence * 100)}}%</span></div>
+        <div class="tl-popup-actions">
+          <button class="tl-popup-btn" @click="quickPlay(popupEvent.commonName)">▶ {{t('tl_listen')}}</button>
+          <button class="tl-popup-btn" @click="navigateTo('species.html',{species:popupEvent.commonName})">🔬 {{t('tl_see_species')}}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cluster popup -->
+    <div class="tl-popup-overlay" v-if="clusterPopup" @click.self="clusterPopup = null">
+      <div class="tl-popup" style="max-width:360px;">
+        <button class="tl-popup-close" @click="clusterPopup = null">✕</button>
+        <div style="font-weight:600;margin-bottom:.75rem;">🕐 {{clusterPopup.time}} — {{clusterPopup.count}} {{t('tl_detections')}}</div>
+        <div v-for="sp in clusterPopup.species" :key="sp.sciName"
+             class="tl-event-row" style="border-radius:8px;padding:.5rem .6rem;cursor:pointer;"
+             @click="clusterPopup = null; openPopup(sp)">
+          <div class="tl-er-photo">
+            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="sp.commonName"
+                 @error="$event.target.style.display='none'" />
+            <span v-if="!sp.photoUrl">{{sp.photoFallback}}</span>
+          </div>
+          <div style="flex:1;">
+            <span class="tl-er-name">{{sp.commonName}}</span>
+            <span class="tl-er-sci" v-if="sp.sciName">{{sp.sciName}}</span>
+          </div>
+          <div class="tl-er-conf" v-if="sp.confidence">{{Math.round(sp.confidence * 100)}}%</div>
+        </div>
+      </div>
+    </div>
+
+  </birdash-shell>
+</div>
+
+<script>
+const SKY_H = 420;
+// Dynamic: px-per-hour adapts to fill the scroll container for the visible range
+let _viewStart = 0, _viewEnd = 24;
+let _scrollW = 900; // updated at render time
+function PX_PER_HOUR() {
+  const span = _viewEnd - _viewStart;
+  if (span <= 0) return 140;
+  // Fill container width, with a minimum of 60 px/h for readability
+  return Math.max(60, _scrollW / span);
+}
+function TOTAL_W() { return (_viewEnd - _viewStart) * PX_PER_HOUR(); }
+
+const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+const { useI18n, useTheme, useNav, navigateTo, photoUrl, quickPlaySpecies } = BIRDASH;
+
+const app = createApp({
+  setup() {
+    const { lang, t } = useI18n();
+    useTheme();
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const params = new URLSearchParams(window.location.search);
+    const selectedDate = ref(params.get('date') || todayStr);
+    const data = ref(null);
+    const loading = ref(false);
+    const viewStart = ref(0);
+    const viewEnd = ref(24);
+    const popupEvent = ref(null);
+    const clusterPopup = ref(null);
+    const activeFilters = ref([]);
+    const eventTypes = ['nocturnal','rare','firstyear','firstday','best','out_of_season'];
+
+    // Click-to-zoom: click on density bar → zoom to 4h window, dblclick → reset
+    let _clickTimer = null;
+    function onDensityClick(e) {
+      // Delay single click to let dblclick fire first
+      if (_clickTimer) return;
+      _clickTimer = setTimeout(() => {
+        _clickTimer = null;
+        const canvas = densityRef.value;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        const clickHour = pct * 24;
+        // If already zoomed, zoom deeper (halve the window), else start with 4h
+        const currentSpan = viewEnd.value - viewStart.value;
+        const newSpan = currentSpan >= 22 ? 4 : Math.max(1, currentSpan / 2);
+        const newStart = Math.max(0, Math.round((clickHour - newSpan / 2) * 2) / 2);
+        const newEnd = Math.min(24, newStart + newSpan);
+        viewStart.value = newStart;
+        viewEnd.value = newEnd;
+        _viewStart = newStart;
+        _viewEnd = newEnd;
+        render();
+      }, 250);
+    }
+    function resetZoom() {
+      if (_clickTimer) { clearTimeout(_clickTimer); _clickTimer = null; }
+      viewStart.value = 0;
+      viewEnd.value = 24;
+      _viewStart = 0;
+      _viewEnd = 24;
+      render();
+    }
+
+    const scrollRef = ref(null);
+    const innerRef = ref(null);
+    const skyRef = ref(null);
+    const starsRef = ref(null);
+    const densityRef = ref(null);
+    const densityWrapRef = ref(null);
+
+    function toggleFilter(type) {
+      const idx = activeFilters.value.indexOf(type);
+      if (idx >= 0) activeFilters.value.splice(idx, 1);
+      else activeFilters.value.push(type);
+    }
+
+    const filteredEvents = computed(() => {
+      if (!data.value) return [];
+      let evts = data.value.events.filter(e => !e.isAstro && e.type !== 'cluster');
+      if (activeFilters.value.length > 0) {
+        evts = evts.filter(e => activeFilters.value.includes(e.type));
+      }
+      return evts.sort((a, b) => a.timeDecimal - b.timeDecimal);
+    });
+
+    function formatDate(d) {
+      return new Date(d + 'T12:00:00').toLocaleDateString(lang.value, { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    }
+
+    function moonIcon(phaseName) {
+      const icons = { new_moon:'\uD83C\uDF11', waxing_crescent:'\uD83C\uDF12', first_quarter:'\uD83C\uDF13',
+        waxing_gibbous:'\uD83C\uDF14', full_moon:'\uD83C\uDF15', waning_gibbous:'\uD83C\uDF16',
+        last_quarter:'\uD83C\uDF17', waning_crescent:'\uD83C\uDF18' };
+      return icons[phaseName] || '\uD83C\uDF15';
+    }
+
+    // ── Sky rendering (same as prototype, parameterized) ──
+    function hexLerp(c1, c2, t) {
+      t = Math.max(0, Math.min(1, t));
+      const p = s => parseInt(s, 16);
+      const r = Math.round(p(c1.slice(1,3)) + (p(c2.slice(1,3)) - p(c1.slice(1,3))) * t);
+      const g = Math.round(p(c1.slice(3,5)) + (p(c2.slice(3,5)) - p(c1.slice(3,5))) * t);
+      const b = Math.round(p(c1.slice(5,7)) + (p(c2.slice(5,7)) - p(c1.slice(5,7))) * t);
+      return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    }
+
+    function getSkyStops(A) {
+      return [
+        { h:0,          top:'#010308', bot:'#020510' },
+        { h:A.astroDawn, top:'#020612', bot:'#060d20' },
+        { h:A.nautDawn,  top:'#08112e', bot:'#180e28' },
+        { h:A.civilDawn, top:'#122050', bot:'#5a2a18' },
+        { h:A.sunrise,   top:'#1a3570', bot:'#d4601a' },
+        { h:A.sunrise+.5,top:'#2b5090', bot:'#e8a030' },
+        { h:A.sunrise+1, top:'#3a70b8', bot:'#c8d0e0' },
+        { h:10,          top:'#3a7cc8', bot:'#7ab8e0' },
+        { h:14,          top:'#3a7cc8', bot:'#7ab8e0' },
+        { h:A.sunset-1,  top:'#3470b0', bot:'#c0c8d8' },
+        { h:A.sunset-.5, top:'#2a5090', bot:'#e09030' },
+        { h:A.sunset,    top:'#1e3870', bot:'#d06018' },
+        { h:A.civilDusk, top:'#142050', bot:'#6a2040' },
+        { h:A.nautDusk,  top:'#0a1530', bot:'#200d28' },
+        { h:A.astroDusk, top:'#030818', bot:'#050d20' },
+        { h:24,          top:'#010308', bot:'#020510' },
+      ];
+    }
+
+    function getSkyColors(h, stops) {
+      for (let i = 1; i < stops.length; i++) {
+        if (h <= stops[i].h) {
+          const t = (h - stops[i-1].h) / (stops[i].h - stops[i-1].h);
+          return [hexLerp(stops[i-1].top, stops[i].top, t), hexLerp(stops[i-1].bot, stops[i].bot, t)];
+        }
+      }
+      return ['#010308','#020510'];
+    }
+
+    function hourToX(h) { return (h - _viewStart) * PX_PER_HOUR(); }
+
+    function drawSky(canvas, A) {
+      canvas.width = TOTAL_W(); canvas.height = SKY_H;
+      const ctx = canvas.getContext('2d');
+      const stops = getSkyStops(A);
+      const STEP = 3;
+      for (let x = 0; x < TOTAL_W(); x += STEP) {
+        const h = _viewStart + x / PX_PER_HOUR();
+        const [top, bot] = getSkyColors(h, stops);
+        const g = ctx.createLinearGradient(0, 0, 0, SKY_H);
+        g.addColorStop(0, top); g.addColorStop(.65, bot); g.addColorStop(1, 'rgba(0,0,0,0.6)');
+        ctx.fillStyle = g; ctx.fillRect(x, 0, STEP, SKY_H);
+      }
+      [{cx:(A.civilDawn+A.sunrise+.3)/2, color:'rgba(255,130,20,0.22)', rx:PX_PER_HOUR()*1.2},
+       {cx:(A.sunset-.2+A.civilDusk)/2,  color:'rgba(255,90,10,0.22)',  rx:PX_PER_HOUR()*1.2}
+      ].forEach(({cx,color,rx}) => {
+        const px = hourToX(cx);
+        const g = ctx.createRadialGradient(px, SKY_H, 0, px, SKY_H, rx*1.8);
+        g.addColorStop(0, color); g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.fillRect(px-rx*2, 0, rx*4, SKY_H);
+      });
+    }
+
+    function drawStars(canvas, A) {
+      canvas.width = TOTAL_W(); canvas.height = SKY_H;
+      const ctx = canvas.getContext('2d');
+      const stops = getSkyStops(A);
+      // Generate stars in hour-space (0-24) then convert to px
+      let seed = 137;
+      const rng = () => { seed = (seed*1664525+1013904223)>>>0; return seed/0xffffffff; };
+      const stars = Array.from({length:320}, () => ({
+        hour: rng()*24, y: rng()*SKY_H*.68, r: .35+rng()*1.15, warm: rng()>.72
+      }));
+      stars.forEach(s => {
+        if (s.hour < _viewStart || s.hour > _viewEnd) return;
+        const x = hourToX(s.hour);
+        const h = s.hour;
+        let alpha = 0;
+        if (h < A.astroDawn || h > A.astroDusk) alpha = .6 + (s.r/1.5)*.35;
+        else if (h < A.nautDawn) alpha = (.6+(s.r/1.5)*.35)*(1-(h-A.astroDawn)/(A.nautDawn-A.astroDawn)*.75);
+        else if (h < A.civilDawn) alpha = .18*(1-(h-A.nautDawn)/(A.civilDawn-A.nautDawn));
+        else if (h > A.nautDusk) alpha = .18*(h-A.nautDusk)/(A.astroDusk-A.nautDusk)*.8;
+        else if (h > A.civilDusk) alpha = .18*(h-A.civilDusk)/(A.nautDusk-A.civilDusk)*.5;
+        if (alpha < .008) return;
+        const col = s.warm ? `rgba(255,240,210,${alpha})` : `rgba(210,225,255,${alpha})`;
+        ctx.beginPath(); ctx.arc(x, s.y, s.r, 0, Math.PI*2);
+        ctx.fillStyle = col; ctx.fill();
+        if (s.r > 1 && alpha > .35) {
+          const g = ctx.createRadialGradient(x, s.y, 0, x, s.y, s.r*3.5);
+          g.addColorStop(0, `rgba(200,215,255,${alpha*.28})`); g.addColorStop(1, 'transparent');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, s.y, s.r*3.5, 0, Math.PI*2); ctx.fill();
+        }
+      });
+      // Moon
+      if (data.value?.meta?.moonPhase != null && 22.5 >= _viewStart && 22.5 <= _viewEnd) {
+        const mx = hourToX(22.5), my = SKY_H*.2, mr = 11;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,252,225,.92)';
+        ctx.shadowColor = 'rgba(255,250,180,.55)'; ctx.shadowBlur = 22; ctx.fill();
+        ctx.shadowBlur = 0;
+        const phase = data.value.meta.moonPhase;
+        const off = (phase < .5 ? phase*2 - 1 : 1 - (phase-.5)*2) * mr;
+        ctx.beginPath(); ctx.arc(mx + off*.6, my, mr*.86, 0, Math.PI*2);
+        const [nt] = getSkyColors(22.5, stops);
+        ctx.fillStyle = nt; ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function buildDensityBar(canvas) {
+      if (!data.value || !canvas) return;
+      const density = new Array(48).fill(0);
+      (data.value.density || []).forEach(s => { if (s.slot >= 0 && s.slot < 48) density[s.slot] = s.count; });
+      const A = data.value.meta?.astronomy || { civilDawn:5.5, sunrise:6.5, sunset:19.5, civilDusk:20.5 };
+      const w = densityWrapRef.value ? densityWrapRef.value.clientWidth : 800;
+      canvas.width = w; canvas.height = 36;
+      const ctx = canvas.getContext('2d');
+      const sw = w / 48, maxD = Math.max(...density, 1);
+      density.forEach((d, i) => {
+        const norm = d / maxD, x = i * sw, h = Math.max(1, norm * 32);
+        const hour = i / 2;
+        let col;
+        if (hour < A.civilDawn || hour > A.civilDusk) col = `rgba(129,140,248,${.2+norm*.65})`;
+        else if (hour < A.sunrise+.75 || hour > A.sunset-.75) col = `rgba(251,146,60,${.28+norm*.6})`;
+        else col = `rgba(96,165,250,${.18+norm*.65})`;
+        ctx.fillStyle = col;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x+1, 36-h, sw-2, h, [2,2,0,0]); ctx.fill(); }
+        else { ctx.fillRect(x+1, 36-h, sw-2, h); }
+      });
+      // Hour labels on density bar
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      for (let h = 0; h <= 24; h += 3) {
+        ctx.fillText(String(h).padStart(2, '0'), h/24*w, 10);
+      }
+    }
+
+    function buildMarkers(inner, events) {
+      if (!inner) return;
+      inner.querySelectorAll('.tl-hour-tick,.tl-astro-marker,.tl-now-cursor,.tl-event-marker,.tl-cluster-marker,.tp-baseline,.tl-conf-line').forEach(el => el.remove());
+
+      const bl = document.createElement('div');
+      bl.className = 'tp-baseline'; bl.style.bottom = '72px'; inner.appendChild(bl);
+
+      // Compute confidence range — logarithmic scale to spread events toward center
+      const minBot = 90, maxBot = SKY_H - 100; // generous margins top & bottom
+      const realEvents = (events || []).filter(ev => !ev.isAstro && ev.type !== 'cluster' && ev.confidence);
+      const confs = realEvents.map(e => e.confidence).sort((a, b) => a - b);
+      const cMin = confs.length ? confs[0] : 0.5;
+      const cMax = confs.length ? confs[confs.length - 1] : 1;
+      const cRange = cMax - cMin;
+      const confToY = (c) => {
+        if (cRange < 0.01) return Math.round((minBot + maxBot) / 2);
+        const norm = (c - cMin) / cRange; // 0..1
+        // Logarithmic: compress extremes, spread the middle
+        const log = Math.log1p(norm * 9) / Math.log(10); // log1p(0)=0, log1p(9)=1
+        return Math.round(minBot + log * (maxBot - minBot));
+      };
+      // Guide lines at min, mid, max confidence
+      if (confs.length > 1) {
+        [cMin, confs[Math.floor(confs.length / 2)], cMax].forEach(c => {
+          const y = confToY(c);
+          const line = document.createElement('div');
+          line.className = 'tl-conf-line';
+          line.style.bottom = y + 'px';
+          line.innerHTML = `<span>${Math.round(c*100)}%</span>`;
+          inner.appendChild(line);
+        });
+      }
+
+      const span = _viewEnd - _viewStart;
+      const isZoomed = span < 22;
+      const isDeepZoom = span <= 6;
+
+      // Adaptive tick interval: 1h for 24h, 30min for <12h, 15min for <4h
+      const tickStep = span <= 4 ? 0.25 : span <= 12 ? 0.5 : 1;
+      const startH = Math.ceil(_viewStart / tickStep) * tickStep;
+      for (let h = startH; h <= _viewEnd; h += tickStep) {
+        const tick = document.createElement('div');
+        tick.className = 'tl-hour-tick';
+        const x = hourToX(h);
+        tick.style.left = x + 'px';
+        tick.style.bottom = '60px';
+        const mins = Math.round((h % 1) * 60);
+        const label = `${String(Math.floor(h)%24).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+        const isMajor = h === Math.floor(h);
+        tick.innerHTML = `<div class="tick-line" style="height:${isMajor ? '100%' : '50%'};opacity:${isMajor ? .6 : .25}"></div><div class="tick-label" style="opacity:${isMajor ? .9 : .5};font-size:${isMajor ? '.82rem' : '.68rem'};font-weight:${isMajor ? '600' : '400'}">${label}</div>`;
+        inner.appendChild(tick);
+      }
+
+      // Now cursor
+      if (data.value?.meta?.isToday) {
+        const now = new Date();
+        const nowH = now.getHours() + now.getMinutes() / 60;
+        if (nowH >= _viewStart && nowH <= _viewEnd) {
+          const cursor = document.createElement('div');
+          cursor.className = 'tl-now-cursor';
+          cursor.style.left = hourToX(nowH) + 'px';
+          cursor.style.bottom = '56px'; cursor.style.height = (SKY_H - 50) + 'px';
+          cursor.setAttribute('data-label', t('tl_now'));
+          inner.appendChild(cursor);
+        }
+      }
+
+      const typeColors = {
+        nocturnal:'#818cf8', rare:'#f43f5e', firstyear:'#fbbf24',
+        firstday:'#34d399', best:'#60a5fa', out_of_season:'#f97316',
+        species_return:'#a78bfa', activity_spike:'#fb923c', top_species:'#8b949e',
+      };
+
+      // When deep-zoomed, expand clusters into individual events
+      const visibleEvents = (events || []).filter(ev => {
+        const t = ev.timeDecimal;
+        return t >= _viewStart && t <= _viewEnd;
+      });
+
+      visibleEvents.forEach(ev => {
+        const x = hourToX(ev.timeDecimal);
+
+        // Astro markers
+        if (ev.isAstro) {
+          const el = document.createElement('div');
+          const isSunrise = ev.timeDecimal < 12;
+          el.className = `tl-astro-marker ${isSunrise ? 'sunrise' : 'sunset'}`;
+          el.style.left = x + 'px';
+          // SVG sun with rays
+          const sunSvg = `<svg class="a-sun" viewBox="0 0 80 80" width="44" height="44">
+            <defs>
+              <radialGradient id="sg${isSunrise?'r':'s'}"><stop offset="0%" stop-color="${isSunrise?'#fff7cc':'#ffe0a0'}"/><stop offset="50%" stop-color="${isSunrise?'#fbbf24':'#fb923c'}"/><stop offset="100%" stop-color="${isSunrise?'#f59e0b':'#ea580c'}"/></radialGradient>
+            </defs>
+            ${Array.from({length:12},(_,i)=>{const a=i*30*Math.PI/180;const x1=40+Math.cos(a)*22,y1=40+Math.sin(a)*22,x2=40+Math.cos(a)*36,y2=40+Math.sin(a)*36;return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isSunrise?'#fbbf24':'#fb923c'}" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`}).join('')}
+            <circle cx="40" cy="40" r="18" fill="url(#sg${isSunrise?'r':'s'})"/>
+            <circle cx="40" cy="40" r="14" fill="${isSunrise?'#fde68a':'#fed7aa'}" opacity=".5"/>
+          </svg>`;
+          el.innerHTML = `${sunSvg}<div class="a-line"></div><div class="a-label">${ev.commonName}<br><strong>${ev.time}</strong></div>`;
+          inner.appendChild(el);
+          return;
+        }
+
+        // Clusters: when deep-zoomed, auto-expand; otherwise show bubble
+        if (ev.type === 'cluster') {
+          if (isDeepZoom && ev.species) {
+            // Expand cluster into individual markers
+            ev.species.forEach((sp, idx) => {
+              const offsetH = idx * 0.08; // slight horizontal spread
+              const sx = hourToX(ev.timeDecimal + offsetH);
+              const sel = document.createElement('div');
+              const scolor = typeColors[sp.type] || '#8b949e';
+              const spConf = sp.confidence || 0.5;
+              const spY = confToY(spConf);
+              const spLabel = spY > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
+              sel.className = `tl-event-marker ${spLabel}`;
+              sel.style.color = scolor; sel.style.left = sx + 'px';
+              sel.style.bottom = spY + 'px';
+              const sPhotoContent = sp.photoUrl
+                ? `<img src="${sp.photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%">${sp.photoFallback||''}</span>`
+                : sp.photoFallback || '';
+              sel.innerHTML = `
+                <div class="tl-marker-photo" style="width:44px;height:44px;">${sPhotoContent}</div>
+                <div class="tl-marker-connector"></div>
+                <div class="tl-marker-label">
+                  <div class="tl-ml-name" style="color:${scolor}">${sp.commonName}</div>
+                  <div class="tl-ml-conf">${Math.round((sp.confidence||0)*100)}%</div>
+                </div>`;
+              sel.addEventListener('click', () => openPopup(sp));
+              inner.appendChild(sel);
+            });
+            return;
+          }
+          const el = document.createElement('div');
+          el.className = 'tl-cluster-marker'; el.style.left = x + 'px';
+          const dots = (ev.colors||[]).slice(0,5).map(c => `<div class="tl-cluster-dot" style="background:${c}"></div>`).join('');
+          el.innerHTML = `<div class="tl-cluster-bubble"><div class="tl-cluster-dots">${dots}</div><span>+${ev.count}</span></div>`;
+          el.addEventListener('click', () => { clusterPopup.value = ev; });
+          inner.appendChild(el);
+          return;
+        }
+
+        // Regular event markers — vertical position mapped to confidence
+        const el = document.createElement('div');
+        const color = typeColors[ev.type] || '#8b949e';
+        const conf = ev.confidence || 0.5;
+        const confBot = confToY(conf);
+        // Label below if marker is in top third, above otherwise
+        const labelPos = confBot > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
+        el.className = `tl-event-marker ${labelPos}`;
+        el.style.color = color; el.style.left = x + 'px';
+        el.style.bottom = confBot + 'px';
+        const tagHtml = (ev.tags||[]).map(tag =>
+          `<span class="tl-ml-tag" style="background:${color}28;color:${color}">${t('tl_tag_'+tag) || tag}</span>`
+        ).join('');
+
+        // Larger photos when zoomed
+        const photoSize = isDeepZoom ? 48 : 36;
+        const photoContent = ev.photoUrl
+          ? `<img src="${ev.photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%">${ev.photoFallback||''}</span>`
+          : ev.photoFallback || '';
+
+        // Enriched label with confidence when deep zoomed
+        const confHtml = isDeepZoom && ev.confidence ? `<div class="tl-ml-conf">${Math.round(ev.confidence*100)}%</div>` : '';
+        const sciHtml = isDeepZoom && ev.sciName ? `<div class="tl-ml-sci">${ev.sciName}</div>` : '';
+
+        el.innerHTML = `
+          <div class="tl-marker-photo" style="width:${photoSize}px;height:${photoSize}px;">${photoContent}</div>
+          <div class="tl-marker-connector"></div>
+          <div class="tl-marker-label">
+            <div class="tl-ml-time">${ev.time}</div>
+            <div class="tl-ml-name" style="color:${color}">${ev.commonName}</div>
+            ${sciHtml}${confHtml}
+            <div style="margin-top:3px">${tagHtml}</div>
+          </div>`;
+        el.addEventListener('click', () => openPopup(ev));
+        inner.appendChild(el);
+      });
+    }
+
+    async function load() {
+      loading.value = true;
+      // Reset zoom on new day
+      viewStart.value = 0; viewEnd.value = 24;
+      _viewStart = 0; _viewEnd = 24;
+      try {
+        const r = await fetch(`${BIRD_CONFIG.apiUrl}/timeline?date=${selectedDate.value}`);
+        if (!r.ok) return;
+        const json = await r.json();
+        if (!json || json.error) return;
+        data.value = json;
+        window.history.replaceState(null, '', `?date=${selectedDate.value}`);
+      } catch(e) {
+        console.error('[timeline]', e);
+      } finally {
+        loading.value = false;
+        // Wait for DOM to update after loading=false, then render canvas
+        await nextTick();
+        try { render(); } catch(e) { console.error('[timeline render]', e); }
+      }
+    }
+
+    function render() {
+      if (!data.value?.meta?.astronomy) return;
+      // Measure scroll container width for px-per-hour calculation
+      if (scrollRef.value) _scrollW = scrollRef.value.clientWidth;
+      _viewStart = viewStart.value;
+      _viewEnd = viewEnd.value;
+
+      const A = {
+        astroDawn: data.value.meta.astronomy.astronomicalDawn,
+        nautDawn:  data.value.meta.astronomy.nauticalDawn,
+        civilDawn: data.value.meta.astronomy.civilDawn,
+        sunrise:   data.value.meta.astronomy.sunrise,
+        sunset:    data.value.meta.astronomy.sunset,
+        civilDusk: data.value.meta.astronomy.civilDusk,
+        nautDusk:  data.value.meta.astronomy.nauticalDusk,
+        astroDusk: data.value.meta.astronomy.astronomicalDusk,
+      };
+      if (skyRef.value) drawSky(skyRef.value, A);
+      if (starsRef.value) drawStars(starsRef.value, A);
+      if (densityRef.value) buildDensityBar(densityRef.value);
+      if (innerRef.value) {
+        innerRef.value.style.width = TOTAL_W() + 'px';
+        innerRef.value.style.height = SKY_H + 'px';
+        buildMarkers(innerRef.value, data.value.events);
+      }
+      // No auto-scroll when zoomed — user selected the range
+      if (scrollRef.value) {
+        scrollRef.value.scrollLeft = 0;
+      }
+    }
+
+    function navigateDay(dir) {
+      const nav = data.value?.navigation;
+      const target = dir < 0 ? nav?.prevDate : nav?.nextDate;
+      if (target) { selectedDate.value = target; load(); }
+    }
+
+    function openPopup(ev) { popupEvent.value = ev; }
+
+    onMounted(() => load());
+
+    // Polling for today
+    let _timer = null;
+    onMounted(() => {
+      _timer = setInterval(() => {
+        if (selectedDate.value === todayStr) load();
+      }, 3 * 60 * 1000);
+    });
+    onUnmounted(() => { if (_timer) clearInterval(_timer); });
+
+    return {
+      lang, t, data, loading, selectedDate, todayStr,
+      popupEvent, clusterPopup, openPopup, activeFilters, eventTypes, toggleFilter, filteredEvents,
+      formatDate, moonIcon, navigateDay, load,
+      viewStart, viewEnd, resetZoom, onDensityClick,
+      scrollRef, innerRef, skyRef, starsRef, densityRef, densityWrapRef,
+      navigateTo,
+      quickPlay(comName) { quickPlaySpecies(comName); },
+    };
+  }
+});
+BIRDASH.registerComponents(app).mount('#app');
+</script>
+</body>
+</html>

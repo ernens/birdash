@@ -62,9 +62,10 @@ Raspberry Pi 5 + SSD
 
 ### Dashboard
 - 📊 Real-time overview with KPIs, charts, morning summary
+- 🌅 **Timeline** — interactive day timeline with sky gradient, sunrise/sunset SVG markers, click-to-zoom density bar, confidence-based vertical layout, enriched details on deep zoom, event clustering
 - 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
 - 🎧 Detection feed with integrated audio playback
-- 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status
+- 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status, local photo caching
 - 🧬 Biodiversity matrix, Shannon index, taxonomy breakdown
 - 💎 Rare species tracking
 - 📈 Statistics and rankings
@@ -168,7 +169,7 @@ Your dashboard will be available at `http://yourpi.local/birds/`
 ## Tests
 
 ```bash
-# Node.js backend tests (40 tests)
+# Node.js backend tests (46 tests)
 npm test
 
 # Python engine tests (13 tests)
@@ -180,7 +181,7 @@ cd engine && ../engine/venv/bin/python -m unittest test_engine -v
 ```
 birdash/
 ├── server/
-│   └── server.js                  # Node.js API backend (~3500 lines)
+│   └── server.js                  # Node.js API backend (~4700 lines)
 ├── public/                        # Static frontend (Vue 3 CDN)
 │   ├── index.html                 # Dashboard overview
 │   ├── spectrogram.html           # Live spectrogram + clip playback
@@ -188,6 +189,7 @@ birdash/
 │   ├── review.html                # Detection review + auto-flagging
 │   ├── settings.html              # Full settings (6 tabs)
 │   ├── system.html                # System health + terminal
+│   ├── timeline.html              # Interactive timeline with zoom
 │   ├── *.html                     # 9 more pages
 │   ├── js/                        # Config, shared utils, Vue composables
 │   ├── css/                       # Styles + 5 themes

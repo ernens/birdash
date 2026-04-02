@@ -9,6 +9,7 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 ## Funktionen
 
 - 🤖 **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 INT8 parallel
+- 🌅 **Timeline** — interaktive Tages-Timeline mit Himmelsgradient, SVG-Sonnenmarkern, Zoom per Klick auf Dichteleiste, vertikale Anordnung nach Konfidenz, Event-Clustering
 - 🎵 **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
 - 🔍 **Erkennungsuberprufung** — Auto-Flagging + Massenaktionen
 - 🤖 **Modellvergleich** — Seite-an-Seite-Analyse
@@ -51,13 +52,9 @@ Dashboard: `http://ihr-pi.local/birds/`
 ## Tests
 
 ```bash
-npm test                    # 40 Node.js Tests
+npm test                    # 46 Node.js Tests
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python Tests
 ```
-
-## Lizenz
-
-[MIT](LICENSE)
 
 ## Lizenz
 

@@ -51,6 +51,7 @@ const BIRD_CONFIG = {
     { section: 'nav_sec_observe', icon: '👁', items: [
       { id: 'today',        icon: '📅', file: 'today.html'        },
       { id: 'index',        icon: '🦅', file: 'index.html'        },
+      { id: 'timeline',     icon: '🌅', file: 'timeline.html'     },
       { id: 'recent',       icon: '🕐', file: 'recent.html'       },
       { id: 'rarities',     icon: '💎', file: 'rarities.html'     },
       { id: 'species',      icon: '🦜', file: 'species.html'      },

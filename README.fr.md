@@ -47,9 +47,10 @@ Raspberry Pi 5 + SSD
 
 ### Dashboard
 - 📊 Vue d'ensemble avec KPIs, graphiques, resume matinal
+- 🌅 **Timeline** — timeline interactive avec gradient de ciel, marqueurs lever/coucher de soleil SVG, zoom par clic sur la barre de densite, disposition verticale par confiance, details enrichis en zoom profond, clustering d'evenements
 - 🎵 **Spectrogramme live** — audio en temps reel du micro avec noms d'oiseaux
 - 🎧 Fil de detections avec lecture audio integree
-- 🦜 Fiches especes avec photos (iNaturalist + Wikipedia), statut UICN
+- 🦜 Fiches especes avec photos (iNaturalist + Wikipedia), statut UICN, cache photo local
 - 🧬 Matrice biodiversite, indice de Shannon, taxonomie
 - 💎 Suivi des especes rares
 - 📈 Statistiques et classements

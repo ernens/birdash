@@ -28,19 +28,13 @@
         <h2 style="margin:0;font-family:var(--font-display);font-size:1.3rem;color:var(--text-main);">
           {{t('today')}} · {{fmtDateLong(today)}}
         </h2>
-        <div style="font-size:.78rem;color:var(--text-muted);">
-          {{t('filter_confidence')}} : ≥ {{Math.round(minConf*100)}}%
-          &nbsp;·&nbsp;
-          <select class="bird-select" v-model="minConf" @change="loadAll"
-                  style="padding:.15rem .4rem;font-size:.75rem;display:inline-block;width:auto;">
-            <option :value="0">0%</option>
-            <option :value="0.5">50%</option>
-            <option :value="0.7">70%</option>
-            <option :value="0.8">80%</option>
-          </select>
-          &nbsp;·&nbsp;
-          <button class="btn btn-secondary" @click="loadAll"
-                  style="padding:.15rem .6rem;font-size:.75rem;">↺ {{t('loading').replace('…','')}}</button>
+        <div style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.4rem;">
+          {{t('filter_confidence')}} :
+          <input type="range" :min="0" :max="99" :value="Math.round(minConf*100)"
+                 @input="minConf = $event.target.value / 100"
+                 @change="loadAll"
+                 style="width:100px;accent-color:var(--accent);vertical-align:middle;">
+          <span style="min-width:2.2em;text-align:right;">{{Math.round(minConf*100)}}%</span>
         </div>
       </div>
     </div>

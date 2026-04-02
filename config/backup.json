@@ -1,7 +1,8 @@
 {
   "destination": "nfs",
   "content": [
-    "all"
+    "db",
+    "config"
   ],
   "schedule": "daily",
   "scheduleTime": "02:00",
@@ -45,7 +46,7 @@
     "pass": "",
     "remotePath": "/birdash-backup"
   },
-  "lastRun": "2026-03-25T15:19:04.720Z",
+  "lastRun": "2026-03-31T18:56:32.527Z",
   "lastStatus": "success",
   "lastMessage": ""
 }

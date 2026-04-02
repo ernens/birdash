@@ -9,6 +9,7 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 ## Kenmerken
 
 - 🤖 **Dual-model inferentie** — BirdNET V2.4 + Perch V2 INT8 parallel
+- 🌅 **Timeline** — interactieve dagtijdlijn met luchtgradient, SVG-zonmarkeringen, zoom door klik op dichtheidsbalk, verticale positionering op betrouwbaarheid, event-clustering
 - 🎵 **Live spectrogram** — real-time audio met vogelnamen
 - 🔍 **Detectie review** — auto-flagging + bulk acties
 - 🤖 **Model vergelijking** — zij-aan-zij analyse
@@ -51,13 +52,9 @@ Dashboard: `http://jouw-pi.local/birds/`
 ## Tests
 
 ```bash
-npm test                    # 40 Node.js tests
+npm test                    # 46 Node.js tests
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python tests
 ```
-
-## Licentie
-
-[MIT](LICENSE)
 
 ## Licentie
 

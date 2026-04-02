@@ -404,3 +404,55 @@ describe('GET /api/audio/devices', () => {
     assert.ok(Array.isArray(res.json.devices));
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// NEW TESTS — Timeline
+// ══════════════════════════════════════════════════════════════════════════
+
+describe('GET /api/timeline', () => {
+  it('returns valid structure for today', async () => {
+    const res = await request('/api/timeline');
+    assert.equal(res.status, 200);
+    assert.ok(res.json.date);
+    assert.ok(res.json.meta);
+    assert.ok(Array.isArray(res.json.events));
+    assert.ok(Array.isArray(res.json.density));
+    assert.ok(res.json.navigation);
+  });
+
+  it('density slots are in range 0-47', async () => {
+    const res = await request('/api/timeline');
+    assert.equal(res.status, 200);
+    res.json.density.forEach(slot => {
+      assert.ok(slot.slot >= 0 && slot.slot <= 47, `slot ${slot.slot} out of range`);
+      assert.ok(slot.count >= 0, `count ${slot.count} is negative`);
+    });
+  });
+
+  it('each event has required fields', async () => {
+    const res = await request('/api/timeline');
+    assert.equal(res.status, 200);
+    res.json.events.forEach(ev => {
+      assert.ok(ev.type, 'event missing type');
+      assert.ok(typeof ev.timeDecimal === 'number', 'event missing timeDecimal');
+      assert.ok(ev.timeDecimal >= 0 && ev.timeDecimal < 24, `timeDecimal ${ev.timeDecimal} out of range`);
+    });
+  });
+
+  it('accepts date parameter', async () => {
+    const res = await request('/api/timeline?date=2026-01-01');
+    assert.equal(res.status, 200);
+    assert.equal(res.json.date, '2026-01-01');
+  });
+
+  it('meta.hasPrevDay and hasNextDay are booleans', async () => {
+    const res = await request('/api/timeline');
+    assert.equal(typeof res.json.meta.hasPrevDay, 'boolean');
+    assert.equal(typeof res.json.meta.hasNextDay, 'boolean');
+  });
+
+  it('meta.isToday is true for today', async () => {
+    const res = await request('/api/timeline');
+    assert.equal(res.json.meta.isToday, true);
+  });
+});
