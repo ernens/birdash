@@ -53,11 +53,12 @@
   const _TRANSLATIONS = {
     fr: {
       _meta: { lang:'fr', label:'Français', flag:'🇫🇷' },
-      nav_sec_observe:'Observer', nav_sec_explore:'Explorer', nav_sec_insights:'Comprendre', nav_sec_system:'Station',
-      nav_overview:'Vue d\'ensemble', nav_today:'Aujourd\'hui', nav_recent:'Activité', nav_review:'À vérifier',
+      nav_sec_realtime:'En direct', nav_sec_history:'Historique', nav_sec_species:'Espèces', nav_sec_insights:'Analyses', nav_sec_system:'Station',
+      nav_sec_observe:'Observer', nav_sec_explore:'Explorer',
+      nav_overview:'Accueil', nav_today:'Aujourd\'hui', nav_recent:'Activité', nav_review:'À valider',
       nav_detections:'Détections', nav_species:'Espèces',
       nav_biodiversity:'Biodiversité', nav_rarities:'Rarités', nav_stats:'Statistiques',
-      nav_system:'Monitoring', nav_analyses:'Analyses', nav_models:'Modèles', nav_terminal:'Terminal', nav_spectrogram:'Spectrogramme', nav_recordings:'Enregistrements', nav_gallery:'Galerie sonore', nav_settings:'Configuration',
+      nav_system:'Monitoring', nav_analyses:'Analyses', nav_models:'Modèles', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Enregistrements', nav_gallery:'Meilleures captures', nav_settings:'Configuration', nav_timeline:'Calendrier',
       gallery_title:'Galerie sonore', gallery_delete:'Supprimer', gallery_delete_confirm:'Supprimer cette détection et ses fichiers ?', top_detections_per_species:'meilleures détections',
       // Settings page
       set_location:'Localisation', set_site_name:'Nom du site', set_latitude:'Latitude', set_longitude:'Longitude',
@@ -418,11 +419,12 @@
 
     en: {
       _meta: { lang:'en', label:'English', flag:'🇬🇧' },
-      nav_sec_observe:'Observe', nav_sec_explore:'Explore', nav_sec_insights:'Insights', nav_sec_system:'Station',
-      nav_overview:'Overview', nav_today:'Today', nav_recent:'Activity', nav_review:'To verify',
+      nav_sec_realtime:'Live', nav_sec_history:'History', nav_sec_species:'Species', nav_sec_insights:'Insights', nav_sec_system:'Station',
+      nav_sec_observe:'Observe', nav_sec_explore:'Explore',
+      nav_overview:'Home', nav_today:'Today', nav_recent:'Activity', nav_review:'To review',
       nav_detections:'Detections', nav_species:'Species',
       nav_biodiversity:'Biodiversity', nav_rarities:'Rarities', nav_stats:'Statistics',
-      nav_system:'Monitoring', nav_analyses:'Analysis', nav_models:'Models', nav_terminal:'Terminal', nav_spectrogram:'Spectrogram', nav_recordings:'Recordings', nav_gallery:'Sound Gallery', nav_settings:'Configuration',
+      nav_system:'Monitoring', nav_analyses:'Analysis', nav_models:'Models', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Recordings', nav_gallery:'Best catches', nav_settings:'Configuration', nav_timeline:'Calendar',
       gallery_title:'Sound Gallery', gallery_delete:'Delete', gallery_delete_confirm:'Delete this detection and its files?', top_detections_per_species:'top detections',
       set_location:'Location', set_site_name:'Site name', set_latitude:'Latitude', set_longitude:'Longitude',
       set_model:'Detection model', set_model_choice:'AI Model', set_species_freq_thresh:'Species frequency threshold',
@@ -765,11 +767,12 @@
 
     de: {
       _meta: { lang:'de', label:'Deutsch', flag:'🇩🇪' },
-      nav_sec_observe:'Beobachten', nav_sec_explore:'Erkunden', nav_sec_insights:'Verstehen', nav_sec_system:'Station',
-      nav_overview:'Übersicht', nav_today:'Heute', nav_recent:'Aktivität', nav_review:'Zu prüfen',
+      nav_sec_realtime:'Live', nav_sec_history:'Verlauf', nav_sec_species:'Arten', nav_sec_insights:'Analysen', nav_sec_system:'Station',
+      nav_sec_observe:'Beobachten', nav_sec_explore:'Erkunden',
+      nav_overview:'Startseite', nav_today:'Heute', nav_recent:'Aktivität', nav_review:'Zu prüfen',
       nav_detections:'Erkennungen', nav_species:'Arten',
       nav_biodiversity:'Biodiversität', nav_rarities:'Seltenheiten',
-      nav_stats:'Statistiken', nav_system:'Monitoring', nav_analyses:'Analysen', nav_models:'Modelle', nav_terminal:'Terminal', nav_spectrogram:'Spektrogramm', nav_recordings:'Aufnahmen', nav_gallery:'Klanggalerie', nav_settings:'Konfiguration',
+      nav_stats:'Statistiken', nav_system:'Monitoring', nav_analyses:'Analysen', nav_models:'Modelle', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Aufnahmen', nav_gallery:'Beste Aufnahmen', nav_settings:'Konfiguration', nav_timeline:'Kalender',
       gallery_title:'Klanggalerie', gallery_delete:'Löschen', gallery_delete_confirm:'Diese Erkennung und ihre Dateien löschen?', top_detections_per_species:'beste Erkennungen',
       set_location:'Standort', set_site_name:'Standortname', set_latitude:'Breitengrad', set_longitude:'Längengrad',
       set_model:'Erkennungsmodell', set_model_choice:'KI-Modell', set_species_freq_thresh:'Artenhäufigkeitsschwelle',
@@ -1112,11 +1115,12 @@
 
     nl: {
       _meta: { lang:'nl', label:'Nederlands', flag:'🇳🇱' },
-      nav_sec_observe:'Observeren', nav_sec_explore:'Verkennen', nav_sec_insights:'Inzichten', nav_sec_system:'Station',
-      nav_overview:'Overzicht', nav_today:'Vandaag', nav_recent:'Activiteit', nav_review:'Te controleren',
+      nav_sec_realtime:'Live', nav_sec_history:'Geschiedenis', nav_sec_species:'Soorten', nav_sec_insights:'Inzichten', nav_sec_system:'Station',
+      nav_sec_observe:'Observeren', nav_sec_explore:'Verkennen',
+      nav_overview:'Startpagina', nav_today:'Vandaag', nav_recent:'Activiteit', nav_review:'Te controleren',
       nav_detections:'Detecties', nav_species:'Soorten',
       nav_biodiversity:'Biodiversiteit', nav_rarities:'Zeldzaamheden',
-      nav_stats:'Statistieken', nav_system:'Monitoring', nav_analyses:'Analyse', nav_models:'Modellen', nav_terminal:'Terminal', nav_spectrogram:'Spectrogram', nav_recordings:'Opnames', nav_gallery:'Geluidsgalerij', nav_settings:'Configuratie',
+      nav_stats:'Statistieken', nav_system:'Monitoring', nav_analyses:'Analyse', nav_models:'Modellen', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Opnames', nav_gallery:'Beste opnames', nav_settings:'Configuratie', nav_timeline:'Kalender',
       gallery_title:'Geluidsgalerij', gallery_delete:'Verwijderen', gallery_delete_confirm:'Deze detectie en bijbehorende bestanden verwijderen?', top_detections_per_species:'beste detecties',
       set_location:'Locatie', set_site_name:'Sitenaam', set_latitude:'Breedtegraad', set_longitude:'Lengtegraad',
       set_model:'Detectiemodel', set_model_choice:'AI-model', set_species_freq_thresh:'Soortfrequentiedrempel',
