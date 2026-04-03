@@ -2092,7 +2092,8 @@
         }
       }
 
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
+      const currentPage = props.page;
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
     },
     directives: {
       'click-outside': {
@@ -2218,6 +2219,13 @@
     <slot></slot>
   </main>
   <spectro-modal></spectro-modal>
+  <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+    <a href="index.html" class="mob-nav-item" :class="{active: currentPage==='index'}"><span class="mob-nav-icon">🏠</span>{{t('nav_overview')}}</a>
+    <a href="calendar.html" class="mob-nav-item" :class="{active: currentPage==='calendar'}"><span class="mob-nav-icon">📆</span>{{t('nav_calendar')}}</a>
+    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon">🦜</span>{{t('nav_species')}}</a>
+    <a href="weather.html" class="mob-nav-item" :class="{active: currentPage==='weather'}"><span class="mob-nav-icon">📊</span>{{t('nav_sec_insights')}}</a>
+    <a href="settings.html" class="mob-nav-item" :class="{active: currentPage==='settings'}"><span class="mob-nav-icon">⚙️</span>{{t('nav_sec_system')}}</a>
+  </nav>
 </div>`
   };
 
