@@ -84,9 +84,15 @@
             <bird-img :src="group.imgUrl" :alt="group.name"></bird-img>
           </div>
           <div class="gallery-sp-info">
-            <div class="gallery-sp-name">{{spName(group.name, group.sci)}}</div>
+            <div class="gallery-sp-name">
+              {{spName(group.name, group.sci)}}
+              <span v-if="newSpeciesSet.has(group.name)" style="font-size:.6rem;vertical-align:middle;margin-left:.2rem;">🆕</span>
+            </div>
             <div class="gallery-sp-sci">{{group.sci}}</div>
-            <div class="gallery-sp-count">{{group.dets.length}} {{t('top_detections_per_species')}}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;flex-shrink:0;">
+            <span style="font-size:.72rem;font-weight:600;color:var(--accent);">{{group.dets.length}} det.</span>
+            <span style="font-size:.68rem;color:var(--text-faint);">max {{Math.round(Math.max(...group.dets.map(d=>d.conf))*100)}}%</span>
           </div>
         </div>
 
