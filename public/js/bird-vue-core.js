@@ -1949,11 +1949,6 @@
       function navSectionClick(si) {
         if (openSection.value === si) { openSection.value = -1; return; }
         openSection.value = si;
-        // Navigate to first page of the section (unless current page is in it)
-        const sec = (BIRD_CONFIG.nav || [])[si];
-        if (sec && !sec.items.some(p => p.id === props.page)) {
-          window.location.href = sec.items[0].file;
-        }
       }
       const { spName, spNamesReady }    = useSpeciesNames();
       const langOpen = ref(false);
@@ -2310,7 +2305,7 @@
         refreshing.value = true;
         try {
           await fetch(BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sci), {
-            method: 'DELETE', headers: authHeaders(),
+            method: 'DELETE', headers: U.authHeaders(),
           });
           // Force reload with cache-bust
           loaded.value = false;

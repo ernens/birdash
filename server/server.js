@@ -1943,6 +1943,7 @@ const server = http.createServer((req, res) => {
         delete conf.CADDY_PWD;
         delete conf.ICE_PWD;
         delete conf.FLICKR_API_KEY;
+        delete conf.BIRDWEATHER_ID;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(conf));
       } catch(e) {

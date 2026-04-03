@@ -86,7 +86,7 @@
           <div class="matrix-wrap">
             <div v-if="matrix.loading" class="spinner"><div></div><div></div><div></div></div>
             <div v-else-if="matrix.error" class="error-msg">⚠ {{matrix.error}}</div>
-            <div v-else v-html="safeHtml(matrix.html)"></div>
+            <div v-else v-html="safeHtml(matrix.html)" @click="e => { const sp = e.target.closest('[data-species]'); if (sp) navigateTo('species.html',{species:sp.dataset.species}); }"></div>
           </div>
         </div>
 
@@ -425,7 +425,7 @@ const app = createApp({
         let html = `<table class="matrix-table"><thead><tr><th class="sp-col">${t('species_name')}</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>${t('bio_total')}</th></tr></thead><tbody>`;
         topSp.forEach(sp => {
           const arr=data[sp], tot=arr.reduce((a,b)=>a+b,0);
-          html+=`<tr><td class="sp-name" onclick="BIRDASH.navigateTo('species.html',{species:'${encodeURIComponent(sp)}'});">${escHtml(spName(sp, sciMap[sp]))}</td>`;
+          html+=`<tr><td class="sp-name" data-species="${escHtml(sp)}" style="cursor:pointer;">${escHtml(spName(sp, sciMap[sp]))}</td>`;
           html+=arr.map(v=>`<td style="${cs(v)}">${v>0?v.toLocaleString():''}</td>`).join('');
           html+=`<td style="color:var(--accent);font-weight:500;">${tot.toLocaleString()}</td></tr>`;
         });

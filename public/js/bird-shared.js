@@ -126,7 +126,7 @@
     if (!fileName) return null;
     const m = fileName.match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
     if (!m) return null;
-    return `${BIRD_CONFIG.audioUrl}/By_Date/${m[2]}/${m[1]}/${encodeURIComponent(fileName)}`;
+    return `${BIRD_CONFIG.audioUrl}/By_Date/${encodeURIComponent(m[2])}/${encodeURIComponent(m[1])}/${encodeURIComponent(fileName)}`;
   }
 
   // ── Species links ────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@
     'style','class','title','href','target','rel','colspan','rowspan',
     'width','height','alt','src','loading','d','viewBox','stroke',
     'stroke-width','fill','cx','cy','r','x','y','x1','y1','x2','y2',
-    'onclick',  // needed for biodiversity matrix navigation
+    'data-species',
   ]);
 
   function safeHtml(html) {
@@ -316,11 +316,13 @@
     // Clean up legacy/stale cache keys
     try {
       sessionStorage.removeItem('birdash-taxonomy');
+      const staleKeys = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const k = sessionStorage.key(i);
         if (k && k.startsWith('birdash-taxonomy-') && !k.endsWith('-v' + _TAXONOMY_CACHE_VER))
-          sessionStorage.removeItem(k);
+          staleKeys.push(k);
       }
+      staleKeys.forEach(k => sessionStorage.removeItem(k));
     } catch(e) {}
     // Try sessionStorage (keyed by lang + version)
     const cacheKey = `birdash-taxonomy-${lang || 'en'}-v${_TAXONOMY_CACHE_VER}`;
@@ -423,19 +425,25 @@
   let _favCache = null; // [{com_name, sci_name, added_at}]
   const _FAV_KEY = 'birdash_favorites';
 
+  let _favLoading = null;
   async function loadFavorites() {
-    try {
-      const res = await fetch(BIRD_CONFIG.apiUrl + '/favorites');
-      if (res.ok) {
-        _favCache = await res.json();
-        localStorage.setItem(_FAV_KEY, JSON.stringify(_favCache.map(f => f.com_name)));
-        return _favCache;
-      }
-    } catch(e) {}
-    // Fallback to localStorage
-    try { _favCache = (JSON.parse(localStorage.getItem(_FAV_KEY)) || []).map(n => ({ com_name: n })); }
-    catch { _favCache = []; }
-    return _favCache;
+    if (_favLoading) return _favLoading;
+    _favLoading = (async () => {
+      try {
+        const res = await fetch(BIRD_CONFIG.apiUrl + '/favorites');
+        if (res.ok) {
+          _favCache = await res.json();
+          localStorage.setItem(_FAV_KEY, JSON.stringify(_favCache.map(f => f.com_name)));
+          return _favCache;
+        }
+      } catch(e) {}
+      try { _favCache = (JSON.parse(localStorage.getItem(_FAV_KEY)) || []).map(n => ({ com_name: n })); }
+      catch { _favCache = []; }
+      return _favCache;
+    })();
+    const result = await _favLoading;
+    _favLoading = null;
+    return result;
   }
 
   function getFavorites() {

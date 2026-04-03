@@ -98,5 +98,5 @@ function getAudioUrl(fileName) {
   if (!m) return null;
   const species = m[1];  // 'Pie_bavarde', 'Martin-pêcheur_dEurope'
   const date    = m[2];  // '2023-09-18'
-  return `${BIRD_CONFIG.audioUrl}/By_Date/${date}/${species}/${encodeURIComponent(fileName)}`;
+  return `${BIRD_CONFIG.audioUrl}/By_Date/${encodeURIComponent(date)}/${encodeURIComponent(species)}/${encodeURIComponent(fileName)}`;
 }
