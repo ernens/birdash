@@ -1107,11 +1107,26 @@ const app = createApp({
 
     async function shareSpecies() {
       const name = spName(sp.value.name, sp.value.sci);
-      const data = { title: name, url: window.location.href };
+      const url = window.location.href;
       if (navigator.share) {
-        try { await navigator.share(data); } catch(_) {}
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
+        try { await navigator.share({ title: name, url }); return; } catch(_) {}
+      }
+      // Clipboard fallback (works on HTTP too)
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        // Visual feedback
+        const btn = event?.target?.closest('button');
+        if (btn) { const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = orig, 1500); }
+      } catch(e) {
+        prompt('Copier le lien :', url);
       }
     }
 
