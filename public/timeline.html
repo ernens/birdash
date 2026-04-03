@@ -10,7 +10,6 @@
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <title>BIRDASH — Timeline</title>
-  <script>location.replace('calendar.html' + location.search);</script>
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
@@ -18,10 +17,11 @@
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-vue-core.js"></script>
+  <script src="js/bird-timeline.js"></script>
 </head>
 <body>
 <div id="app">
-  <birdash-shell page="timeline" :title="t('tl_title')">
+  <birdash-shell page="timeline" :title="t('nav_timeline')">
 
     <!-- Header with navigation -->
     <div class="tl-page-header">
