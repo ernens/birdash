@@ -727,7 +727,11 @@ const app = createApp({
           ...r,
           imgUrl: BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(r.sci || r.Com_Name),
         }));
-        if (rows.length > 0 && !selected.value) selectSpecies(speciesList.value[0]);
+        if (rows.length > 0 && !selected.value) {
+          const urlSp = new URLSearchParams(window.location.search).get('species');
+          const match = urlSp ? speciesList.value.find(s => s.Com_Name === urlSp) : null;
+          selectSpecies(match || speciesList.value[0]);
+        }
       } catch(e) { console.error('species:', e); }
       loadingList.value = false;
     }
