@@ -171,10 +171,7 @@
     return BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
   }
 
-  // Keep fetchCachedPhoto as alias (returns same URL synchronously now)
-  async function fetchCachedPhoto(sciName) {
-    return photoUrl(sciName);
-  }
+
 
   // ── Chart.js defaults ──────────────────────────────────────────────────
 
@@ -521,7 +518,6 @@
     buildSpeciesLinks: buildSpeciesLinks,
     fetchSpeciesImage: fetchSpeciesImage,
     photoUrl: photoUrl,
-    fetchCachedPhoto: fetchCachedPhoto,
     chartDefaults: chartDefaults,
     escHtml: escHtml,
     safeHtml: safeHtml,

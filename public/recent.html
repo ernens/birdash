@@ -775,8 +775,7 @@ const app = createApp({
       try {
         const resp = await fetch(BIRD_CONFIG.apiUrl + '/validations', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-                     ...(localStorage.getItem('birdash_token') ? { 'Authorization': 'Bearer ' + localStorage.getItem('birdash_token') } : {}) },
+          headers: BIRDASH.authHeaders(),
           body: JSON.stringify({
             date: d.Date || selDate.value,
             time: d.Time,
@@ -940,7 +939,7 @@ const app = createApp({
         return;
       }
 
-      console.log('[spectro] URL :', url);
+      // [spectro] URL loaded
       spectro.value = { state:'loading' };
 
       await nextTick(); await nextTick();

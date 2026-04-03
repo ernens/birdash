@@ -81,7 +81,9 @@
       set_alert_svc_down:'Alerter si un service critique tombe',
       set_notif_cat_bird_smart:'Alertes oiseaux intelligentes',
       set_alert_influx:'Afflux inhabituel (>3x la moyenne)', set_alert_missing:'Espèce commune absente (après midi)', set_alert_rare_visitor:'Visiteur rare détecté',
-      set_tab_detection:'Détection', set_tab_station:'Station', set_tab_system:'Système', set_tab_backup:'Sauvegarde',
+      set_tab_detection:'Détection', set_tab_audio:'Audio', set_tab_notif:'Notifications', set_tab_station:'Station', set_tab_services:'Services', set_tab_species:'Espèces', set_tab_system:'Système', set_tab_backup:'Sauvegarde', set_tab_database:'Base de données', set_tab_terminal:'Terminal',
+      bkp_init:'Initialisation', bkp_db:'Base de données', bkp_config:'Configuration', bkp_projects:'Projets', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Montage', bkp_done:'Terminé',
+      share:'Partager',
       set_save:'Enregistrer', set_saved:'Configuration enregistrée avec succès', set_defaults:'Défaut', set_defaults_confirm:'Remettre tous les paramètres de détection à leurs valeurs par défaut ?', set_defaults_applied:'Valeurs par défaut appliquées — cliquez Enregistrer pour confirmer',
       set_recording:'Enregistrement audio', set_overlap:'Chevauchement (s)', set_rec_length:'Durée enregistrement (s)',
       set_extraction_length:'Durée extraction (s)', set_channels:'Canaux micro', set_audio_format:'Format audio',
@@ -443,7 +445,9 @@
       set_alert_svc_down:'Alert when a critical service goes down',
       set_notif_cat_bird_smart:'Smart bird alerts',
       set_alert_influx:'Unusual influx (>3x average)', set_alert_missing:'Missing common species (after noon)', set_alert_rare_visitor:'Rare visitor detected',
-      set_tab_detection:'Detection', set_tab_station:'Station', set_tab_system:'System', set_tab_backup:'Backup',
+      set_tab_detection:'Detection', set_tab_audio:'Audio', set_tab_notif:'Notifications', set_tab_station:'Station', set_tab_services:'Services', set_tab_species:'Species', set_tab_system:'System', set_tab_backup:'Backup', set_tab_database:'Database', set_tab_terminal:'Terminal',
+      bkp_init:'Initialisation', bkp_db:'Database', bkp_config:'Configuration', bkp_projects:'Projects', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Mounting', bkp_done:'Done',
+      share:'Share',
       set_save:'Save', set_saved:'Configuration saved successfully', set_defaults:'Defaults', set_defaults_confirm:'Reset all detection parameters to their default values?', set_defaults_applied:'Default values applied — click Save to confirm',
       set_recording:'Audio recording', set_overlap:'Overlap (s)', set_rec_length:'Recording length (s)',
       set_extraction_length:'Extraction length (s)', set_channels:'Mic channels', set_audio_format:'Audio format',
@@ -788,7 +792,9 @@
       set_alert_svc_down:'Alarm bei Ausfall eines kritischen Dienstes',
       set_notif_cat_bird_smart:'Intelligente Vogelalarme',
       set_alert_influx:'Ungewöhnlicher Zustrom (>3x Durchschnitt)', set_alert_missing:'Häufige Art fehlt (nach Mittag)', set_alert_rare_visitor:'Seltener Besucher entdeckt',
-      set_tab_detection:'Erkennung', set_tab_station:'Station', set_tab_system:'System', set_tab_backup:'Sicherung',
+      set_tab_detection:'Erkennung', set_tab_audio:'Audio', set_tab_notif:'Benachrichtigungen', set_tab_station:'Station', set_tab_services:'Dienste', set_tab_species:'Arten', set_tab_system:'System', set_tab_backup:'Sicherung', set_tab_database:'Datenbank', set_tab_terminal:'Terminal',
+      bkp_init:'Initialisierung', bkp_db:'Datenbank', bkp_config:'Konfiguration', bkp_projects:'Projekte', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Einbindung', bkp_done:'Fertig',
+      share:'Teilen',
       set_save:'Speichern', set_saved:'Konfiguration erfolgreich gespeichert', set_defaults:'Standard', set_defaults_confirm:'Alle Erkennungsparameter auf Standardwerte zurücksetzen?', set_defaults_applied:'Standardwerte angewendet — klicken Sie Speichern zur Bestätigung',
       set_recording:'Audioaufnahme', set_overlap:'Überlappung (s)', set_rec_length:'Aufnahmedauer (s)',
       set_extraction_length:'Extraktionsdauer (s)', set_channels:'Mikrofonkanäle', set_audio_format:'Audioformat',
@@ -1133,7 +1139,9 @@
       set_alert_svc_down:'Alarm bij uitval van een kritieke dienst',
       set_notif_cat_bird_smart:'Slimme vogelalarmen',
       set_alert_influx:'Ongebruikelijke toestroom (>3x gemiddelde)', set_alert_missing:'Veelvoorkomende soort afwezig (na de middag)', set_alert_rare_visitor:'Zeldzame bezoeker gedetecteerd',
-      set_tab_detection:'Detectie', set_tab_station:'Station', set_tab_system:'Systeem', set_tab_backup:'Back-up',
+      set_tab_detection:'Detectie', set_tab_audio:'Audio', set_tab_notif:'Meldingen', set_tab_station:'Station', set_tab_services:'Diensten', set_tab_species:'Soorten', set_tab_system:'Systeem', set_tab_backup:'Back-up', set_tab_database:'Database', set_tab_terminal:'Terminal',
+      bkp_init:'Initialisatie', bkp_db:'Database', bkp_config:'Configuratie', bkp_projects:'Projecten', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Koppeling', bkp_done:'Klaar',
+      share:'Delen',
       set_save:'Opslaan', set_saved:'Configuratie succesvol opgeslagen', set_defaults:'Standaard', set_defaults_confirm:'Alle detectieparameters terugzetten naar standaardwaarden?', set_defaults_applied:'Standaardwaarden toegepast — klik Opslaan om te bevestigen',
       set_recording:'Audio-opname', set_overlap:'Overlap (s)', set_rec_length:'Opnameduur (s)',
       set_extraction_length:'Extractieduur (s)', set_channels:'Microfoonkanalen', set_audio_format:'Audioformaat',
@@ -1456,8 +1464,9 @@
   const _lang  = ref(localStorage.getItem('birdash_lang')  || 'fr');
   const _theme = ref(localStorage.getItem('birdash-theme') || 'forest');
 
-  // Appliquer le thème immédiatement au chargement
+  // Appliquer le thème et la langue immédiatement au chargement
   document.documentElement.setAttribute('data-theme', _theme.value);
+  document.documentElement.lang = _lang.value;
 
   // ── useI18n ───────────────────────────────────────────────────────────────
   function useI18n() {
@@ -1486,6 +1495,7 @@
       if (!_TRANSLATIONS[code]) return;
       _lang.value = code;
       localStorage.setItem('birdash_lang', code);
+      document.documentElement.lang = code;
     }
 
     const langs = Object.keys(_TRANSLATIONS).map(code => ({
@@ -2610,7 +2620,6 @@
     buildAudioUrl:    U.buildAudioUrl,
     fetchSpeciesImage:U.fetchSpeciesImage,
     photoUrl: U.photoUrl,
-    fetchCachedPhoto: U.fetchCachedPhoto,
     getUrlParam:      U.getUrlParam,
     navigateTo:       U.navigateTo,
     chartDefaults:    U.chartDefaults,

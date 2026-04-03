@@ -134,6 +134,9 @@
             <a v-for="l in extLinks" :key="l.label" class="ext-link" :href="l.url" target="_blank" rel="noopener noreferrer">
               {{l.icon}} {{l.label}}
             </a>
+            <button class="ext-link" @click="shareSpecies" style="border:none;cursor:pointer;background:var(--card-bg);">
+              🔗 {{t('share')}}
+            </button>
           </div>
         </div>
       </div>
@@ -888,11 +891,21 @@ const app = createApp({
       bulkDeleting.value = false;
     }
 
+    async function shareSpecies() {
+      const name = spName(sp.value.name, sp.value.sci);
+      const data = { title: name, url: window.location.href };
+      if (navigator.share) {
+        try { await navigator.share(data); } catch(_) {}
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    }
+
     return {
       lang, t, spName,
       mode, speciesList, pickerVal, onPickerChange,
       hasPrevSpecies, hasNextSpecies, prevSpecies, nextSpecies,
-      sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote,
+      sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
       photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,
       playingFile, toggleAudio,

@@ -1497,14 +1497,14 @@ const app = createApp({
     // ── Tab navigation ──────────────────────────────────────────
     const tabs = [
       { id: 'detection', icon: '🤖', labelKey: 'set_tab_detection' },
-      { id: 'audio',     icon: '🎙️', label: 'Audio' },
-      { id: 'notif',     icon: '🔔', label: 'Notifications' },
+      { id: 'audio',     icon: '🎙️', labelKey: 'set_tab_audio' },
+      { id: 'notif',     icon: '🔔', labelKey: 'set_tab_notif' },
       { id: 'station',   icon: '📍', labelKey: 'set_tab_station' },
-      { id: 'services',  icon: '🔧', label: 'Services' },
-      { id: 'species',   icon: '📋', label: 'Espèces' },
+      { id: 'services',  icon: '🔧', labelKey: 'set_tab_services' },
+      { id: 'species',   icon: '📋', labelKey: 'set_tab_species' },
       { id: 'backup',    icon: '💾', labelKey: 'set_tab_backup' },
-      { id: 'database',  icon: '🗄️', label: 'Base de données' },
-      { id: 'terminal',  icon: '💻', label: 'Terminal' },
+      { id: 'database',  icon: '🗄️', labelKey: 'set_tab_database' },
+      { id: 'terminal',  icon: '💻', labelKey: 'set_tab_terminal' },
     ];
     const hashTab = location.hash.slice(1);
     const localTabs = ['detection', 'audio', 'notif', 'station', 'services', 'species', 'backup', 'database', 'terminal'];
@@ -1521,6 +1521,7 @@ const app = createApp({
       }
       activeTab.value = id;
       localStorage.setItem('birdash-settings-tab', id);
+      history.replaceState(null, '', '#' + id);
     }
     const saving = ref(false);
     const svcLoading = ref(true);
@@ -1688,9 +1689,9 @@ const app = createApp({
     }
 
     function bkpStepLabel(step) {
-      const labels = { init: 'Initialisation', db: 'Base de données', config: 'Configuration',
-        projects: 'Projets', audio: 'BirdSongs', upload: 'Upload', mount: 'Montage', done: 'Terminé' };
-      return labels[step] || step || '';
+      const keys = { init: 'bkp_init', db: 'bkp_db', config: 'bkp_config',
+        projects: 'bkp_projects', audio: 'bkp_audio', upload: 'bkp_upload', mount: 'bkp_mount', done: 'bkp_done' };
+      return keys[step] ? t(keys[step]) : step || '';
     }
 
     const bkpElapsed = computed(() => {

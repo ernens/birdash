@@ -707,7 +707,7 @@ const app = createApp({
         for (const r of allRows) {
           if (r.Time && r.Time < initCutoff) _playedFiles.add(r.File_Name);
         }
-        console.log(`[playback] init: ${_playedFiles.size} fichiers anciens ignorés`);
+        // playback init done
       } catch(e) {
         console.error('[playback] init query error', e);
       }

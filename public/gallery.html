@@ -373,9 +373,9 @@ const app = createApp({
             if (idx >= 0) allGroups.value.splice(idx, 1);
           }
         } else {
-          alert(data.error || 'Error');
+          console.error('Delete failed:', data.error);
         }
-      } catch (e) { alert(e.message); }
+      } catch (e) { console.error('Delete error:', e); }
     }
 
     onMounted(() => { loadGallery(); });

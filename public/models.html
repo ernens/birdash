@@ -185,7 +185,7 @@ const app = createApp({
         const from = fp.dateFrom.value;
         const to = fp.dateTo.value;
         const days = Math.max(1, Math.ceil((new Date(to) - new Date(from)) / 86400000) + 1);
-        const resp = await fetch(`api/model-comparison?days=${days}&dateFrom=${from}&dateTo=${to}`);
+        const resp = await fetch(`${BIRD_CONFIG.apiUrl}/model-comparison?days=${days}&dateFrom=${from}&dateTo=${to}`);
         data.value = await resp.json();
         loading.value = false;
         await nextTick();

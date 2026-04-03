@@ -12,7 +12,7 @@
   <title>BIRDASH — Timeline</title>
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
@@ -179,14 +179,14 @@ function PX_PER_HOUR() {
 function TOTAL_W() { return (_viewEnd - _viewStart) * PX_PER_HOUR(); }
 
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, navigateTo, photoUrl, quickPlaySpecies } = BIRDASH;
+const { useI18n, useTheme, useNav, navigateTo, photoUrl, quickPlaySpecies, localDateStr } = BIRDASH;
 
 const app = createApp({
   setup() {
     const { lang, t } = useI18n();
     useTheme();
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = localDateStr();
     const params = new URLSearchParams(window.location.search);
     const selectedDate = ref(params.get('date') || todayStr);
     const data = ref(null);

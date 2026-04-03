@@ -12,7 +12,7 @@
   <title>BIRDASH — Vue d'ensemble</title>
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
@@ -271,7 +271,7 @@
             <button class="tp-nav-btn" :disabled="tlZoom <= 0" @click="tlZoomOut()">−</button>
             <button class="tp-nav-btn" :disabled="tlZoom >= 2" @click="tlZoomIn()">+</button>
           </span>
-          <a class="tp-fullpage-link" :href="'/birds/timeline.html?date=' + tlSelectedDate">↗ {{t('tl_full_view')}}</a>
+          <a class="tp-fullpage-link" :href="'timeline.html?date=' + tlSelectedDate">↗ {{t('tl_full_view')}}</a>
         </div>
         <button class="tp-toggle">{{timelineExpanded ? '▲' : '▼'}}</button>
       </div>
@@ -307,7 +307,7 @@
           </div>
 
           <div class="tp-footer">
-            <a :href="'/birds/timeline.html?date=' + tlSelectedDate" class="tp-more-link">{{t('tl_see_full')}} →</a>
+            <a :href="'timeline.html?date=' + tlSelectedDate" class="tp-more-link">{{t('tl_see_full')}} →</a>
           </div>
         </template>
       </div>
@@ -639,9 +639,9 @@ const app = createApp({
     const timelineExpanded = ref(true);
     const timelineLoading  = ref(false);
     const timelineData     = ref(null);
-    const tlSelectedDate   = ref(new Date().toISOString().slice(0, 10));
+    const tlSelectedDate   = ref(localDateStr());
     const tlShowDatePicker = ref(false);
-    const tlTodayStr       = new Date().toISOString().slice(0, 10);
+    const tlTodayStr       = localDateStr();
     const tlScrollRef      = ref(null);
     const tlInnerRef       = ref(null);
     const tlSkyCanvasRef   = ref(null);

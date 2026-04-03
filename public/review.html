@@ -217,20 +217,22 @@ const app = createApp({
       }
     }
 
-    function bulkRejectByReason(reason) {
+    async function bulkRejectByReason(reason) {
       const matching = flagged.value.filter(d =>
         d.reasons.includes(reason) && d.validation !== 'rejected' && d.validation !== 'confirmed'
       );
       if (matching.length === 0) return;
       if (!confirm(`${t('review_reject')} ${matching.length} "${reason}" ?`)) return;
       const dets = matching.map(d => ({ date: d.date, time: d.time, sci_name: d.sci_name }));
-      fetch(`${API}/bulk-validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ detections: dets, status: 'rejected' }),
-      }).then(() => {
+      try {
+        const resp = await fetch(`${API}/bulk-validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ detections: dets, status: 'rejected' }),
+        });
+        if (!resp.ok) { console.error('bulk-validate failed:', resp.status); return; }
         for (const d of matching) d.validation = 'rejected';
-      });
+      } catch (e) { console.error('bulk-validate error:', e); }
     }
 
     function toggleSelect(det) {
