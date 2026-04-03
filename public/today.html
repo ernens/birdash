@@ -57,7 +57,7 @@
         <div class="kpi-value">{{kpis.lastHour}}</div>
         <div class="kpi-label">{{t('last_hour')}}</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" style="cursor:pointer;" @click="newSpOnly = !newSpOnly">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
         <div class="kpi-label">{{t('new_species')}}</div>
       </div>
@@ -69,13 +69,22 @@
       <!-- Colonne gauche : liste espèces -->
       <div>
         <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.4rem;">
             <div class="card-title" style="margin:0;">
               {{t('species')}} — {{speciesList.length}}
             </div>
-            <input type="text" v-model="searchQ" class="bird-input"
-                   :placeholder="'🔍 '+t('search_filter_ph')"
-                   style="width:120px;padding:.2rem .5rem;font-size:.78rem;">
+            <div style="display:flex;align-items:center;gap:.3rem;">
+              <button v-if="newSpeciesSet.size" @click="newSpOnly = !newSpOnly"
+                      style="padding:.12rem .5rem;font-size:.68rem;font-weight:600;border-radius:999px;border:1px solid;cursor:pointer;white-space:nowrap;"
+                      :style="newSpOnly
+                        ? 'background:var(--danger);color:#fff;border-color:var(--danger);'
+                        : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+                🆕 {{newSpeciesSet.size}}
+              </button>
+              <input type="text" v-model="searchQ" class="bird-input"
+                     :placeholder="'🔍 '+t('search_filter_ph')"
+                     style="width:100px;padding:.2rem .5rem;font-size:.78rem;">
+            </div>
           </div>
 
           <div v-if="loadingList" class="spinner" style="padding:2rem;"><div></div><div></div><div></div></div>
@@ -92,7 +101,7 @@
                 <span v-else>🦜</span>
               </div>
               <div class="sp-info">
-                <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}}</div>
+                <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}} <span v-if="newSpeciesSet.has(s.Com_Name)" style="font-size:.6rem;vertical-align:middle;">🆕</span></div>
                 <div class="sp-sci-row">{{s.sci}}</div>
               </div>
               <div class="sp-meta">
@@ -345,6 +354,8 @@ const app = createApp({
     const today   = localDateStr();
     const minConf = ref(BIRD_CONFIG.defaultConfidence);
     const searchQ = ref('');
+    const newSpOnly = ref(false);
+    const newSpeciesSet = ref(new Set());
 
     const kpis     = ref({ det:'—', sp:'—', conf:'—', lastHour:'—', newSp:'—' });
     const freshness = ref('—');
@@ -382,11 +393,11 @@ const app = createApp({
     });
 
     const filteredSpecies = computed(() => {
+      let list = speciesList.value;
+      if (newSpOnly.value) list = list.filter(s => newSpeciesSet.value.has(s.Com_Name));
       const q = searchQ.value.toLowerCase().trim();
-      if (!q) return speciesList.value;
-      return speciesList.value.filter(s =>
-        s.Com_Name.toLowerCase().includes(q) || (s.sci||'').toLowerCase().includes(q)
-      );
+      if (q) list = list.filter(s => s.Com_Name.toLowerCase().includes(q) || (s.sci||'').toLowerCase().includes(q));
+      return list;
     });
 
     const nextAudioIdx = computed(() => {
@@ -417,11 +428,11 @@ const app = createApp({
           `SELECT COUNT(*) as n FROM detections
            WHERE Date=? AND Confidence>=? AND Time >= time('now','-1 hour','localtime')`,
           [today, minConf.value]);
-        const [ns] = await birdQuery(
-          `SELECT COUNT(*) as n FROM (
-             SELECT Com_Name FROM detections WHERE Confidence>=?
-             GROUP BY Com_Name HAVING MIN(Date)=?
-           )`, [minConf.value, today]);
+        const nsRows = await birdQuery(
+          `SELECT Com_Name FROM detections WHERE Confidence>=?
+           GROUP BY Com_Name HAVING MIN(Date)=?`, [minConf.value, today]);
+        newSpeciesSet.value = new Set(nsRows.map(r => r.Com_Name));
+        const ns = { n: nsRows.length };
         kpis.value = {
           det: d ? d.n.toLocaleString() : '0',
           sp:  d ? d.sp : '0',
@@ -689,7 +700,7 @@ const app = createApp({
 
     return {
       lang, t, spName,
-      today, minConf, searchQ,
+      today, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx,
