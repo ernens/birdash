@@ -54,8 +54,7 @@ const BIRD_CONFIG = {
     ]},
     { section: 'nav_sec_history', icon: '🗓️', items: [
       { id: 'index',        icon: '🏠', file: 'index.html'        },
-      { id: 'timeline',     icon: '📆', file: 'timeline.html'     },
-      { id: 'recent',       icon: '🕐', file: 'recent.html'       },
+      { id: 'calendar',     icon: '📆', file: 'calendar.html'     },
       { id: 'detections',   icon: '📋', file: 'detections.html'   },
       { id: 'review',       icon: '✅', file: 'review.html'       },
     ]},

@@ -272,7 +272,7 @@
             <button class="tp-nav-btn" :disabled="tlZoom <= 0" @click="tlZoomOut()">−</button>
             <button class="tp-nav-btn" :disabled="tlZoom >= 2" @click="tlZoomIn()">+</button>
           </span>
-          <a class="tp-fullpage-link" :href="'timeline.html?date=' + tlSelectedDate">↗ {{t('tl_full_view')}}</a>
+          <a class="tp-fullpage-link" :href="'calendar.html?date=' + tlSelectedDate">↗ {{t('tl_full_view')}}</a>
         </div>
         <button class="tp-toggle">{{timelineExpanded ? '▲' : '▼'}}</button>
       </div>
@@ -308,7 +308,7 @@
           </div>
 
           <div class="tp-footer">
-            <a :href="'timeline.html?date=' + tlSelectedDate" class="tp-more-link">{{t('tl_see_full')}} →</a>
+            <a :href="'calendar.html?date=' + tlSelectedDate" class="tp-more-link">{{t('tl_see_full')}} →</a>
           </div>
         </template>
       </div>
