@@ -2698,12 +2698,15 @@ const server = http.createServer((req, res) => {
         const todayStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
         const dateStr = params.get('date') || todayStr;
         const isToday = dateStr === todayStr;
+        const minConf = parseFloat(params.get('minConf') || '0.7');
+        const maxEvents = Math.min(999, parseInt(params.get('maxEvents') || '8'));
 
         // ── Cache check ──
+        const cacheKey = `${dateStr}_${minConf}_${maxEvents}`;
         const ttl = isToday ? TIMELINE_TTL_TODAY : TIMELINE_TTL_PAST;
-        if (_timelineCache[dateStr] && (Date.now() - (_timelineCacheTs[dateStr] || 0)) < ttl) {
+        if (_timelineCache[cacheKey] && (Date.now() - (_timelineCacheTs[cacheKey] || 0)) < ttl) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(_timelineCache[dateStr]));
+          res.end(JSON.stringify(_timelineCache[cacheKey]));
           return;
         }
 
@@ -2776,11 +2779,11 @@ const server = http.createServer((req, res) => {
             FROM detections
             WHERE Date = ?
               AND (CAST(SUBSTR(Time,1,2) AS INT) < 6 OR CAST(SUBSTR(Time,1,2) AS INT) >= 21)
-              AND Confidence >= 0.75
+              AND Confidence >= ?
               AND Sci_Name IN (${placeholders})
             GROUP BY Com_Name
             ORDER BY MIN(Time) ASC
-          `).all(dateStr, ...nocturnalSpecies);
+          `).all(dateStr, Math.max(minConf, 0.5), ...nocturnalSpecies);
           for (const r of noctRows) {
             const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
             events.push({
@@ -2810,9 +2813,9 @@ const server = http.createServer((req, res) => {
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
             FROM detections
-            WHERE Date = ? AND Sci_Name IN (${ph}) AND Confidence >= 0.7
+            WHERE Date = ? AND Sci_Name IN (${ph}) AND Confidence >= ?
             GROUP BY Com_Name ORDER BY Confidence DESC
-          `).all(dateStr, ...oosSciNames);
+          `).all(dateStr, ...oosSciNames, minConf);
           for (const r of oosRows) {
             if (events.some(e => e.sciName === r.Sci_Name)) continue;
             const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
@@ -2843,7 +2846,7 @@ const server = http.createServer((req, res) => {
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
             FROM detections
-            WHERE Date = ? AND Confidence >= 0.80
+            WHERE Date = ? AND Confidence >= ?
             GROUP BY Com_Name
           )
           SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name,
@@ -2852,8 +2855,8 @@ const server = http.createServer((req, res) => {
           LEFT JOIN hist h ON t.Com_Name = h.Com_Name
           WHERE COALESCE(h.cnt, 0) <= 3
           ORDER BY t.Confidence DESC
-          LIMIT 5
-        `).all(dateStr, dateStr, dateStr);
+          LIMIT ?
+        `).all(dateStr, dateStr, dateStr, minConf, maxEvents);
         for (const r of rareRows) {
           if (events.some(e => e.sciName === r.Sci_Name)) continue;
           const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
@@ -2878,7 +2881,7 @@ const server = http.createServer((req, res) => {
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
             FROM detections
-            WHERE Date = ? AND Confidence >= 0.75
+            WHERE Date = ? AND Confidence >= ?
             GROUP BY Com_Name
           ),
           prior AS (
@@ -2890,8 +2893,8 @@ const server = http.createServer((req, res) => {
           LEFT JOIN prior p ON t.Com_Name = p.Com_Name
           WHERE p.Com_Name IS NULL
           ORDER BY t.Time ASC
-          LIMIT 5
-        `).all(dateStr, yearStart, dateStr);
+          LIMIT ?
+        `).all(dateStr, minConf, yearStart, dateStr, maxEvents);
         for (const r of foyRows) {
           if (events.some(e => e.sciName === r.Sci_Name)) continue;
           const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
@@ -2913,9 +2916,9 @@ const server = http.createServer((req, res) => {
         const firstDiurnal = db.prepare(`
           SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
           FROM detections
-          WHERE Date = ? AND Time >= ? AND Confidence >= 0.8
+          WHERE Date = ? AND Time >= ? AND Confidence >= ?
           ORDER BY Time ASC LIMIT 1
-        `).get(dateStr, sunriseTime);
+        `).get(dateStr, sunriseTime, minConf);
         if (firstDiurnal && !events.some(e => e.sciName === firstDiurnal.Sci_Name && e.time === firstDiurnal.Time.substr(0, 5))) {
           const h = parseInt(firstDiurnal.Time.substr(0, 2)), m = parseInt(firstDiurnal.Time.substr(3, 2));
           events.push({
@@ -3228,8 +3231,8 @@ const server = http.createServer((req, res) => {
           },
         };
 
-        _timelineCache[dateStr] = result;
-        _timelineCacheTs[dateStr] = Date.now();
+        _timelineCache[cacheKey] = result;
+        _timelineCacheTs[cacheKey] = Date.now();
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
