@@ -2261,7 +2261,7 @@
         <div v-if="errored" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:2rem;color:var(--text-faint);">🦜</div>
         <button v-if="loaded && !errored && imgSrc"
                 class="img-refresh-btn" @click.stop="refreshPhoto"
-                :disabled="refreshing" title="Refresh photo">🔄</button>
+                :disabled="refreshing" title="Refresh photo" aria-label="Refresh photo">🔄</button>
       </div>
     `
   };
@@ -2498,7 +2498,7 @@
       };
     },
     template: `
-<div v-if="modal.open" class="spectro-modal-overlay" @click.self="close">
+<div v-if="modal.open" class="spectro-modal-overlay" @click.self="close" role="dialog" aria-modal="true" :aria-label="modal.speciesName">
   <div class="spectro-modal">
     <div class="spectro-modal-header">
       <div>
@@ -2512,7 +2512,7 @@
           <span v-if="modal.time">{{modal.time}}</span>
         </div>
       </div>
-      <button class="spectro-modal-close" @click="close">&times;</button>
+      <button class="spectro-modal-close" @click="close" aria-label="Close">&times;</button>
     </div>
     <div class="spectro-modal-canvas-wrap" style="position:relative;">
       <canvas ref="canvas" :width="800" :height="200"></canvas>
@@ -2523,7 +2523,7 @@
       </div>
     </div>
     <div class="spectro-modal-controls">
-      <button class="play-big" :class="{playing: isPlaying}" @click="togglePlay">
+      <button class="play-big" :class="{playing: isPlaying}" @click="togglePlay" :aria-label="isPlaying ? 'Pause' : 'Play'">
         {{isPlaying ? '\u23F9' : '\u25B6'}}
       </button>
       <div class="audio-progress-wrap">

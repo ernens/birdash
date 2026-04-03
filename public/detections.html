@@ -160,7 +160,7 @@
                 </td>
                 <td>
                   <button v-if="d.File_Name" class="play-btn" :class="{playing:playingFile===d.File_Name}"
-                          @click="toggleAudio(d.File_Name)" :title="t('play')">▶</button>
+                          @click="toggleAudio(d.File_Name)" :title="t('play')" :aria-label="t('play')">▶</button>
                   <span v-else style="width:28px;display:inline-block;"></span>
                 </td>
                 <!-- Download -->
