@@ -83,7 +83,7 @@
       set_alert_influx:'Afflux inhabituel (>3x la moyenne)', set_alert_missing:'Espèce commune absente (après midi)', set_alert_rare_visitor:'Visiteur rare détecté',
       set_tab_detection:'Détection', set_tab_audio:'Audio', set_tab_notif:'Notifications', set_tab_station:'Station', set_tab_services:'Services', set_tab_species:'Espèces', set_tab_system:'Système', set_tab_backup:'Sauvegarde', set_tab_database:'Base de données', set_tab_terminal:'Terminal',
       bkp_init:'Initialisation', bkp_db:'Base de données', bkp_config:'Configuration', bkp_projects:'Projets', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Montage', bkp_done:'Terminé',
-      share:'Partager', fav_add:'Ajouter aux favoris', fav_remove:'Retirer des favoris', fav_only:'Favoris uniquement', phenology_calendar:'Calendrier phénologique',
+      share:'Partager', fav_add:'Ajouter aux favoris', fav_remove:'Retirer des favoris', fav_only:'Favoris uniquement', phenology_calendar:'Calendrier phénologique', notifications:'Notifications', wn_empty:'Rien de nouveau',
       set_save:'Enregistrer', set_saved:'Configuration enregistrée avec succès', set_defaults:'Défaut', set_defaults_confirm:'Remettre tous les paramètres de détection à leurs valeurs par défaut ?', set_defaults_applied:'Valeurs par défaut appliquées — cliquez Enregistrer pour confirmer',
       set_recording:'Enregistrement audio', set_overlap:'Chevauchement (s)', set_rec_length:'Durée enregistrement (s)',
       set_extraction_length:'Durée extraction (s)', set_channels:'Canaux micro', set_audio_format:'Format audio',
@@ -447,7 +447,7 @@
       set_alert_influx:'Unusual influx (>3x average)', set_alert_missing:'Missing common species (after noon)', set_alert_rare_visitor:'Rare visitor detected',
       set_tab_detection:'Detection', set_tab_audio:'Audio', set_tab_notif:'Notifications', set_tab_station:'Station', set_tab_services:'Services', set_tab_species:'Species', set_tab_system:'System', set_tab_backup:'Backup', set_tab_database:'Database', set_tab_terminal:'Terminal',
       bkp_init:'Initialisation', bkp_db:'Database', bkp_config:'Configuration', bkp_projects:'Projects', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Mounting', bkp_done:'Done',
-      share:'Share', fav_add:'Add to favorites', fav_remove:'Remove from favorites', fav_only:'Favorites only', phenology_calendar:'Phenology calendar',
+      share:'Share', fav_add:'Add to favorites', fav_remove:'Remove from favorites', fav_only:'Favorites only', phenology_calendar:'Phenology calendar', notifications:'Notifications', wn_empty:'Nothing new',
       set_save:'Save', set_saved:'Configuration saved successfully', set_defaults:'Defaults', set_defaults_confirm:'Reset all detection parameters to their default values?', set_defaults_applied:'Default values applied — click Save to confirm',
       set_recording:'Audio recording', set_overlap:'Overlap (s)', set_rec_length:'Recording length (s)',
       set_extraction_length:'Extraction length (s)', set_channels:'Mic channels', set_audio_format:'Audio format',
@@ -794,7 +794,7 @@
       set_alert_influx:'Ungewöhnlicher Zustrom (>3x Durchschnitt)', set_alert_missing:'Häufige Art fehlt (nach Mittag)', set_alert_rare_visitor:'Seltener Besucher entdeckt',
       set_tab_detection:'Erkennung', set_tab_audio:'Audio', set_tab_notif:'Benachrichtigungen', set_tab_station:'Station', set_tab_services:'Dienste', set_tab_species:'Arten', set_tab_system:'System', set_tab_backup:'Sicherung', set_tab_database:'Datenbank', set_tab_terminal:'Terminal',
       bkp_init:'Initialisierung', bkp_db:'Datenbank', bkp_config:'Konfiguration', bkp_projects:'Projekte', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Einbindung', bkp_done:'Fertig',
-      share:'Teilen', fav_add:'Zu Favoriten', fav_remove:'Aus Favoriten entfernen', fav_only:'Nur Favoriten', phenology_calendar:'Phänologie-Kalender',
+      share:'Teilen', fav_add:'Zu Favoriten', fav_remove:'Aus Favoriten entfernen', fav_only:'Nur Favoriten', phenology_calendar:'Phänologie-Kalender', notifications:'Benachrichtigungen', wn_empty:'Nichts Neues',
       set_save:'Speichern', set_saved:'Konfiguration erfolgreich gespeichert', set_defaults:'Standard', set_defaults_confirm:'Alle Erkennungsparameter auf Standardwerte zurücksetzen?', set_defaults_applied:'Standardwerte angewendet — klicken Sie Speichern zur Bestätigung',
       set_recording:'Audioaufnahme', set_overlap:'Überlappung (s)', set_rec_length:'Aufnahmedauer (s)',
       set_extraction_length:'Extraktionsdauer (s)', set_channels:'Mikrofonkanäle', set_audio_format:'Audioformat',
@@ -1141,7 +1141,7 @@
       set_alert_influx:'Ongebruikelijke toestroom (>3x gemiddelde)', set_alert_missing:'Veelvoorkomende soort afwezig (na de middag)', set_alert_rare_visitor:'Zeldzame bezoeker gedetecteerd',
       set_tab_detection:'Detectie', set_tab_audio:'Audio', set_tab_notif:'Meldingen', set_tab_station:'Station', set_tab_services:'Diensten', set_tab_species:'Soorten', set_tab_system:'Systeem', set_tab_backup:'Back-up', set_tab_database:'Database', set_tab_terminal:'Terminal',
       bkp_init:'Initialisatie', bkp_db:'Database', bkp_config:'Configuratie', bkp_projects:'Projecten', bkp_audio:'BirdSongs', bkp_upload:'Upload', bkp_mount:'Koppeling', bkp_done:'Klaar',
-      share:'Delen', fav_add:'Toevoegen aan favorieten', fav_remove:'Verwijderen uit favorieten', fav_only:'Alleen favorieten', phenology_calendar:'Fenologiekalender',
+      share:'Delen', fav_add:'Toevoegen aan favorieten', fav_remove:'Verwijderen uit favorieten', fav_only:'Alleen favorieten', phenology_calendar:'Fenologiekalender', notifications:'Meldingen', wn_empty:'Niets nieuws',
       set_save:'Opslaan', set_saved:'Configuratie succesvol opgeslagen', set_defaults:'Standaard', set_defaults_confirm:'Alle detectieparameters terugzetten naar standaardwaarden?', set_defaults_applied:'Standaardwaarden toegepast — klik Opslaan om te bevestigen',
       set_recording:'Audio-opname', set_overlap:'Overlap (s)', set_rec_length:'Opnameduur (s)',
       set_extraction_length:'Extractieduur (s)', set_channels:'Microfoonkanalen', set_audio_format:'Audioformaat',
@@ -2043,7 +2043,43 @@
         }
       }
 
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch };
+      // ── Notification bell ────────────────────────────────────────────
+      const bellOpen = ref(false);
+      const bellItems = ref([]);
+      const bellCount = computed(() => bellItems.value.length);
+      const bellSeen = ref(parseInt(localStorage.getItem('birdash_bell_seen') || '0', 10));
+      const bellUnseen = computed(() => Math.max(0, bellCount.value - bellSeen.value));
+
+      fetch(`${BIRD_CONFIG.apiUrl}/whats-new`).then(r => r.json()).then(d => {
+        const items = [];
+        const icons = { out_of_season: '⚠️', activity_spike: '📈', species_return: '🔄', first_of_year: '🆕', species_streak: '📅', seasonal_peak: '🌿' };
+        const allCards = [...(d.alerts || []), ...(d.phenology || [])];
+        for (const card of allCards) {
+          if (!card.active || !card.data?.species) continue;
+          const icon = icons[card.type] || '🔔';
+          const label = t('wn_card_' + card.type) || card.type;
+          for (const sp of card.data.species) {
+            const name = sp.commonName || sp.comName || '';
+            const sci = sp.sciName || '';
+            let sub = label;
+            if (sp.absentDays) sub += ' (' + sp.absentDays + 'j)';
+            if (sp.streakDays) sub += ' (' + sp.streakDays + 'j)';
+            if (sp.count) sub += ' (' + sp.count + ')';
+            items.push({ icon, text: spName(name, sci) || name, sub, href: 'species.html?species=' + encodeURIComponent(name) });
+          }
+        }
+        bellItems.value = items.slice(0, 12);
+      }).catch(() => {});
+
+      function toggleBell() {
+        bellOpen.value = !bellOpen.value;
+        if (bellOpen.value) {
+          bellSeen.value = bellCount.value;
+          localStorage.setItem('birdash_bell_seen', String(bellCount.value));
+        }
+      }
+
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
     },
     directives: {
       'click-outside': {
@@ -2091,6 +2127,23 @@
             <span class="gSearch-rname">{{ r.displayName }}</span>
             <span class="gSearch-rsci">{{ r.sciName }}</span>
           </button>
+        </div>
+      </div>
+      <!-- Notification bell -->
+      <div class="hdr-bell" v-click-outside="()=>bellOpen=false">
+        <button class="bell-btn" @click="toggleBell" :aria-label="t('notifications')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span v-if="bellUnseen > 0" class="bell-badge">{{bellUnseen}}</span>
+        </button>
+        <div class="bell-panel" v-show="bellOpen">
+          <div v-if="bellItems.length === 0" style="padding:1rem;text-align:center;opacity:.5;font-size:.8rem;">{{t('wn_empty')}}</div>
+          <a v-for="(item, i) in bellItems" :key="i" :href="item.href" class="bell-item">
+            <span class="bell-icon">{{item.icon}}</span>
+            <div class="bell-text">
+              <div class="bell-name">{{item.text}}</div>
+              <div class="bell-sub">{{item.sub}}</div>
+            </div>
+          </a>
         </div>
       </div>
       <div class="header-dropdowns">

@@ -917,6 +917,38 @@ a:hover { opacity: .85; }
   }
 }
 
+/* ── Notification bell ────────────────────────────────────────────────────── */
+.hdr-bell { position: relative; }
+.bell-btn {
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  padding: 4px 6px; border-radius: var(--radius); position: relative;
+}
+.bell-btn:hover { color: var(--text-main); background: var(--border); }
+.bell-badge {
+  position: absolute; top: 0; right: 0; min-width: 14px; height: 14px;
+  background: #e53e3e; color: #fff; font-size: .6rem; font-weight: 700;
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; line-height: 1;
+}
+.bell-panel {
+  position: absolute; right: 0; top: 100%; margin-top: 4px;
+  width: 280px; max-height: 360px; overflow-y: auto;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  z-index: 200;
+}
+.bell-item {
+  display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem;
+  text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.bell-item:last-child { border-bottom: none; }
+.bell-item:hover { background: var(--bg-deep); }
+.bell-icon { font-size: 1.1rem; flex-shrink: 0; }
+.bell-text { min-width: 0; }
+.bell-name { font-size: .82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bell-sub { font-size: .7rem; color: var(--text-muted); }
+
 /* ── Chart download button ────────────────────────────────────────────────── */
 .chart-dl-btn {
   background: none; border: none; cursor: pointer; font-size: .9rem;
