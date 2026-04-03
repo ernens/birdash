@@ -596,10 +596,18 @@ const app = createApp({
 
     async function loadMonthlyData(name) {
       try {
-        const rows = await birdQuery(`SELECT CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM detections WHERE Com_Name=? GROUP BY m ORDER BY m ASC`,[name]);
-        const vals = Array(12).fill(0);
-        rows.forEach(r=>{vals[r.m-1]=r.n;});
-        monthlyData.value = vals;
+        const rows = await birdQuery(
+          `SELECT SUBSTR(Date,1,4) as y, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n
+           FROM detections WHERE Com_Name=? GROUP BY y, m ORDER BY y, m`, [name]);
+        const thisYear = new Date().getFullYear().toString();
+        const lastYear = (new Date().getFullYear() - 1).toString();
+        const cur = Array(12).fill(0), prev = Array(12).fill(0), all = Array(12).fill(0);
+        for (const r of rows) {
+          all[r.m - 1] += r.n;
+          if (r.y === thisYear) cur[r.m - 1] = r.n;
+          else if (r.y === lastYear) prev[r.m - 1] = r.n;
+        }
+        monthlyData.value = { all, cur, prev, hasYoY: prev.some(v => v > 0) };
       } catch(e) {}
     }
 
@@ -677,17 +685,29 @@ const app = createApp({
       await nextTick();
       if (!monthlyData.value || !canvasMonthly.value) return;
       const base = chartDefaults();
+      const md = monthlyData.value;
+      const thisYear = new Date().getFullYear();
+      const datasets = [];
+      if (md.hasYoY) {
+        datasets.push({
+          label: String(thisYear), data: md.cur,
+          backgroundColor: 'rgba(251,191,36,.55)', borderColor: '#fbbf24', borderWidth: 1, borderRadius: 3
+        });
+        datasets.push({
+          label: String(thisYear - 1), data: md.prev,
+          backgroundColor: 'rgba(148,163,184,.35)', borderColor: '#94a3b8', borderWidth: 1, borderRadius: 3
+        });
+      } else {
+        datasets.push({
+          label: t('detections'), data: md.all,
+          backgroundColor: md.all.map(v => v > 0 ? 'rgba(251,191,36,.55)' : 'rgba(251,191,36,.1)'),
+          borderColor: '#fbbf24', borderWidth: 1, borderRadius: 3
+        });
+      }
       mountMonthly(canvasMonthly, () => ({
         type: 'bar',
-        data: {
-          labels: t('months_short'),
-          datasets: [{
-            label: t('detections'), data: monthlyData.value,
-            backgroundColor: monthlyData.value.map(v => v > 0 ? 'rgba(251,191,36,.55)' : 'rgba(251,191,36,.1)'),
-            borderColor: '#fbbf24', borderWidth: 1, borderRadius: 3
-          }]
-        },
-        options: {...base, plugins:{...base.plugins, legend:{display:false}},
+        data: { labels: t('months_short'), datasets },
+        options: {...base, plugins:{...base.plugins, legend:{display: md.hasYoY}},
           scales:{x:{...base.scales.x, ticks:{font:{size:10}}}, y:{...base.scales.y, beginAtZero:true}}}
       }));
     });
