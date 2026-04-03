@@ -933,7 +933,7 @@ const app = createApp({
     // ── Timeline functions ──────────────────────────────────────────
     const TL_ZOOM_LEVELS = [70, 110, 180];
     const TL_SKY_H = 200;
-    const tlZoom = ref(1); // 0=compact, 1=normal, 2=étendu
+    const tlZoom = ref(window.innerWidth < 768 ? 0 : 1); // mobile=compact
     function tlPxPerHour() { return TL_ZOOM_LEVELS[tlZoom.value] || 110; }
     function tlTotalW() { return 24 * tlPxPerHour(); }
     function tlZoomIn() { if (tlZoom.value < 2) { tlZoom.value++; renderTimeline(); } }
