@@ -917,6 +917,36 @@ a:hover { opacity: .85; }
   }
 }
 
+/* ── Gallery tabs ─────────────────────────────────────────────────────────── */
+.gallery-tabs {
+  display: flex; gap: .3rem; margin-bottom: 1rem;
+  border-bottom: 2px solid var(--border); padding-bottom: 0;
+}
+.gallery-tab {
+  padding: .5rem 1rem; font-size: .85rem; font-weight: 500;
+  text-decoration: none; color: var(--text-muted);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.gallery-tab:hover { color: var(--text-main); }
+.gallery-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── Weather widget ───────────────────────────────────────────────────────── */
+.weather-widget {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .4rem .8rem; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-main); transition: border-color .15s;
+}
+.weather-widget:hover { border-color: var(--accent); }
+
+/* ── Nav badge ────────────────────────────────────────────────────────────── */
+.nav-badge {
+  background: #e53e3e; color: #fff; font-size: .6rem; font-weight: 700;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 4px; margin-left: auto;
+}
+
 /* ── Quick links bar ──────────────────────────────────────────────────────── */
 .quick-links {
   display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem;

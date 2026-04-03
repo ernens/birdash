@@ -59,7 +59,7 @@
       nav_detections:'Détections', nav_species:'Espèces',
       nav_biodiversity:'Biodiversité', nav_rarities:'Rarités', nav_stats:'Statistiques',
       nav_system:'Monitoring', nav_analyses:'Analyses', nav_models:'Modèles', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Enregistrements', nav_gallery:'Meilleures captures', nav_settings:'Configuration', nav_timeline:'Calendrier', nav_calendar:'Calendrier',
-      gallery_title:'Galerie sonore', gallery_delete:'Supprimer', gallery_delete_confirm:'Supprimer cette détection et ses fichiers ?', top_detections_per_species:'meilleures détections',
+      gallery_title:'Meilleures captures', gallery_tab_best:'Meilleures', gallery_tab_library:'Bibliothèque audio', gallery_delete:'Supprimer', gallery_delete_confirm:'Supprimer cette détection et ses fichiers ?', top_detections_per_species:'meilleures détections',
       // Settings page
       set_location:'Localisation', set_site_name:'Nom du site', set_latitude:'Latitude', set_longitude:'Longitude',
       set_model:'Modèle de détection', set_model_choice:'Modèle IA', set_species_freq_thresh:'Seuil fréquence espèces',
@@ -425,7 +425,7 @@
       nav_detections:'Detections', nav_species:'Species',
       nav_biodiversity:'Biodiversity', nav_rarities:'Rarities', nav_stats:'Statistics',
       nav_system:'Monitoring', nav_analyses:'Analysis', nav_models:'Models', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Recordings', nav_gallery:'Best catches', nav_settings:'Configuration', nav_timeline:'Calendar', nav_calendar:'Calendar',
-      gallery_title:'Sound Gallery', gallery_delete:'Delete', gallery_delete_confirm:'Delete this detection and its files?', top_detections_per_species:'top detections',
+      gallery_title:'Best catches', gallery_tab_best:'Best', gallery_tab_library:'Audio library', gallery_delete:'Delete', gallery_delete_confirm:'Delete this detection and its files?', top_detections_per_species:'top detections',
       set_location:'Location', set_site_name:'Site name', set_latitude:'Latitude', set_longitude:'Longitude',
       set_model:'Detection model', set_model_choice:'AI Model', set_species_freq_thresh:'Species frequency threshold',
       set_analysis:'Analysis', set_params:'Parameters', set_shared_params:'Shared parameters', set_confidence:'Confidence', set_birdnet_conf:'BirdNET confidence', set_perch_conf:'Perch confidence', set_perch_margin:'Perch margin (top1-top2)', set_sensitivity:'Sensitivity',
@@ -773,7 +773,7 @@
       nav_detections:'Erkennungen', nav_species:'Arten',
       nav_biodiversity:'Biodiversität', nav_rarities:'Seltenheiten',
       nav_stats:'Statistiken', nav_system:'Monitoring', nav_analyses:'Analysen', nav_models:'Modelle', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Aufnahmen', nav_gallery:'Beste Aufnahmen', nav_settings:'Konfiguration', nav_timeline:'Kalender', nav_calendar:'Kalender',
-      gallery_title:'Klanggalerie', gallery_delete:'Löschen', gallery_delete_confirm:'Diese Erkennung und ihre Dateien löschen?', top_detections_per_species:'beste Erkennungen',
+      gallery_title:'Beste Aufnahmen', gallery_tab_best:'Beste', gallery_tab_library:'Audiobibliothek', gallery_delete:'Löschen', gallery_delete_confirm:'Diese Erkennung und ihre Dateien löschen?', top_detections_per_species:'beste Erkennungen',
       set_location:'Standort', set_site_name:'Standortname', set_latitude:'Breitengrad', set_longitude:'Längengrad',
       set_model:'Erkennungsmodell', set_model_choice:'KI-Modell', set_species_freq_thresh:'Artenhäufigkeitsschwelle',
       set_analysis:'Analyse', set_params:'Parameter', set_shared_params:'Gemeinsame Parameter', set_confidence:'Konfidenz', set_birdnet_conf:'BirdNET-Konfidenz', set_perch_conf:'Perch-Konfidenz', set_perch_margin:'Perch-Marge (Top1-Top2)', set_sensitivity:'Empfindlichkeit',
@@ -1121,7 +1121,7 @@
       nav_detections:'Detecties', nav_species:'Soorten',
       nav_biodiversity:'Biodiversiteit', nav_rarities:'Zeldzaamheden',
       nav_stats:'Statistieken', nav_system:'Monitoring', nav_analyses:'Analyse', nav_models:'Modellen', nav_terminal:'Terminal', nav_spectrogram:'Live', nav_recordings:'Opnames', nav_gallery:'Beste opnames', nav_settings:'Configuratie', nav_timeline:'Kalender', nav_calendar:'Kalender',
-      gallery_title:'Geluidsgalerij', gallery_delete:'Verwijderen', gallery_delete_confirm:'Deze detectie en bijbehorende bestanden verwijderen?', top_detections_per_species:'beste detecties',
+      gallery_title:'Beste opnames', gallery_tab_best:'Beste', gallery_tab_library:'Audiobibliotheek', gallery_delete:'Verwijderen', gallery_delete_confirm:'Deze detectie en bijbehorende bestanden verwijderen?', top_detections_per_species:'beste detecties',
       set_location:'Locatie', set_site_name:'Sitenaam', set_latitude:'Breedtegraad', set_longitude:'Lengtegraad',
       set_model:'Detectiemodel', set_model_choice:'AI-model', set_species_freq_thresh:'Soortfrequentiedrempel',
       set_analysis:'Analyse', set_params:'Parameters', set_shared_params:'Gedeelde parameters', set_confidence:'Betrouwbaarheid', set_birdnet_conf:'BirdNET-betrouwbaarheid', set_perch_conf:'Perch-betrouwbaarheid', set_perch_margin:'Perch-marge (top1-top2)', set_sensitivity:'Gevoeligheid',
@@ -2093,7 +2093,13 @@
       }
 
       const currentPage = props.page;
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
+
+      // Review badge count
+      const reviewCount = ref(0);
+      fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(7)}&dateTo=${U.localDateStr()}&limit=1`)
+        .then(r => r.json()).then(d => { reviewCount.value = d.total || 0; }).catch(() => {});
+
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
     },
     directives: {
       'click-outside': {
@@ -2211,6 +2217,7 @@
          class="nav-link" :class="{active:p.active}" :aria-current="p.active?'page':null">
         <span class="nav-icon" aria-hidden="true">{{p.icon}}</span>
         <span class="nav-label">{{p.label}}</span>
+        <span v-if="p.id==='review' && reviewCount > 0" class="nav-badge">{{reviewCount}}</span>
       </a>
     </div>
   </nav>

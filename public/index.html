@@ -66,13 +66,20 @@
       </div>
     </div>
 
-    <!-- Quick links -->
-    <div class="quick-links">
-      <a href="spectrogram.html" class="quick-link">📡 {{t('nav_spectrogram')}}</a>
-      <a :href="'calendar.html?date='+daysAgo(1)" class="quick-link">📆 {{t('yesterday')}}</a>
-      <a href="rarities.html" class="quick-link">💎 {{t('nav_rarities')}}</a>
-      <a href="weather.html" class="quick-link">🌦️ {{t('nav_weather')}}</a>
-      <a href="review.html" class="quick-link">✅ {{t('nav_review')}}</a>
+    <!-- Weather widget + Quick links -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem;">
+      <a v-if="weatherToday" href="weather.html" class="weather-widget" style="text-decoration:none;">
+        <span style="font-size:1.1rem;">🌡️</span>
+        <span style="font-weight:600;font-size:.95rem;">{{weatherToday.temp}}°C</span>
+        <span style="color:var(--text-muted);font-size:.78rem;">{{weatherToday.precip}}mm</span>
+        <span style="color:var(--text-muted);font-size:.78rem;">💨{{weatherToday.wind}}km/h</span>
+      </a>
+      <div class="quick-links" style="margin-bottom:0;">
+        <a href="spectrogram.html" class="quick-link">📡 {{t('nav_spectrogram')}}</a>
+        <a :href="'calendar.html?date='+daysAgo(1)" class="quick-link">📆 {{t('yesterday')}}</a>
+        <a href="rarities.html" class="quick-link">💎 {{t('nav_rarities')}}</a>
+        <a href="review.html" class="quick-link">✅ {{t('nav_review')}}</a>
+      </div>
     </div>
 
     <!-- ═══ What's New — 3-level editorial module ═══ -->
@@ -671,11 +678,31 @@ const app = createApp({
       }
     }
 
+    // Weather widget
+    const weatherToday = ref(null);
+    async function loadWeatherWidget() {
+      try {
+        const r = await fetch(`${BIRD_CONFIG.apiUrl}/weather?days=1`);
+        if (!r.ok) return;
+        const d = await r.json();
+        const daily = d.daily || {};
+        const tMax = (daily.temperature_2m_max || [])[0];
+        const tMin = (daily.temperature_2m_min || [])[0];
+        if (tMax != null && tMin != null) {
+          weatherToday.value = {
+            temp: Math.round((tMax + tMin) / 2),
+            precip: Math.round((daily.precipitation_sum || [])[0] || 0),
+            wind: Math.round((daily.windspeed_10m_max || [])[0] || 0),
+          };
+        }
+      } catch(e) {}
+    }
+
     async function loadAll() {
       await Promise.all([loadKpis(), loadLastDet(), loadFeed(),
                          load7dData(), loadTopData(), loadHourlyData(),
-                         loadRareSpeciesToday(), loadMorningSummary(), loadWhatsNew()]);
-      // Load timeline separately to avoid blocking the rest of the page
+                         loadRareSpeciesToday(), loadMorningSummary(), loadWhatsNew(),
+                         loadWeatherWidget()]);
       loadTimeline().catch(e => console.error('[timeline]', e));
     }
 
@@ -1061,7 +1088,7 @@ const app = createApp({
     onUnmounted(() => { if (_tlTimer) clearInterval(_tlTimer); });
 
     return {
-      lang, t, spName, daysAgo,
+      lang, t, spName, daysAgo, weatherToday,
       today, kpis, lastDet, feed, rareSpeciesToday, rarePanelOpen, toggleRarePanel, morning,
       whatsNew, wnIcon, wnMoonIcon,
       timelineExpanded, timelineLoading, timelineData, tlSelectedDate, tlShowDatePicker, tlTodayStr,

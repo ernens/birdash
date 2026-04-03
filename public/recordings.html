@@ -20,7 +20,13 @@
 </head>
 <body>
 <div id="app">
-  <birdash-shell page="recordings" :title="t('nav_recordings')">
+  <birdash-shell page="gallery" :title="t('nav_gallery')">
+
+    <!-- ── Tab switcher ────────────────────────────────────────────── -->
+    <div class="gallery-tabs">
+      <a href="gallery.html" class="gallery-tab">🏆 {{t('gallery_tab_best')}}</a>
+      <a href="recordings.html" class="gallery-tab active">🎧 {{t('gallery_tab_library')}}</a>
+    </div>
 
     <!-- ── Titre + tri global ────────────────────────────────────── -->
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
