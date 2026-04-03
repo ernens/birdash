@@ -577,7 +577,7 @@ const app = createApp({
         // Auto-select all if none selected, otherwise keep valid selection
         const available = new Set(rows.map(r => r.Com_Name));
         if (selectedSpecies.value.length === 0) {
-          selectedSpecies.value = rows.map(r => r.Com_Name);
+          selectedSpecies.value = rows.slice(0, 5).map(r => r.Com_Name);
         } else {
           selectedSpecies.value = selectedSpecies.value.filter(s => available.has(s));
         }
@@ -1020,6 +1020,9 @@ const app = createApp({
 
     onMounted(async () => {
       document.addEventListener('keydown', onKeydown);
+      // Read species param from URL
+      const urlSp = new URLSearchParams(window.location.search).get('species');
+      if (urlSp) selectedSpecies.value = [urlSp];
       const tax = await BIRDASH_UTILS.loadTaxonomy(lang.value);
       taxonomyData.value = tax.species || [];
       await applyFilters();
