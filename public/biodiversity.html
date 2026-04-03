@@ -51,8 +51,6 @@
 
       <!-- ── Main content ───────────────────────────────────────── -->
       <div>
-        <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;margin-bottom:.75rem;">⬇ CSV</button>
-
         <!-- Shannon diversity KPIs -->
         <div v-if="shannonH !== null" class="kpi-strip" style="margin-bottom:.75rem;">
           <div class="kpi-card">
@@ -71,7 +69,10 @@
 
         <!-- Richesse journalière -->
         <div class="card">
-          <div class="card-title">{{t('richness_per_day')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('richness_per_day')}}
+            <button @click="exportCsv" class="chart-dl-btn" title="Export CSV">⬇ CSV</button>
+          </div>
           <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasRichness"></canvas></div>
         </div>
 

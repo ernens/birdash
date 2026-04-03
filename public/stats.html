@@ -57,8 +57,6 @@
       <!-- ── Main content ───────────────────────────────────────── -->
       <div>
 
-        <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;margin-bottom:.75rem;">⬇ CSV</button>
-
         <!-- KPIs globaux -->
         <div class="kpi-grid">
           <div v-if="kpis.loading" class="spinner" style="grid-column:1/-1;"><div></div><div></div><div></div></div>
@@ -74,7 +72,10 @@
 
         <!-- Totaux mensuels -->
         <div class="card">
-          <div class="card-title">{{t('monthly_totals')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('monthly_totals')}}
+            <button @click="exportCsv" class="chart-dl-btn" title="Export CSV">⬇ CSV</button>
+          </div>
           <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasMonthly"></canvas></div>
         </div>
 
