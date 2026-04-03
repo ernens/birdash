@@ -79,7 +79,11 @@
 
     <!-- Detection list -->
     <div v-else style="padding:.5rem 1rem;">
-      <div v-for="det in flagged" :key="det.date + det.time + det.sci_name"
+      <div style="font-size:.8rem;opacity:.6;margin-bottom:.5rem;">
+        {{flagged.length}} / {{totalDets}} {{t('detections')}}
+        <span v-if="flagged.length > pageLimit"> — {{t('review_showing')}} {{pageLimit}}</span>
+      </div>
+      <div v-for="det in pagedFlagged" :key="det.date + det.time + det.sci_name"
            class="review-card" :class="{ rejected: det.validation === 'rejected', confirmed: det.validation === 'confirmed' }">
         <div style="display:flex;align-items:center;gap:.6rem;">
 
@@ -119,13 +123,18 @@
           </div>
         </div>
       </div>
+      <div v-if="flagged.length > pageLimit" style="text-align:center;padding:1rem;">
+        <button class="btn-confirm" @click="pageLimit += 50" style="padding:.4rem 1.5rem;">
+          {{t('review_show_more')}} ({{flagged.length - pageLimit}})
+        </button>
+      </div>
     </div>
 
   </birdash-shell>
 </div>
 
 <script>
-const { createApp, ref, reactive, computed, onMounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 const { useI18n, useTheme, useNav, useFilterPeriod, useSpeciesNames, registerComponents } = BIRDASH;
 const { birdQuery, buildAudioUrl } = BIRDASH_UTILS;
 const API = BIRD_CONFIG.apiBase;
@@ -140,6 +149,8 @@ const app = createApp({
     const flagged = ref([]);
     const totalDets = ref(0);
     const loading = ref(false);
+    const pageLimit = ref(50);
+    const pagedFlagged = computed(() => flagged.value.slice(0, pageLimit.value));
     const selected = reactive(new Set());
     let _audio = null;
     const playingDet = ref(null);
@@ -170,7 +181,8 @@ const app = createApp({
       try {
         const from = fp.dateFrom.value || new Date().toISOString().split('T')[0];
         const to = fp.dateTo.value || from;
-        const resp = await fetch(`${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=500`);
+        pageLimit.value = 50;
+        const resp = await fetch(`${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=2000`);
         const data = await resp.json();
         flagged.value = data.flagged || [];
         totalDets.value = data.total || 0;
@@ -267,7 +279,7 @@ const app = createApp({
     onMounted(loadFlagged);
 
     return {
-      t, spName, fp, flagged, totalDets, loading,
+      t, spName, fp, flagged, pagedFlagged, totalDets, loading, pageLimit,
       selected, playingDet, reasonGroups,
       detKey, loadFlagged, validate, bulkAction,
       bulkRejectByReason, toggleSelect, selectAll, playAudio,

@@ -917,6 +917,14 @@ a:hover { opacity: .85; }
   }
 }
 
+/* ── Chart download button ────────────────────────────────────────────────── */
+.chart-dl-btn {
+  background: none; border: none; cursor: pointer; font-size: .9rem;
+  color: var(--text-faint); padding: 2px 6px; border-radius: var(--radius);
+  opacity: .4; transition: opacity .15s;
+}
+.chart-dl-btn:hover { opacity: 1; background: var(--border); }
+
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-deep); }

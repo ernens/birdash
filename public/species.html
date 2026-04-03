@@ -170,29 +170,44 @@
       <!-- ── Graphiques ─────────────────────────────────────────── -->
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">{{t('activity_by_hour')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('activity_by_hour')}}
+            <button class="chart-dl-btn" @click="exportChart(canvasHourly, sp.name+'-hourly')" title="PNG">⤓</button>
+          </div>
           <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title">{{t('monthly_presence')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('monthly_presence')}}
+            <button class="chart-dl-btn" @click="exportChart(canvasMonthly, sp.name+'-monthly')" title="PNG">⤓</button>
+          </div>
           <div class="chart-wrap"><canvas ref="canvasMonthly"></canvas></div>
         </div>
       </div>
 
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">{{t('activity_30d')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('activity_30d')}}
+            <button class="chart-dl-btn" @click="exportChart(canvas30d, sp.name+'-30d')" title="PNG">⤓</button>
+          </div>
           <div class="chart-wrap"><canvas ref="canvas30d"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title">{{t('conf_distribution')}}</div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            {{t('conf_distribution')}}
+            <button class="chart-dl-btn" @click="exportChart(canvasConf, sp.name+'-confidence')" title="PNG">⤓</button>
+          </div>
           <div class="chart-wrap"><canvas ref="canvasConf"></canvas></div>
         </div>
       </div>
 
       <!-- ── Heatmap jour/heure ─────────────────────────────────── -->
       <div class="card">
-        <div class="card-title">{{t('activity_month_hour')}}</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          {{t('activity_month_hour')}}
+          <button class="chart-dl-btn" @click="exportChart(canvasDayHour, sp.name+'-heatmap')" title="PNG">⤓</button>
+        </div>
         <div class="chart-wrap"><canvas ref="canvasDayHour"></canvas></div>
       </div>
 
@@ -341,7 +356,7 @@
 
 <script>
 const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesNames,
+const { useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesNames, exportChart,
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
         buildSpeciesLinks, chartDefaults, shortModel, authHeaders } = BIRDASH;
@@ -1009,7 +1024,7 @@ const app = createApp({
       prevPhoto, nextPhoto, photoErr,
       playingFile, toggleAudio,
       fmtDate, fmtTime, fmtConf, navigateTo, shortModel,
-      canvasHourly, canvasMonthly, canvas30d, canvasConf, canvasDayHour,
+      canvasHourly, canvasMonthly, canvas30d, canvasConf, canvasDayHour, exportChart,
       loadDetail,
       deleteMode, showBulkModal, bulkConfirmName, bulkDeleting, deleteError,
       deleteResult, deleteToast, bulkTargetName, bulkTargetCount,
