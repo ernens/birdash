@@ -13,13 +13,36 @@
 
   // ── API Query ────────────────────────────────────────────────────────────
 
+  // ── Global API error tracking ──────────────────────────────────────────
+  let _apiFailCount = 0;
+  let _apiBannerShown = false;
+
+  function _showApiBanner() {
+    if (_apiBannerShown) return;
+    _apiBannerShown = true;
+    const el = document.createElement('div');
+    el.className = 'api-error-banner';
+    el.innerHTML = '<span>API unavailable</span><button onclick="this.parentElement.remove()">✕</button>';
+    document.body.prepend(el);
+  }
+
+  function _clearApiBanner() {
+    _apiFailCount = 0;
+    if (_apiBannerShown) {
+      const el = document.querySelector('.api-error-banner');
+      if (el) el.remove();
+      _apiBannerShown = false;
+    }
+  }
+
   async function birdQuery(sql, params = []) {
     const res = await fetch(`${BIRD_CONFIG.apiUrl}/query`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ sql, params }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) { _apiFailCount++; if (_apiFailCount >= 3) _showApiBanner(); throw new Error(`HTTP ${res.status}`); }
+    _clearApiBanner();
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data.rows.map(row => {

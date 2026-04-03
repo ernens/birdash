@@ -41,7 +41,7 @@
       <div class="sp-hero">
 
         <!-- Carousel photos -->
-        <div class="sp-carousel">
+        <div class="sp-carousel" v-swipe="{ left: nextPhoto, right: prevPhoto }">
           <div class="sp-carousel-main">
             <bird-img v-if="photos.length" :src="photos[photoIdx].url" :alt="sp.name"
                  class="sp-carousel-img"></bird-img>
@@ -71,7 +71,7 @@
         </div>
 
         <!-- Info panel -->
-        <div class="sp-info-panel">
+        <div class="sp-info-panel" v-swipe="{ left: nextSpecies, right: prevSpecies }">
           <!-- Title + inline species picker -->
           <div class="sp-title-row">
             <h1 class="sp-title">{{spName(sp.name, sp.sci)}}</h1>

@@ -917,6 +917,19 @@ a:hover { opacity: .85; }
   }
 }
 
+/* ── API error banner ─────────────────────────────────────────────────────── */
+.api-error-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: #e53e3e; color: #fff; padding: .5rem 1rem;
+  display: flex; justify-content: center; align-items: center; gap: 1rem;
+  font-size: .85rem; font-weight: 500;
+}
+.api-error-banner button {
+  background: none; border: none; color: #fff; font-size: 1.1rem;
+  cursor: pointer; opacity: .7;
+}
+.api-error-banner button:hover { opacity: 1; }
+
 /* ── Notification bell ────────────────────────────────────────────────────── */
 .hdr-bell { position: relative; }
 .bell-btn {

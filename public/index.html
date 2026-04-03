@@ -655,7 +655,10 @@ const app = createApp({
           phenology: d.phenology || [],
           context: d.context || whatsNew.value.context
         };
-      } catch(e) { console.error('whatsNew:', e); }
+      } catch(e) {
+        console.error('whatsNew:', e);
+        whatsNew.value = { ...whatsNew.value, loaded: true, error: true };
+      }
     }
 
     async function loadAll() {
@@ -1203,16 +1206,17 @@ const app = createApp({
 
     function renderTimeline() {
       const data = timelineData.value;
-      if (!data || !data.meta?.astronomy) return;
+      if (!data) return;
+      const astro = data.meta?.astronomy || { astronomicalDawn:4, nauticalDawn:5, civilDawn:5.5, sunrise:6.5, sunset:19.5, civilDusk:20.5, nauticalDusk:21, astronomicalDusk:22 };
       const A = {
-        astroDawn: data.meta.astronomy.astronomicalDawn,
-        nautDawn:  data.meta.astronomy.nauticalDawn,
-        civilDawn: data.meta.astronomy.civilDawn,
-        sunrise:   data.meta.astronomy.sunrise,
-        sunset:    data.meta.astronomy.sunset,
-        civilDusk: data.meta.astronomy.civilDusk,
-        nautDusk:  data.meta.astronomy.nauticalDusk,
-        astroDusk: data.meta.astronomy.astronomicalDusk,
+        astroDawn: astro.astronomicalDawn,
+        nautDawn:  astro.nauticalDawn,
+        civilDawn: astro.civilDawn,
+        sunrise:   astro.sunrise,
+        sunset:    astro.sunset,
+        civilDusk: astro.civilDusk,
+        nautDusk:  astro.nauticalDusk,
+        astroDusk: astro.astronomicalDusk,
       };
       if (tlSkyCanvasRef.value) tlDrawSky(tlSkyCanvasRef.value, A);
       if (tlStarsCanvasRef.value) tlDrawStars(tlStarsCanvasRef.value, A);

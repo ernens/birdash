@@ -2663,8 +2663,26 @@
 </div>`
   };
 
+  // ── Swipe directive ──────────────────────────────────────────────────────
+  // Usage: v-swipe="{ left: fn, right: fn }"
+  const vSwipe = {
+    mounted(el, binding) {
+      let sx = 0, sy = 0;
+      el.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+        const fns = binding.value || {};
+        if (dx < 0 && fns.left) fns.left();
+        if (dx > 0 && fns.right) fns.right();
+      }, { passive: true });
+    }
+  };
+
   // Enregistre les composants globaux sur une instance d'app Vue
   function registerComponents(app) {
+    app.directive('swipe', vSwipe);
     app.component('birdash-shell', PibirdShell);
     app.component('bird-img', BirdImg);
     app.component('spectro-modal', SpectroModal);
@@ -2681,7 +2699,7 @@
     // Filter composables
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components
-    PibirdShell, registerComponents, MODEL_LABELS,
+    PibirdShell, registerComponents, MODEL_LABELS, vSwipe,
     // Wrapper with reactive lang injection (calls BIRDASH_UTILS under the hood)
     buildSpeciesLinks,
     // Re-exports from BIRDASH_UTILS for backward compatibility
