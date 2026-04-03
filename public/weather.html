@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <title>BIRDASH — Weather</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+</head>
+<body>
+<div id="app">
+  <birdash-shell page="weather" :title="t('nav_weather')">
+
+    <!-- Today + Tomorrow KPIs -->
+    <div class="kpi-strip" v-if="todayWeather">
+      <div class="kpi-card">
+        <div class="kpi-value">{{todayWeather.temp}}°C</div>
+        <div class="kpi-label">{{t('temperature')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value blue">{{todayWeather.precip}} mm</div>
+        <div class="kpi-label">{{t('precipitation')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">{{todayWeather.wind}} km/h</div>
+        <div class="kpi-label">{{t('wind')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" :style="{color: todayWeather.detToday > 0 ? 'var(--accent)' : 'var(--text-muted)'}">{{todayWeather.detToday}}</div>
+        <div class="kpi-label">{{t('detections')}} {{t('today_label')}}</div>
+      </div>
+    </div>
+
+    <!-- Tomorrow forecast -->
+    <div class="card" v-if="forecast">
+      <div class="card-title">{{t('weather_forecast')}}</div>
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+          <span style="font-size:1.4rem;font-weight:700;">{{forecast.temp}}°C</span>
+          <span style="margin-left:.5rem;color:var(--text-muted);">{{forecast.precip}} mm</span>
+          <span style="margin-left:.5rem;color:var(--text-muted);">{{forecast.wind}} km/h</span>
+        </div>
+        <div style="font-size:.85rem;" :style="{color: forecast.trend > 0 ? '#5a9e3a' : forecast.trend < -15 ? '#e53e3e' : 'var(--text-muted)'}">
+          {{forecast.trend > 0 ? '↑' : '↓'}} {{t('weather_trend', {pct: Math.abs(forecast.trend)})}}
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- 30-day chart -->
+      <div class="card">
+        <div class="card-title">{{t('weather_activity')}}</div>
+        <div v-if="loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else-if="error" class="error-msg">{{error}}</div>
+        <div v-else class="chart-wrap chart-wrap-tall"><canvas ref="canvasWeather"></canvas></div>
+        <!-- Correlation -->
+        <div v-if="corr" style="margin-top:.75rem;padding:.5rem;background:var(--bg-deep);border-radius:var(--radius);font-size:.82rem;">
+          <div style="font-weight:600;margin-bottom:.4rem;">{{t('weather_correlation')}}</div>
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+            <span>🌡️ {{t('temperature')}} : <strong :style="{color: corr.temp > 0.3 ? '#5a9e3a' : corr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.temp.toFixed(2)}}</strong></span>
+            <span>🌧️ {{t('precipitation')}} : <strong :style="{color: corr.precip > 0.3 ? '#5a9e3a' : corr.precip < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.precip.toFixed(2)}}</strong></span>
+            <span>🌬️ {{t('wind')}} : <strong :style="{color: corr.wind > 0.3 ? '#5a9e3a' : corr.wind < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.wind.toFixed(2)}}</strong></span>
+          </div>
+          <div v-if="corr.bestConditions" style="margin-top:.4rem;color:var(--text-muted);">
+            {{corr.bestConditions}}
+          </div>
+        </div>
+      </div>
+
+      <!-- Top species by conditions -->
+      <div class="card">
+        <div class="card-title">{{t('weather_top_species')}}</div>
+        <div v-if="topByWeather.length === 0 && !loading" class="error-msg">{{t('no_data')}}</div>
+        <div v-for="sp in topByWeather" :key="sp.name" class="det-item" style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.name})">
+          <bird-img :src="photoUrl(sp.sci)" :alt="sp.name" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;"></bird-img>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(sp.name, sp.sci)}}</div>
+            <div style="font-size:.7rem;color:var(--text-muted);">{{sp.avgTemp}}°C · {{sp.avgPrecip}}mm · {{sp.count}} det.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
+        birdQuery, localDateStr, daysAgo, navigateTo, photoUrl, chartDefaults } = BIRDASH;
+
+const app = createApp({
+  setup() {
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('weather');
+    const { spName } = useSpeciesNames();
+    const { mountChart: mountWeather } = useChart();
+
+    const loading = ref(true);
+    const error = ref(null);
+    const todayWeather = ref(null);
+    const forecast = ref(null);
+    const corr = ref(null);
+    const topByWeather = ref([]);
+    const canvasWeather = ref(null);
+
+    function pearson(x, y) {
+      const n = x.length;
+      if (n < 5) return 0;
+      let sx=0,sy=0,sxx=0,syy=0,sxy=0;
+      for (let i=0;i<n;i++) { sx+=x[i]; sy+=y[i]; sxx+=x[i]*x[i]; syy+=y[i]*y[i]; sxy+=x[i]*y[i]; }
+      const d = Math.sqrt((n*sxx-sx*sx)*(n*syy-sy*sy));
+      return d===0 ? 0 : (n*sxy-sx*sy)/d;
+    }
+
+    async function loadAll() {
+      loading.value = true;
+      error.value = null;
+      try {
+        const weatherRes = await fetch(BIRD_CONFIG.apiUrl + '/weather?days=30');
+        if (!weatherRes.ok) throw new Error('weather API ' + weatherRes.status);
+        const weatherData = await weatherRes.json();
+        if (weatherData.error) throw new Error(weatherData.error);
+
+        const daily = weatherData.daily || {};
+        const dates = daily.time || [];
+        const tempMax = daily.temperature_2m_max || [];
+        const tempMin = daily.temperature_2m_min || [];
+        const precip = daily.precipitation_sum || [];
+        const wind = daily.windspeed_10m_max || [];
+
+        // Detection counts per day
+        const detRows = await birdQuery(
+          `SELECT Date, COUNT(*) as n FROM detections WHERE Date >= ? GROUP BY Date`, [daysAgo(30)]);
+        const detMap = {};
+        detRows.forEach(r => { detMap[r.Date] = r.n; });
+
+        const today = localDateStr();
+        const todayIdx = dates.indexOf(today);
+        const tomorrowIdx = todayIdx >= 0 ? todayIdx + 1 : -1;
+
+        // Today's weather
+        if (todayIdx >= 0) {
+          const avgT = Math.round(((tempMax[todayIdx]||0)+(tempMin[todayIdx]||0))/2);
+          todayWeather.value = {
+            temp: avgT, precip: Math.round((precip[todayIdx]||0)*10)/10,
+            wind: Math.round(wind[todayIdx]||0), detToday: detMap[today] || 0
+          };
+        }
+
+        // Tomorrow's forecast
+        if (tomorrowIdx >= 0 && tomorrowIdx < dates.length) {
+          const avgT = Math.round(((tempMax[tomorrowIdx]||0)+(tempMin[tomorrowIdx]||0))/2);
+          // Estimate activity trend based on correlation
+          const pastDets = dates.slice(0, todayIdx+1).map(d => detMap[d] || 0);
+          const avgDet = pastDets.length ? pastDets.reduce((a,b)=>a+b,0)/pastDets.length : 0;
+          const pastTemps = dates.slice(0, todayIdx+1).map((_,i) => ((tempMax[i]||0)+(tempMin[i]||0))/2);
+          const rT = pearson(pastTemps, pastDets);
+          const tempDiff = avgT - (todayWeather.value?.temp || avgT);
+          const trend = Math.round(rT * tempDiff * 5);
+          forecast.value = {
+            temp: avgT, precip: Math.round((precip[tomorrowIdx]||0)*10)/10,
+            wind: Math.round(wind[tomorrowIdx]||0), trend
+          };
+        }
+
+        // Build chart (past 30 days only, exclude forecast)
+        const chartEnd = todayIdx >= 0 ? todayIdx + 1 : dates.length;
+        const chartDates = dates.slice(0, chartEnd);
+        const labels = chartDates.map(d => {
+          const dt = new Date(d);
+          return dt.getDate() + ' ' + (t('months_short')||[])[dt.getMonth()];
+        });
+        const detData = chartDates.map(d => detMap[d] || 0);
+        const tempData = chartDates.map((_,i) => {
+          const hi = tempMax[i], lo = tempMin[i];
+          return (hi!=null && lo!=null) ? Math.round((hi+lo)/2*10)/10 : null;
+        });
+        const precipData = chartDates.map((_,i) => precip[i] || 0);
+        const windData = chartDates.map((_,i) => wind[i] || 0);
+
+        // Correlations
+        const validIdx = tempData.map((v,i) => v!=null ? i : -1).filter(i=>i>=0);
+        const cT = validIdx.map(i=>tempData[i]), cD = validIdx.map(i=>detData[i]);
+        const cP = validIdx.map(i=>precipData[i]), cW = validIdx.map(i=>windData[i]);
+        const rT = pearson(cT, cD), rP = pearson(cP, cD), rW = pearson(cW, cD);
+
+        const sorted = validIdx.map(i=>({det:detData[i],temp:tempData[i],precip:precipData[i],wind:windData[i]}))
+          .sort((a,b)=>b.det-a.det);
+        const top = sorted.slice(0, Math.max(3, Math.floor(sorted.length*.2)));
+        let bestText = '';
+        if (top.length >= 3) {
+          const avgT2 = Math.round(top.reduce((s,d)=>s+d.temp,0)/top.length);
+          const avgP2 = Math.round(top.reduce((s,d)=>s+d.precip,0)/top.length*10)/10;
+          const avgW2 = Math.round(top.reduce((s,d)=>s+d.wind,0)/top.length);
+          bestText = t('weather_best_full', {temp:avgT2, precip:avgP2, wind:avgW2});
+        }
+        corr.value = { temp: rT, precip: rP, wind: rW, bestConditions: bestText };
+
+        // Top species by weather conditions (top 10 species, their preferred weather)
+        try {
+          const spRows = await birdQuery(
+            `SELECT d.Com_Name, MAX(d.Sci_Name) as Sci_Name, COUNT(*) as n, d.Date
+             FROM detections d WHERE d.Date >= ? GROUP BY d.Com_Name, d.Date ORDER BY n DESC`, [daysAgo(30)]);
+          const spWeather = {};
+          for (const r of spRows) {
+            const idx = dates.indexOf(r.Date);
+            if (idx < 0 || tempData[idx] == null) continue;
+            if (!spWeather[r.Com_Name]) spWeather[r.Com_Name] = { sci: r.Sci_Name, temps: [], precips: [], count: 0 };
+            const sw = spWeather[r.Com_Name];
+            sw.temps.push(tempData[idx]); sw.precips.push(precipData[idx]); sw.count += r.n;
+          }
+          topByWeather.value = Object.entries(spWeather)
+            .sort((a,b) => b[1].count - a[1].count)
+            .slice(0, 8)
+            .map(([name, d]) => ({
+              name, sci: d.sci,
+              avgTemp: Math.round(d.temps.reduce((s,v)=>s+v,0)/d.temps.length),
+              avgPrecip: Math.round(d.precips.reduce((s,v)=>s+v,0)/d.precips.length*10)/10,
+              count: d.count
+            }));
+        } catch(e) {}
+
+        // Render chart
+        loading.value = false;
+        await nextTick();
+        if (!canvasWeather.value) return;
+        const base = chartDefaults();
+        mountWeather(canvasWeather, () => ({
+          type: 'bar',
+          data: { labels, datasets: [
+            { label: t('precipitation')+' (mm)', data: precipData, backgroundColor:'rgba(100,180,255,.35)', borderColor:'rgba(100,180,255,.6)', borderWidth:1, borderRadius:2, yAxisID:'yPrecip', order:3 },
+            { label: t('detections'), data: detData, backgroundColor:'rgba(90,158,58,.6)', borderColor:'#5a9e3a', borderWidth:1, borderRadius:2, yAxisID:'y', order:1 },
+            { label: t('temperature')+' (\u00B0C)', data: tempData, type:'line', borderColor:'#e6a23c', backgroundColor:'transparent', pointRadius:1.5, tension:.3, borderWidth:2, yAxisID:'yTemp', order:0 },
+            { label: t('wind')+' (km/h)', data: windData, type:'line', borderColor:'#94a3b8', backgroundColor:'transparent', pointRadius:0, tension:.3, borderWidth:1.5, borderDash:[4,3], yAxisID:'yWind', order:2 },
+          ]},
+          options: { ...base, scales: {
+            x: { ...base.scales.x, ticks:{maxTicksLimit:15,font:{size:9}} },
+            y: { ...base.scales.y, beginAtZero:true, position:'left', title:{display:true,text:t('detections'),color:'#5a9e3a',font:{size:10}} },
+            yTemp: { position:'right', beginAtZero:false, ticks:{color:'#e6a23c',font:{size:9}}, grid:{drawOnChartArea:false}, title:{display:true,text:'\u00B0C',color:'#e6a23c',font:{size:10}} },
+            yPrecip: { position:'right', beginAtZero:true, ticks:{color:'rgba(100,180,255,.7)',font:{size:9}}, grid:{drawOnChartArea:false}, title:{display:true,text:'mm',color:'rgba(100,180,255,.7)',font:{size:10}} },
+            yWind: { display:false, beginAtZero:true },
+          }},
+        }));
+
+      } catch(e) {
+        console.error('[weather]', e);
+        error.value = e.message;
+        loading.value = false;
+      }
+    }
+
+    onMounted(loadAll);
+
+    return {
+      lang, t, spName, navigateTo, photoUrl,
+      loading, error, todayWeather, forecast, corr, topByWeather, canvasWeather,
+    };
+  }
+});
+BIRDASH.registerComponents(app).mount('#app');
+</script>
+</body>
+</html>

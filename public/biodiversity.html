@@ -151,23 +151,9 @@
           <div v-else class="spinner"><div></div><div></div><div></div></div>
         </div>
 
-        <!-- Weather & Activity -->
-        <div class="card">
-          <div class="card-title">{{t('weather_activity')}}</div>
-          <div v-if="weather.loading" class="spinner"><div></div><div></div><div></div></div>
-          <div v-else-if="weather.error" class="error-msg">{{weather.error}}</div>
-          <div v-else class="chart-wrap chart-wrap-tall"><canvas ref="canvasWeather"></canvas></div>
-          <!-- Correlation insights -->
-          <div v-if="weatherCorr" style="margin-top:.75rem;padding:.5rem;background:var(--bg-deep);border-radius:var(--radius);font-size:.82rem;">
-            <div style="font-weight:600;margin-bottom:.4rem;">{{t('weather_correlation')}}</div>
-            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
-              <span>🌡️ {{t('temperature')}} : <strong :style="{color: weatherCorr.temp > 0.3 ? '#5a9e3a' : weatherCorr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{weatherCorr.temp.toFixed(2)}}</strong></span>
-              <span>🌧️ {{t('precipitation')}} : <strong :style="{color: weatherCorr.precip > 0.3 ? '#5a9e3a' : weatherCorr.precip < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{weatherCorr.precip.toFixed(2)}}</strong></span>
-            </div>
-            <div v-if="weatherCorr.bestConditions" style="margin-top:.4rem;color:var(--text-muted);">
-              {{weatherCorr.bestConditions}}
-            </div>
-          </div>
+        <!-- Weather link -->
+        <div class="card" style="text-align:center;padding:1.5rem;">
+          <a href="weather.html" class="btn btn-primary" style="font-size:.9rem;">🌦️ {{t('nav_weather')}} →</a>
         </div>
       </div>
 

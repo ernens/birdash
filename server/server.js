@@ -1751,7 +1751,7 @@ const server = http.createServer((req, res) => {
         const lat = conf.LATITUDE  || conf.LAT || '50.85';
         const lon = conf.LONGITUDE || conf.LON || '4.35';
 
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&past_days=${days}&timezone=auto`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&past_days=${days}&forecast_days=2&timezone=auto`;
 
         const data = await new Promise((resolve, reject) => {
           https.get(url, (resp) => {
