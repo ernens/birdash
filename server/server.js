@@ -4924,7 +4924,7 @@ const server = http.createServer((req, res) => {
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ flagged, dateFrom, dateTo, total: rows.length }));
+        res.end(JSON.stringify({ flagged, dateFrom, dateTo, total: flagged.length }));
       } catch (e) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));

@@ -2096,7 +2096,7 @@
 
       // Review badge count
       const reviewCount = ref(0);
-      fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(7)}&dateTo=${U.localDateStr()}&limit=1`)
+      fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(7)}&dateTo=${U.localDateStr()}&limit=2000`)
         .then(r => r.json()).then(d => { reviewCount.value = d.total || 0; }).catch(() => {});
 
       return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
