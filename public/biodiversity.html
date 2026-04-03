@@ -176,13 +176,11 @@ const app = createApp({
     const { mountChart: mountRichness } = useChart();
     const { mountChart: mountTaxChart } = useChart();
     const { mountChart: mountPhenology } = useChart();
-    const { mountChart: mountWeather } = useChart();
     let _echartsOrders = null;
     const { spName } = useSpeciesNames();
 
     const canvasRichness = ref(null);
     const canvasPhenology = ref(null);
-    const canvasWeather = ref(null);
     const elTaxOrders = ref(null);
     const phenology = ref({ loading: true, ready: false });
     const taxFamilies = ref([]);
@@ -194,18 +192,7 @@ const app = createApp({
     });
     const fc = useFilterConfidence({ onChange: () => loadAll() });
 
-    const weatherCorr = ref(null);
 
-    function pearson(x, y) {
-      const n = x.length;
-      if (n < 5) return 0;
-      let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
-      for (let i = 0; i < n; i++) {
-        sx += x[i]; sy += y[i]; sxx += x[i]*x[i]; syy += y[i]*y[i]; sxy += x[i]*y[i];
-      }
-      const d = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
-      return d === 0 ? 0 : (n*sxy - sx*sy) / d;
-    }
 
     function resetDefaults() {
       fc.confidence.value = BIRD_CONFIG.defaultConfidence;
@@ -216,7 +203,6 @@ const app = createApp({
     const heatmap  = ref({ loading:true, error:null, html:'' });
     const monthly  = ref({ loading:true, rows:[] });
     const matrix   = ref({ loading:true, error:null, html:'' });
-    const weather  = ref({ loading:true, error:null });
 
     const chartColor = i => BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length];
 
@@ -356,139 +342,8 @@ const app = createApp({
       } catch(e) { console.error('[phenology]', e); phenology.value = { loading: false, ready: false }; }
     }
 
-    async function loadWeather() {
-      weather.value = { loading: true, error: null };
-      try {
-        // Fetch weather data from Open-Meteo via server proxy
-        const weatherRes = await fetch(BIRD_CONFIG.apiUrl + '/weather?days=30');
-        if (!weatherRes.ok) throw new Error('weather API ' + weatherRes.status);
-        const weatherData = await weatherRes.json();
-        if (weatherData.error) throw new Error(weatherData.error);
-
-        // Fetch detection counts per day for last 30 days
-        const detRows = await birdQuery(
-          `SELECT Date, COUNT(*) as n FROM detections WHERE Date >= ? AND Confidence >= ? GROUP BY Date ORDER BY Date ASC`,
-          [daysAgo(30), fc.confidence.value]);
-        const detMap = {};
-        detRows.forEach(r => { detMap[r.Date] = r.n; });
-
-        const daily = weatherData.daily || {};
-        const dates = daily.time || [];
-        const tempMax = daily.temperature_2m_max || [];
-        const tempMin = daily.temperature_2m_min || [];
-        const precip  = daily.precipitation_sum || [];
-
-        // Build chart labels (short date)
-        const labels = dates.map(d => {
-          const dt = new Date(d);
-          const mo = t('months_short')[dt.getMonth()];
-          return dt.getDate() + ' ' + mo;
-        });
-
-        // Detection counts aligned to weather dates
-        const detData = dates.map(d => detMap[d] || 0);
-        // Avg temperature per day
-        const tempData = dates.map((_, i) => {
-          const hi = tempMax[i], lo = tempMin[i];
-          return (hi != null && lo != null) ? Math.round((hi + lo) / 2 * 10) / 10 : null;
-        });
-
-        // Compute correlations
-        const validIdx = tempData.map((v, i) => v != null ? i : -1).filter(i => i >= 0);
-        const cTemp = validIdx.map(i => tempData[i]);
-        const cDet  = validIdx.map(i => detData[i]);
-        const cPrec = validIdx.map(i => precip[i] || 0);
-        const rTemp = pearson(cTemp, cDet);
-        const rPrec = pearson(cPrec, cDet);
-
-        // Best conditions: top 20% detection days
-        const sorted = validIdx.map(i => ({ det: detData[i], temp: tempData[i], precip: precip[i] || 0 }))
-          .sort((a, b) => b.det - a.det);
-        const top = sorted.slice(0, Math.max(3, Math.floor(sorted.length * 0.2)));
-        let bestText = '';
-        if (top.length >= 3) {
-          const avgT = Math.round(top.reduce((s, d) => s + d.temp, 0) / top.length);
-          const avgP = Math.round(top.reduce((s, d) => s + d.precip, 0) / top.length * 10) / 10;
-          bestText = t('weather_best', { temp: avgT, precip: avgP });
-        }
-        weatherCorr.value = { temp: rTemp, precip: rPrec, bestConditions: bestText };
-
-        weather.value = { loading: false, error: null };
-        await nextTick();
-        if (!canvasWeather.value) return;
-
-        const base = chartDefaults();
-        mountWeather(canvasWeather, () => ({
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: t('precipitation') + ' (mm)',
-                data: precip,
-                backgroundColor: 'rgba(100,180,255,.35)',
-                borderColor: 'rgba(100,180,255,.6)',
-                borderWidth: 1,
-                borderRadius: 2,
-                yAxisID: 'yPrecip',
-                order: 2,
-              },
-              {
-                label: t('detections'),
-                data: detData,
-                backgroundColor: 'rgba(90,158,58,.6)',
-                borderColor: '#5a9e3a',
-                borderWidth: 1,
-                borderRadius: 2,
-                yAxisID: 'y',
-                order: 1,
-              },
-              {
-                label: t('temperature') + ' (\u00B0C)',
-                data: tempData,
-                type: 'line',
-                borderColor: '#e6a23c',
-                backgroundColor: 'transparent',
-                pointRadius: 1.5,
-                pointBackgroundColor: '#e6a23c',
-                tension: 0.3,
-                borderWidth: 2,
-                yAxisID: 'yTemp',
-                order: 0,
-              },
-            ],
-          },
-          options: {
-            ...base,
-            scales: {
-              x: { ...base.scales.x, ticks: { maxTicksLimit: 15, font: { size: 9 } } },
-              y: {
-                ...base.scales.y, beginAtZero: true, position: 'left',
-                title: { display: true, text: t('detections'), color: '#5a9e3a', font: { size: 10 } },
-              },
-              yTemp: {
-                position: 'right', beginAtZero: false,
-                ticks: { color: '#e6a23c', font: { size: 9 } },
-                grid: { drawOnChartArea: false },
-                title: { display: true, text: '\u00B0C', color: '#e6a23c', font: { size: 10 } },
-              },
-              yPrecip: {
-                position: 'right', beginAtZero: true,
-                ticks: { color: 'rgba(100,180,255,.7)', font: { size: 9 } },
-                grid: { drawOnChartArea: false },
-                title: { display: true, text: 'mm', color: 'rgba(100,180,255,.7)', font: { size: 10 } },
-              },
-            },
-          },
-        }));
-      } catch(e) {
-        console.error('[weather]', e);
-        weather.value = { loading: false, error: e.message || 'Weather data unavailable' };
-      }
-    }
-
     async function loadAll() {
-      await Promise.all([loadRichnessData(), loadHeatmap(), loadMonthly(), loadMatrix(), loadShannon(), loadPhenology(), loadWeather()]);
+      await Promise.all([loadRichnessData(), loadHeatmap(), loadMonthly(), loadMatrix(), loadShannon(), loadPhenology()]);
     }
 
     async function loadRichnessData() {
@@ -721,9 +576,9 @@ const app = createApp({
 
     return {
       lang, t, safeHtml,
-      shannonH, shannonJ, shannonS, weatherCorr,
-      heatmap, monthly, matrix, phenology, weather,
-      canvasRichness, canvasPhenology, canvasWeather, elTaxOrders, taxFamilies,
+      shannonH, shannonJ, shannonS,
+      heatmap, monthly, matrix, phenology,
+      canvasRichness, canvasPhenology, elTaxOrders, taxFamilies,
       fp, fc, resetDefaults, loadAll,
       chartColor, navigateTo, spName, exportCsv, quickPlay,
     };

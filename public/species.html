@@ -141,6 +141,9 @@
             <button class="ext-link" @click="shareSpecies" style="border:none;cursor:pointer;background:var(--card-bg);">
               🔗 {{t('share')}}
             </button>
+            <a class="ext-link" :href="'analyses.html?species='+encodeURIComponent(sp.name)" style="font-weight:600;color:var(--accent);">
+              🔬 {{t('analyze_deep')}}
+            </a>
           </div>
         </div>
       </div>
