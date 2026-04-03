@@ -1508,9 +1508,14 @@ const app = createApp({
     ];
     const hashTab = location.hash.slice(1);
     const localTabs = ['detection', 'audio', 'notif', 'station', 'services', 'species', 'backup', 'database', 'terminal'];
+    // Migrate old key
+    if (localStorage.getItem('birdash-settings-tab') && !localStorage.getItem('birdash_settings_tab')) {
+      localStorage.setItem('birdash_settings_tab', localStorage.getItem('birdash-settings-tab'));
+      localStorage.removeItem('birdash-settings-tab');
+    }
     const activeTab = ref(
       localTabs.includes(hashTab) ? hashTab :
-      localStorage.getItem('birdash-settings-tab') || 'detection'
+      localStorage.getItem('birdash_settings_tab') || 'detection'
     );
 
     function switchTab(id) {
@@ -1520,7 +1525,7 @@ const app = createApp({
         return;
       }
       activeTab.value = id;
-      localStorage.setItem('birdash-settings-tab', id);
+      localStorage.setItem('birdash_settings_tab', id);
       history.replaceState(null, '', '#' + id);
     }
     const saving = ref(false);

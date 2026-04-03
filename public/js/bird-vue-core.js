@@ -1461,8 +1461,14 @@
   // ── Singletons réactifs (partagés dans toute l'app) ───────────────────────
   // Un seul ref par page — Vue garantit que tous les composables qui y accèdent
   // voient le même changement et réagissent de façon coordonnée.
+  // Migrate old keys (birdash-theme → birdash_theme)
+  if (localStorage.getItem('birdash-theme') && !localStorage.getItem('birdash_theme')) {
+    localStorage.setItem('birdash_theme', localStorage.getItem('birdash-theme'));
+    localStorage.removeItem('birdash-theme');
+  }
+
   const _lang  = ref(localStorage.getItem('birdash_lang')  || 'fr');
-  const _theme = ref(localStorage.getItem('birdash-theme') || 'forest');
+  const _theme = ref(localStorage.getItem('birdash_theme') || 'forest');
 
   // Appliquer le thème et la langue immédiatement au chargement
   document.documentElement.setAttribute('data-theme', _theme.value);
@@ -1519,7 +1525,7 @@
   function useTheme() {
     function setTheme(id) {
       _theme.value = id;
-      localStorage.setItem('birdash-theme', id);
+      localStorage.setItem('birdash_theme', id);
       document.documentElement.setAttribute('data-theme', id);
     }
     return { theme: _theme, themes: THEMES, setTheme };
