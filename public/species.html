@@ -82,6 +82,10 @@
               </select>
               <button class="date-nav-btn" @click="nextSpecies" :disabled="!hasNextSpecies" title="→" style="width:26px;height:26px;font-size:.8rem;">→</button>
             </div>
+            <button class="date-nav-btn" @click="onToggleFav" :title="isFav ? t('fav_remove') : t('fav_add')"
+                    style="width:30px;height:30px;font-size:1.1rem;margin-left:.3rem;">
+              {{isFav ? '★' : '☆'}}
+            </button>
           </div>
           <div class="sp-sci">{{sp.sci}}</div>
 
@@ -314,7 +318,7 @@
 
 <script>
 const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
+const { useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
         buildSpeciesLinks, chartDefaults, shortModel, authHeaders } = BIRDASH;
@@ -326,6 +330,9 @@ const app = createApp({
     const { navItems, siteName } = useNav('species');
     const { spName } = useSpeciesNames();
     const { playingFile, toggleAudio }= useAudio();
+    const { favorites, toggleFavorite: _toggleFav, isFavorite: _isFav } = useFavorites();
+    const isFav = computed(() => sp.value.name ? _isFav(sp.value.name) : false);
+    function onToggleFav() { if (sp.value.name) _toggleFav(sp.value.name); }
     const { mountChart: mountHourly } = useChart();
     const { mountChart: mountMonthly }= useChart();
     const { mountChart: mount30d }    = useChart();
@@ -917,6 +924,7 @@ const app = createApp({
       mode, speciesList, pickerVal, onPickerChange,
       hasPrevSpecies, hasNextSpecies, prevSpecies, nextSpecies,
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
+      isFav, onToggleFav,
       photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,
       playingFile, toggleAudio,

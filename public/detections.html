@@ -48,6 +48,13 @@
             <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
           </select>
         </div>
+        <!-- Favorites toggle -->
+        <div>
+          <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+            <input type="checkbox" v-model="favOnly" @change="loadDetections" style="accent-color:var(--accent);">
+            ★ {{t('fav_only')}}
+          </label>
+        </div>
         <!-- Species picker filtered by taxonomy -->
         <div>
           <span class="fp-label">{{t('filter_species')}}</span>
@@ -198,7 +205,7 @@
 
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
+const { useI18n, useTheme, useNav, useAudio, useFavorites, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
         birdQuery, fmtDate, fmtTime, fmtConf,
         localDateStr, daysAgo, getUrlParam, navigateTo,
@@ -221,6 +228,8 @@ const app = createApp({
     const { navItems, siteName } = useNav('detections');
     const { playingFile, toggleAudio }= useAudio();
     const { spName } = useSpeciesNames();
+    const { favorites, isFavorite } = useFavorites();
+    const favOnly = ref(false);
 
     const PS = BIRD_CONFIG.pageSize;
 
@@ -378,6 +387,20 @@ const app = createApp({
         wheres.push(`Com_Name IN (${effectiveSpecies.map(()=>'?').join(',')})`);
         params.push(...effectiveSpecies);
       }
+      if (favOnly.value && favorites.value.length) {
+        const favList = favorites.value;
+        if (!effectiveSpecies.length) {
+          effectiveSpecies = favList;
+          if (effectiveSpecies.length === 1) {
+            wheres.push('Com_Name=?'); params.push(effectiveSpecies[0]);
+          } else {
+            wheres.push(`Com_Name IN (${effectiveSpecies.map(()=>'?').join(',')})`);
+            params.push(...effectiveSpecies);
+          }
+        }
+      } else if (favOnly.value) {
+        wheres.push('1=0'); // no favorites → no results
+      }
       if (fp.dateFrom.value) { wheres.push('Date>=?');       params.push(fp.dateFrom.value); }
       if (fp.dateTo.value)   { wheres.push('Date<=?');       params.push(fp.dateTo.value); }
       if (fc.confidence.value > 0) { wheres.push('Confidence>=?'); params.push(fc.confidence.value); }
@@ -503,7 +526,7 @@ const app = createApp({
     return {
       lang,t,
       fp,fc,
-      fSpecies,uniqueMode,
+      fSpecies,uniqueMode,favOnly,
       fOrder,fFamily,fGuild,guildOptions,onGuildChange,taxonomyOrders,taxonomyAllFamilies,onOrderChange,onFamilyChange,spSearchInput,
       speciesList,
       spSearch,spDropdownOpen,filteredSpeciesList,allSpeciesSelected,

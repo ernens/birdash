@@ -395,6 +395,32 @@
     'Certhia brachydactyla': { min: 4, max: 9, label: 'Short-toed Treecreeper' },
   };
 
+  // ── Favorites ──────────────────────────────────────────────────────────
+
+  const _FAV_KEY = 'birdash_favorites';
+
+  function getFavorites() {
+    try { return JSON.parse(localStorage.getItem(_FAV_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function setFavorites(list) {
+    localStorage.setItem(_FAV_KEY, JSON.stringify(list));
+  }
+
+  function isFavorite(comName) {
+    return getFavorites().includes(comName);
+  }
+
+  function toggleFavorite(comName) {
+    const favs = getFavorites();
+    const idx = favs.indexOf(comName);
+    if (idx >= 0) favs.splice(idx, 1);
+    else favs.push(comName);
+    setFavorites(favs);
+    return idx < 0; // returns true if now favorite
+  }
+
   // ── FFT & Spectrogram helpers (shared across pages) ────────────────────
 
   /**
@@ -617,6 +643,9 @@
     ECOLOGICAL_GUILDS: ECOLOGICAL_GUILDS,
     getSpeciesGuild: getSpeciesGuild,
     SPECIES_FREQ_RANGES: SPECIES_FREQ_RANGES,
+    getFavorites: getFavorites,
+    isFavorite: isFavorite,
+    toggleFavorite: toggleFavorite,
     fftInPlace: fftInPlace,
     buildColorLUT: buildColorLUT,
     COLOR_LUT: _COLOR_LUT,
