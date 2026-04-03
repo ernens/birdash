@@ -124,12 +124,12 @@
     </div>
 
     <!-- Delete confirmation / result modal -->
-    <div v-if="deleteModal.open" class="tl-popup-overlay" @click.self="closeDeleteModal" role="dialog" aria-modal="true">
+    <div v-if="delOpen" class="tl-popup-overlay" @click.self="closeDeleteModal" role="dialog" aria-modal="true">
       <div class="tl-popup" style="max-width:520px;max-height:80vh;overflow-y:auto;">
         <button class="tl-popup-close" @click="closeDeleteModal">✕</button>
 
         <!-- Before deletion: preview -->
-        <template v-if="!deleteModal.done">
+        <template v-if="!delDone">
           <div style="font-weight:600;font-size:1rem;margin-bottom:.5rem;color:#e53e3e;">
             🗑 {{t('review_purge_title')}}
           </div>
@@ -137,7 +137,7 @@
             {{t('review_purge_warning')}}
           </div>
           <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;">
-            <div v-for="det in deleteModal.items" :key="det.date+det.time+det.sci_name"
+            <div v-for="det in delItems" :key="det.date+det.time+det.sci_name"
                  style="display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid var(--border);font-size:.8rem;">
               <span style="color:var(--text-muted);min-width:70px;">{{det.date}}</span>
               <span style="color:var(--text-muted);min-width:40px;">{{det.time.slice(0,5)}}</span>
@@ -147,8 +147,8 @@
           </div>
           <div style="display:flex;gap:.5rem;justify-content:flex-end;">
             <button class="rv-btn-outline" @click="closeDeleteModal" style="padding:.4rem 1rem;">{{t('cancel') || 'Annuler'}}</button>
-            <button class="rv-btn rv-btn-no" style="padding:.4rem 1rem;" @click="executeDelete" :disabled="deleteModal.deleting">
-              {{deleteModal.deleting ? '...' : t('review_purge_confirm')}}
+            <button class="rv-btn rv-btn-no" style="padding:.4rem 1rem;" @click="executeDelete" :disabled="delDeleting">
+              {{delDeleting ? '...' : t('review_purge_confirm')}}
             </button>
           </div>
         </template>
@@ -159,7 +159,7 @@
             ✓ {{t('review_delete_done')}}
           </div>
           <div style="max-height:350px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;">
-            <div v-for="r in deleteModal.results" :key="r.file"
+            <div v-for="r in delResults" :key="r.file"
                  style="display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid var(--border);font-size:.8rem;">
               <span :style="{color: r.ok ? '#38a169' : '#e53e3e'}">{{r.ok ? '✓' : '✗'}}</span>
               <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{r.name}}</span>
@@ -269,7 +269,11 @@ const app = createApp({
     }
 
     // ── Delete modal (shared by "delete selected" and "purge rejected") ──
-    const deleteModal = reactive({ open: false, items: [], deleting: false, done: false, results: [] });
+    const delOpen = ref(false);
+    const delItems = ref([]);
+    const delDeleting = ref(false);
+    const delDone = ref(false);
+    const delResults = ref([]);
 
     function deleteSelected() {
       const items = flagged.value.filter(d => selected.has(detKey(d)));
@@ -278,34 +282,34 @@ const app = createApp({
     }
 
     function openDeleteModal(items) {
-      deleteModal.items = items;
-      deleteModal.deleting = false;
-      deleteModal.done = false;
-      deleteModal.results = [];
-      deleteModal.open = true;
+      delItems.value = items.map(d => ({ ...d }));
+      delDeleting.value = false;
+      delDone.value = false;
+      delResults.value = [];
+      delOpen.value = true;
     }
 
     function closeDeleteModal() {
-      deleteModal.open = false;
-      if (deleteModal.done) { selected.clear(); loadFlagged(); }
+      delOpen.value = false;
+      if (delDone.value) { selected.clear(); loadFlagged(); }
     }
 
     async function executeDelete() {
-      deleteModal.deleting = true;
+      delDeleting.value = true;
       const results = [];
-      for (const det of deleteModal.items) {
+      for (const det of delItems.value) {
         try {
           const resp = await fetch(`${API}/detections`, { method:'DELETE', headers:BIRDASH.authHeaders(),
             body: JSON.stringify({ date:det.date, time:det.time, comName:det.com_name }) });
           const data = await resp.json();
-          results.push({ name: det.com_name, file: det.file_name, ok: !!data.ok, deleted: data.deleted || 0 });
+          results.push({ name: det.com_name, file: det.file_name, ok: !!data.ok });
         } catch(e) {
-          results.push({ name: det.com_name, file: det.file_name, ok: false, deleted: 0 });
+          results.push({ name: det.com_name, file: det.file_name, ok: false });
         }
       }
-      deleteModal.deleting = false;
-      deleteModal.results = results;
-      deleteModal.done = true;
+      delDeleting.value = false;
+      delResults.value = results;
+      delDone.value = true;
     }
 
     onMounted(loadFlagged);
@@ -314,10 +318,10 @@ const app = createApp({
       t, spName, fp, API,
       flagged, pagedFlagged, loading, pageLimit, selected, playingDet,
       unreviewed, rejectedList, rejectedCount, confirmedCount, reasonGroups,
-      deleteModal,
+      delOpen, delItems, delDeleting, delDone, delResults,
       detKey, loadFlagged, validate, bulkAction, bulkRejectByReason,
       toggleSelect, selectAll, playAudio, openSpectro,
-      deleteSelected, openDeleteModal, executeDelete,
+      deleteSelected, openDeleteModal, closeDeleteModal, executeDelete,
     };
   }
 });
