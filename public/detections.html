@@ -10,6 +10,10 @@
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <title>BIRDASH — Détections</title>
+  <meta property="og:title" content="BIRDASH — Détections">
+  <meta property="og:description" content="Bird detection dashboard — Heinsch, Belgium">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/birds/img/robin-logo.svg">
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
@@ -188,6 +192,9 @@
                 </td>
                 <td class="hide-sm">
                   <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+                </td>
+                <td style="width:30px;">
+                  <button class="chart-dl-btn" @click="deleteDet(d)" title="Supprimer" style="opacity:.3;font-size:.75rem;">🗑</button>
                 </td>
               </tr>
             </tbody>
@@ -539,6 +546,18 @@ const app = createApp({
       await loadDetections();
     });
 
+    async function deleteDet(d) {
+      const name = spName(d.Com_Name, d.Sci_Name);
+      if (!confirm(`${t('gallery_delete_confirm')}\n\n${name} — ${fmtDate(d.Date)} ${fmtTime(d.Time)}`)) return;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/detections', {
+          method: 'DELETE', headers: BIRDASH.authHeaders(),
+          body: JSON.stringify({ date: d.Date, time: d.Time, comName: d.Com_Name }),
+        });
+        if (resp.ok) await loadDetections();
+      } catch(e) { console.error('deleteDet:', e); }
+    }
+
     onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });
 
     return {
@@ -553,7 +572,7 @@ const app = createApp({
       displayRows,displayTotal,
       playingFile,toggleAudio, buildAudioUrl,
       fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,
-      applyFilters,resetFilters,goPage,exportCsv,exportEbird,
+      applyFilters,resetFilters,goPage,exportCsv,exportEbird,deleteDet,
     };
   }
 });

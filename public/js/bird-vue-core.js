@@ -1986,24 +1986,56 @@
         .then(rows => { dbSpecies.value = rows; })
         .catch(() => {});
 
+      // Parse date from search query (e.g. "3 avril", "03/04", "2026-04-03")
+      const _months = {
+        jan:1,fev:2,fév:2,feb:2,mar:3,avr:4,apr:4,mai:5,may:5,jun:6,juin:6,jul:7,juil:7,
+        aug:8,aou:8,aoû:8,sep:9,oct:10,nov:11,dec:12,déc:12
+      };
+      function _parseDate(q) {
+        // YYYY-MM-DD
+        let m = q.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+        // DD/MM or DD/MM/YYYY
+        m = q.match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/);
+        if (m) { const y = m[3] ? (m[3].length===2 ? '20'+m[3] : m[3]) : new Date().getFullYear(); return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+        // "3 avril" or "avril 3"
+        m = q.match(/(\d{1,2})\s+([a-zéûô]+)/i) || q.match(/([a-zéûô]+)\s+(\d{1,2})/i);
+        if (m) {
+          const day = m[1].match(/\d/) ? m[1] : m[2];
+          const mon = m[1].match(/\d/) ? m[2] : m[1];
+          const mk = mon.toLowerCase().substring(0,3);
+          if (_months[mk]) return `${new Date().getFullYear()}-${String(_months[mk]).padStart(2,'0')}-${day.padStart(2,'0')}`;
+        }
+        return null;
+      }
+
       const searchResults = computed(() => {
         const q = (searchQuery.value || '').trim().toLowerCase();
         if (!q) return [];
-        const seen = new Set();
         const results = [];
+
+        // Check for date in query
+        const parsedDate = _parseDate(q);
+        if (parsedDate) {
+          const dateLabel = new Date(parsedDate+'T12:00:00').toLocaleDateString(_lang.value, {weekday:'long',day:'numeric',month:'long'});
+          results.push({ type:'date', date: parsedDate, displayName: '📆 ' + dateLabel, comName: '' });
+        }
+
+        // Species search (filter out date tokens)
+        const speciesQ = parsedDate ? q.replace(/\d{4}-\d{2}-\d{2}|\d{1,2}[\/.\s]\d{1,2}([\/.\s]\d{2,4})?|\d{1,2}\s+[a-zéûô]+|[a-zéûô]+\s+\d{1,2}/gi, '').trim() : q;
+        const seen = new Set();
         for (const row of dbSpecies.value) {
           const com = row.Com_Name || '';
           const sci = row.Sci_Name || '';
           const translated = spName(com, sci);
-          if (
-            translated.toLowerCase().includes(q) ||
-            com.toLowerCase().includes(q) ||
-            sci.toLowerCase().includes(q)
-          ) {
+          const sq = speciesQ || q;
+          if (translated.toLowerCase().includes(sq) || com.toLowerCase().includes(sq) || sci.toLowerCase().includes(sq)) {
             const key = sci || com;
             if (!seen.has(key)) {
               seen.add(key);
-              results.push({ comName: com, sciName: sci, displayName: translated });
+              const r = { type:'species', comName: com, sciName: sci, displayName: translated };
+              if (parsedDate) { r.type = 'species+date'; r.date = parsedDate; r.displayName += ' 📆'; }
+              results.push(r);
               if (results.length >= 8) break;
             }
           }
@@ -2017,7 +2049,13 @@
       }
 
       function selectSearchResult(result) {
-        window.location.href = 'species.html?species=' + encodeURIComponent(result.comName);
+        if (result.type === 'date') {
+          window.location.href = 'calendar.html?date=' + result.date;
+        } else if (result.type === 'species+date') {
+          window.location.href = 'calendar.html?date=' + result.date + '&species=' + encodeURIComponent(result.comName);
+        } else {
+          window.location.href = 'species.html?species=' + encodeURIComponent(result.comName);
+        }
       }
 
       function onSearchKeydown(e) {
