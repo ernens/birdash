@@ -941,6 +941,11 @@
           </label></div>
 
           <div class="set-row"><label class="set-check">
+            <input type="checkbox" v-model="conf.NOTIFY_FAVORITES" true-value="1" false-value="0">
+            <span>⭐ <strong>{{t('notif_favorites')}}</strong> — {{t('notif_favorites_desc')}}</span>
+          </label></div>
+
+          <div class="set-row"><label class="set-check">
             <input type="checkbox" v-model="conf.APPRISE_NOTIFY_EACH_DETECTION" true-value="1" false-value="0">
             <span>📢 {{t('notif_each')}} <span style="color:var(--danger);font-size:.78em;">({{t('notif_each_warn')}})</span></span>
           </label></div>
@@ -1606,6 +1611,7 @@ const app = createApp({
         const updates = {
           APPRISE_NOTIFY_EACH_DETECTION: String(conf.APPRISE_NOTIFY_EACH_DETECTION || 0),
           APPRISE_NOTIFY_NEW_SPECIES: String(conf.APPRISE_NOTIFY_NEW_SPECIES || 0),
+          NOTIFY_FAVORITES: String(conf.NOTIFY_FAVORITES || 0),
           APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY: String(conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY || 0),
           APPRISE_WEEKLY_REPORT: String(conf.APPRISE_WEEKLY_REPORT || 0),
           APPRISE_NOTIFICATION_TITLE: conf.APPRISE_NOTIFICATION_TITLE || '',

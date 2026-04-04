@@ -532,6 +532,7 @@ class Notifier:
             "season": lambda d: f"Première de saison (absente depuis {d} jours)",
             "new": "Nouvelle espèce — jamais détectée",
             "daily": "Première du jour",
+            "favorite": "Favori détecté — première du jour",
             "conf": "Confiance",
         },
         "en": {
@@ -539,6 +540,7 @@ class Notifier:
             "season": lambda d: f"First of season (absent for {d} days)",
             "new": "New species — never detected before",
             "daily": "First of the day",
+            "favorite": "Favorite detected — first of the day",
             "conf": "Confidence",
         },
         "de": {
@@ -546,6 +548,7 @@ class Notifier:
             "season": lambda d: f"Erste der Saison (seit {d} Tagen abwesend)",
             "new": "Neue Art — noch nie erkannt",
             "daily": "Erste des Tages",
+            "favorite": "Favorit erkannt — erste des Tages",
             "conf": "Konfidenz",
         },
         "nl": {
@@ -553,6 +556,7 @@ class Notifier:
             "season": lambda d: f"Eerste van het seizoen ({d} dagen afwezig)",
             "new": "Nieuwe soort — nooit eerder gedetecteerd",
             "daily": "Eerste van de dag",
+            "favorite": "Favoriet gedetecteerd — eerste van de dag",
             "conf": "Betrouwbaarheid",
         },
     }
@@ -588,6 +592,22 @@ class Notifier:
             log.info("Notifier: loaded %d species from DB", len(self._species_counts))
         except Exception as e:
             log.warning("Notifier cache load failed: %s", e)
+
+    def _load_favorites(self):
+        """Load favorite species from birdash.db."""
+        try:
+            import sqlite3
+            birdash_db = os.path.join(os.path.dirname(self.db_path or ""), "..", "birdash.db")
+            if not os.path.exists(birdash_db):
+                birdash_db = os.path.expanduser("~/birdash/birdash.db")
+            if os.path.exists(birdash_db):
+                conn = sqlite3.connect(birdash_db)
+                rows = conn.execute("SELECT com_name FROM favorites").fetchall()
+                conn.close()
+                return {r[0] for r in rows}
+        except Exception as e:
+            log.warning("Notifier: failed to load favorites: %s", e)
+        return set()
 
     def _read_notif_conf(self):
         """Read notification settings from birdnet.conf (cached 60s)."""
@@ -672,6 +692,13 @@ class Notifier:
         elif bconf.get("APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY", "0") == "1" and is_new_today:
             reason = msgs["daily"]
             priority = "low"
+
+        # Rule 5: Favorite species (first detection of the day)
+        if not reason and bconf.get("NOTIFY_FAVORITES", "0") == "1" and is_new_today:
+            favs = self._load_favorites()
+            if com_name in favs:
+                reason = msgs.get("favorite", msgs["daily"])
+                priority = "default"
 
         if not reason:
             return
