@@ -1644,6 +1644,27 @@
     return U.buildSpeciesLinks(comName, sciName, _lang.value);
   }
 
+  // ── useToast ────────────────────────────────────────────────────────────
+  const _toasts = ref([]);
+  let _toastId = 0;
+
+  function useToast() {
+    function show(msg, type = 'error', duration = 4000) {
+      const id = ++_toastId;
+      _toasts.value.push({ id, msg, type });
+      setTimeout(() => {
+        _toasts.value = _toasts.value.filter(t => t.id !== id);
+      }, duration);
+    }
+    // Listen for global error events
+    if (typeof window !== 'undefined') {
+      window.addEventListener('birdash:error', (e) => {
+        show(e.detail || 'Unknown error', 'error');
+      });
+    }
+    return { toasts: _toasts, showToast: show };
+  }
+
   // ── useFavorites ────────────────────────────────────────────────────────
   function useFavorites() {
     const favorites = ref(U.getFavorites());
@@ -1961,6 +1982,7 @@
       const { lang, t, setLang, langs } = useI18n();
       const { theme, themes, setTheme } = useTheme();
       const { navItems, navSections, siteName } = useNav(props.page);
+      const { toasts } = useToast();
       // Open the section containing the current page by default
       const openSection = ref(
         (BIRD_CONFIG.nav || []).findIndex(sec => sec.items.some(p => p.id === props.page))
@@ -2159,7 +2181,7 @@
       fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(7)}&dateTo=${U.localDateStr()}&limit=2000`)
         .then(r => r.json()).then(d => { reviewCount.value = d.total || 0; }).catch(() => {});
 
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellItems, bellCount, bellUnseen, toggleBell, toasts };
     },
     directives: {
       'click-outside': {
@@ -2286,6 +2308,9 @@
     <slot></slot>
   </main>
   <spectro-modal></spectro-modal>
+  <div v-if="toasts.length" style="position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:.4rem;max-width:90vw;">
+    <div v-for="t in toasts" :key="t.id" :style="{padding:'.5rem 1rem',borderRadius:'8px',fontSize:'.82rem',boxShadow:'0 2px 12px rgba(0,0,0,.3)',color:'#fff',background:t.type==='error'?'var(--danger,#e53935)':t.type==='success'?'var(--accent,#4caf50)':'var(--warning,#ff9800)'}">{{t.msg}}</div>
+  </div>
   <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
     <a href="index.html" class="mob-nav-item" :class="{active: currentPage==='index'}"><span class="mob-nav-icon">🏠</span>{{t('nav_overview')}}</a>
     <a href="calendar.html" class="mob-nav-item" :class="{active: currentPage==='calendar'}"><span class="mob-nav-icon">📆</span>{{t('nav_calendar')}}</a>
@@ -2851,7 +2876,7 @@
   // ── Export global ─────────────────────────────────────────────────────────
   window.BIRDASH = {
     // Vue composables
-    useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesNames, exportChart,
+    useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesNames, useToast, exportChart,
     // Filter composables
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components
