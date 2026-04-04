@@ -123,13 +123,13 @@
               <div class="kpi-value" style="color:var(--accent);">{{sp.avgConf ? sp.avgConf+'%' : '—'}}</div>
               <div class="kpi-label">{{t('avg_conf_short')}}</div>
             </div>
-            <div class="kpi-card sp-kpi">
+            <div class="kpi-card sp-kpi" style="cursor:pointer;" @click="sp.first && navigateTo('calendar.html',{species:sp.name,date:sp.first})" :title="t('first_detection')">
               <div class="kpi-value muted">{{fmtDate(sp.first)}}</div>
-              <div class="kpi-label">{{t('first_detection')}}</div>
+              <div class="kpi-label">{{t('first_detection')}} →</div>
             </div>
-            <div class="kpi-card sp-kpi">
+            <div class="kpi-card sp-kpi" style="cursor:pointer;" @click="sp.last && navigateTo('calendar.html',{species:sp.name,date:sp.last})" :title="t('last_seen')">
               <div class="kpi-value muted">{{fmtDate(sp.last)}}</div>
-              <div class="kpi-label">{{t('last_seen')}}</div>
+              <div class="kpi-label">{{t('last_seen')}} →</div>
             </div>
             <div class="kpi-card sp-kpi">
               <div class="kpi-value muted">{{sp.daysDetected || '—'}}</div>

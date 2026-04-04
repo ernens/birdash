@@ -31,24 +31,8 @@
     <!-- KPIs -->
     <div class="kpi-grid kpi-grid-6">
       <div class="kpi-card">
-        <div class="kpi-value">{{kpis.det || '—'}}</div>
-        <div class="kpi-label">{{t('detections')}}</div>
-      </div>
-      <div class="kpi-card">
         <div class="kpi-value amber">{{kpis.sp || '—'}}</div>
         <div class="kpi-label">{{t('species')}}</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
-        <div class="kpi-label">{{t('avg_confidence')}}</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-value muted">{{kpis.total || '—'}}</div>
-        <div class="kpi-label">{{t('all_time')}}</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-value" style="color:var(--accent);">{{kpis.lastHour || '—'}}</div>
-        <div class="kpi-label">{{t('last_hour')}}</div>
       </div>
       <div class="kpi-card" style="position:relative;cursor:pointer;" @click="toggleRarePanel">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.rareToday || '0'}}</div>
@@ -67,6 +51,22 @@
             <span class="rare-badge" style="flex-shrink:0;">💎 {{r.n}}×</span>
           </div>
         </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
+        <div class="kpi-label">{{t('avg_confidence')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">{{kpis.det || '—'}}</div>
+        <div class="kpi-label">{{t('detections')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:var(--accent);">{{kpis.lastHour || '—'}}</div>
+        <div class="kpi-label">{{t('last_hour')}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value muted">{{kpis.total || '—'}}</div>
+        <div class="kpi-label">{{t('all_time')}}</div>
       </div>
     </div>
 
@@ -266,6 +266,50 @@
           </div>
 
         </div>
+      </div>
+    </div>
+
+    <!-- Journal du jour -->
+    <div class="card">
+      <div class="card-title">{{t('today_log')}}</div>
+      <div v-if="feed.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="!feed.rows.length" class="error-msg">{{t('no_data')}}</div>
+      <div v-else>
+        <div v-for="d in feed.rows" :key="d.Date+d.Time+d.File_Name"
+             class="det-item"
+             :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
+          <!-- Miniature espèce -->
+          <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
+               :alt="d.Com_Name"></bird-img>
+          <div v-else class="det-thumb-ph">🐦</div>
+          <!-- Bouton play -->
+          <button v-if="d.File_Name" class="play-btn"
+                  style="width:22px;height:22px;font-size:.6rem;"
+                  :class="{playing:playingFile===d.File_Name}"
+                  @click="toggleAudio(d.File_Name)">▶</button>
+          <span v-else style="width:22px;display:inline-block;"></span>
+          <div class="det-time">{{fmtTime(d.Time)}}</div>
+          <div class="det-species">
+            <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">
+              {{spName(d.Com_Name, d.Sci_Name)}}
+            </a>
+            <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">&#x1F50A;</button>
+            <div class="det-sci">{{d.Sci_Name}}</div>
+          </div>
+          <!-- Badge rareté -->
+          <span v-if="d.isRare" class="rare-badge" :title="'Vu seulement '+d.totalDet+' fois'">
+            💎 {{d.totalDet}}×
+          </span>
+          <span v-else style="display:flex;align-items:center;gap:.25rem;">
+            <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+            <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
+              {{fmtConf(d.Confidence)}}
+            </span>
+          </span>
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:.75rem;">
+        <a href="detections.html" class="btn btn-secondary">{{t('nav_detections')}} →</a>
       </div>
     </div>
 
@@ -491,58 +535,10 @@
 
     </div>
 
-    <div class="grid-2">
-
-      <!-- Top espèces -->
-      <div class="card">
-        <div class="card-title">{{t('top_species')}}</div>
-        <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasTop"></canvas></div>
-      </div>
-
-      <!-- Feed récent -->
-      <div class="card">
-        <div class="card-title">{{t('recent_detections')}}</div>
-        <div v-if="feed.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!feed.rows.length" class="error-msg">{{t('no_data')}}</div>
-        <div v-else>
-          <div v-for="d in feed.rows" :key="d.Date+d.Time+d.File_Name"
-               class="det-item"
-               :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
-            <!-- Miniature espèce -->
-            <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
-                 :alt="d.Com_Name"></bird-img>
-            <div v-else class="det-thumb-ph">🐦</div>
-            <!-- Bouton play -->
-            <button v-if="d.File_Name" class="play-btn"
-                    style="width:22px;height:22px;font-size:.6rem;"
-                    :class="{playing:playingFile===d.File_Name}"
-                    @click="toggleAudio(d.File_Name)">▶</button>
-            <span v-else style="width:22px;display:inline-block;"></span>
-            <div class="det-time">{{fmtTime(d.Time)}}</div>
-            <div class="det-species">
-              <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">
-                {{spName(d.Com_Name, d.Sci_Name)}}
-              </a>
-              <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">&#x1F50A;</button>
-              <div class="det-sci">{{d.Sci_Name}}</div>
-            </div>
-            <!-- Badge rareté -->
-            <span v-if="d.isRare" class="rare-badge" :title="'Vu seulement '+d.totalDet+' fois'">
-              💎 {{d.totalDet}}×
-            </span>
-            <span v-else style="display:flex;align-items:center;gap:.25rem;">
-              <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
-              <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
-                {{fmtConf(d.Confidence)}}
-              </span>
-            </span>
-          </div>
-        </div>
-        <div style="text-align:right;margin-top:.75rem;">
-          <a href="detections.html" class="btn btn-secondary">{{t('nav_detections')}} →</a>
-        </div>
-      </div>
-
+    <!-- Top espèces -->
+    <div class="card">
+      <div class="card-title">{{t('top_species')}}</div>
+      <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasTop"></canvas></div>
     </div>
 
 

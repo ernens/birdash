@@ -78,20 +78,8 @@
         <!-- KPIs -->
         <div class="kpi-strip">
           <div class="kpi-card">
-            <div class="kpi-value">{{kpis.det}}</div>
-            <div class="kpi-label">{{t('detections')}}</div>
-          </div>
-          <div class="kpi-card">
             <div class="kpi-value amber">{{kpis.sp}}</div>
             <div class="kpi-label">{{t('species')}}</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-value blue">{{kpis.conf}}</div>
-            <div class="kpi-label">{{t('avg_confidence')}}</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-value">{{kpis.lastHour}}</div>
-            <div class="kpi-label">{{t('last_hour')}}</div>
           </div>
           <div class="kpi-card" style="position:relative;cursor:pointer;" @click="toggleNewSp">
             <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
@@ -113,6 +101,18 @@
                 </span>
               </div>
             </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value blue">{{kpis.conf}}</div>
+            <div class="kpi-label">{{t('avg_confidence')}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value">{{kpis.det}}</div>
+            <div class="kpi-label">{{t('detections')}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value">{{kpis.lastHour}}</div>
+            <div class="kpi-label">{{t('last_hour')}}</div>
           </div>
         </div>
 

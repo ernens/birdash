@@ -1348,7 +1348,8 @@
       margin-top: .25rem;
     }
     .sp-kpi { flex:1; min-width:0; text-align: center; padding: .5rem .3rem; }
-    .sp-kpi .kpi-value { font-size: 1.1rem; }
+    .sp-kpi .kpi-value { font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sp-kpi .kpi-value.muted { font-size: .95rem; }
     .sp-kpi .kpi-label { font-size: .65rem; }
 
     @media (max-width: 500px) { .sp-kpis { flex-wrap:wrap; } .sp-kpi { flex: 1 1 calc(50% - .4rem); } }
