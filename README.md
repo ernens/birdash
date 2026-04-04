@@ -60,28 +60,40 @@ Raspberry Pi 5 + SSD
 - 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species (not every sparrow)
 - ⚡ **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
-### Dashboard
-- 📊 Real-time overview with KPIs, charts, morning summary
-- 🌅 **Timeline** — interactive day timeline with sky gradient, sunrise/sunset SVG markers, click-to-zoom density bar, confidence-based vertical layout, enriched details on deep zoom, event clustering
-- 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
-- 🎧 Detection feed with integrated audio playback
-- 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status, local photo caching
-- 🧬 Biodiversity matrix, Shannon index, taxonomy breakdown
-- 💎 Rare species tracking
-- 📈 Statistics and rankings
-- 🏆 Best recordings gallery
-- 🔬 Advanced analyses (polar charts, heatmaps, time series)
+### Dashboard (14 pages)
 
-### Model Comparison
-- 🤖 **Side-by-side** — detections per model, species coverage, confidence
-- 📊 **Daily chart** — detection trends per model over time
-- 🎯 **Exclusive species** — what each model catches that the other misses
-- 📋 **Overlap table** — shared species with detection ratio
+**Real-time**
+- 📊 Dashboard overview with KPIs, weather widget, quick links, morning summary, "What's New" alerts
+- 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
+- 📅 **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
+
+**History**
+- 📆 **Calendar** — unified day-by-day view with timeline visualization, species list, audio player
+- 🌅 **Timeline** — full-page interactive timeline with drag-to-zoom, unified bird density slider (0-100%), SVG sunrise/sunset/moon icons, type filter badges with blink highlight, confidence-mapped vertical layout
+- 📋 **Detections** — full filterable table with favorites, new species filter, per-detection delete, CSV/eBird export
+- ✅ **Review** — auto-flagged detections with spectro modal, bulk confirm/reject/delete with preview, purge rejected
+
+**Species**
+- 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status, favorites (SQLite-backed), personal notes (per-species and per-detection), phenology calendar (12-month dot map), year-over-year monthly comparison, chart PNG export, Web Share API
+- 💎 Rare species tracking
+- 🏆 Best recordings gallery with audio library tab
+
+**Analysis**
+- 🌦️ **Weather** — dedicated page with correlation analysis (Pearson r), tomorrow's forecast, species by weather conditions
+- 📈 Statistics and rankings with model comparison tab
+- 🔬 Advanced analyses (polar charts, heatmaps, time series, narrative)
+- 🧬 Biodiversity — Shannon index, taxonomy breakdown, phenology
+
+**Navigation**
+- 5 intent-based sections: Live, History, Species, Insights, Station
+- Mobile bottom nav bar, global species+date search, notification bell, review badge counter
+- Keyboard shortcuts on 5 pages, swipe gestures on species photos
 
 ### Detection Review
 - 🔍 **Auto-flagging** — nocturnal birds by day, out-of-season migrants, low confidence isolates, non-European species
-- ✅ **Bulk actions** — confirm/reject by rule ("reject all owls detected during daytime")
-- 🎵 Audio playback per detection for manual verification
+- ✅ **Bulk actions** — confirm/reject/delete by rule, per-selection, or purge all rejected
+- 🎵 Full spectrogram modal with gain/highpass/lowpass filters and loop selection for manual verification
+- 🗑️ **Permanent deletion** — preview modal listing what will be deleted (DB + audio files), with result report
 
 ### Audio Configuration
 - 🎙️ Auto-detection of USB audio devices with one-click selection
@@ -183,15 +195,26 @@ birdash/
 ├── server/
 │   └── server.js                  # Node.js API backend (~4700 lines)
 ├── public/                        # Static frontend (Vue 3 CDN)
-│   ├── index.html                 # Dashboard overview
+│   ├── index.html                 # Dashboard overview + weather widget
+│   ├── today.html                 # Today's detections with audio filters
+│   ├── calendar.html              # Calendar (timeline + species + audio)
+│   ├── timeline.html              # Full-page timeline with drag-to-zoom
+│   ├── detections.html            # Filterable detection table
+│   ├── review.html                # Detection review + bulk actions
+│   ├── species.html               # Species cards + favorites + notes
+│   ├── gallery.html               # Best recordings + audio library
+│   ├── weather.html               # Weather/activity correlation
+│   ├── stats.html                 # Statistics + model comparison tab
+│   ├── analyses.html              # Per-species deep analysis
+│   ├── biodiversity.html          # Shannon index, taxonomy, phenology
 │   ├── spectrogram.html           # Live spectrogram + clip playback
-│   ├── models.html                # Model comparison
-│   ├── review.html                # Detection review + auto-flagging
-│   ├── settings.html              # Full settings (6 tabs)
+│   ├── settings.html              # Full settings (9 tabs)
 │   ├── system.html                # System health + terminal
-│   ├── timeline.html              # Interactive timeline with zoom
-│   ├── *.html                     # 9 more pages
-│   ├── js/                        # Config, shared utils, Vue composables
+│   ├── js/
+│   │   ├── bird-config.js         # Navigation, API config
+│   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API
+│   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
+│   │   └── bird-timeline.js       # Timeline rendering (sky, stars, markers)
 │   ├── css/                       # Styles + 5 themes
 │   └── sw.js                      # Service Worker (offline cache)
 ├── engine/                        # BirdEngine (Python detection engine)

@@ -49,24 +49,26 @@ Raspberry Pi 5 + SSD
 - 📊 Vue d'ensemble avec KPIs, graphiques, resume matinal
 - 🌅 **Timeline** — timeline interactive avec gradient de ciel, marqueurs lever/coucher de soleil SVG, zoom par clic sur la barre de densite, disposition verticale par confiance, details enrichis en zoom profond, clustering d'evenements
 - 🎵 **Spectrogramme live** — audio en temps reel du micro avec noms d'oiseaux
-- 🎧 Fil de detections avec lecture audio integree
-- 🦜 Fiches especes avec photos (iNaturalist + Wikipedia), statut UICN, cache photo local
+- 🎧 Fil de detections avec lecture audio integree et filtres gain/passe-haut/passe-bas
+- 🦜 Fiches especes avec photos, statut UICN, favoris (SQLite), notes personnelles, phenologie calendaire, comparaison annee/annee, export PNG
 - 🧬 Matrice biodiversite, indice de Shannon, taxonomie
 - 💎 Suivi des especes rares
-- 📈 Statistiques et classements
-- 🏆 Galerie des meilleurs enregistrements
+- 📈 Statistiques et classements avec onglet comparaison de modeles
+- 🏆 Galerie des meilleures captures avec bibliotheque audio
 - 🔬 Analyses avancees (diagrammes polaires, heatmaps, series temporelles)
+- 🌦️ **Meteo** — page dediee avec correlation meteo/activite, prevision J+1, especes par conditions
+- 📆 **Calendrier** — vue unifiee timeline + especes + lecteur audio par date
+- 🌅 **Timeline pleine page** — zoom par glisser, slider densite unifie, badges filtres avec clignotement
 
-### Comparaison de modeles
-- 🤖 **Cote a cote** — detections par modele, couverture d'especes, confiance
-- 📊 **Graphique journalier** — tendances de detection par modele
-- 🎯 **Especes exclusives** — ce que chaque modele detecte que l'autre rate
-- 📋 **Tableau de recouvrement** — especes communes avec ratio de detection
+### Navigation
+- 5 sections (En direct, Historique, Especes, Analyses, Station)
+- Barre de navigation mobile, recherche globale espece+date, cloche notifications, badge "A valider"
 
 ### Revue des detections
 - 🔍 **Auto-flagging** — especes nocturnes de jour, migrateurs hors saison, confiance faible isolee, especes non-europeennes
-- ✅ **Actions en masse** — confirmer/rejeter par regle
-- 🎵 Lecture audio par detection pour verification manuelle
+- ✅ **Actions en masse** — confirmer/rejeter/supprimer par regle ou par selection avec apercu
+- 🎵 Spectrogramme complet avec filtres et selection de boucle pour verification manuelle
+- 🗑️ **Suppression definitive** — apercu avant suppression (DB + fichiers audio), rapport de resultat
 
 ### Configuration audio
 - 🎙️ Detection automatique des peripheriques USB audio

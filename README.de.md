@@ -9,17 +9,16 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 ## Funktionen
 
 - 🤖 **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 INT8 parallel
-- 🌅 **Timeline** — interaktive Tages-Timeline mit Himmelsgradient, SVG-Sonnenmarkern, Zoom per Klick auf Dichteleiste, vertikale Anordnung nach Konfidenz, Event-Clustering
+- 🌅 **Timeline** — Ganzseitige Timeline mit Drag-to-Zoom, einheitlicher Dichte-Slider, SVG-Icons, Filter-Badges mit Blink
+- 📆 **Kalender** — Vereinigte Tagesansicht mit Timeline + Artenliste + Audioplayer
+- 🌦️ **Wetter** — Korrelationsanalyse (Pearson r), Prognose, Arten nach Bedingungen
 - 🎵 **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
-- 🔍 **Erkennungsuberprufung** — Auto-Flagging + Massenaktionen
-- 🤖 **Modellvergleich** — Seite-an-Seite-Analyse
-- 🎙️ **Audiokonfiguration** — Gerat, Profile, Kalibrierung
-- 🎚️ **Adaptive Normalisierung** — automatischer Software-Gain, Clipping-Schutz, Beobachtermodus
-- 🔇 **Audiofilter** — Hochpass + Tiefpass (Bandpass), spektrale Rauschunterdruckung, RMS-Normalisierung
-- 👁️ **Filtervorschau** — Vorher/Nachher-Spektrogramme vom Mikrofon zur Visualisierung der Filtereffekte
-- 🔔 **Intelligente Benachrichtigungen** — nur seltene Arten (ntfy.sh)
-- 📡 **BirdWeather** — automatischer Upload
-- 💻 **Web-Terminal** — Bash im Browser, unterstutzt Claude Code
+- 🔍 **Uberprufung** — Auto-Flagging, Spektrogramm-Modal mit Filtern und Loop-Auswahl, Loschen mit Vorschau
+- ⭐ **Favoriten** (SQLite) + 📝 **Notizen** pro Art und pro Erkennung
+- 🦜 **Artenkarten** — Phonologie-Kalender, Jahresvergleich, PNG-Export
+- 📱 **Mobil** — Bottom-Navigation, Touch-Gesten, globale Suche (Art + Datum)
+- 🔔 **Benachrichtigungen** — ntfy.sh + In-App-Glocke
+- 💻 **Web-Terminal** — Bash im Browser
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
 - 🌍 4 UI-Sprachen (FR/EN/NL/DE) + 36 Sprachen fur Artnamen
 
