@@ -142,12 +142,12 @@
         <div v-for="ev in filteredEvents" :key="ev.id" class="tl-event-row" @click="openPopup(ev)">
           <div class="tl-er-time">{{ev.time}}</div>
           <div class="tl-er-photo">
-            <img v-if="ev.photoUrl" :src="ev.photoUrl" :alt="ev.commonName"
+            <img v-if="ev.photoUrl" :src="ev.photoUrl" :alt="spName(ev.commonName, ev.sciName)"
                  @error="$event.target.style.display='none'" />
             <span v-if="!ev.photoUrl">{{ev.photoFallback}}</span>
           </div>
           <div>
-            <span class="tl-er-name">{{ev.commonName}}</span>
+            <span class="tl-er-name">{{spName(ev.commonName, ev.sciName)}}</span>
             <span class="tl-er-sci">{{ev.sciName}}</span>
           </div>
           <div class="tl-er-tags">
@@ -164,12 +164,12 @@
         <button class="tl-popup-close" @click="popupEvent = null">✕</button>
         <div class="tl-popup-header">
           <div class="tl-popup-photo">
-            <img v-if="popupEvent.photoUrl" :src="popupEvent.photoUrl" :alt="popupEvent.commonName"
+            <img v-if="popupEvent.photoUrl" :src="popupEvent.photoUrl" :alt="spName(popupEvent.commonName, popupEvent.sciName)"
                  @error="$event.target.style.display='none'" />
             <span v-if="!popupEvent.photoUrl">{{popupEvent.photoFallback}}</span>
           </div>
           <div>
-            <div class="tl-popup-name">{{popupEvent.commonName}}</div>
+            <div class="tl-popup-name">{{spName(popupEvent.commonName, popupEvent.sciName)}}</div>
             <div class="tl-popup-sci">{{popupEvent.sciName}}</div>
             <div class="tl-popup-time">🕐 {{popupEvent.time}}</div>
           </div>
@@ -200,12 +200,12 @@
              class="tl-event-row" style="border-radius:8px;padding:.5rem .6rem;cursor:pointer;"
              @click="clusterPopup = null; openPopup(sp)">
           <div class="tl-er-photo">
-            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="sp.commonName"
+            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="spName(sp.commonName, sp.sciName)"
                  @error="$event.target.style.display='none'" />
             <span v-if="!sp.photoUrl">{{sp.photoFallback}}</span>
           </div>
           <div style="flex:1;">
-            <span class="tl-er-name">{{sp.commonName}}</span>
+            <span class="tl-er-name">{{spName(sp.commonName, sp.sciName)}}</span>
             <span class="tl-er-sci" v-if="sp.sciName">{{sp.sciName}}</span>
           </div>
           <div class="tl-er-conf" v-if="sp.confidence">{{Math.round(sp.confidence * 100)}}%</div>
@@ -230,11 +230,12 @@ function PX_PER_HOUR() {
 function TOTAL_W() { return (_viewEnd - _viewStart) * PX_PER_HOUR(); }
 
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, navigateTo, photoUrl, quickPlaySpecies, localDateStr, birdQuery } = BIRDASH;
+const { useI18n, useTheme, useNav, useSpeciesNames, navigateTo, photoUrl, quickPlaySpecies, localDateStr, birdQuery } = BIRDASH;
 
 const app = createApp({
   setup() {
     const { lang, t } = useI18n();
+    const { spName } = useSpeciesNames();
     useTheme();
 
     const todayStr = localDateStr();
@@ -688,7 +689,7 @@ const app = createApp({
               <div class="tl-marker-photo">${sPhotoContent}</div>
               <div class="tl-marker-connector"></div>
               <div class="tl-marker-label">
-                <div class="tl-ml-name" style="color:${scolor}">${sp.commonName}</div>
+                <div class="tl-ml-name" style="color:${scolor}">${spName(sp.commonName, sp.sciName)}</div>
                 <div class="tl-ml-conf">${Math.round((sp.confidence||0)*100)}%</div>
               </div>`;
             sel.addEventListener('click', () => openPopup(sp));
@@ -727,7 +728,7 @@ const app = createApp({
           <div class="tl-marker-connector"></div>
           <div class="tl-marker-label">
             <div class="tl-ml-time">${ev.time}</div>
-            <div class="tl-ml-name" style="color:${color}">${ev.commonName}</div>
+            <div class="tl-ml-name" style="color:${color}">${spName(ev.commonName, ev.sciName)}</div>
             ${sciHtml}${confHtml}
             <div style="margin-top:3px">${tagHtml}</div>
           </div>`;
@@ -840,7 +841,7 @@ const app = createApp({
     onUnmounted(() => { if (_timer) clearInterval(_timer); });
 
     return {
-      lang, t, data, loading, selectedDate, todayStr,
+      lang, t, spName, data, loading, selectedDate, todayStr,
       popupEvent, clusterPopup, openPopup, activeFilters, eventTypes, toggleFilter, typeCounts, filteredEvents,
       formatDate, moonEmoji, navigateDay, load,
       viewStart, viewEnd, resetZoom, onZoneMousedown, dragSelect,

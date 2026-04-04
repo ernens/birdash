@@ -329,12 +329,12 @@
         <button class="tl-popup-close" @click="tlClosePopup()">✕</button>
         <div class="tl-popup-header">
           <div class="tl-popup-photo">
-            <img v-if="tlPopupEvent.photoUrl" :src="tlPopupEvent.photoUrl" :alt="tlPopupEvent.commonName"
+            <img v-if="tlPopupEvent.photoUrl" :src="tlPopupEvent.photoUrl" :alt="spName(tlPopupEvent.commonName, tlPopupEvent.sciName)"
                  @error="$event.target.style.display='none'" />
             <span v-if="!tlPopupEvent.photoUrl">{{tlPopupEvent.photoFallback}}</span>
           </div>
           <div>
-            <div class="tl-popup-name">{{tlPopupEvent.commonName}}</div>
+            <div class="tl-popup-name">{{spName(tlPopupEvent.commonName, tlPopupEvent.sciName)}}</div>
             <div class="tl-popup-sci">{{tlPopupEvent.sciName}}</div>
             <div class="tl-popup-time">🕐 {{tlPopupEvent.time}}</div>
           </div>
@@ -361,12 +361,12 @@
              class="tl-event-row" style="border-radius:8px;padding:.5rem .6rem;cursor:pointer;"
              @click="tlClusterPopup = null; tlOpenPopup(sp)">
           <div class="tl-er-photo">
-            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="sp.commonName"
+            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="spName(sp.commonName, sp.sciName)"
                  @error="$event.target.style.display='none'" />
             <span v-if="!sp.photoUrl">{{sp.photoFallback}}</span>
           </div>
           <div style="flex:1;">
-            <span class="tl-er-name">{{sp.commonName}}</span>
+            <span class="tl-er-name">{{spName(sp.commonName, sp.sciName)}}</span>
             <span class="tl-er-sci" v-if="sp.sciName">{{sp.sciName}}</span>
           </div>
           <div class="tl-er-conf" v-if="sp.confidence">{{Math.round(sp.confidence * 100)}}%</div>
@@ -1034,7 +1034,7 @@ const app = createApp({
         tlInnerRef.value.style.width = tlTotalW() + 'px';
         tlInnerRef.value.style.height = TL.TL_SKY_H + 'px';
         TL.buildMarkers(tlInnerRef.value, data.events, pph, {
-          t, isToday: data.meta?.isToday,
+          t, spName, isToday: data.meta?.isToday,
           onOpenPopup: tlOpenPopup, onOpenCluster: tlOpenCluster,
         });
       }

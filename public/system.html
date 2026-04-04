@@ -837,7 +837,7 @@
             <div style="flex:1;min-width:0;">
               <div style="font-size:.85rem;font-weight:600;color:var(--text-main);
                           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                {{obs.comName}}
+                {{spName(obs.comName, obs.sciName)}}
               </div>
               <div style="font-size:.72rem;color:var(--text-muted);">
                 &#128205; {{obs.locName}}
@@ -910,7 +910,7 @@
               <div class="kpi-label">{{t('top_species')}}</div>
             </div>
             <div class="kpi-card">
-              <div class="kpi-value" style="font-size:.85rem;">{{bw.stats.top_species?.commonName || '—'}}</div>
+              <div class="kpi-value" style="font-size:.85rem;">{{spName(bw.stats.top_species?.commonName, bw.stats.top_species?.scientificName) || '—'}}</div>
               <div class="kpi-label">{{t('top_species')}} #1</div>
             </div>
           </div>
@@ -926,11 +926,11 @@
               <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
               <img loading="lazy" v-if="sp.thumbnailUrl" :src="sp.thumbnailUrl"
                    style="width:28px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0;"
-                   :alt="sp.commonName" @error="sp.thumbnailUrl=null">
+                   :alt="spName(sp.commonName, sp.scientificName)" @error="sp.thumbnailUrl=null">
               <div v-else style="width:28px;height:28px;border-radius:4px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;">&#128038;</div>
               <div style="flex:1;min-width:0;">
                 <div style="font-size:.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                  {{sp.commonName || '—'}}
+                  {{spName(sp.commonName, sp.scientificName) || '—'}}
                 </div>
                 <div style="height:3px;background:var(--bg-card2);border-radius:2px;margin-top:3px;">
                   <div :style="{height:'100%',width:Math.round((sp.detections?.total||0)/bw.species[0].detections?.total*100)+'%',background:'var(--accent)',borderRadius:'2px',transition:'width .4s'}"></div>
@@ -1717,7 +1717,7 @@ const app = createApp({
         const ts = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString('fr-BE', {hour:'2-digit',minute:'2-digit'}) : '';
         ebird.value = { loading:false, error:null, hasKey:true, obs, fetchedAt: ts };
       } catch(e) {
-        ebird.value = { loading:false, error:'Erreur réseau : '+e.message, hasKey:true, obs:[], fetchedAt:'' };
+        ebird.value = { loading:false, error:t('network_error')+' : '+e.message, hasKey:true, obs:[], fetchedAt:'' };
       }
     }
 
@@ -1753,7 +1753,7 @@ const app = createApp({
           species,
         };
       } catch(e) {
-        bw.value = { ...bw.value, loading:false, error:'Erreur : '+e.message };
+        bw.value = { ...bw.value, loading:false, error:t('error')+' : '+e.message };
       }
     }
 

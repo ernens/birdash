@@ -147,6 +147,7 @@
     const moonPhase = opts.moonPhase;
     const onOpenPopup = opts.onOpenPopup;
     const onOpenCluster = opts.onOpenCluster;
+    const spName = opts.spName || ((c) => c);
 
     // Clear previous markers
     inner.querySelectorAll('.tl-hour-tick,.tl-astro-marker,.tl-now-cursor,.tl-event-marker,.tl-cluster-marker,.tp-baseline').forEach(el => el.remove());
@@ -228,7 +229,7 @@
         <div class="tl-marker-connector"></div>
         <div class="tl-marker-label">
           <div class="tl-ml-time">${ev.time}</div>
-          <div class="tl-ml-name" style="color:${color}">${ev.commonName}</div>
+          <div class="tl-ml-name" style="color:${color}">${spName(ev.commonName, ev.sciName)}</div>
           <div style="margin-top:3px">${tagHtml}</div>
         </div>`;
       if (onOpenPopup) el.addEventListener('click', () => onOpenPopup(ev));
