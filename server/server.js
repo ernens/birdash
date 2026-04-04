@@ -3684,6 +3684,64 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Route : GET /api/favorites/stats ─────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/favorites/stats') {
+    try {
+      const favs = db.prepare('SELECT com_name, sci_name, added_at FROM favorites ORDER BY added_at DESC').all();
+      if (!favs.length) {
+        res.writeHead(200, JSON_CT);
+        res.end(JSON.stringify({ favorites: [], stats: { total: 0 } }));
+        return;
+      }
+      const names = favs.map(f => f.com_name);
+      const placeholders = names.map(() => '?').join(',');
+
+      // Per-species stats
+      const detCounts = db.prepare(
+        `SELECT Com_Name, COUNT(*) as n, MAX(Date) as last_date, MAX(Time) as last_time,
+                AVG(Confidence) as avg_conf, MIN(Date) as first_date
+         FROM detections WHERE Com_Name IN (${placeholders}) GROUP BY Com_Name`
+      ).all(...names);
+      const countMap = {};
+      for (const r of detCounts) countMap[r.Com_Name] = r;
+
+      // Today count
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayCounts = db.prepare(
+        `SELECT Com_Name, COUNT(*) as n FROM detections
+         WHERE Com_Name IN (${placeholders}) AND Date=? GROUP BY Com_Name`
+      ).all(...names, todayStr);
+      const todayMap = {};
+      for (const r of todayCounts) todayMap[r.Com_Name] = r.n;
+
+      const enriched = favs.map(f => ({
+        com_name: f.com_name,
+        sci_name: f.sci_name,
+        added_at: f.added_at,
+        total_detections: countMap[f.com_name]?.n || 0,
+        today_detections: todayMap[f.com_name] || 0,
+        last_date: countMap[f.com_name]?.last_date || null,
+        last_time: countMap[f.com_name]?.last_time || null,
+        first_date: countMap[f.com_name]?.first_date || null,
+        avg_conf: countMap[f.com_name]?.avg_conf || 0,
+      }));
+
+      const totalDets = enriched.reduce((s, f) => s + f.total_detections, 0);
+      const todayDets = enriched.reduce((s, f) => s + f.today_detections, 0);
+      const activeFavs = enriched.filter(f => f.today_detections > 0).length;
+
+      res.writeHead(200, JSON_CT);
+      res.end(JSON.stringify({
+        favorites: enriched,
+        stats: { total: favs.length, total_detections: totalDets, today_detections: todayDets, active_today: activeFavs }
+      }));
+    } catch(e) {
+      res.writeHead(500, JSON_CT);
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   // ── Route : GET /api/favorites ────────────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/favorites') {
     try {

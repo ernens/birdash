@@ -106,7 +106,7 @@
               </div>
               <div class="sp-info">
                 <div class="sp-name-row">{{spName(s.Com_Name, s.sci)}} <span v-if="newSpeciesSet.has(s.Com_Name)" style="font-size:.6rem;vertical-align:middle;">🆕</span></div>
-                <div class="sp-sci-row">{{s.sci}}</div>
+                <div class="sp-sci-row">{{s.sci}} <button @click.stop="toggleFavorite(s.Com_Name, s.sci)" :title="isFavorite(s.Com_Name) ? t('fav_remove') : t('fav_add')" style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">{{isFavorite(s.Com_Name) ? '★' : '☆'}}</button></div>
               </div>
               <div class="sp-meta">
                 <span class="conf-badge" :class="s.max_conf>=0.8?'conf-high':'conf-mid'"
@@ -337,7 +337,7 @@
 <script>
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useSpeciesNames,
+const { useI18n, useTheme, useNav, useSpeciesNames, useFavorites,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, buildAudioUrl, buildSpeciesLinks,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav,
@@ -352,6 +352,7 @@ const app = createApp({
   setup() {
     const { lang, t, setLang, langs } = useI18n();
     const { spName } = useSpeciesNames();
+    const { favorites, toggleFavorite, isFavorite } = useFavorites();
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('today');
 
@@ -703,7 +704,7 @@ const app = createApp({
     }
 
     return {
-      lang, t, spName,
+      lang, t, spName, favorites, toggleFavorite, isFavorite,
       today, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
