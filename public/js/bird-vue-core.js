@@ -1595,9 +1595,18 @@
     );
     // Flat list for backwards compat
     const navItems = computed(() => navSections.value.flatMap(s => s.items));
-    const siteName = BIRD_CONFIG.siteName
-      || (BIRD_CONFIG.location && BIRD_CONFIG.location.name)
-      || '';
+    const siteName = ref(BIRD_CONFIG.siteName || (BIRD_CONFIG.location && BIRD_CONFIG.location.name) || 'BirdStation');
+
+    // Load SITE_NAME from settings API (overrides config if set)
+    fetch(BIRD_CONFIG.apiUrl + '/settings').then(r => r.ok ? r.json() : {}).then(conf => {
+      if (conf.SITE_NAME) {
+        siteName.value = conf.SITE_NAME;
+        // Update page title
+        const pageTitle = document.title.replace(/^[^—]+—/, siteName.value + ' —');
+        if (pageTitle !== document.title) document.title = pageTitle;
+      }
+    }).catch(() => {});
+
     return { navItems, navSections, siteName };
   }
 
