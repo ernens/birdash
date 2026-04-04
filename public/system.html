@@ -764,8 +764,8 @@
       <!-- Local Rare Species -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;">
-          <div class="card-title" style="margin:0;">&#128142; Raretés locales récentes</div>
-          <span style="font-size:.72rem;color:var(--text-faint);">&#8804;5 détections total</span>
+          <div class="card-title" style="margin:0;">&#128142; {{t('rare_species')}}</div>
+          <span style="font-size:.72rem;color:var(--text-faint);">&#8804;5 {{t('audio_max_det')}}</span>
         </div>
         <div v-if="rareLocal.loading" class="spinner"><div></div><div></div><div></div></div>
         <div v-else-if="!rareLocal.rows.length" class="error-msg">{{t('no_rarities_detected')}}</div>
@@ -919,7 +919,7 @@
           <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
             {{t('top_detected')}}
           </div>
-          <div v-if="!bw.species.length" class="error-msg" style="font-size:.8rem;">Aucune donnée</div>
+          <div v-if="!bw.species.length" class="error-msg" style="font-size:.8rem;">{{t('no_data')}}</div>
           <div v-else>
             <div v-for="(sp, i) in bw.species.slice(0,10)" :key="sp.id || i"
                  style="display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;">
@@ -1003,10 +1003,10 @@ const app = createApp({
 
     // ── Tab system ────────────────────────────────────────────────
     const tabs = [
-      { id: 'health',    icon: '\u{1F4E1}', label: 'Santé' },
-      { id: 'model',     icon: '\u{1F9E0}', label: 'Modèle' },
-      { id: 'data',      icon: '\u{1F4CA}', label: 'Données' },
-      { id: 'external',  icon: '\u{1F30D}', label: 'Externe' },
+      { id: 'health',    icon: '\u{1F4E1}', label: t('sys_tab_health') },
+      { id: 'model',     icon: '\u{1F9E0}', label: t('sys_tab_model') },
+      { id: 'data',      icon: '\u{1F4CA}', label: t('sys_tab_data') },
+      { id: 'external',  icon: '\u{1F30D}', label: t('sys_tab_external') },
     ];
 
     const validTabs = ['health', 'model', 'data', 'external'];
@@ -1060,14 +1060,16 @@ const app = createApp({
       return 'bar-ok';
     }
 
-    const SVC_LABELS = {
-      'birdengine':           'Moteur de détection',
-      'birdengine-recording': 'Capture audio',
-      'birdash':              'Dashboard API',
-      'caddy':                'Serveur web',
-      'ttyd':                 'Terminal web',
-    };
-    function svcLabel(name) { return SVC_LABELS[name] || name; }
+    function svcLabel(name) {
+      const labels = {
+        'birdengine': t('svc_engine'),
+        'birdengine-recording': t('svc_recording'),
+        'birdash': 'Dashboard API',
+        'caddy': t('svc_web'),
+        'ttyd': t('svc_terminal'),
+      };
+      return labels[name] || name;
+    }
 
     function svcDotClass(state) {
       if (state === 'active') return 'dot-ok';
