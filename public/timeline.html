@@ -116,7 +116,7 @@
       </div>
 
       <!-- Sky timeline — also supports drag to zoom -->
-      <div class="tp-scroll" ref="scrollRef" style="margin:0 0 .5rem;position:relative;"
+      <div class="tp-scroll" ref="scrollRef" style="margin:0 0 .5rem;position:relative;padding-top:60px;"
            @mousedown.prevent="onZoneMousedown" @dblclick.prevent="resetZoom">
         <div class="tp-inner" ref="innerRef" style="cursor:crosshair;">
           <canvas ref="skyRef" class="tp-sky-canvas"></canvas>
@@ -676,7 +676,7 @@ const app = createApp({
             const scolor = typeColors[sp.type] || '#8b949e';
             const spConf = sp.confidence || 0.5;
             const spY = confToY(spConf);
-            const spLabel = spY > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
+            const spLabel = spY > (maxBot - (maxBot - minBot) * 0.4) ? 'below' : 'above';
             sel.className = `tl-event-marker ${spLabel}`;
             sel.dataset.type = sp.type || '';
             sel.style.color = scolor; sel.style.left = sx + 'px';
@@ -702,8 +702,8 @@ const app = createApp({
         const color = typeColors[ev.type] || '#8b949e';
         const conf = ev.confidence || 0.5;
         const confBot = confToY(conf);
-        // Label below if marker is in top third, above otherwise
-        const labelPos = confBot > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
+        // Label below if marker is in top 40%, above otherwise
+        const labelPos = confBot > (maxBot - (maxBot - minBot) * 0.4) ? 'below' : 'above';
         el.className = `tl-event-marker ${labelPos}`;
         el.dataset.type = ev.type;
         el.style.color = color; el.style.left = x + 'px';
