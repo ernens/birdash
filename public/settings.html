@@ -1410,7 +1410,7 @@
               <div v-else-if="bkpProgress.state === 'stopped'" style="margin-bottom:.5rem;">
                 <div style="display:flex;align-items:center;gap:.5rem;">
                   <span class="bkp-state-badge bkp-stopped">{{t('set_backup_state_stopped')}}</span>
-                  <span style="font-size:.78rem;color:var(--text-muted);">{{bkpProgress.detail}}</span>
+                  <span style="font-size:.78rem;color:var(--text-muted);">{{t('bkp_stopped_by_user')}}</span>
                 </div>
                 <div v-if="bkpProgress.percent > 0" style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem;">
                   <div class="health-bar" style="height:8px;flex:1;">

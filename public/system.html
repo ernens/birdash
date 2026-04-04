@@ -785,7 +785,7 @@
           </div>
           <div style="text-align:right;margin-top:.5rem;">
             <a href="rarities.html" class="btn btn-secondary" style="font-size:.75rem;padding:.25rem .6rem;">
-              Toutes les raretés &#8594;
+              {{t('all_rarities')}} &#8594;
             </a>
           </div>
         </div>
@@ -794,10 +794,10 @@
       <!-- eBird Notable Observations -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem;">
-          <div class="card-title" style="margin:0;">&#127757; eBird — Observations notables Belgique</div>
+          <div class="card-title" style="margin:0;">&#127757; {{t('ebird_notable_title')}}</div>
           <div style="display:flex;align-items:center;gap:.5rem;">
             <span v-if="ebird.fetchedAt" style="font-size:.68rem;color:var(--text-faint);">
-              Mis à jour {{ebird.fetchedAt}}
+              {{t('updated_at')}} {{ebird.fetchedAt}}
             </span>
             <span v-if="!ebird.hasKey"
                   style="font-size:.72rem;color:var(--warning);background:color-mix(in srgb,var(--warning) 10%,transparent);
@@ -1002,12 +1002,12 @@ const app = createApp({
     const canvasModTrend = ref(null);
 
     // ── Tab system ────────────────────────────────────────────────
-    const tabs = [
+    const tabs = computed(() => [
       { id: 'health',    icon: '\u{1F4E1}', label: t('sys_tab_health') },
       { id: 'model',     icon: '\u{1F9E0}', label: t('sys_tab_model') },
       { id: 'data',      icon: '\u{1F4CA}', label: t('sys_tab_data') },
       { id: 'external',  icon: '\u{1F30D}', label: t('sys_tab_external') },
-    ];
+    ]);
 
     const validTabs = ['health', 'model', 'data', 'external'];
     const hashTab = location.hash.slice(1);
@@ -1017,7 +1017,7 @@ const app = createApp({
     const tabLoaded = ref({ health: false, model: false, data: false, external: false });
 
     function switchTab(id) {
-      const tab = tabs.find(t => t.id === id);
+      const tab = tabs.value.find(t => t.id === id);
       if (tab && tab.href) { window.location.href = tab.href; return; }
       activeTab.value = id;
       location.hash = id;
@@ -1039,7 +1039,7 @@ const app = createApp({
     // ── Helper functions ──────────────────────────────────────────
     function fmtBytes(b) {
       if (!b || b === 0) return '0 B';
-      const u = ['B','Ko','Mo','Go','To'];
+      const u = ['B','KB','MB','GB','TB'];
       const i = Math.floor(Math.log(b) / Math.log(1024));
       return (b / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
     }
@@ -1049,9 +1049,9 @@ const app = createApp({
       const d = Math.floor(secs / 86400);
       const h = Math.floor((secs % 86400) / 3600);
       const m = Math.floor((secs % 3600) / 60);
-      if (d > 0) return `${d}j ${h}h`;
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}m`;
+      if (d > 0) return `${d}${t('unit_d')} ${h}${t('unit_h')}`;
+      if (h > 0) return `${h}${t('unit_h')} ${m}${t('unit_m')}`;
+      return `${m}${t('unit_m')}`;
     }
 
     function barColor(pct) {
@@ -1668,12 +1668,12 @@ const app = createApp({
     const rareLocal = ref({ loading:true, rows:[] });
     const ebird = ref({ loading:false, error:null, hasKey:true, obs:[], fetchedAt:'' });
     const bwPeriod  = ref('day');
-    const bwPeriods = [
-      { label:'Auj.',  val:'day'   },
-      { label:'7j',    val:'week'  },
-      { label:'30j',   val:'month' },
-      { label:'Tout',  val:'all'   },
-    ];
+    const bwPeriods = computed(() => [
+      { label: t('bw_period_today'), val:'day'   },
+      { label: t('bw_period_week'),  val:'week'  },
+      { label: t('bw_period_month'), val:'month' },
+      { label: t('bw_period_all'),   val:'all'   },
+    ]);
     const bw = ref({ loading:false, error:null, hasStation:false, stationId:'', stats:{}, species:[] });
 
     async function loadRareLocal() {
