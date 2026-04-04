@@ -1,10 +1,10 @@
-# 🐦 Birdash
+# 🐦 BirdStation
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
 
-Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Architecture dual-modele autonome avec BirdNET V2.4 + Perch V2.
+Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Architecture dual-modele autonome avec BirdNET V2.4 + Perch V2. Nom de station et branding personnalisables.
 
 > [English](README.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md)
 
@@ -42,7 +42,7 @@ Raspberry Pi 5 + SSD
 - 🎚️ **Normalisation adaptative** — gain logiciel automatique selon le bruit ambiant, protection clipping, gel activite, mode observateur
 - 🔇 **Filtres audio** — passe-haut + passe-bas (bandpass), reduction de bruit spectrale (gating stationnaire), normalisation RMS
 - 📡 **BirdWeather** — upload automatique des paysages sonores + detections
-- 🔔 **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece (pas chaque moineau)
+- 🔔 **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece, favoris (pas chaque moineau)
 - ⚡ **Post-traitement async** — extraction MP3, spectrogrammes, sync DB ne bloquent pas l'inference
 
 ### Dashboard
@@ -52,6 +52,7 @@ Raspberry Pi 5 + SSD
 - 🎧 Fil de detections avec lecture audio integree et filtres gain/passe-haut/passe-bas
 - 🦜 Fiches especes avec photos, statut UICN, favoris (SQLite), notes personnelles, phenologie calendaire, comparaison annee/annee, export PNG
 - 🧬 Matrice biodiversite, indice de Shannon, taxonomie
+- ⭐ **Favoris** — page dediee avec KPIs, recherche, tri ; toggle coeur sur toutes les listes d'especes
 - 💎 Suivi des especes rares
 - 📈 Statistiques et classements avec onglet comparaison de modeles
 - 🏆 Galerie des meilleures captures avec bibliotheque audio
@@ -85,6 +86,9 @@ Raspberry Pi 5 + SSD
 - 💻 **Terminal web** — bash complet dans le navigateur, supporte Claude Code
 - 💾 **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
 - 🎨 5 themes (Foret, Nuit, Papier, Ocean, Crepuscule)
+- 📷 **Gestion des photos** — bannir/remplacer, definir la photo preferee par espece
+- 🏷️ **Branding personnalisable** — nom de station et en-tete configurables dans les reglages
+- 🌐 **Traduction des noms d'especes** — noms affiches dans la langue choisie sur toutes les pages
 - 🌍 4 langues UI (FR/EN/NL/DE) + 36 langues pour les noms d'especes
 
 ## Modeles Perch V2 optimises
@@ -138,7 +142,7 @@ Dashboard : `http://votre-pi.local/birds/`
 ## Tests
 
 ```bash
-npm test                    # 40 tests Node.js
+npm test                    # 134 tests Node.js
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 tests Python
 ```
 

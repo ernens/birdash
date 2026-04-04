@@ -1,8 +1,8 @@
-# 🐦 Birdash
+# 🐦 BirdStation
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-model architectuur met BirdNET V2.4 + Perch V2.
+Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-model architectuur met BirdNET V2.4 + Perch V2. Aanpasbare stationnaam en branding.
 
 > [English](README.md) | [Francais](README.fr.md) | [Deutsch](README.de.md)
 
@@ -14,12 +14,16 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - 🌦️ **Weer** — correlatieanalyse (Pearson r), prognose, soorten per omstandigheden
 - 🎵 **Live spectrogram** — real-time audio met vogelnamen
 - 🔍 **Review** — auto-flagging, spectrogram-modal met filters en loop-selectie, verwijderen met voorbeeldweergave
-- ⭐ **Favorieten** (SQLite) + 📝 **Notities** per soort en per detectie
+- ⭐ **Favorieten** — speciale pagina met KPIs, zoeken, sorteren; harttoggle op alle soortenlijsten
+- 📝 **Notities** per soort en per detectie
 - 🦜 **Soortkaarten** — fenologiekalender, jaarlijkse vergelijking, PNG-export
 - 📱 **Mobiel** — navigatiebalk onderaan, veeggebaren, globale zoekfunctie (soort + datum)
 - 🔔 **Meldingen** — ntfy.sh + in-app belletje
 - 💻 **Web terminal** — bash in browser
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
+- 📷 **Fotobeheer** — blokkeren/vervangen, standaardfoto per soort
+- 🏷️ **Aanpasbare branding** — stationnaam en header configureerbaar via instellingen
+- 🌐 **Soortnaamvertaling** — vogelnamen in gekozen taal op alle pagina's
 - 🌍 4 UI-talen (FR/EN/NL/DE) + 36 talen voor soortnamen
 
 ## Geoptimaliseerde Perch V2 Modellen
@@ -53,7 +57,7 @@ Dashboard: `http://jouw-pi.local/birds/`
 ## Tests
 
 ```bash
-npm test                    # 46 Node.js-tests
+npm test                    # 134 Node.js-tests
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python tests
 ```
 

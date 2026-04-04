@@ -1,8 +1,8 @@
-# 🐦 Birdash
+# 🐦 BirdStation
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige Dual-Modell-Architektur mit BirdNET V2.4 + Perch V2.
+Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige Dual-Modell-Architektur mit BirdNET V2.4 + Perch V2. Anpassbarer Stationsname und Branding.
 
 > [English](README.md) | [Francais](README.fr.md) | [Nederlands](README.nl.md)
 
@@ -14,12 +14,16 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 - 🌦️ **Wetter** — Korrelationsanalyse (Pearson r), Prognose, Arten nach Bedingungen
 - 🎵 **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
 - 🔍 **Uberprufung** — Auto-Flagging, Spektrogramm-Modal mit Filtern und Loop-Auswahl, Loschen mit Vorschau
-- ⭐ **Favoriten** (SQLite) + 📝 **Notizen** pro Art und pro Erkennung
+- ⭐ **Favoriten** — eigene Seite mit KPIs, Suche, Sortierung; Herz-Toggle auf allen Artenlisten
+- 📝 **Notizen** pro Art und pro Erkennung
 - 🦜 **Artenkarten** — Phonologie-Kalender, Jahresvergleich, PNG-Export
 - 📱 **Mobil** — Bottom-Navigation, Touch-Gesten, globale Suche (Art + Datum)
 - 🔔 **Benachrichtigungen** — ntfy.sh + In-App-Glocke
 - 💻 **Web-Terminal** — Bash im Browser
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
+- 📷 **Fotoverwaltung** — Sperren/Ersetzen, Standardfoto pro Art
+- 🏷️ **Anpassbares Branding** — Stationsname und Header uber Einstellungen konfigurierbar
+- 🌐 **Artnamenubersetzung** — Vogelnamen in gewahlter Sprache auf allen Seiten
 - 🌍 4 UI-Sprachen (FR/EN/NL/DE) + 36 Sprachen fur Artnamen
 
 ## Optimierte Perch V2 Modelle
@@ -53,7 +57,7 @@ Dashboard: `http://ihr-pi.local/birds/`
 ## Tests
 
 ```bash
-npm test                    # 46 Node.js Tests
+npm test                    # 134 Node.js Tests
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 Python Tests
 ```
 

@@ -1,11 +1,11 @@
-# 🐦 Birdash
+# 🐦 BirdStation
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-model architecture with BirdNET V2.4 + Perch V2.
+Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-model architecture with BirdNET V2.4 + Perch V2. Customizable station name and branding.
 
 > [Francais](README.fr.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md) | [Contributing](CONTRIBUTING.md)
 
@@ -78,15 +78,16 @@ Raspberry Pi 5 + SSD
 - 🎚️ **Adaptive noise normalization** — automatic software gain based on ambient noise, with clip guard, activity hold, and observer mode
 - 🔇 **Audio filters** — configurable highpass + lowpass (bandpass), spectral noise reduction (stationary gating), RMS normalization
 - 📡 **BirdWeather** — automatic upload of soundscapes + detections
-- 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species (not every sparrow)
+- 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
 - ⚡ **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
-### Dashboard (14 pages)
+### Dashboard (15 pages)
 
 **Real-time**
 - 📊 Dashboard overview with KPIs, weather widget, quick links, morning summary, "What's New" alerts
 - 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
 - 📅 **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
+- 🌐 **Species name translation** — bird names displayed in the user's chosen language across all pages
 
 **History**
 - 📆 **Calendar** — unified day-by-day view with timeline visualization, species list, audio player
@@ -96,6 +97,7 @@ Raspberry Pi 5 + SSD
 
 **Species**
 - 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status, favorites (SQLite-backed), personal notes (per-species and per-detection), phenology calendar (12-month dot map), year-over-year monthly comparison, chart PNG export, Web Share API
+- ⭐ **Favorites** — dedicated page with KPIs, search, sort; heart toggle on all species lists
 - 💎 Rare species tracking
 - 🏆 Best recordings gallery with audio library tab
 
@@ -109,6 +111,7 @@ Raspberry Pi 5 + SSD
 - 5 intent-based sections: Live, History, Species, Insights, Station
 - Mobile bottom nav bar, global species+date search, notification bell, review badge counter
 - Keyboard shortcuts on 5 pages, swipe gestures on species photos
+- Toast notifications for API errors
 
 ### Detection Review
 - 🔍 **Auto-flagging** — nocturnal birds by day, out-of-season migrants, low confidence isolates, non-European species
@@ -131,6 +134,8 @@ Raspberry Pi 5 + SSD
 - 💻 **Web terminal** — full bash in browser, supports Claude Code
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV with scheduling
 - 🎨 5 themes (Forest, Night, Paper, Ocean, Dusk)
+- 📷 **Photo management** — ban/replace photos, set preferred photo per species
+- 🏷️ **Customizable branding** — configurable station name and header brand via settings
 - 🌍 4 UI languages (FR/EN/NL/DE) + 36 languages for species names
 
 ## Optimized Perch V2 Models
@@ -208,7 +213,7 @@ Your dashboard will be available at `http://yourpi.local/birds/`
 ## Tests
 
 ```bash
-# Node.js backend tests (46 tests)
+# Node.js backend tests (134 tests)
 npm test
 
 # Python engine tests (13 tests)
@@ -220,7 +225,7 @@ cd engine && ../engine/venv/bin/python -m unittest test_engine -v
 ```
 birdash/
 ├── server/
-│   └── server.js                  # Node.js API backend (~4700 lines)
+│   └── server.js                  # Node.js API backend (~5600 lines)
 ├── public/                        # Static frontend (Vue 3 CDN)
 │   ├── index.html                 # Dashboard overview + weather widget
 │   ├── today.html                 # Today's detections with audio filters
@@ -230,6 +235,7 @@ birdash/
 │   ├── review.html                # Detection review + bulk actions
 │   ├── species.html               # Species cards + favorites + notes
 │   ├── gallery.html               # Best recordings + audio library
+│   ├── favorites.html             # Favorites with stats + management
 │   ├── weather.html               # Weather/activity correlation
 │   ├── stats.html                 # Statistics + model comparison tab
 │   ├── analyses.html              # Per-species deep analysis
