@@ -19,6 +19,7 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - 🦜 **Soortkaarten** — fenologiekalender, jaarlijkse vergelijking, PNG-export
 - 📱 **Mobiel** — navigatiebalk onderaan, veeggebaren, globale zoekfunctie (soort + datum)
 - 🔔 **Meldingen** — ntfy.sh + in-app belletje
+- 📋 **Live log** — realtime dashboard (SSE) met kleurgecodeerde categorieën, filters, KPIs
 - 💻 **Web terminal** — bash in browser
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
 - 📷 **Fotobeheer** — blokkeren/vervangen, standaardfoto per soort

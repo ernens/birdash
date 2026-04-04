@@ -19,6 +19,7 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 - 🦜 **Artenkarten** — Phonologie-Kalender, Jahresvergleich, PNG-Export
 - 📱 **Mobil** — Bottom-Navigation, Touch-Gesten, globale Suche (Art + Datum)
 - 🔔 **Benachrichtigungen** — ntfy.sh + In-App-Glocke
+- 📋 **Live-Log** — Echtzeit-Dashboard (SSE) mit farbcodierten Kategorien, Filtern, KPIs
 - 💻 **Web-Terminal** — Bash im Browser
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
 - 📷 **Fotoverwaltung** — Sperren/Ersetzen, Standardfoto pro Art

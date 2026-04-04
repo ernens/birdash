@@ -107,6 +107,9 @@ Raspberry Pi 5 + SSD
 - 🔬 Advanced analyses (polar charts, heatmaps, time series, narrative)
 - 🧬 Biodiversity — Shannon index, taxonomy breakdown, phenology
 
+**Station**
+- 📋 **Live log** — real-time streaming dashboard (SSE) with color-coded categories, filters, KPIs (detections/BirdWeather/errors), pause/resume, auto-scroll
+
 **Navigation**
 - 5 intent-based sections: Live, History, Species, Insights, Station
 - Mobile bottom nav bar, global species+date search, notification bell, review badge counter
@@ -243,6 +246,7 @@ birdash/
 │   ├── spectrogram.html           # Live spectrogram + clip playback
 │   ├── settings.html              # Full settings (9 tabs)
 │   ├── system.html                # System health + terminal
+│   ├── log.html                   # Live log dashboard (SSE)
 │   ├── js/
 │   │   ├── bird-config.js         # Navigation, API config
 │   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API

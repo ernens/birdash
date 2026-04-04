@@ -61,6 +61,9 @@ Raspberry Pi 5 + SSD
 - 📆 **Calendrier** — vue unifiee timeline + especes + lecteur audio par date
 - 🌅 **Timeline pleine page** — zoom par glisser, slider densite unifie, badges filtres avec clignotement
 
+### Station
+- 📋 **Log live** — dashboard temps reel (SSE) avec categories colorees, filtres, KPIs (detections/BirdWeather/erreurs), pause/reprise, auto-scroll
+
 ### Navigation
 - 5 sections (En direct, Historique, Especes, Analyses, Station)
 - Barre de navigation mobile, recherche globale espece+date, cloche notifications, badge "A valider"
