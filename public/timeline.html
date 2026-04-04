@@ -42,8 +42,8 @@
         </span>
         <span class="rv-sep" style="height:24px;"></span>
         <span style="font-size:.72rem;color:var(--text-muted);">🐦 {{t('tl_density_label_short')}}</span>
-        <input type="range" v-model.number="confSlider" min="0" max="100" step="5" @change="onSliderChange"
-               style="width:120px;accent-color:var(--accent);">
+        <input type="range" v-model.number="confSlider" min="0" max="100" step="2" @change="onSliderChange"
+               style="width:360px;accent-color:var(--accent);">
         <span style="font-size:.72rem;min-width:60px;color:var(--text-main);">{{sliderLabel}}</span>
       </div>
     </div>
