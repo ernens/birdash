@@ -716,9 +716,10 @@ const app = createApp({
 
     let _lastDate = null;
     async function load() {
-      loading.value = true;
+      const dateChanged = _lastDate !== selectedDate.value;
+      if (dateChanged) loading.value = true;
       // Reset zoom only on date change
-      if (_lastDate !== selectedDate.value) {
+      if (dateChanged) {
         viewStart.value = 0; viewEnd.value = 24;
         _viewStart = 0; _viewEnd = 24;
         _lastDate = selectedDate.value;
