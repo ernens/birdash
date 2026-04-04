@@ -41,16 +41,11 @@
           — {{String(Math.floor(viewEnd)).padStart(2,'0')}}:{{String(Math.round((viewEnd%1)*60)).padStart(2,'0')}}
         </span>
         <span class="rv-sep" style="height:24px;"></span>
-        <span style="font-size:.78rem;color:var(--text-muted);">🐦</span>
-        <button class="tp-nav-btn" @click="lessbirds" :disabled="density <= 0" title="Moins d'oiseaux">−</button>
-        <span style="font-size:.72rem;min-width:40px;text-align:center;color:var(--text-main);">{{t('tl_density_'+density)}}</span>
-        <button class="tp-nav-btn" @click="morebirds" :disabled="density >= 5" title="Plus d'oiseaux">+</button>
-        <button v-if="density !== 2" class="tp-nav-btn" @click="density = 2; confMin = 70; load()" style="font-size:.65rem;" title="Défaut">↺</button>
-        <span class="rv-sep" style="height:24px;"></span>
-        <span style="font-size:.72rem;color:var(--text-muted);">{{t('conf_min')}}</span>
-        <input type="range" v-model.number="confMin" min="0" max="95" step="5" @change="load"
-               style="width:80px;accent-color:var(--accent);">
-        <span style="font-size:.72rem;min-width:28px;color:var(--text-main);">{{confMin}}%</span>
+        <span style="font-size:.72rem;color:var(--text-muted);">🐦 {{t('tl_density_label_short')}}</span>
+        <input type="range" v-model.number="confSlider" min="0" max="100" step="5" @change="onSliderChange"
+               style="width:120px;accent-color:var(--accent);">
+        <span style="font-size:.72rem;min-width:60px;color:var(--text-main);">{{sliderLabel}}</span>
+        <button v-if="confSlider !== 50" class="tp-nav-btn" @click="confSlider = 50; onSliderChange()" style="font-size:.65rem;" title="Défaut">↺</button>
       </div>
     </div>
 
@@ -251,12 +246,30 @@ const app = createApp({
     const viewEnd = ref(24);
 
     // Bird density control: 0=min, 2=default, 5=all detections
-    const density = ref(2);
-    const confMin = ref(70);
-    const densityConf =   [0.90, 0.80, 0.70, 0.50, 0.0, 0.0];
-    const densityLimits = [3, 5, 8, 15, 999, 999];
-    function morebirds() { if (density.value < 5) { density.value++; load(); } }
-    function lessbirds() { if (density.value > 0) { density.value--; load(); } }
+    // Unified slider: 0=strictest (95% conf, 3 birds) → 100=everything (0% conf, all)
+    const confSlider = ref(50); // default = 70% conf, 8 events
+    const sliderLabel = computed(() => {
+      const s = confSlider.value;
+      if (s <= 10) return t('tl_density_0');
+      if (s <= 25) return t('tl_density_1');
+      if (s <= 55) return t('tl_density_2');
+      if (s <= 75) return t('tl_density_3');
+      if (s <= 90) return t('tl_density_4');
+      return t('tl_density_5');
+    });
+    function sliderToConf(s) {
+      // 0→0.95, 25→0.80, 50→0.70, 75→0.50, 90→0.20, 100→0
+      return Math.max(0, 0.95 - s * 0.0095);
+    }
+    function sliderToMax(s) {
+      if (s <= 10) return 3;
+      if (s <= 25) return 5;
+      if (s <= 50) return 8;
+      if (s <= 75) return 15;
+      if (s <= 90) return 50;
+      return 999;
+    }
+    function onSliderChange() { load(); }
     const popupEvent = ref(null);
     const clusterPopup = ref(null);
     const activeFilters = ref([]);
@@ -633,42 +646,33 @@ const app = createApp({
           return;
         }
 
-        // Clusters: when deep-zoomed, auto-expand; otherwise show bubble
-        if (ev.type === 'cluster') {
-          if (isDeepZoom && ev.species) {
-            // Expand cluster into individual markers
-            ev.species.forEach((sp, idx) => {
-              const offsetH = idx * 0.08; // slight horizontal spread
-              const sx = hourToX(ev.timeDecimal + offsetH);
-              const sel = document.createElement('div');
-              const scolor = typeColors[sp.type] || '#8b949e';
-              const spConf = sp.confidence || 0.5;
-              const spY = confToY(spConf);
-              const spLabel = spY > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
-              sel.className = `tl-event-marker ${spLabel}`;
-              sel.style.color = scolor; sel.style.left = sx + 'px';
-              sel.style.bottom = spY + 'px';
-              const sPhotoContent = sp.photoUrl
-                ? `<img src="${sp.photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%">${sp.photoFallback||''}</span>`
-                : sp.photoFallback || '';
-              sel.innerHTML = `
-                <div class="tl-marker-photo" style="width:44px;height:44px;">${sPhotoContent}</div>
-                <div class="tl-marker-connector"></div>
-                <div class="tl-marker-label">
-                  <div class="tl-ml-name" style="color:${scolor}">${sp.commonName}</div>
-                  <div class="tl-ml-conf">${Math.round((sp.confidence||0)*100)}%</div>
-                </div>`;
-              sel.addEventListener('click', () => openPopup(sp));
-              inner.appendChild(sel);
-            });
-            return;
-          }
-          const el = document.createElement('div');
-          el.className = 'tl-cluster-marker'; el.style.left = x + 'px';
-          const dots = (ev.colors||[]).slice(0,5).map(c => `<div class="tl-cluster-dot" style="background:${c}"></div>`).join('');
-          el.innerHTML = `<div class="tl-cluster-bubble"><div class="tl-cluster-dots">${dots}</div><span>+${ev.count}</span></div>`;
-          el.addEventListener('click', () => { clusterPopup.value = ev; });
-          inner.appendChild(el);
+        // Clusters: always expand into individual markers
+        if (ev.type === 'cluster' && ev.species) {
+          ev.species.forEach((sp, idx) => {
+            const offsetH = idx * 0.08;
+            const sx = hourToX(ev.timeDecimal + offsetH);
+            const sel = document.createElement('div');
+            const scolor = typeColors[sp.type] || '#8b949e';
+            const spConf = sp.confidence || 0.5;
+            const spY = confToY(spConf);
+            const spLabel = spY > (maxBot - (maxBot - minBot) / 3) ? 'below' : 'above';
+            sel.className = `tl-event-marker ${spLabel}`;
+            sel.dataset.type = sp.type || '';
+            sel.style.color = scolor; sel.style.left = sx + 'px';
+            sel.style.bottom = spY + 'px';
+            const sPhotoContent = sp.photoUrl
+              ? `<img src="${sp.photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%">${sp.photoFallback||''}</span>`
+              : sp.photoFallback || '';
+            sel.innerHTML = `
+              <div class="tl-marker-photo">${sPhotoContent}</div>
+              <div class="tl-marker-connector"></div>
+              <div class="tl-marker-label">
+                <div class="tl-ml-name" style="color:${scolor}">${sp.commonName}</div>
+                <div class="tl-ml-conf">${Math.round((sp.confidence||0)*100)}%</div>
+              </div>`;
+            sel.addEventListener('click', () => openPopup(sp));
+            inner.appendChild(sel);
+          });
           return;
         }
 
@@ -717,14 +721,14 @@ const app = createApp({
       viewStart.value = 0; viewEnd.value = 24;
       _viewStart = 0; _viewEnd = 24;
       try {
-        const mc = Math.min(densityConf[density.value], confMin.value / 100);
-        const ml = densityLimits[density.value];
+        const mc = sliderToConf(confSlider.value);
+        const ml = sliderToMax(confSlider.value);
         const r = await fetch(`${BIRD_CONFIG.apiUrl}/timeline?date=${selectedDate.value}&minConf=${mc}&maxEvents=${ml}`);
         if (!r.ok) return;
         const json = await r.json();
         if (!json || json.error) return;
         // ALL mode: inject individual detections as events
-        if (density.value === 5) {
+        if (confSlider.value > 90) {
           try {
             const detRows = await birdQuery(
               `SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
@@ -814,7 +818,7 @@ const app = createApp({
       popupEvent, clusterPopup, openPopup, activeFilters, eventTypes, toggleFilter, typeCounts, filteredEvents,
       formatDate, moonEmoji, navigateDay, load,
       viewStart, viewEnd, resetZoom, onZoneMousedown, dragSelect,
-      density, confMin, morebirds, lessbirds,
+      confSlider, sliderLabel, onSliderChange,
       scrollRef, innerRef, skyRef, starsRef, densityRef, densityWrapRef,
       navigateTo,
       quickPlay(comName) { quickPlaySpecies(comName); },
