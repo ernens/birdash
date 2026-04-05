@@ -137,16 +137,7 @@
    * @param {string} sciName - Scientific name
    * @param {string} lang - Language code for Wikipedia (e.g. 'fr', 'en', 'nl', 'de')
    */
-  function buildSpeciesLinks(comName, sciName, lang) {
-    const sci     = encodeURIComponent(sciName || '');
-    const sciWiki = (sciName || '').replace(/ /g, '_');
-    var wikiLang  = 'fr';
-    if (lang === 'nl') wikiLang = 'nl';
-    else if (lang === 'de') wikiLang = 'de';
-    else if (lang === 'en') wikiLang = 'en';
-    else if (lang === 'fr') wikiLang = 'fr';
-    else if (lang) wikiLang = lang;
-    // ── Confirm dialog (replaces native confirm()) ─────────────────────
+  // ── Confirm dialog (replaces native confirm()) ─────────────────────────
   function confirmDialog(message, { okLabel = 'OK', cancelLabel, danger = false } = {}) {
     return new Promise(resolve => {
       const overlay = document.createElement('div');
@@ -195,6 +186,15 @@
     return () => el.removeEventListener('keydown', handler);
   }
 
+  function buildSpeciesLinks(comName, sciName, lang) {
+    const sci     = encodeURIComponent(sciName || '');
+    const sciWiki = (sciName || '').replace(/ /g, '_');
+    var wikiLang  = 'fr';
+    if (lang === 'nl') wikiLang = 'nl';
+    else if (lang === 'de') wikiLang = 'de';
+    else if (lang === 'en') wikiLang = 'en';
+    else if (lang === 'fr') wikiLang = 'fr';
+    else if (lang) wikiLang = lang;
   return {
       xenocanto:   { url: 'https://xeno-canto.org/explore?query=' + sci,           label: 'Xeno-canto',  icon: '\uD83C\uDFB5' },
       ebird:       { url: 'https://ebird.org/search?q=' + sci,                     label: 'eBird',        icon: '\uD83C\uDF0D' },
