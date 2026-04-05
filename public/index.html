@@ -86,10 +86,89 @@
       </div>
     </div>
 
-    <!-- ═══ What's New — 3-level editorial module ═══ -->
+    <!-- ═══ Dernière détection + Contexte du jour ═══ -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+
+      <!-- Dernière détection (gauche) -->
+      <div class="card">
+        <div class="card-title">{{t('last_detection')}}</div>
+        <div v-if="lastDet.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else-if="!lastDet.row" class="error-msg">{{t('no_data')}}</div>
+        <div v-else>
+          <div class="last-det-photo-wrap">
+            <bird-img v-if="lastDet.photoUrl" :src="lastDet.photoUrl" :alt="lastDet.row.Com_Name"></bird-img>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:.75rem;">
+            <div style="flex:1;">
+              <div style="font-size:1.05rem;font-family:var(--font-display);font-weight:600;">
+                <a class="species-link" @click="navigateTo('species.html',{species:lastDet.row.Com_Name})">{{spName(lastDet.row.Com_Name, lastDet.row.Sci_Name)}}</a>
+              </div>
+              <div style="font-size:.8rem;color:var(--text-muted);font-style:italic;">{{lastDet.row.Sci_Name}}</div>
+              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">{{fmtDate(lastDet.row.Date)}} · {{fmtTime(lastDet.row.Time)}}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.3rem;">
+              <span v-if="lastDet.row.Model" class="model-tag">{{shortModel(lastDet.row.Model)}}</span>
+              <span :class="'conf-badge '+(parseFloat(lastDet.row.Confidence)>=0.8?'conf-high':parseFloat(lastDet.row.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(lastDet.row.Confidence)}}</span>
+            </div>
+          </div>
+          <div v-if="lastDet.row.File_Name" class="idx-player">
+            <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(lastDet.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
+            <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
+            <span class="idx-duration">{{richDuration}}</span>
+          </div>
+          <div v-if="lastDet.row.File_Name" class="idx-spectro-wrap">
+            <div class="idx-spectro-freqs">
+              <span class="idx-spectro-freq">12k</span>
+              <span class="idx-spectro-freq">6k</span>
+              <span class="idx-spectro-freq">0</span>
+            </div>
+            <canvas ref="spectroCanvas" class="idx-spectro-canvas" :height="80"></canvas>
+            <div v-if="spectroState==='loading'" class="idx-spectro-loading"><div class="spinner" style="transform:scale(.5)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contexte du jour (droite) -->
+      <div v-if="whatsNew.loaded" class="card">
+        <div class="card-title">{{t('wn_level_context')}}</div>
+        <div class="wn-context-grid" style="grid-template-columns:1fr;">
+          <div class="wn-ctx-card" v-if="whatsNew.context.dawn_chorus.data">
+            <div class="wn-ctx-icon">☀</div>
+            <div class="wn-ctx-body">
+              <div class="wn-ctx-label">{{t('wn_card_dawn_chorus')}}</div>
+              <div class="wn-ctx-hero">{{whatsNew.context.dawn_chorus.data.speciesCount}}<span class="wn-ctx-unit"> {{t('wn_species_detected')}}</span></div>
+              <div class="wn-ctx-sub">{{whatsNew.context.dawn_chorus.data.detectionCount}} det. · {{whatsNew.context.dawn_chorus.data.sunriseTime}}–{{whatsNew.context.dawn_chorus.data.windowEnd}}</div>
+            </div>
+          </div>
+          <div class="wn-ctx-card" v-if="whatsNew.context.species_richness.data">
+            <div class="wn-ctx-icon">🌿</div>
+            <div class="wn-ctx-body">
+              <div class="wn-ctx-label">{{t('wn_card_species_richness')}}</div>
+              <div class="wn-ctx-hero">{{whatsNew.context.species_richness.data.todayCount}} <span class="wn-trend-indicator" :class="'wn-trend--'+whatsNew.context.species_richness.data.trend" style="font-size:.82rem;">{{whatsNew.context.species_richness.data.deltaPct > 0 ? '+' : ''}}{{whatsNew.context.species_richness.data.deltaPct}}%</span></div>
+              <div class="wn-ctx-sub">{{t('wn_vs_avg')}} {{whatsNew.context.species_richness.data.historicalAvg}}</div>
+            </div>
+          </div>
+          <div class="wn-ctx-card" v-if="whatsNew.context.acoustic_quality.data">
+            <div class="wn-ctx-icon"><span class="wn-quality-dot" :class="'wn-quality-dot--'+whatsNew.context.acoustic_quality.data.qualityLevel" style="width:12px;height:12px;"></span></div>
+            <div class="wn-ctx-body">
+              <div class="wn-ctx-label">{{t('wn_card_acoustic_quality')}}</div>
+              <div class="wn-ctx-hero">{{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}<span class="wn-ctx-unit"> · {{Math.round(whatsNew.context.acoustic_quality.data.strongRate * 100)}}%</span></div>
+            </div>
+          </div>
+          <div class="wn-ctx-card" v-if="whatsNew.context.moon_phase.data">
+            <div class="wn-ctx-icon" style="font-size:1.4rem;">{{wnMoonIcon(whatsNew.context.moon_phase.data.phaseName)}}</div>
+            <div class="wn-ctx-body">
+              <div class="wn-ctx-label">{{t('wn_card_moon_phase')}}</div>
+              <div class="wn-ctx-hero">{{t('wn_moon_'+whatsNew.context.moon_phase.data.phaseName)}} · {{Math.round(whatsNew.context.moon_phase.data.illumination * 100)}}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ What's New — alertes + phénologie ═══ -->
     <div v-if="whatsNew.loaded" class="wn-section" style="margin-bottom:1rem;">
 
-      <!-- ── Section title ── -->
       <div class="wn-sun-bar">
         <span class="wn-sun-title">{{t('wn_title')}}</span>
       </div>
@@ -197,120 +276,6 @@
 
       </div>
 
-      <!-- ── Niveau 3 : Contexte du jour ── -->
-      <div class="wn-level">
-        <div class="wn-level-header">
-          <span class="wn-level-dot wn-level-dot--context"></span>
-          <h3>{{t('wn_level_context')}}</h3>
-        </div>
-        <div class="wn-context-grid">
-
-          <!-- dawn_chorus -->
-          <div class="wn-ctx-card" :class="{'wn-card--insufficient': whatsNew.context.dawn_chorus.insufficientData}">
-            <div class="wn-ctx-icon">&#9788;</div>
-            <div class="wn-ctx-body" v-if="!whatsNew.context.dawn_chorus.insufficientData && whatsNew.context.dawn_chorus.data">
-              <div class="wn-ctx-label">{{t('wn_card_dawn_chorus')}}</div>
-              <div class="wn-ctx-hero">{{whatsNew.context.dawn_chorus.data.speciesCount}}<span class="wn-ctx-unit"> {{t('wn_species_detected')}}</span></div>
-              <div class="wn-ctx-sub">{{whatsNew.context.dawn_chorus.data.detectionCount}} {{t('wn_detections')}} &middot; {{whatsNew.context.dawn_chorus.data.sunriseTime}}&ndash;{{whatsNew.context.dawn_chorus.data.windowEnd}}</div>
-            </div>
-            <div class="wn-ctx-body" v-else>
-              <div class="wn-ctx-label">{{t('wn_card_dawn_chorus')}}</div>
-              <div class="wn-insufficient-label">{{t('wn_insuf_label')}}</div>
-            </div>
-          </div>
-
-          <!-- acoustic_quality -->
-          <div class="wn-ctx-card" :class="{'wn-card--insufficient': whatsNew.context.acoustic_quality.insufficientData}">
-            <div class="wn-ctx-icon">
-              <span class="wn-quality-dot" :class="'wn-quality-dot--'+(whatsNew.context.acoustic_quality.data ? whatsNew.context.acoustic_quality.data.qualityLevel : 'moderate')" style="width:12px;height:12px;"></span>
-            </div>
-            <div class="wn-ctx-body" v-if="!whatsNew.context.acoustic_quality.insufficientData && whatsNew.context.acoustic_quality.data">
-              <div class="wn-ctx-label">{{t('wn_card_acoustic_quality')}}</div>
-              <div class="wn-ctx-hero">{{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}<span class="wn-ctx-unit"> &middot; {{Math.round(whatsNew.context.acoustic_quality.data.strongRate * 100)}}%</span></div>
-              <div class="wn-ctx-sub">{{whatsNew.context.acoustic_quality.data.strong}} / {{whatsNew.context.acoustic_quality.data.totalDetections}} {{t('wn_strong_detections').toLowerCase()}}</div>
-            </div>
-            <div class="wn-ctx-body" v-else>
-              <div class="wn-ctx-label">{{t('wn_card_acoustic_quality')}}</div>
-              <div class="wn-insufficient-label">{{t('wn_insuf_label')}}</div>
-            </div>
-          </div>
-
-          <!-- species_richness -->
-          <div class="wn-ctx-card" :class="{'wn-card--insufficient': whatsNew.context.species_richness.insufficientData}">
-            <div class="wn-ctx-icon">&#127807;</div>
-            <div class="wn-ctx-body" v-if="!whatsNew.context.species_richness.insufficientData && whatsNew.context.species_richness.data">
-              <div class="wn-ctx-label">{{t('wn_card_species_richness')}}</div>
-              <div class="wn-ctx-hero">
-                {{whatsNew.context.species_richness.data.todayCount}}
-                <span class="wn-trend-indicator" :class="'wn-trend--'+whatsNew.context.species_richness.data.trend" style="font-size:.82rem;margin-left:.3rem;">
-                  {{whatsNew.context.species_richness.data.trend === 'above' ? '&#9650;' : whatsNew.context.species_richness.data.trend === 'below' ? '&#9660;' : '&#8212;'}}
-                  {{whatsNew.context.species_richness.data.deltaPct > 0 ? '+' : ''}}{{whatsNew.context.species_richness.data.deltaPct}}%
-                </span>
-              </div>
-              <div class="wn-ctx-sub">{{t('wn_vs_avg')}} {{whatsNew.context.species_richness.data.historicalAvg}}</div>
-            </div>
-            <div class="wn-ctx-body" v-else>
-              <div class="wn-ctx-label">{{t('wn_card_species_richness')}}</div>
-              <div class="wn-insufficient-label">{{t('wn_insuf_label')}}</div>
-            </div>
-          </div>
-
-          <!-- moon_phase -->
-          <div class="wn-ctx-card">
-            <div class="wn-ctx-icon" style="font-size:1.4rem;">{{whatsNew.context.moon_phase.data ? wnMoonIcon(whatsNew.context.moon_phase.data.phaseName) : '&#127765;'}}</div>
-            <div class="wn-ctx-body" v-if="whatsNew.context.moon_phase.data">
-              <div class="wn-ctx-label">{{t('wn_card_moon_phase')}}</div>
-              <div class="wn-ctx-hero">{{t('wn_moon_'+whatsNew.context.moon_phase.data.phaseName)}}<span class="wn-ctx-unit"> &middot; {{Math.round(whatsNew.context.moon_phase.data.illumination * 100)}}%</span></div>
-              <div class="wn-ctx-sub" :class="'wn-migration--'+whatsNew.context.moon_phase.data.migrationContext">{{t('wn_migration_'+whatsNew.context.moon_phase.data.migrationContext)}}</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- Journal du jour -->
-    <div class="card">
-      <div class="card-title">{{t('today_log')}}</div>
-      <div v-if="feed.loading" class="spinner"><div></div><div></div><div></div></div>
-      <div v-else-if="!feed.rows.length" class="error-msg">{{t('no_data')}}</div>
-      <div v-else>
-        <div v-for="d in feed.rows" :key="d.Date+d.Time+d.File_Name"
-             class="det-item"
-             :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
-          <!-- Miniature espèce -->
-          <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb"
-               :alt="d.Com_Name"></bird-img>
-          <div v-else class="det-thumb-ph">🐦</div>
-          <!-- Bouton play -->
-          <button v-if="d.File_Name" class="play-btn"
-                  style="width:22px;height:22px;font-size:.6rem;"
-                  :class="{playing:playingFile===d.File_Name}"
-                  @click="toggleAudio(d.File_Name)">▶</button>
-          <span v-else style="width:22px;display:inline-block;"></span>
-          <div class="det-time">{{fmtTime(d.Time)}}</div>
-          <div class="det-species">
-            <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">
-              {{spName(d.Com_Name, d.Sci_Name)}}
-            </a>
-            <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">&#x1F50A;</button>
-            <div class="det-sci">{{d.Sci_Name}}</div>
-          </div>
-          <!-- Badge rareté -->
-          <span v-if="d.isRare" class="rare-badge" :title="'Vu seulement '+d.totalDet+' fois'">
-            💎 {{d.totalDet}}×
-          </span>
-          <span v-else style="display:flex;align-items:center;gap:.25rem;">
-            <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
-            <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
-              {{fmtConf(d.Confidence)}}
-            </span>
-          </span>
-        </div>
-      </div>
-      <div style="text-align:right;margin-top:.75rem;">
-        <a href="detections.html" class="btn btn-secondary">{{t('nav_detections')}} →</a>
-      </div>
     </div>
 
     <!-- ═══ Timeline du jour ═══ -->
@@ -419,94 +384,6 @@
     </div>
 
     <div class="grid-2">
-
-      <!-- Dernière détection -->
-      <div class="card">
-        <div class="card-title">{{t('last_detection')}}</div>
-        <div v-if="lastDet.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!lastDet.row" class="error-msg">{{t('no_data')}}</div>
-        <div v-else>
-          <!-- Photo espèce -->
-          <div class="last-det-photo-wrap">
-            <bird-img v-if="lastDet.photoUrl" :src="lastDet.photoUrl"
-                 :alt="lastDet.row.Com_Name"></bird-img>
-          </div>
-          <!-- Nom + confiance -->
-          <div style="display:flex;align-items:flex-start;gap:.75rem;">
-            <div style="flex:1;">
-              <div style="font-size:1.05rem;font-family:var(--font-display);font-weight:600;">
-                <a class="species-link" @click="navigateTo('species.html',{species:lastDet.row.Com_Name})">
-                  {{spName(lastDet.row.Com_Name, lastDet.row.Sci_Name)}}
-                </a>
-              </div>
-              <div style="font-size:.8rem;color:var(--text-muted);font-style:italic;">{{lastDet.row.Sci_Name}}</div>
-              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">
-                {{fmtDate(lastDet.row.Date)}} · {{fmtTime(lastDet.row.Time)}}
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:.3rem;">
-              <span v-if="lastDet.row.Model" class="model-tag">{{shortModel(lastDet.row.Model)}}</span>
-              <span :class="'conf-badge '+(parseFloat(lastDet.row.Confidence)>=0.8?'conf-high':parseFloat(lastDet.row.Confidence)>=0.6?'conf-mid':'conf-low')">
-                {{fmtConf(lastDet.row.Confidence)}}
-              </span>
-            </div>
-          </div>
-          <!-- Player -->
-          <div v-if="lastDet.row.File_Name" class="idx-player">
-            <button class="idx-play-btn" :class="{playing: richPlaying}"
-                    @click="toggleRichPlay(lastDet.row.File_Name)">
-              {{richPlaying ? '⏹' : '▶'}}
-            </button>
-            <div class="idx-progress" @click="seekRich">
-              <div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div>
-            </div>
-            <span class="idx-duration">{{richDuration}}</span>
-          </div>
-          <!-- Spectrogramme -->
-          <div v-if="lastDet.row.File_Name" class="idx-spectro-wrap">
-            <div class="idx-spectro-freqs">
-              <span class="idx-spectro-freq">12k</span>
-              <span class="idx-spectro-freq">6k</span>
-              <span class="idx-spectro-freq">0</span>
-            </div>
-            <canvas ref="spectroCanvas" :width="600" :height="90"
-                    style="padding-left:24px;box-sizing:border-box;"></canvas>
-            <div v-if="spectroState==='loading'" class="idx-spectro-overlay">
-              ⏳ Analyse…
-            </div>
-            <button v-if="spectroState==='ready'" class="spectro-expand-btn"
-                    @click.stop="openSpectroModal(lastDet.row)"
-                    :title="t('spectro_expand')||'Agrandir le spectrogramme'">⛶</button>
-          </div>
-          <!-- Clean -->
-          <div v-if="spectroState==='ready' || cleanProcessing"
-               class="idx-clean-bar">
-            <button class="idx-clean-btn"
-                    :disabled="cleanProcessing"
-                    :style="cleanMode
-                      ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
-                      : 'background:transparent;color:var(--text-muted);border-color:var(--border);'"
-                    @click="toggleClean">
-              <span v-if="cleanProcessing">⏳ {{t('audio_clean_progress')}}</span>
-              <span v-else-if="cleanMode">✨ {{t('audio_clean_done')}}</span>
-              <span v-else>🎛 {{t('audio_clean_btn')}}</span>
-            </button>
-            <template v-if="cleanMode && !cleanProcessing">
-              <span style="font-size:.72rem;color:var(--text-muted);">Force</span>
-              <input type="range" min="0.2" max="1.0" step="0.05"
-                     v-model.number="cleanStrength" @change="reapplyClean" aria-label="Clean strength"
-                     style="flex:1;max-width:100px;accent-color:var(--accent);">
-              <span style="font-size:.7rem;font-family:monospace;color:var(--accent);">
-                {{Math.round(cleanStrength*100)}}%
-              </span>
-            </template>
-          </div>
-          <div style="font-size:.72rem;color:var(--text-faint);margin-top:.5rem;font-style:italic;">
-            {{freshnessLabel(lastDet.row.Date, lastDet.row.Time, t)}}
-          </div>
-        </div>
-      </div>
-
       <!-- Graphiques activité (stacked) -->
       <div class="idx-right-stack">
         <div class="card">
@@ -541,6 +418,36 @@
       <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasTop"></canvas></div>
     </div>
 
+    <!-- Journal du jour -->
+    <div class="card">
+      <div class="card-title">{{t('today_log')}}</div>
+      <div v-if="feed.loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="!feed.rows.length" class="error-msg">{{t('no_data')}}</div>
+      <div v-else>
+        <div v-for="d in feed.rows" :key="d.Date+d.Time+d.File_Name"
+             class="det-item"
+             :style="d.isRare ? 'border-left:2px solid var(--danger);padding-left:.4rem;' : ''">
+          <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name"></bird-img>
+          <div v-else class="det-thumb-ph">🐦</div>
+          <button v-if="d.File_Name" class="play-btn" style="width:22px;height:22px;font-size:.6rem;"
+                  :class="{playing:playingFile===d.File_Name}" @click="toggleAudio(d.File_Name)">▶</button>
+          <span v-else style="width:22px;display:inline-block;"></span>
+          <div class="det-time">{{fmtTime(d.Time)}}</div>
+          <div class="det-species">
+            <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">{{spName(d.Com_Name, d.Sci_Name)}}</a>
+            <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)">🔊</button>
+          </div>
+          <span v-if="d.isRare" class="rare-badge">💎 {{d.totalDet}}×</span>
+          <span v-else style="display:flex;align-items:center;gap:.25rem;">
+            <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+            <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(d.Confidence)}}</span>
+          </span>
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:.5rem;">
+        <a href="detections.html" class="btn btn-secondary">{{t('nav_detections')}} →</a>
+      </div>
+    </div>
 
   </birdash-shell>
 </div>
