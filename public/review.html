@@ -227,33 +227,50 @@ const app = createApp({
     }
 
     async function validate(det, status) {
+      const labels = { confirmed: t('review_confirmed_msg'), rejected: t('review_rejected_msg'), doubtful: t('review_doubtful_msg') };
       try {
-        await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
+        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections:[{date:det.date,time:det.time,sci_name:det.sci_name}], status }) });
+        if (!resp.ok) throw new Error(resp.statusText);
         det.validation = status; window.dispatchEvent(new Event('birdash:review-changed'));
-      } catch(e) { console.error('validate:', e); }
+        window.dispatchEvent(new CustomEvent('birdash:success', {detail: (labels[status] || status) + ' — ' + spName(det.com_name, det.sci_name)}));
+      } catch(e) {
+        console.error('validate:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', {detail: t('review_action_error') + ': ' + e.message}));
+      }
     }
 
     async function bulkAction(status) {
       const dets = flagged.value.filter(d => selected.has(detKey(d)));
       if (!dets.length) return;
-      if (!confirm(`${status==='confirmed'?t('review_confirm'):status==='rejected'?t('review_reject'):'?'} ${dets.length} ?`)) return;
+      const labels = { confirmed: t('review_confirm'), rejected: t('review_reject'), doubtful: '?' };
+      if (!confirm(`${labels[status] || status} ${dets.length} ?`)) return;
       try {
-        await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
+        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections: dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status }) });
+        if (!resp.ok) throw new Error(resp.statusText);
         for (const d of dets) d.validation = status;
         selected.clear(); window.dispatchEvent(new Event('birdash:review-changed'));
-      } catch(e) { console.error('bulkAction:', e); }
+        window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${labels[status]} — ${dets.length} ${t('review_detections')}`}));
+      } catch(e) {
+        console.error('bulkAction:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', {detail: t('review_action_error') + ': ' + e.message}));
+      }
     }
 
     async function bulkRejectByReason(reason) {
       const matching = flagged.value.filter(d => d.reasons.includes(reason) && d.validation==='unreviewed');
       if (!matching.length || !confirm(`${t('review_reject')} ${matching.length} "${reason}" ?`)) return;
       try {
-        await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
+        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections: matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status:'rejected' }) });
+        if (!resp.ok) throw new Error(resp.statusText);
         for (const d of matching) d.validation = 'rejected'; window.dispatchEvent(new Event('birdash:review-changed'));
-      } catch(e) { console.error('bulkRejectByReason:', e); }
+        window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${t('review_reject')} — ${matching.length} "${reason}"`}));
+      } catch(e) {
+        console.error('bulkRejectByReason:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', {detail: t('review_action_error') + ': ' + e.message}));
+      }
     }
 
     function toggleSelect(det) { const k=detKey(det); selected.has(k)?selected.delete(k):selected.add(k); }
