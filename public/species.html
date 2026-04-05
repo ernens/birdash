@@ -1143,9 +1143,23 @@ const app = createApp({
         } catch(e) { results.push({ name: sp.value.name, file: d.File_Name, ok: false }); }
       }
       manageDets.value.result = results;
-      // Reload species data
+      // Check if species still has detections
+      const [check] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Com_Name=?`, [sp.value.name]);
+      if (!check || !check.n) {
+        // Species gone — close modal, load last detected species
+        manageDets.value = { open: false, items: [], selected: new Set(), result: null };
+        try {
+          const [last] = await birdQuery(`SELECT Com_Name FROM detections ORDER BY Date DESC, Time DESC LIMIT 1`);
+          if (last) { await loadDetail(last.Com_Name); }
+          else { mode.value = 'picker'; }
+          // Refresh species list
+          const spRows = await birdQuery(`SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC`);
+          speciesList.value = spRows.map(r => ({ com: r.Com_Name, sci: r.Sci_Name }));
+        } catch(e) { mode.value = 'picker'; }
+        return;
+      }
+      // Species still exists — reload data and list
       await loadDetail(sp.value.name);
-      // Reload list
       const rows = await birdQuery(
         `SELECT Date, Time, Confidence, File_Name, Model FROM detections WHERE Com_Name=? ORDER BY Date DESC, Time DESC`,
         [sp.value.name]);
