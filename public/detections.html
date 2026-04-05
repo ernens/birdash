@@ -166,10 +166,11 @@
                   <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" ></bird-img>
                   <div v-else class="det-thumb-ph">🐦</div>
                 </td>
-                <td>
+                <td style="white-space:nowrap;">
                   <button v-if="d.File_Name" class="play-btn" :class="{playing:playingFile===d.File_Name}"
                           @click="toggleAudio(d.File_Name)" :title="t('play')" :aria-label="t('play')">▶</button>
                   <span v-else style="width:28px;display:inline-block;"></span>
+                  <button v-if="d.File_Name" class="play-btn" @click="openSpectro(d)" title="Spectrogramme" style="font-size:.65rem;margin-left:2px;">⛶</button>
                 </td>
                 <!-- Download -->
                 <td>
@@ -546,6 +547,13 @@ const app = createApp({
       await loadDetections();
     });
 
+    function openSpectro(d) {
+      BIRDASH.openSpectroModal({
+        fileName: d.File_Name, speciesName: d.Com_Name, sciName: d.Sci_Name,
+        confidence: d.Confidence, date: d.Date, time: d.Time,
+      });
+    }
+
     async function deleteDet(d) {
       const name = spName(d.Com_Name, d.Sci_Name);
       if (!confirm(`${t('gallery_delete_confirm')}\n\n${name} — ${fmtDate(d.Date)} ${fmtTime(d.Time)}`)) return;
@@ -572,7 +580,7 @@ const app = createApp({
       displayRows,displayTotal,
       playingFile,toggleAudio, buildAudioUrl,
       fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,
-      applyFilters,resetFilters,goPage,exportCsv,exportEbird,deleteDet,
+      applyFilters,resetFilters,goPage,exportCsv,exportEbird,openSpectro,deleteDet,
     };
   }
 });
