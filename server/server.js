@@ -429,12 +429,14 @@ if (!fs.existsSync(DB_PATH)) {
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
   initDb.pragma('journal_mode = WAL');
+initDb.pragma('busy_timeout = 5000');
   initDb.close();
   console.log('[BIRDASH] Empty birds.db created successfully');
 }
 
 // Ouvre en lecture seule (requêtes SELECT)
 const db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+db.pragma('busy_timeout = 5000');
 
 // Connexion en écriture pour les suppressions uniquement
 const dbWrite = new Database(DB_PATH, { fileMustExist: true });
@@ -516,6 +518,7 @@ let taxonomyDb;
 try {
   taxonomyDb = new Database(TAXONOMY_DB_PATH);
   taxonomyDb.pragma('journal_mode = WAL');
+  taxonomyDb.pragma('busy_timeout = 5000');
   taxonomyDb.exec(`CREATE TABLE IF NOT EXISTS species_taxonomy (
     sci_name    TEXT PRIMARY KEY,
     order_name  TEXT,
@@ -1244,6 +1247,7 @@ const server = http.createServer((req, res) => {
       if (bodySize > MAX_BODY_SIZE && !bodyLimited) {
         bodyLimited = true;
         req.removeAllListeners('data'); // Stop reading
+        req._aborted = true;
         if (!res.headersSent) {
           res.writeHead(413, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Request body too large' }));
@@ -1282,6 +1286,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Skip if body was already rejected (413)
+  if (req._aborted) return;
   // Extraire le pathname proprement (ignore query string éventuel)
   const pathname = req.url.split('?')[0].replace(/\/$/, '') || '/';
   // CSP only for non-API routes (HTML pages)

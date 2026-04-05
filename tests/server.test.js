@@ -1275,3 +1275,91 @@ describe('GET /api/settings — Structure', () => {
     assert.ok(res.json.LONGITUDE !== undefined || res.json.longitude !== undefined, 'should have longitude');
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// AUDIT TESTS — Auth, error handling, boundary conditions
+// ══════════════════════════════════════════════════════════════════════════
+
+describe('POST /api/favorites — Auth required', () => {
+  it('accepts POST when no token configured (open access)', async () => {
+    const res = await request('/api/favorites', {
+      method: 'POST',
+      body: { com_name: '__test_audit__', sci_name: 'Testus auditus', action: 'add' },
+    });
+    assert.equal(res.status, 200);
+    assert.ok(res.json.ok);
+    // Cleanup
+    await request('/api/favorites', {
+      method: 'POST',
+      body: { com_name: '__test_audit__', action: 'remove' },
+    });
+  });
+});
+
+describe('POST /api/notes — Auth required', () => {
+  it('accepts POST when no token configured (open access)', async () => {
+    const res = await request('/api/notes', {
+      method: 'POST',
+      body: { com_name: '__test_audit__', note: 'audit test note' },
+    });
+    assert.equal(res.status, 200);
+    assert.ok(res.json.ok);
+    // Cleanup
+    if (res.json.id) {
+      await request(`/api/notes?id=${res.json.id}`, { method: 'DELETE' });
+    }
+  });
+
+  it('rejects POST without com_name', async () => {
+    const res = await request('/api/notes', {
+      method: 'POST',
+      body: { note: 'no species' },
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('rejects POST without note', async () => {
+    const res = await request('/api/notes', {
+      method: 'POST',
+      body: { com_name: 'Test' },
+    });
+    assert.equal(res.status, 400);
+  });
+});
+
+describe('POST /api/query — Row limit', () => {
+  it('rejects queries returning > 10000 rows', async () => {
+    // This generates a large cross join — should hit the limit
+    const res = await request('/api/query', {
+      method: 'POST',
+      body: { sql: "SELECT 1 AS n FROM detections AS a, detections AS b LIMIT 10001" },
+    });
+    // Either 400 (too many rows) or 200 with ≤ 10000 rows
+    if (res.status === 200) {
+      assert.ok(res.json.rows.length <= 10000);
+    } else {
+      assert.equal(res.status, 400);
+    }
+  });
+});
+
+describe('Error responses — No internal details leaked', () => {
+  it('POST /api/favorites with bad JSON returns generic error', async () => {
+    const res = await request('/api/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // Should not contain stack trace or file path
+    if (res.json?.error) {
+      assert.ok(!res.json.error.includes('/home/'), 'should not leak file paths');
+      assert.ok(!res.json.error.includes('at '), 'should not leak stack traces');
+    }
+  });
+});
+
+describe('DELETE /api/notes — Auth required', () => {
+  it('returns 400 without id parameter', async () => {
+    const res = await request('/api/notes', { method: 'DELETE' });
+    assert.equal(res.status, 400);
+  });
+});

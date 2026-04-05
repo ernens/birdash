@@ -92,7 +92,7 @@
               {{spName(group.name, group.sci)}}
               <span v-if="newSpeciesSet.has(group.name)" style="font-size:.6rem;vertical-align:middle;margin-left:.2rem;">🆕</span>
             </div>
-            <div class="gallery-sp-sci">{{group.sci}} <button @click.stop="toggleFavorite(group.name, group.sci)" :title="isFavorite(group.name) ? t('fav_remove') : t('fav_add')" style="background:none;border:none;cursor:pointer;font-size:.9rem;padding:0 .2rem;line-height:1;color:var(--accent);">{{isFavorite(group.name) ? '★' : '☆'}}</button></div>
+            <div class="gallery-sp-sci">{{group.sci}} <button @click.stop="toggleFavorite(group.name, group.sci)" :title="isFavorite(group.name) ? t('fav_remove') : t('fav_add')" :aria-label="isFavorite(group.name) ? t('fav_remove') : t('fav_add')" style="background:none;border:none;cursor:pointer;font-size:.9rem;padding:0 .2rem;line-height:1;color:var(--accent);">{{isFavorite(group.name) ? '★' : '☆'}}</button></div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;flex-shrink:0;">
             <span style="font-size:.72rem;font-weight:600;color:var(--accent);">{{group.dets.length}} det.</span>

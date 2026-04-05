@@ -186,14 +186,14 @@
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             {{t('activity_by_hour')}}
-            <button class="chart-dl-btn" @click="exportChart(canvasHourly, sp.name+'-hourly')" title="PNG">⤓</button>
+            <button class="chart-dl-btn" @click="exportChart(canvasHourly, sp.name+'-hourly')" title="PNG" aria-label="Export PNG">⤓</button>
           </div>
           <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
         </div>
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             {{t('monthly_presence')}}
-            <button class="chart-dl-btn" @click="exportChart(canvasMonthly, sp.name+'-monthly')" title="PNG">⤓</button>
+            <button class="chart-dl-btn" @click="exportChart(canvasMonthly, sp.name+'-monthly')" title="PNG" aria-label="Export PNG">⤓</button>
           </div>
           <div class="chart-wrap"><canvas ref="canvasMonthly"></canvas></div>
         </div>
@@ -203,14 +203,14 @@
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             {{t('activity_30d')}}
-            <button class="chart-dl-btn" @click="exportChart(canvas30d, sp.name+'-30d')" title="PNG">⤓</button>
+            <button class="chart-dl-btn" @click="exportChart(canvas30d, sp.name+'-30d')" title="PNG" aria-label="Export PNG">⤓</button>
           </div>
           <div class="chart-wrap"><canvas ref="canvas30d"></canvas></div>
         </div>
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             {{t('conf_distribution')}}
-            <button class="chart-dl-btn" @click="exportChart(canvasConf, sp.name+'-confidence')" title="PNG">⤓</button>
+            <button class="chart-dl-btn" @click="exportChart(canvasConf, sp.name+'-confidence')" title="PNG" aria-label="Export PNG">⤓</button>
           </div>
           <div class="chart-wrap"><canvas ref="canvasConf"></canvas></div>
         </div>
@@ -220,7 +220,7 @@
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
           {{t('activity_month_hour')}}
-          <button class="chart-dl-btn" @click="exportChart(canvasDayHour, sp.name+'-heatmap')" title="PNG">⤓</button>
+          <button class="chart-dl-btn" @click="exportChart(canvasDayHour, sp.name+'-heatmap')" title="PNG" aria-label="Export PNG">⤓</button>
         </div>
         <div class="chart-wrap"><canvas ref="canvasDayHour"></canvas></div>
       </div>
