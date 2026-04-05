@@ -230,7 +230,7 @@ const app = createApp({
       try {
         await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections:[{date:det.date,time:det.time,sci_name:det.sci_name}], status }) });
-        det.validation = status;
+        det.validation = status; window.dispatchEvent(new Event('birdash:review-changed'));
       } catch(e) { console.error('validate:', e); }
     }
 
@@ -242,7 +242,7 @@ const app = createApp({
         await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections: dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status }) });
         for (const d of dets) d.validation = status;
-        selected.clear();
+        selected.clear(); window.dispatchEvent(new Event('birdash:review-changed'));
       } catch(e) { console.error('bulkAction:', e); }
     }
 
@@ -252,7 +252,7 @@ const app = createApp({
       try {
         await fetch(`${API}/bulk-validate`, { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ detections: matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status:'rejected' }) });
-        for (const d of matching) d.validation = 'rejected';
+        for (const d of matching) d.validation = 'rejected'; window.dispatchEvent(new Event('birdash:review-changed'));
       } catch(e) { console.error('bulkRejectByReason:', e); }
     }
 
@@ -295,7 +295,7 @@ const app = createApp({
 
     function closeDeleteModal() {
       delOpen.value = false;
-      if (delDone.value) { selected.clear(); loadFlagged(); }
+      if (delDone.value) { selected.clear(); loadFlagged(); window.dispatchEvent(new Event('birdash:review-changed')); }
     }
 
     async function executeDelete() {
