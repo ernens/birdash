@@ -62,7 +62,22 @@ Open an Issue with the `enhancement` label to discuss the idea before coding.
 ```
 birdash/
 ├── server/
-│   └── server.js              # Node.js HTTP backend (API + SQLite)
+│   ├── server.js              # HTTP server, middleware, route delegations
+│   ├── lib/
+│   │   ├── alerts.js          # Alert monitoring system
+│   │   ├── config.js          # BirdNET config, validators, exec helper
+│   │   └── db.js              # DB bootstrap, tables, taxonomy
+│   └── routes/
+│       ├── audio.js           # Audio devices, adaptive gain, streaming
+│       ├── backup.js          # Backup config/schedule/export
+│       ├── data.js            # Favorites, notes, photo-pref, query
+│       ├── detections.js      # Detections, validations, flagging
+│       ├── external.js        # BirdWeather, eBird, weather
+│       ├── photos.js          # Photo resolution, species names/info
+│       ├── settings.js        # Settings, apprise, alerts, logs SSE
+│       ├── system.js          # Services, health, hardware, models
+│       ├── timeline.js        # Timeline with SunCalc astronomy
+│       └── whats-new.js       # Daily overview cards
 ├── tests/
 │   └── server.test.js         # Backend tests
 ├── public/                    # Static files served by Caddy
@@ -151,7 +166,9 @@ Browser                    Raspberry Pi
 | `bird-shared.js` | Pure utilities | No Vue dependency — framework-agnostic |
 | `bird-vue-core.js` | Vue composables + i18n | Contains all translations inline |
 | `bird-pages.css` | Page-specific styles | Organized by page with comments |
-| `server.js` | API routes | All routes in one file, async IIFE pattern, DELETE endpoints for detection management, backup management (config/run/progress/pause/stop) |
+| `server/server.js` | HTTP entry point | Middleware, security, route delegations (208 lines) |
+| `server/routes/*.js` | Route modules | Each handles a group of API endpoints via `handle(req, res, pathname, ctx)` |
+| `server/lib/*.js` | Shared libraries | DB init, config parsing, alert system |
 | `backup.sh` | Backup script | rsync incremental with progress tracking via JSON status file, supports 7 destination types |
 
 ### Commits

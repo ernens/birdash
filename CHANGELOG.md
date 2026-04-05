@@ -2,6 +2,15 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.0.1] — 2026-04-05
+
+### Architecture
+- **Server modularization** — server.js split from 5759 to 208 lines (-96%)
+  - 11 route modules in `server/routes/` (audio, backup, data, detections, external, photos, settings, system, timeline, whats-new)
+  - 3 library modules in `server/lib/` (alerts, config, db)
+  - Route modules use `handle(req, res, pathname, ctx)` pattern with dependency injection
+- All 141 tests pass unchanged
+
 ## [1.0.0] — 2026-04-04
 
 First public release. Complete bird detection dashboard for Raspberry Pi.

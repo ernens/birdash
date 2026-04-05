@@ -228,7 +228,22 @@ cd engine && ../engine/venv/bin/python -m unittest test_engine -v
 ```
 birdash/
 ├── server/
-│   └── server.js                  # Node.js API backend (~5600 lines)
+│   ├── server.js                  # HTTP server, middleware, route delegations (208 lines)
+│   ├── lib/
+│   │   ├── alerts.js              # Alert monitoring system
+│   │   ├── config.js              # BirdNET config, settings validators, exec helper
+│   │   └── db.js                  # Database bootstrap, tables, taxonomy
+│   └── routes/
+│       ├── audio.js               # Audio devices, adaptive gain, streaming
+│       ├── backup.js              # Backup config, scheduling, export
+│       ├── data.js                # Favorites, notes, photo-pref, query
+│       ├── detections.js          # Detections, validations, flagging
+│       ├── external.js            # BirdWeather, eBird, weather APIs
+│       ├── photos.js              # Photo resolution/caching, species names
+│       ├── settings.js            # Settings, apprise, alerts, logs SSE
+│       ├── system.js              # Services, health, hardware, models
+│       ├── timeline.js            # Timeline with SunCalc astronomy
+│       └── whats-new.js           # Daily overview cards
 ├── public/                        # Static frontend (Vue 3 CDN)
 │   ├── index.html                 # Dashboard overview + weather widget
 │   ├── today.html                 # Today's detections with audio filters
