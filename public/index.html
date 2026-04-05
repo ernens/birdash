@@ -128,7 +128,8 @@
         </div>
       </div>
 
-      <!-- Contexte du jour (droite) -->
+      <!-- Colonne droite : contexte + top especes -->
+      <div>
       <div v-if="whatsNew.loaded" class="card">
         <div class="card-title">{{t('wn_level_context')}}</div>
         <div class="wn-context-grid" style="grid-template-columns:1fr;">
@@ -163,13 +164,14 @@
             </div>
           </div>
         </div>
-        <!-- Top 10 espèces du jour -->
-        <div class="card" style="margin-top:.75rem;">
-          <div class="card-title">{{t('top_species')}}</div>
-          <div class="chart-wrap"><canvas ref="canvasTop"></canvas></div>
-        </div>
       </div>
-    </div>
+
+      <!-- Top 10 espèces du jour -->
+      <div class="card" style="margin-top:.75rem;">
+        <div class="card-title">{{t('top_species')}}</div>
+        <div class="chart-wrap"><canvas ref="canvasTop"></canvas></div>
+      </div>
+      </div>
 
     <!-- ═══ What's New — alertes + phénologie ═══ -->
     <div v-if="whatsNew.loaded" class="wn-section" style="margin-bottom:1rem;">
