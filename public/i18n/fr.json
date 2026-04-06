@@ -1064,5 +1064,6 @@
   "dash_evt_analyzing": "Analyse en cours...",
   "dash_evt_recording": "Enregistrement en cours...",
   "dash_consensus_agree": "Consensus",
-  "dash_consensus_disagree": "Divergence"
+  "dash_consensus_disagree": "Divergence",
+  "dash_model_listening": "En attente..."
 }

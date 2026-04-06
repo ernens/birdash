@@ -202,7 +202,8 @@
       margin-top: .1rem; transition: color .3s;
     }
     .bf-core-conf.high{color:#4caf50} .bf-core-conf.mid{color:#ff9800} .bf-core-conf.low{color:#e53935}
-    .bf-core-idle { font-size: .7rem; color: var(--text-muted); margin-top: .25rem; }
+    .bf-core-idle { font-size: .65rem; color: var(--text-muted); margin-top: .25rem; font-style: italic; }
+    .bf-core-species.stale, .bf-core-conf.stale { opacity: .5; }
     .bf-fusion.diverge { color:#ff9800; background:rgba(255,152,0,.08); border:1px solid rgba(255,152,0,.2); }
     .bf-fusion {
       display: flex; align-items: center; justify-content: center; gap: .3rem;
@@ -402,17 +403,17 @@
                 <div class="bf-core-icon bf-icon-bn">BN</div>
                 <div class="bf-core-name">{{status.model ? status.modelLabel : '…'}}</div>
                 <div class="bf-core-time">{{bnLive.time ? bnLive.time+'s' : (status.inferenceTime?status.inferenceTime+'s':'\u2014')}}</div>
-                <div v-if="bnLive.species" class="bf-core-species">{{bnLive.species}}</div>
-                <div v-if="bnLive.species" class="bf-core-conf" :class="confClass(bnLive.conf/100)">{{bnLive.conf.toFixed(0)}}%</div>
-                <div v-if="!bnLive.species && bnLive.detections===0" class="bf-core-idle">—</div>
+                <div v-if="bnLive.species" class="bf-core-species" :class="{stale: bnLive.detections===0}">{{bnLive.species}}</div>
+                <div v-if="bnLive.species" class="bf-core-conf" :class="[confClass(bnLive.conf/100), {stale: bnLive.detections===0}]">{{bnLive.conf.toFixed(0)}}%</div>
+                <div v-if="!bnLive.species" class="bf-core-idle">{{t('dash_model_listening')}}</div>
               </div>
               <div v-if="status.secondaryModel" class="bf-core perch" :class="{firing:enginePulse}">
                 <div class="bf-core-icon bf-icon-perch">P2</div>
                 <div class="bf-core-name">{{status.secModelLabel}}</div>
                 <div class="bf-core-time">{{p2Live.time ? p2Live.time+'s' : (status.secondaryInferenceTime?status.secondaryInferenceTime+'s':'\u2014')}}</div>
-                <div v-if="p2Live.species" class="bf-core-species">{{p2Live.species}}</div>
-                <div v-if="p2Live.species" class="bf-core-conf" :class="confClass(p2Live.conf/100)">{{p2Live.conf.toFixed(0)}}%</div>
-                <div v-if="!p2Live.species && p2Live.detections===0" class="bf-core-idle">—</div>
+                <div v-if="p2Live.species" class="bf-core-species" :class="{stale: p2Live.detections===0}">{{p2Live.species}}</div>
+                <div v-if="p2Live.species" class="bf-core-conf" :class="[confClass(p2Live.conf/100), {stale: p2Live.detections===0}]">{{p2Live.conf.toFixed(0)}}%</div>
+                <div v-if="!p2Live.species" class="bf-core-idle">{{t('dash_model_listening')}}</div>
               </div>
             </div>
             <div v-if="status.model" class="bf-fusion" :class="{consensus: status.secondaryModel && bnLive.species && p2Live.species && bnLive.species===p2Live.species, diverge: status.secondaryModel && bnLive.species && p2Live.species && bnLive.species!==p2Live.species}">
@@ -653,13 +654,11 @@ BIRDASH.ready.then(() => {
             _dm = d.msg.match(/\[(BirdNET[^\]]*)\] Done: (\d+) detections? in ([\d.]+)s/);
             if (_dm) {
               bnLive.value = { ...bnLive.value, detections: parseInt(_dm[2]), time: parseFloat(_dm[3]) };
-              if (parseInt(_dm[2]) === 0) bnLive.value = { ...bnLive.value, species: '', conf: 0 };
             }
             // Perch Done line: "[perch_v2...] file.wav: 1 detections in 0.5s"
             _dm = d.msg.match(/\[(perch[^\]]*)\].*?\.wav: (\d+) detections? in ([\d.]+)s/i);
             if (_dm) {
               p2Live.value = { ...p2Live.value, detections: parseInt(_dm[2]), time: parseFloat(_dm[3]) };
-              if (parseInt(_dm[2]) === 0) p2Live.value = { ...p2Live.value, species: '', conf: 0 };
             } 
             if(d.cat==="api"||d.cat==="cleanup"||d.cat==="system")return;
             if(/GET |POST |DELETE |api\//i.test(d.msg))return;
