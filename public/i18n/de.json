@@ -1060,5 +1060,7 @@
   "dash_sys_backlog": "Warteschlange",
   "dash_sys_rec_len": "Aufnahmedauer",
   "dash_key_events": "Wichtige Ereignisse",
-  "dash_recent_species": "Arten des Tages"
+  "dash_recent_species": "Arten des Tages",
+  "dash_evt_analyzing": "Analyse lauft...",
+  "dash_evt_recording": "Aufnahme lauft..."
 }

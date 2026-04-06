@@ -386,7 +386,7 @@
             <div class="bf-cores">
               <div class="bf-core birdnet" :class="{firing:enginePulse}">
                 <div class="bf-core-icon">🧠</div>
-                <div class="bf-core-name">{{status.modelLabel}}</div>
+                <div class="bf-core-name">{{status.model ? status.modelLabel : '…'}}</div>
                 <div class="bf-core-time">{{status.inferenceTime?status.inferenceTime+'s':'\u2014'}}</div>
               </div>
               <div v-if="status.secondaryModel" class="bf-core perch" :class="{firing:enginePulse}">
@@ -395,7 +395,7 @@
                 <div class="bf-core-time">{{status.secondaryInferenceTime?status.secondaryInferenceTime+'s':'\u2014'}}</div>
               </div>
             </div>
-            <div class="bf-fusion" :class="{consensus:status.secondaryModel}">
+            <div v-if="status.model" class="bf-fusion" :class="{consensus:status.secondaryModel}">
               <span class="bf-fusion-bar"></span>
               {{status.secondaryModel?t('dash_dual_consensus'):t('dash_single_model')}}
               <span class="bf-fusion-bar"></span>
@@ -412,7 +412,7 @@
               <div class="bf-eng-lbl">{{t('dash_lag')}}</div>
             </div>
             <div class="bf-eng-stat">
-              <div class="bf-eng-num">{{(status.confidence*100).toFixed(0)}}%</div>
+              <div class="bf-eng-num">{{status.confidence ? (status.confidence*100).toFixed(0)+'%' : '…'}}</div>
               <div class="bf-eng-lbl">{{t('dash_confidence_thresh')}}</div>
             </div>
           </div>
@@ -582,6 +582,33 @@ BIRDASH.ready.then(() => {
       const keyEvents=ref([]); let tickId=0;
       const enginePulse=ref(false), detPulse=ref(false), detEnter=ref(false);
       let logSource=null;
+      function simplifyMsg(msg, cat) {
+        // Detection: "[BirdNET...] Done: 3 detections in 0.2s" → "BirdNET: 3 détections (0.2s)"
+        let m;
+        m = msg.match(/\[(BirdNET[^\]]*)\] Done: (\d+) detections? in ([\d.]+)s/);
+        if (m) return (m[1].includes('FP16') ? 'BirdNET' : m[1].replace(/_/g,' ')) + ' : ' + m[2] + ' detection' + (m[2]!=='1'?'s':'') + ' (' + m[3] + 's)';
+        // Perch: "[perch_v2...] file.wav: 2 detections in 0.5s"
+        m = msg.match(/\[(perch[^\]]*)\].*?: (\d+) detections? in ([\d.]+)s/i);
+        if (m) return 'Perch V2 : ' + m[2] + ' detection' + (m[2]!=='1'?'s':'') + ' (' + m[3] + 's)';
+        // Species detection: "[perch...] Moineau domestique — Passer domesticus (86.9%)"
+        m = msg.match(/\[(?:perch|BirdNET)[^\]]*\]\s+(.+?)\s*[—–-]\s*(.+?)\s*\(([\d.]+)%\)/);
+        if (m) return m[1] + ' (' + parseFloat(m[3]).toFixed(0) + '%)';
+        // BirdWeather upload
+        m = msg.match(/BirdWeather.*?uploaded (\d+) detections?/i);
+        if (m) return 'BirdWeather : ' + m[1] + ' envoyee' + (m[1]!=='1'?'s':'');
+        // Recording: "Analyzing: file.wav"
+        m = msg.match(/Analyzing:\s*(.+)/);
+        if (m) return t('dash_evt_analyzing');
+        // Synced
+        m = msg.match(/Synced (\d+) detections? to (\w+)/);
+        if (m) return m[1] + ' detection' + (m[1]!=='1'?'s':'') + ' sync → ' + m[2];
+        // Recording started
+        if (/Recording started|arecord|recording/i.test(msg)) return t('dash_evt_recording');
+        // Error
+        if (/error|fail|exception/i.test(msg)) return msg.replace(/\[.*?\]\s*/g, '').substring(0, 80);
+        // Fallback: strip brackets, truncate
+        return msg.replace(/\[.*?\]\s*/g, '').substring(0, 60);
+      }
       function connectLogs() {
         logSource = new EventSource(API+'/logs');
         logSource.onmessage = (e)=>{
@@ -590,7 +617,7 @@ BIRDASH.ready.then(() => {
             if(d.cat==='api'||d.cat==='cleanup'||d.cat==='system')return;
             if(EVT_CLASS[d.cat]){
               tickId++;
-              keyEvents.value.unshift({id:tickId,ts:d.ts,msg:d.msg,dotClass:EVT_CLASS[d.cat]});
+              keyEvents.value.unshift({id:tickId,ts:d.ts,msg:simplifyMsg(d.msg,d.cat),dotClass:EVT_CLASS[d.cat]});
               if(keyEvents.value.length>20)keyEvents.value.length=20;
             }
             if(d.cat==='recording'){

@@ -67,6 +67,8 @@
   "dash_events": "evenements",
   "dash_key_events": "Evenements cles",
   "dash_recent_species": "Especes du jour",
+  "dash_evt_analyzing": "Analyse en cours...",
+  "dash_evt_recording": "Enregistrement en cours...",
   "dash_sys_title": "Etat du systeme",
   "dash_sys_model": "Modele principal",
   "dash_sys_secondary": "Modele secondaire",

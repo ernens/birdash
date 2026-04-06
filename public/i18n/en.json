@@ -1060,5 +1060,7 @@
   "dash_sys_backlog": "Backlog",
   "dash_sys_rec_len": "Rec. length",
   "dash_key_events": "Key events",
-  "dash_recent_species": "Today's species"
+  "dash_recent_species": "Today's species",
+  "dash_evt_analyzing": "Analyzing audio...",
+  "dash_evt_recording": "Recording..."
 }
