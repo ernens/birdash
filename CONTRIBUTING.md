@@ -81,8 +81,11 @@ birdash/
 ├── tests/
 │   └── server.test.js         # Backend tests
 ├── public/                    # Static files served by Caddy
-│   ├── index.html             # Dashboard overview (6 KPIs, charts)
-│   ├── recent.html            # Recent detections
+│   ├── index.html             # Redirect to dashboard.html
+│   ├── dashboard.html         # Bird Flow — live pipeline visualization
+│   ├── overview.html          # Dashboard overview + weather widget
+│   ├── today.html             # Today's detections
+│   ├── recent.html            # Recent activity
 │   ├── spectrogram.html       # Live spectrogram with audio filters
 │   ├── recordings.html        # Best recordings with spectrograms
 │   ├── detections.html        # Detection journal
@@ -92,12 +95,22 @@ birdash/
 │   ├── stats.html             # Statistics & rankings
 │   ├── analyses.html          # Advanced multi-species analysis
 │   ├── system.html            # System health (CPU, RAM, disk)
-│   ├── settings.html          # Settings (model, params, services, backup)
+│   ├── settings.html          # Settings (10 lazy-loaded tabs)
+│   ├── settings/              # Tab fragment HTML files
+│   ├── log.html               # Live log dashboard (SSE)
+│   ├── calendar.html          # Calendar/timeline view
+│   ├── timeline.html          # Chronology view
+│   ├── review.html            # Detection review
+│   ├── gallery.html           # Best recordings + audio library
+│   ├── favorites.html         # Favorites page
+│   ├── weather.html           # Weather correlation
+│   ├── models.html            # Model comparison
 │   ├── js/
 │   │   ├── bird-config.js     # Central configuration
 │   │   ├── bird-shared.js     # Shared utilities (no Vue dependency)
 │   │   ├── bird-vue-core.js   # Vue 3 composables, i18n, components
 │   │   └── birdash-local.js   # Local config overrides (not versioned)
+│   ├── i18n/                  # Translation JSON (fr/en/de/nl)
 │   ├── css/
 │   │   ├── bird-styles.css    # Global styles + 5 themes
 │   │   └── bird-pages.css     # Page-specific styles

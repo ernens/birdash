@@ -81,10 +81,12 @@ Raspberry Pi 5 + SSD
 - 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
 - ⚡ **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
-### Dashboard (15 pages)
+### Dashboard (22 pages)
 
-**Real-time**
-- 📊 Dashboard overview with KPIs, weather widget, quick links, morning summary, "What's New" alerts
+**Home**
+- ⚡ **Bird Flow** — animated pipeline landing page showing live audio levels (SSE), dual-model inference with per-model species + confidence, detection flow with animated connectors, today's KPIs, key events feed, recent species gallery
+- 📊 **Overview** — dashboard with KPIs, weather widget, quick links, morning summary, "What's New" alerts
+- 🕐 **Recent activity** — latest detections across all species
 - 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
 - 📅 **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
 - 🌐 **Species name translation** — bird names displayed in the user's chosen language across all pages
@@ -111,10 +113,12 @@ Raspberry Pi 5 + SSD
 - 📋 **Live log** — real-time streaming dashboard (SSE) with color-coded categories, filters, KPIs (detections/BirdWeather/errors), pause/resume, auto-scroll
 
 **Navigation**
-- 5 intent-based sections: Live, History, Species, Insights, Station
-- Mobile bottom nav bar, global species+date search, notification bell, review badge counter
+- 6 intent-based sections: Home, Live, History, Species, Indicators, Station
+- Mobile bottom nav (4 quick links + hamburger drawer with all 22 pages)
+- Global species+date search, notification bell, review badge counter
 - Keyboard shortcuts on 5 pages, swipe gestures on species photos
 - Toast notifications for API errors
+- Cross-navigation between settings and system pages
 
 ### Detection Review
 - 🔍 **Auto-flagging** — nocturnal birds by day, out-of-season migrants, low confidence isolates, non-European species
@@ -245,7 +249,8 @@ birdash/
 │       ├── timeline.js            # Timeline with SunCalc astronomy
 │       └── whats-new.js           # Daily overview cards
 ├── public/                        # Static frontend (Vue 3 CDN)
-│   ├── index.html                 # Dashboard overview + weather widget
+│   ├── index.html                 # Redirect to dashboard.html
+│   ├── dashboard.html              # Bird Flow — live pipeline visualization
 │   ├── today.html                 # Today's detections with audio filters
 │   ├── calendar.html              # Calendar (timeline + species + audio)
 │   ├── timeline.html              # Full-page timeline with drag-to-zoom
@@ -262,12 +267,19 @@ birdash/
 │   ├── settings.html              # Full settings (9 tabs)
 │   ├── system.html                # System health + terminal
 │   ├── log.html                   # Live log dashboard (SSE)
+│   ├── overview.html               # Dashboard overview + weather widget
+│   ├── recent.html                 # Recent activity
+│   ├── recordings.html             # Best recordings
+│   ├── models.html                 # Model comparison
+│   ├── rarities.html               # Rare species tracker
 │   ├── js/
 │   │   ├── bird-config.js         # Navigation, API config
 │   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API
 │   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
 │   │   └── bird-timeline.js       # Timeline rendering (sky, stars, markers)
+│   ├── i18n/                      # Translation files (fr/en/de/nl.json)
 │   ├── css/                       # Styles + 5 themes
+│   ├── settings/                  # Lazy-loaded settings tab fragments
 │   └── sw.js                      # Service Worker (offline cache)
 ├── engine/                        # BirdEngine (Python detection engine)
 │   ├── engine.py                  # Dual-model inference (~1100 lines)

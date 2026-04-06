@@ -2,6 +2,46 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.1.0] — 2026-04-06
+
+### Bird Flow — Live Pipeline Dashboard
+- **New landing page** (`dashboard.html`) showing the detection pipeline in real-time
+- Flow corridor layout: Mic → Engine → Detection with animated pulse connectors
+- **Live audio levels** via SSE `/api/audio/monitor` with breathing glow
+- **Dual AI cores** — BirdNET (blue) + Perch V2 (teal) with distinct visual identity
+  - Per-model species name + confidence updated live from SSE logs
+  - Consensus/divergence indicator when both models detect
+- **Pipeline stages** — 4-stage animated flow (Listen → Record → Analyze → Store)
+  with progress bar driven by real backend events
+- **Latest detection card** with 130px photo, confidence ring, entrance animation
+- **Recent species strip** — today's top 8 species with thumbnails
+- **Key events feed** — curated from SSE logs, humanized messages
+  - BirdWeather events show species + confidence
+  - Technical log messages translated to readable French/English
+- **KPIs** — detections today, unique species, review queue, system health
+- **System status panel** — backlog, lag, sensitivity, recording length
+- index.html now redirects to dashboard.html
+
+### UX/UI Audit & Navigation Overhaul
+- **6 navigation sections** (was 5): Home, Live, History, Species, Indicators, Station
+- **22 pages in nav** (was 18): reintegrated recent, models, recordings (were orphaned)
+- **Mobile drawer** — hamburger button opens bottom sheet with all sections/pages
+- **Fixed 5 missing NAV_KEYS** — overview, calendar, favorites, weather, log were showing raw key names
+- **Fixed mobile nav labels** — weather.html was labeled "Analyses" instead of "Météo"
+- **Differentiated nav_timeline/nav_calendar** — were both "Calendrier" in French
+- **Homogenized 9 page titles** — 9 English `<title>` tags translated to French
+- **Cross-navigation** between settings and system pages (link tabs)
+
+### Bug Fixes
+- **Rate limiting** — reduced dashboard polling from ~18 to ~8 req/min, debounced SSE-triggered refreshes
+- **Perch V2 inference time** — regex was case-sensitive, never matched lowercase `perch_v2`
+- **SSE log categorization** — API messages (`GET /api/flagged-detections`) were miscategorized as "detection"
+- **Vue reactivity** — `Object.assign` instead of full ref replacement prevents data flickering
+- **Species persistence** — model cards keep last detected species (dimmed) instead of clearing every 45s
+
+### i18n
+- 60+ new translation keys across FR/EN/DE/NL for dashboard, events, model status, navigation
+
 ## [1.0.1] — 2026-04-05
 
 ### Architecture
