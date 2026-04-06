@@ -4,7 +4,7 @@
  * Stratégie : cache-first pour les assets, network-first pour l'API.
  */
 
-const CACHE_NAME = 'birdash-v99';
+const CACHE_NAME = 'birdash-v100';
 
 // Assets statiques à pré-cacher à l'installation
 const PRECACHE = [
@@ -15,6 +15,10 @@ const PRECACHE = [
   'js/bird-vue-core.js',
   'img/robin-logo.svg',
   'img/favicon.svg',
+  'i18n/fr.json',
+  'i18n/en.json',
+  'i18n/de.json',
+  'i18n/nl.json',
 ];
 
 // Patterns d'assets à cacher au vol (cache-first)

@@ -293,7 +293,7 @@
           <!-- Contrôles -->
           <div class="audio-controls">
             <button class="play-big" :class="{playing:isPlaying}"
-                    @click="togglePlay" :disabled="!currentDet.File_Name || spectro.state==='loading'">
+                    @click="_togglePlay" :disabled="!currentDet.File_Name || spectro.state==='loading'">
               {{isPlaying ? '⏸' : '▶'}}
             </button>
             <div class="audio-progress-wrap">
@@ -395,7 +395,7 @@
 <script>
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useChart, useSpeciesNames, useFilterConfidence,
+const { useI18n, useTheme, useNav, useChart, useAudioPlayer, useSpeciesNames, useFilterConfidence,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, buildAudioUrl, buildSpeciesLinks, photoUrl,
         navigateTo,
@@ -481,15 +481,12 @@ const app = createApp({
     const currentDetIdx = ref(0);
 
     // Audio
-    let _audio = null;
-    let _rafId = null;
-    const isPlaying       = ref(false);
-    const audioProgress   = ref(0);
-    const audioCurrentTime= ref(0);
-    const audioDuration   = ref(0);
 
     // Spectrogramme
     const spectroCanvas = ref(null);
+    const { isPlaying, audioProgress, audioCurrentTime, audioDuration, play: _playAudio, stop: stopAudio, seekFraction, seekFromEvent: seekFromProgressBar, fmtDuration } = useAudioPlayer();
+    function _togglePlay() { _playAudio(spectro.value.url); }
+    function seekFromClick(e) { if (!spectroCanvas.value) return; seekFromProgressBar(e); }
     const spectro       = ref({ state: 'idle' });
 
     // Nettoyage
@@ -784,59 +781,9 @@ const app = createApp({
     async function reapplyClean() {
       if (cleanMode.value) await applyClean();
     }
-
-    // ── Audio (rAF loop pour progression fluide) ─────────────────────────
-    function _startRaf() {
-      if (_rafId) return;
-      function tick() {
-        if (_audio && !_audio.paused && _audio.duration) {
-          audioCurrentTime.value = _audio.currentTime;
-          audioProgress.value    = _audio.currentTime / _audio.duration;
-          _rafId = requestAnimationFrame(tick);
-        } else { _rafId = null; }
-      }
-      _rafId = requestAnimationFrame(tick);
-    }
-    function _stopRaf() {
-      if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
-    }
-
-    function togglePlay() {
-      if (!spectro.value.url) return;
-      if (_audio && isPlaying.value)  { _audio.pause(); return; }
-      if (_audio && !isPlaying.value) { _audio.play().catch(()=>{}); return; }
-      _audio = new Audio(spectro.value.url);
-      _audio.addEventListener('play',  () => { isPlaying.value = true;  _startRaf(); });
-      _audio.addEventListener('pause', () => { isPlaying.value = false; _stopRaf(); });
-      _audio.addEventListener('ended', () => {
-        isPlaying.value = false; audioProgress.value = 0; audioCurrentTime.value = 0; _stopRaf();
-      });
-      _audio.play().catch(() => {});
-    }
-
-    function stopAudio() {
-      _stopRaf();
-      if (_audio) { _audio.pause(); _audio = null; }
-      isPlaying.value = false; audioProgress.value = 0;
-      audioCurrentTime.value = 0; audioDuration.value = 0;
-    }
-
-    function seekFromProgressBar(e) {
-      if (!_audio || !_audio.duration) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      _audio.currentTime = ((e.clientX - rect.left) / rect.width) * _audio.duration;
-    }
-    function seekFromClick(e) {
-      if (!spectroCanvas.value || !_audio || !_audio.duration) return;
-      const rect = spectroCanvas.value.getBoundingClientRect();
-      _audio.currentTime = ((e.clientX - rect.left) / rect.width) * _audio.duration;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
-    function fmtDuration(s) {
-      if (!s) return '0:00';
-      return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-    }
     function fmtDateLong(d) {
       if (!d) return '';
       const [y,mo,day] = d.split('-');
@@ -879,7 +826,7 @@ const app = createApp({
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
       if (e.code === 'Space') {
         e.preventDefault();
-        togglePlay();
+        _togglePlay();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
         if (currentDetIdx.value < selectedDets.value.length - 1) loadDetection(currentDetIdx.value + 1);
@@ -892,7 +839,7 @@ const app = createApp({
     onMounted(() => { document.addEventListener('keydown', _onKeydown); loadAll(); });
     onUnmounted(() => {
       document.removeEventListener('keydown', _onKeydown);
-      _stopRaf(); stopAudio();
+      stopAudio();
       if (_cleanBlobUrl) { URL.revokeObjectURL(_cleanBlobUrl); _cleanBlobUrl = null; }
     });
 
@@ -925,13 +872,13 @@ const app = createApp({
       buildAudioUrl,
       fmtDate, fmtTime, fmtConf, fmtDuration, fmtDateLong,
       navigateTo, loadAll, selectSpecies, loadDetection,
-      togglePlay, seekFromProgressBar, seekFromClick,
+      _togglePlay, seekFromProgressBar, seekFromClick,
       toggleClean, reapplyClean,
       openSpectroModal,
     };
   }
 });
-BIRDASH.registerComponents(app).mount('#app');
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
 </script>
 </body>
 </html>

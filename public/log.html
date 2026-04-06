@@ -183,7 +183,7 @@ const app = createApp({
     };
   }
 });
-registerComponents(app).mount('#app');
+BIRDASH.ready.then(() => registerComponents(app).mount('#app'));
 </script>
 </body>
 </html>

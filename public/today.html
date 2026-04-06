@@ -372,15 +372,12 @@ const app = createApp({
     const currentDetIdx = ref(0);
 
     // Audio
-    let _audio = null;
-    let _rafId = null;
-    const isPlaying       = ref(false);
-    const audioProgress   = ref(0);
-    const audioCurrentTime= ref(0);
-    const audioDuration   = ref(0);
 
     // Spectrogramme
     const spectroCanvas = ref(null);
+    const { isPlaying, audioProgress, audioCurrentTime, audioDuration, play: _playAudio, stop: stopAudio, seekFraction, seekFromEvent: seekFromProgressBar, fmtDuration, filters, setFilter } = useAudioPlayer({ filters: true });
+    function togglePlay() { _playAudio(spectro.value.url); }
+    function seekFromClick(e) { if (!spectroCanvas.value) return; seekFromProgressBar(e); }
     const spectro       = ref({ state: 'idle' });
 
     // Nettoyage
@@ -577,90 +574,10 @@ const app = createApp({
     async function reapplyClean() {
       if (cleanMode.value) await applyClean();
     }
-
-    // ── Audio filters ────────────────────────────────────────────────────
-    const filters = Vue.reactive({ gain: 0, highpass: 0, lowpass: 0 });
-    let _audioCtx = null, _sourceNode = null, _gainNode = null, _hpNode = null, _lpNode = null;
-
-    function _buildFilterChain() {
-      if (!_audioCtx || !_audio) return;
-      if (_sourceNode) return; // already connected
-      _sourceNode = _audioCtx.createMediaElementSource(_audio);
-      _gainNode = _audioCtx.createGain();
-      _gainNode.gain.value = Math.pow(10, filters.gain / 20);
-      _hpNode = _audioCtx.createBiquadFilter();
-      _hpNode.type = 'highpass'; _hpNode.frequency.value = filters.highpass || 0;
-      _lpNode = _audioCtx.createBiquadFilter();
-      _lpNode.type = 'lowpass'; _lpNode.frequency.value = filters.lowpass || _audioCtx.sampleRate / 2;
-      _sourceNode.connect(_hpNode); _hpNode.connect(_lpNode); _lpNode.connect(_gainNode); _gainNode.connect(_audioCtx.destination);
-    }
-
-    function setFilter(key, val) {
-      filters[key] = val;
-      if (_gainNode && key === 'gain') _gainNode.gain.value = Math.pow(10, val / 20);
-      if (_hpNode && key === 'highpass') _hpNode.frequency.value = val || 0;
-      if (_lpNode && key === 'lowpass') _lpNode.frequency.value = val || (_audioCtx ? _audioCtx.sampleRate / 2 : 22050);
-    }
-
-    // ── Audio (rAF loop pour progression fluide) ─────────────────────────
-    function _startRaf() {
-      if (_rafId) return;
-      function tick() {
-        if (_audio && !_audio.paused && _audio.duration) {
-          audioCurrentTime.value = _audio.currentTime;
-          audioProgress.value    = _audio.currentTime / _audio.duration;
-          _rafId = requestAnimationFrame(tick);
-        } else { _rafId = null; }
-      }
-      _rafId = requestAnimationFrame(tick);
-    }
-    function _stopRaf() {
-      if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
-    }
-
-    function togglePlay() {
-      if (!spectro.value.url) return;
-      if (_audio && isPlaying.value)  { _audio.pause(); return; }
-      if (_audio && !isPlaying.value) { _audio.play().catch(()=>{}); return; }
-      if (!_audioCtx || _audioCtx.state === 'closed') {
-        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      _sourceNode = null; // reset for new element
-      _audio = new Audio(spectro.value.url);
-      _audio.crossOrigin = 'anonymous';
-      _buildFilterChain();
-      _audio.addEventListener('play',  () => { isPlaying.value = true;  _startRaf(); });
-      _audio.addEventListener('pause', () => { isPlaying.value = false; _stopRaf(); });
-      _audio.addEventListener('ended', () => {
-        isPlaying.value = false; audioProgress.value = 0; audioCurrentTime.value = 0; _stopRaf();
-      });
-      _audio.play().catch(() => {});
-    }
-
-    function stopAudio() {
-      _stopRaf();
-      if (_audio) { _audio.pause(); _audio = null; }
-      _sourceNode = null;
-      isPlaying.value = false; audioProgress.value = 0;
-      audioCurrentTime.value = 0; audioDuration.value = 0;
-    }
-
-    function seekFromProgressBar(e) {
-      if (!_audio || !_audio.duration) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      _audio.currentTime = ((e.clientX - rect.left) / rect.width) * _audio.duration;
-    }
-    function seekFromClick(e) {
-      if (!spectroCanvas.value || !_audio || !_audio.duration) return;
-      const rect = spectroCanvas.value.getBoundingClientRect();
-      _audio.currentTime = ((e.clientX - rect.left) / rect.width) * _audio.duration;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
-    function fmtDuration(s) {
-      if (!s) return '0:00';
-      return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-    }
+
     function fmtDateLong(d) {
       if (!d) return '';
       const [y,mo,day] = d.split('-');
@@ -688,7 +605,7 @@ const app = createApp({
     onMounted(() => { document.addEventListener('keydown', _onKeydown); loadAll(); });
     onUnmounted(() => {
       document.removeEventListener('keydown', _onKeydown);
-      _stopRaf(); stopAudio();
+      stopAudio();
       if (_cleanBlobUrl) { URL.revokeObjectURL(_cleanBlobUrl); _cleanBlobUrl = null; }
     });
 
@@ -721,7 +638,7 @@ const app = createApp({
     };
   }
 });
-BIRDASH.registerComponents(app).mount('#app');
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
 </script>
 </body>
 </html>
