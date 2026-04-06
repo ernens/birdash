@@ -383,8 +383,7 @@
         </div>
 
         <!-- Dual AI + stats -->
-        <div class="bf-engine-body">
-          <div class="bf-ai-panel">
+        <div class="bf-ai-panel">
             <div class="bf-cores">
               <div class="bf-core birdnet" :class="{firing:enginePulse}">
                 <div class="bf-core-icon bf-icon-bn">BN</div>
@@ -402,18 +401,7 @@
               {{status.secondaryModel?t('dash_dual_consensus'):t('dash_single_model')}}
               <span class="bf-fusion-bar"></span>
             </div>
-          </div>
 
-          <div class="bf-eng-stats">
-            <div class="bf-eng-stat">
-              <div class="bf-eng-num" :class="{'warn-val':status.backlog>5}">{{status.backlog}}</div>
-              <div class="bf-eng-lbl">{{t('dash_backlog')}}</div>
-            </div>
-            <div class="bf-eng-stat">
-              <div class="bf-eng-num" :class="{'warn-val':status.lagSecs>60}">{{fmtLag(status.lagSecs)}}</div>
-              <div class="bf-eng-lbl">{{t('dash_lag')}}</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -485,6 +473,8 @@
       </div>
       <div class="bf-card">
         <div class="bf-card-hdr"><span>{{t('dash_sys_title')}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_backlog')}}</span><span class="bf-sys-val" :class="status.backlog>5?'delayed':'ok'">{{status.backlog}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_lag')}}</span><span class="bf-sys-val" :class="status.lagSecs>60?'delayed':'ok'">{{fmtLag(status.lagSecs)}}</span></div>
         <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_sensitivity')}}</span><span class="bf-sys-val">{{status.sensitivity}}</span></div>
         <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_rec_len')}}</span><span class="bf-sys-val">{{status.recordingLength}}s</span></div>
         <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_confidence_thresh')}}</span><span class="bf-sys-val">{{status.confidence?(status.confidence*100).toFixed(0)+'%':'…'}}</span></div>
@@ -580,6 +570,7 @@ BIRDASH.ready.then(() => {
       const enginePulse=ref(false), detPulse=ref(false), detEnter=ref(false);
       let logSource=null;
       let _refreshTimer = null;
+      let _lastSpecies = "";
       function debouncedRefresh() {
         if (_refreshTimer) clearTimeout(_refreshTimer);
         _refreshTimer = setTimeout(() => {
@@ -589,10 +580,15 @@ BIRDASH.ready.then(() => {
         }, 2000);
       }
       function simplifyMsg(msg, cat) {
+        // Track last species for BirdWeather enrichment
+        let sp;
         // Detection: "[BirdNET...] Done: 3 detections in 0.2s" → "BirdNET: 3 détections (0.2s)"
         let m;
         m = msg.match(/\[(BirdNET[^\]]*)\] Done: (\d+) detections? in ([\d.]+)s/);
         if (m) return (m[1].includes('FP16') ? 'BirdNET' : m[1].replace(/_/g,' ')) + ' : ' + m[2] + ' detection' + (m[2]!=='1'?'s':'') + ' (' + m[3] + 's)';
+        // Standalone species line (no bracket prefix): "Moineau domestique — Passer (86.9%)"
+        sp = msg.match(/^\s*(?:\[[^\]]*\]\s*)?(.+?)\s*[—–-]\s*(.+?)\s*\(([\d.]+)%\)/);
+        if (sp) { _lastSpecies = sp[1] + ' (' + parseFloat(sp[3]).toFixed(0) + '%)'; return _lastSpecies; }
         // Perch: "[perch_v2...] file.wav: 2 detections in 0.5s"
         m = msg.match(/\[(perch[^\]]*)\].*?: (\d+) detections? in ([\d.]+)s/i);
         if (m) return 'Perch V2 : ' + m[2] + ' detection' + (m[2]!=='1'?'s':'') + ' (' + m[3] + 's)';
