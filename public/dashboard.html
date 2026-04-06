@@ -597,7 +597,7 @@ BIRDASH.ready.then(() => {
         if (m) return m[1] + ' (' + parseFloat(m[3]).toFixed(0) + '%)';
         // BirdWeather upload
         m = msg.match(/BirdWeather.*?uploaded (\d+) detections?/i);
-        if (m) return 'BirdWeather : ' + m[1] + ' envoyee' + (m[1]!=='1'?'s':'');
+        if (m) return 'BirdWeather' + (_lastSpecies ? ' : ' + _lastSpecies : ' : ' + m[1] + ' envoyee' + (m[1]!=='1'?'s':''));
         // Recording: "Analyzing: file.wav"
         m = msg.match(/Analyzing:\s*(.+)/);
         if (m) return t('dash_evt_analyzing');
@@ -616,7 +616,10 @@ BIRDASH.ready.then(() => {
         logSource.onmessage = (e)=>{
           try {
             const d=JSON.parse(e.data);
-            if(d.cat==='api'||d.cat==='cleanup'||d.cat==='system')return;
+            // Track species name from any message before filtering
+            let _sp = d.msg.match(/^\s*(?:\[[^\]]*\]\s*)?(.+?)\s*[—–-]\s*(.+?)\s*\(([\d.]+)%\)/);
+            if (_sp) _lastSpecies = _sp[1] + " (" + parseFloat(_sp[3]).toFixed(0) + "%)"; 
+            if(d.cat==="api"||d.cat==="cleanup"||d.cat==="system")return;
             if(/GET |POST |DELETE |api\//i.test(d.msg))return;
             if(EVT_CLASS[d.cat]){
               tickId++;
