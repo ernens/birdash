@@ -341,7 +341,7 @@ const { useI18n, useTheme, useNav, useSpeciesNames, useFavorites,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, buildAudioUrl, buildSpeciesLinks,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav,
-        navigateTo } = BIRDASH;
+        navigateTo, useAudioPlayer } = BIRDASH;
 
 // PCM brut conservé entre loadDetection et applyClean (non réactif)
 let _rawPcm = null;
@@ -573,7 +573,6 @@ const app = createApp({
 
     async function reapplyClean() {
       if (cleanMode.value) await applyClean();
-    }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
