@@ -7,11 +7,9 @@
   <meta name="color-scheme" content="dark light">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <title>BirdStation — Bird Flow</title>
   <meta property="og:title" content="BirdStation — Bird Flow">
-  <meta property="og:description" content="Bird detection dashboard — Heinsch, Belgium">
+  <meta property="og:description" content="Bird detection dashboard">
   <meta property="og:type" content="website">
   <meta property="og:image" content="/birds/img/robin-logo.svg">
   <link rel="stylesheet" href="css/bird-styles.css">
@@ -22,380 +20,323 @@
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <style>
-    .bf-baseline{text-align:center;margin-bottom:1.25rem;color:var(--text-muted);font-size:.8rem;letter-spacing:.02em}
+    .bf-baseline{text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:.78rem;letter-spacing:.02em}
 
-    /* ════ HERO: 2-row asymmetric grid ══════════════════════════ */
-    .bf-hero {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr 1.8fr;
-      grid-template-rows: auto auto;
-      gap: .85rem;
+    /* ════════════════════════════════════════════════════════════
+       FLOW CORRIDOR — the main innovation
+       3 zones connected by animated pulse strips
+       ════════════════════════════════════════════════════════════ */
+    .bf-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
       margin-bottom: 1.25rem;
+      min-height: 260px;
     }
-    /* Detection card spans full right column height */
-    .bf-hero .bf-det-node { grid-column: 3; grid-row: 1 / 3; }
 
-    /* ── Node base ─────────────────────────────────────────────── */
-    .bf-node {
+    /* ── Zone base ─────────────────────────────────────────────── */
+    .bf-zone {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1rem 1.1rem;
+      padding: 1rem;
       position: relative;
-      overflow: hidden;
-      transition: border-color .5s ease, box-shadow .5s ease;
+      transition: border-color .5s, box-shadow .5s;
     }
-    .bf-node.pulse {
+    .bf-zone.pulse {
       border-color: var(--accent);
-      box-shadow: 0 0 24px -4px rgba(var(--accent-rgb,90,158,58),.35);
+      box-shadow: 0 0 20px -4px rgba(var(--accent-rgb,90,158,58),.3);
     }
-    .bf-node-hdr {
-      font-size: .66rem; text-transform: uppercase; letter-spacing: .08em;
-      color: var(--text-muted); margin-bottom: .5rem;
-      display: flex; align-items: center; gap: .4rem;
+    .bf-zone-hdr {
+      font-size: .64rem; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text-muted); margin-bottom: .6rem;
+      display: flex; align-items: center; gap: .35rem;
     }
-
-    /* ── Status dot ────────────────────────────────────────────── */
     .bf-dot {
       width: 7px; height: 7px; border-radius: 50%;
-      background: var(--text-muted);
-      transition: background .4s, box-shadow .4s;
+      background: var(--text-muted); transition: background .4s, box-shadow .4s;
     }
-    .bf-dot.live {
-      background: #4caf50;
-      box-shadow: 0 0 6px #4caf50;
-      animation: bfDotPulse 2.5s ease-in-out infinite;
-    }
-    .bf-dot.warn { background: #ff9800; box-shadow: 0 0 5px rgba(255,152,0,.4); }
-    @keyframes bfDotPulse {
-      0%,100%{opacity:1;box-shadow:0 0 6px #4caf50}
-      50%{opacity:.45;box-shadow:0 0 2px #4caf50}
-    }
+    .bf-dot.live { background:#4caf50; box-shadow:0 0 6px #4caf50; animation:bfDot 2.5s ease-in-out infinite; }
+    .bf-dot.warn { background:#ff9800; box-shadow:0 0 5px rgba(255,152,0,.4); }
+    @keyframes bfDot{0%,100%{opacity:1}50%{opacity:.4}}
 
-    /* ── Flow arrows (desktop) ─────────────────────────────────── */
-    .bf-hero .bf-node:not(.bf-det-node):not(:nth-child(3)):not(:nth-child(4))::after {
-      content:''; position:absolute; right:-.5rem; top:50%; transform:translateY(-50%);
-      border:5px solid transparent; border-left:6px solid var(--border); z-index:2;
-      transition:border-left-color .4s;
+    /* ── Zone 1: MIC (narrow left) ─────────────────────────────── */
+    .bf-zone-mic {
+      width: 160px; flex-shrink: 0;
+      border-radius: 14px 0 0 14px;
+      display: flex; flex-direction: column;
+      overflow: visible;
     }
-    .bf-hero .bf-node.pulse::after { border-left-color: var(--accent); }
-
-    /* ════ 1. MIC — breathing ambient glow ═════════════════════ */
-    .bf-node.bf-mic { overflow: visible; }
     .bf-mic-glow {
-      position: absolute; inset: -8px; border-radius: 20px;
-      background: radial-gradient(ellipse at center, rgba(var(--accent-rgb,90,158,58),.12) 0%, transparent 70%);
-      opacity: 0; transition: opacity .6s ease; pointer-events: none; z-index: -1;
+      position: absolute; inset: -10px; border-radius: 22px;
+      background: radial-gradient(ellipse at center, rgba(var(--accent-rgb,90,158,58),.15) 0%, transparent 70%);
+      opacity: 0; transition: opacity .6s; pointer-events: none; z-index: -1;
     }
-    .bf-mic.pulse .bf-mic-glow { opacity: 1; }
+    .bf-zone-mic.pulse .bf-mic-glow { opacity: 1; }
     .bf-mic-bars {
       display: flex; align-items: flex-end; gap: 2px;
-      height: 52px; margin: .4rem 0;
+      height: 64px; margin: .3rem 0; flex: 1;
     }
     .bf-mic-bar {
       flex: 1; border-radius: 2px 2px 0 0; min-height: 2px;
       transition: height .15s ease-out, background .2s, opacity .2s;
-      background: var(--accent, #5a9e3a); opacity: .45;
+      background: var(--accent,#5a9e3a); opacity: .4;
     }
     .bf-mic-bar.hot { opacity: 1; background: #66bb6a; }
-    .bf-mic-val {
-      font-size: 1.6rem; font-weight: 800;
-      font-variant-numeric: tabular-nums; line-height: 1;
-    }
+    .bf-mic-val { font-size: 1.8rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
     .bf-mic-val span { font-size: .6rem; font-weight: 400; color: var(--text-muted); }
-    .bf-mic-status { font-size: .68rem; margin-top: .15rem; color: var(--text-muted); transition: color .3s; }
-    .bf-mic-status.on { color: #4caf50; }
+    .bf-mic-sub { font-size: .66rem; color: var(--text-muted); transition: color .3s; }
+    .bf-mic-sub.on { color: #4caf50; }
 
-    /* ════ 2. PIPELINE — animated flow line ════════════════════ */
-    .bf-pipe-stages {
+    /* ── Connector strips ──────────────────────────────────────── */
+    .bf-conn {
+      width: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .bf-conn-track {
+      width: 4px; height: 60%;
+      background: var(--border); border-radius: 2px;
+      position: relative; overflow: hidden;
+      /* Rotated to horizontal flow */
+      transform: rotate(0deg);
+    }
+    /* Actually horizontal track */
+    .bf-conn { flex-direction: column; }
+    .bf-conn-track {
+      width: 60%; height: 4px;
+      transform: none;
+    }
+    .bf-conn-pulse {
+      position: absolute; left: -20%; top: 0;
+      width: 40%; height: 100%;
+      border-radius: 2px;
+      background: var(--accent,#5a9e3a);
+      opacity: 0;
+    }
+    .bf-conn-pulse.fire {
+      animation: connPulse .8s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes connPulse {
+      0% { left: -20%; opacity: 0; }
+      20% { opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
+    .bf-conn-arrow {
+      color: var(--border); font-size: .7rem; margin-top: .2rem;
+      transition: color .3s;
+    }
+    .bf-conn.active .bf-conn-arrow { color: var(--accent); }
+
+    /* ── Zone 2: ENGINE (wide center) ──────────────────────────── */
+    .bf-zone-engine {
+      flex: 1;
+      border-radius: 0;
+      border-left: none; border-right: none;
+      display: flex; flex-direction: column;
+    }
+    /* Pipeline stages row */
+    .bf-pipe-row {
       display: flex; align-items: center; gap: 0;
-      margin: .5rem 0 .65rem; position: relative;
+      margin-bottom: .6rem; position: relative;
+      padding: .4rem .5rem;
+      background: var(--bg-card2, rgba(0,0,0,.03));
+      border-radius: 8px;
     }
-    .bf-pipe-stage { flex: 1; text-align: center; position: relative; z-index: 1; }
-    .bf-pipe-dot {
-      width: 11px; height: 11px; border-radius: 50%;
-      background: var(--border); margin: 0 auto .2rem;
-      transition: background .4s, box-shadow .4s, transform .35s cubic-bezier(.34,1.56,.64,1);
-    }
-    .bf-pipe-dot.active {
-      background: var(--accent, #5a9e3a);
-      box-shadow: 0 0 10px rgba(var(--accent-rgb,90,158,58),.6);
-      transform: scale(1.4);
-    }
-    .bf-pipe-dot.warn { background: #ff9800; box-shadow: 0 0 8px rgba(255,152,0,.4); }
-    .bf-pipe-lbl { font-size: .56rem; color: var(--text-muted); letter-spacing: .02em; }
     .bf-pipe-track {
-      position: absolute; top: 5px; left: 12%; right: 12%;
-      height: 3px; background: var(--border); z-index: 0;
-      border-radius: 2px; overflow: hidden;
+      position: absolute; top: 50%; left: 8%; right: 8%;
+      height: 3px; background: var(--border); border-radius: 2px;
+      transform: translateY(-50%); overflow: hidden;
     }
     .bf-pipe-fill {
       height: 100%; width: 0; border-radius: 2px;
-      background: linear-gradient(90deg, var(--accent,#5a9e3a), #66bb6a);
+      background: linear-gradient(90deg,var(--accent,#5a9e3a),#66bb6a);
       transition: width .8s cubic-bezier(.22,1,.36,1);
     }
-    .bf-pipe-stats { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .bf-pipe-stat { flex: 1; min-width: 55px; text-align: center; }
-    .bf-pipe-num {
-      font-size: 1.05rem; font-weight: 700;
-      font-variant-numeric: tabular-nums; line-height: 1.1;
+    .bf-pipe-stage { flex: 1; text-align: center; position: relative; z-index: 1; }
+    .bf-pipe-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--border); margin: 0 auto .15rem;
+      transition: all .4s cubic-bezier(.34,1.56,.64,1);
     }
-    .bf-pipe-num.warn-val { color: #ff9800; }
-    .bf-pipe-label { font-size: .58rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .bf-pipe-dot.active {
+      background: var(--accent,#5a9e3a);
+      box-shadow: 0 0 10px rgba(var(--accent-rgb,90,158,58),.6);
+      transform: scale(1.4);
+    }
+    .bf-pipe-dot.warn { background:#ff9800; box-shadow:0 0 8px rgba(255,152,0,.4); }
+    .bf-pipe-lbl { font-size: .55rem; color: var(--text-muted); }
 
-    /* ════ 3. DUAL AI — branded twin cores ═════════════════════ */
-    .bf-cores { display: flex; gap: .5rem; margin-bottom: .45rem; }
+    /* Dual AI + stats row */
+    .bf-engine-body {
+      flex: 1; display: flex; gap: .6rem;
+    }
+    /* Dual AI cores */
+    .bf-ai-panel { flex: 1.2; display: flex; flex-direction: column; gap: .4rem; }
+    .bf-cores { display: flex; gap: .4rem; flex: 1; }
     .bf-core {
       flex: 1; border: 1.5px solid transparent; border-radius: 10px;
-      padding: .5rem .55rem; text-align: center;
+      padding: .5rem; text-align: center;
       transition: border-color .4s, background .4s, box-shadow .5s;
+      display: flex; flex-direction: column; justify-content: center;
     }
-    /* BirdNET = blue identity */
-    .bf-core.birdnet {
-      background: rgba(66,165,245,.06);
-      border-color: rgba(66,165,245,.25);
-    }
-    .bf-core.birdnet.firing {
-      border-color: #42a5f5;
-      box-shadow: 0 0 14px -3px rgba(66,165,245,.4);
-    }
-    /* Perch = teal/green identity */
-    .bf-core.perch {
-      background: rgba(38,166,154,.06);
-      border-color: rgba(38,166,154,.25);
-    }
-    .bf-core.perch.firing {
-      border-color: #26a69a;
-      box-shadow: 0 0 14px -3px rgba(38,166,154,.4);
-    }
-    .bf-core-icon { font-size: 1.5rem; line-height: 1; margin-bottom: .15rem; }
-    .bf-core-name { font-size: .72rem; font-weight: 700; line-height: 1.2; }
-    .bf-core-time {
-      font-size: .62rem; color: var(--text-muted);
-      font-variant-numeric: tabular-nums; margin-top: .1rem;
-    }
-    /* Fusion node between cores */
+    .bf-core.birdnet { background:rgba(66,165,245,.06); border-color:rgba(66,165,245,.25); }
+    .bf-core.birdnet.firing { border-color:#42a5f5; box-shadow:0 0 16px -3px rgba(66,165,245,.45); }
+    .bf-core.perch { background:rgba(38,166,154,.06); border-color:rgba(38,166,154,.25); }
+    .bf-core.perch.firing { border-color:#26a69a; box-shadow:0 0 16px -3px rgba(38,166,154,.45); }
+    .bf-core-icon { font-size: 1.6rem; line-height: 1; }
+    .bf-core-name { font-size: .72rem; font-weight: 700; margin-top: .1rem; }
+    .bf-core-time { font-size: .62rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
     .bf-fusion {
-      display: flex; align-items: center; justify-content: center; gap: .35rem;
-      padding: .3rem .5rem; border-radius: 8px;
-      font-size: .66rem; font-weight: 600; color: var(--text-muted);
-      background: var(--bg-card2, rgba(0,0,0,.04));
+      display: flex; align-items: center; justify-content: center; gap: .3rem;
+      padding: .25rem; border-radius: 6px;
+      font-size: .64rem; font-weight: 600; color: var(--text-muted);
+      background: var(--bg-card2, rgba(0,0,0,.03));
       transition: all .4s;
     }
-    .bf-fusion.consensus {
-      color: #26a69a;
-      background: rgba(38,166,154,.08);
-      border: 1px solid rgba(38,166,154,.2);
-    }
-    .bf-fusion-bar {
-      width: 18px; height: 2px; border-radius: 1px;
-      background: var(--border); transition: background .4s;
-    }
-    .bf-fusion.consensus .bf-fusion-bar { background: #26a69a; }
-    .bf-conf-row { font-size: .62rem; color: var(--text-muted); margin-top: .3rem; text-align: center; }
+    .bf-fusion.consensus { color:#26a69a; background:rgba(38,166,154,.08); }
+    .bf-fusion-bar { width:16px; height:2px; border-radius:1px; background:var(--border); transition:background .4s; }
+    .bf-fusion.consensus .bf-fusion-bar { background:#26a69a; }
 
-    /* ════ 4. LATEST DETECTION — hero card ═════════════════════ */
-    .bf-det-node {
+    /* Stats column */
+    .bf-eng-stats {
+      flex: 0.8; display: flex; flex-direction: column;
+      justify-content: center; gap: .35rem;
+    }
+    .bf-eng-stat {
+      text-align: center; padding: .25rem;
+      background: var(--bg-card2, rgba(0,0,0,.03));
+      border-radius: 6px;
+    }
+    .bf-eng-num { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    .bf-eng-num.warn-val { color: #ff9800; }
+    .bf-eng-lbl { font-size: .55rem; color: var(--text-muted); text-transform: uppercase; }
+
+    /* ── Zone 3: DETECTION (generous right) ─────────────────────── */
+    .bf-zone-det {
+      width: 320px; flex-shrink: 0;
+      border-radius: 0 14px 14px 0;
       display: flex; flex-direction: column;
     }
-    .bf-det-node .bf-node-hdr { margin-bottom: .6rem; }
-    .bf-det {
-      flex: 1; display: flex; gap: 1rem; align-items: center;
+    .bf-det-main {
+      flex: 1; display: flex; gap: .85rem; align-items: center;
     }
     .bf-det-photo-wrap { position: relative; flex-shrink: 0; }
     .bf-det-photo {
-      width: 130px; height: 130px; border-radius: 14px;
+      width: 120px; height: 120px; border-radius: 14px;
       object-fit: cover; background: var(--bg-card2); display: block;
-      transition: transform .4s cubic-bezier(.34,1.56,.64,1), box-shadow .4s;
+      transition: transform .5s cubic-bezier(.34,1.56,.64,1), box-shadow .4s;
     }
-    .bf-det-node.pulse .bf-det-photo {
-      transform: scale(1.04);
-      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    .bf-zone-det.pulse .bf-det-photo {
+      transform: scale(1.05);
+      box-shadow: 0 4px 24px rgba(0,0,0,.18);
     }
-    /* New detection entrance */
-    .bf-det-enter {
-      animation: bfDetEnter .6s cubic-bezier(.22,1,.36,1);
-    }
-    @keyframes bfDetEnter {
-      from { opacity: 0; transform: scale(.9) translateY(8px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .bf-det-conf-ring {
+    .bf-det-enter { animation: bfDetIn .6s cubic-bezier(.22,1,.36,1); }
+    @keyframes bfDetIn { from{opacity:0;transform:scale(.88) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .bf-det-conf {
       position: absolute; bottom: -5px; right: -5px;
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 38px; height: 38px; border-radius: 50%;
       background: var(--card-bg); border: 2.5px solid var(--border);
       display: flex; align-items: center; justify-content: center;
-      font-size: .72rem; font-weight: 800;
-      font-variant-numeric: tabular-nums;
+      font-size: .72rem; font-weight: 800; font-variant-numeric: tabular-nums;
       transition: border-color .3s, color .3s, transform .3s;
     }
-    .bf-det-node.pulse .bf-det-conf-ring { transform: scale(1.1); }
-    .bf-det-conf-ring.high { border-color: #4caf50; color: #4caf50; }
-    .bf-det-conf-ring.mid  { border-color: #ff9800; color: #ff9800; }
-    .bf-det-conf-ring.low  { border-color: #e53935; color: #e53935; }
-    .bf-det-info {
-      flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
-    }
-    .bf-det-name {
-      font-weight: 800; font-size: 1.15rem; line-height: 1.2;
-      margin-bottom: .1rem;
-    }
-    .bf-det-sci { font-size: .75rem; color: var(--text-muted); font-style: italic; margin-bottom: .4rem; }
-    .bf-det-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .75rem; }
-    .bf-badge {
-      display: inline-flex; padding: .18rem .55rem; border-radius: 5px;
-      font-weight: 700; font-size: .65rem; text-transform: uppercase; letter-spacing: .04em;
-    }
-    .bf-badge.accepted { background: rgba(76,175,80,.14); color: #4caf50; }
-    .bf-badge.review   { background: rgba(255,152,0,.14); color: #ff9800; }
-    .bf-det-model { font-size: .65rem; color: var(--text-muted); margin-top: .25rem; }
-    .bf-det-empty {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      color: var(--text-muted); font-size: .85rem;
-    }
+    .bf-zone-det.pulse .bf-det-conf { transform: scale(1.1); }
+    .bf-det-conf.high{border-color:#4caf50;color:#4caf50}
+    .bf-det-conf.mid{border-color:#ff9800;color:#ff9800}
+    .bf-det-conf.low{border-color:#e53935;color:#e53935}
+    .bf-det-info { flex:1; min-width:0; }
+    .bf-det-name { font-weight:800; font-size:1.15rem; line-height:1.2; margin-bottom:.1rem; }
+    .bf-det-sci { font-size:.72rem; color:var(--text-muted); font-style:italic; margin-bottom:.3rem; }
+    .bf-det-row { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; font-size:.73rem; }
+    .bf-badge { display:inline-flex; padding:.15rem .5rem; border-radius:5px; font-weight:700; font-size:.64rem; text-transform:uppercase; }
+    .bf-badge.accepted{background:rgba(76,175,80,.14);color:#4caf50}
+    .bf-badge.review{background:rgba(255,152,0,.14);color:#ff9800}
+    .bf-det-model { font-size:.62rem; color:var(--text-muted); margin-top:.2rem; }
+    .bf-det-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.82rem; }
 
-    /* ════ KPIs — compact strip ════════════════════════════════ */
-    .bf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .65rem; margin-bottom: 1.25rem; }
-    .bf-kpi {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
-      padding: .55rem .7rem; display: flex; align-items: center; gap: .55rem;
+    /* Recent detections strip inside detection zone */
+    .bf-det-recent {
+      margin-top: .6rem;
+      padding-top: .5rem;
+      border-top: 1px solid var(--bg-card2, rgba(0,0,0,.06));
+      display: flex; gap: .4rem; overflow-x: auto;
     }
-    .bf-kpi-icon {
-      font-size: 1.2rem; flex-shrink: 0; width: 30px; height: 30px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 8px; background: var(--bg-card2, rgba(0,0,0,.05));
-    }
-    .bf-kpi-body { flex: 1; min-width: 0; }
-    .bf-kpi-val {
-      font-size: 1.35rem; font-weight: 800;
-      font-variant-numeric: tabular-nums; line-height: 1;
-      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
-    }
-    .bf-kpi-val.bump { transform: scale(1.25); }
-    .bf-kpi-label { font-size: .6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
-    .bf-kpi-sub { font-size: .58rem; color: var(--text-muted); }
-
-    /* ════ BOTTOM: key events + recent species + system ════════ */
-    .bf-bottom {
-      display: grid;
-      grid-template-columns: 1fr 1fr 240px;
-      gap: .85rem;
-      margin-bottom: 1rem;
-    }
-
-    /* ── Key events (curated) ──────────────────────────────────── */
-    .bf-events {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 10px; padding: .55rem .65rem;
-      max-height: 220px; overflow-y: auto;
-    }
-    .bf-events-hdr {
-      font-size: .66rem; text-transform: uppercase; letter-spacing: .06em;
-      color: var(--text-muted); margin-bottom: .4rem;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .bf-evt {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .35rem .4rem; border-radius: 6px;
-      animation: bfEvtIn .4s cubic-bezier(.22,1,.36,1);
-      margin-bottom: .2rem;
-    }
-    @keyframes bfEvtIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
-    .bf-evt-icon {
-      width: 28px; height: 28px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: .9rem; flex-shrink: 0;
-    }
-    .bf-evt-icon.det { background: rgba(76,175,80,.1); }
-    .bf-evt-icon.bw  { background: rgba(126,87,194,.1); }
-    .bf-evt-icon.err { background: rgba(229,57,53,.1); }
-    .bf-evt-icon.rec { background: rgba(66,165,245,.1); }
-    .bf-evt-body { flex: 1; min-width: 0; }
-    .bf-evt-msg { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bf-evt-time { font-size: .6rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-
-    /* ── Recent species strip ──────────────────────────────────── */
-    .bf-species {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 10px; padding: .55rem .65rem;
-      max-height: 220px; overflow-y: auto;
-    }
-    .bf-species-hdr {
-      font-size: .66rem; text-transform: uppercase; letter-spacing: .06em;
-      color: var(--text-muted); margin-bottom: .5rem;
-    }
-    .bf-sp-list { display: flex; flex-direction: column; gap: .35rem; }
-    .bf-sp-item {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .2rem; border-radius: 8px;
-      transition: background .15s;
+    .bf-det-mini {
+      flex-shrink: 0; width: 48px; text-align: center;
       text-decoration: none; color: var(--text);
     }
-    .bf-sp-item:hover { background: var(--bg-card2, rgba(0,0,0,.04)); }
-    .bf-sp-img {
-      width: 36px; height: 36px; border-radius: 8px;
-      object-fit: cover; background: var(--bg-card2); flex-shrink: 0;
+    .bf-det-mini-img {
+      width: 44px; height: 44px; border-radius: 8px;
+      object-fit: cover; background: var(--bg-card2);
+      display: block; margin: 0 auto .15rem;
+      transition: transform .2s;
     }
-    .bf-sp-name { font-size: .78rem; font-weight: 600; }
-    .bf-sp-count { font-size: .65rem; color: var(--text-muted); }
-    .bf-sp-badge {
-      margin-left: auto; font-size: .7rem; font-weight: 700;
-      font-variant-numeric: tabular-nums; color: var(--accent);
-    }
+    .bf-det-mini:hover .bf-det-mini-img { transform: scale(1.08); }
+    .bf-det-mini-name { font-size: .52rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* ── System sidebar ────────────────────────────────────────── */
-    .bf-sys {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 10px; padding: .55rem .65rem;
+    /* ════ KPIs ═════════════════════════════════════════════════ */
+    .bf-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-bottom:1.15rem; }
+    .bf-kpi {
+      background:var(--card-bg); border:1px solid var(--border); border-radius:10px;
+      padding:.5rem .65rem; display:flex; align-items:center; gap:.5rem;
     }
-    .bf-sys-title {
-      font-size: .66rem; text-transform: uppercase; letter-spacing: .06em;
-      color: var(--text-muted); margin-bottom: .5rem;
-    }
-    .bf-sys-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: .25rem 0; font-size: .73rem;
-      border-bottom: 1px solid var(--bg-card2, rgba(0,0,0,.03));
-    }
-    .bf-sys-row:last-child { border-bottom: none; }
-    .bf-sys-label { color: var(--text-muted); }
-    .bf-sys-val { font-weight: 600; font-variant-numeric: tabular-nums; }
-    .bf-sys-val.ok { color: #4caf50; }
-    .bf-sys-val.delayed { color: #ff9800; }
+    .bf-kpi-icon { font-size:1.15rem; flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--bg-card2,rgba(0,0,0,.05)); }
+    .bf-kpi-body{flex:1;min-width:0}
+    .bf-kpi-val { font-size:1.3rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
+    .bf-kpi-val.bump{transform:scale(1.25)}
+    .bf-kpi-label{font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+    .bf-kpi-sub{font-size:.55rem;color:var(--text-muted)}
 
-    /* ── Quick nav ──────────────────────────────────────────────── */
-    .bf-quick {
-      display: flex; gap: .6rem; margin-top: 1.25rem;
-      justify-content: center; flex-wrap: wrap;
-    }
-    .bf-quick a {
-      display: inline-flex; align-items: center; gap: .3rem;
-      padding: .4rem .85rem; background: var(--card-bg);
-      border: 1px solid var(--border); border-radius: 8px;
-      text-decoration: none; color: var(--text); font-size: .78rem;
-      transition: border-color .2s, background .2s, transform .15s;
-    }
-    .bf-quick a:hover {
-      border-color: var(--accent);
-      background: rgba(var(--accent-rgb,90,158,58),.06);
-      transform: translateY(-1px);
-    }
+    /* ════ BOTTOM ═══════════════════════════════════════════════ */
+    .bf-bottom { display:grid; grid-template-columns:1fr 1fr 220px; gap:.75rem; margin-bottom:1rem; }
+    .bf-card { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; max-height:200px; overflow-y:auto; }
+    .bf-card-hdr { font-size:.64rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.4rem; display:flex; justify-content:space-between; }
+    /* Key events */
+    .bf-evt { display:flex; align-items:center; gap:.45rem; padding:.3rem .35rem; border-radius:5px; margin-bottom:.15rem; animation:bfEvt .35s cubic-bezier(.22,1,.36,1); }
+    @keyframes bfEvt{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+    .bf-evt-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .bf-evt-dot.det{background:#4caf50} .bf-evt-dot.rec{background:#42a5f5} .bf-evt-dot.bw{background:#7e57c2} .bf-evt-dot.err{background:#e53935}
+    .bf-evt-msg { flex:1; font-size:.73rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bf-evt-time { font-size:.58rem; color:var(--text-muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
+    /* Species */
+    .bf-sp-item { display:flex; align-items:center; gap:.45rem; padding:.2rem; border-radius:7px; text-decoration:none; color:var(--text); transition:background .15s; }
+    .bf-sp-item:hover{background:var(--bg-card2,rgba(0,0,0,.04))}
+    .bf-sp-img { width:34px; height:34px; border-radius:7px; object-fit:cover; background:var(--bg-card2); flex-shrink:0; }
+    .bf-sp-name{font-size:.75rem;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bf-sp-badge{font-size:.7rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+    /* System */
+    .bf-sys-row { display:flex; justify-content:space-between; padding:.2rem 0; font-size:.7rem; border-bottom:1px solid var(--bg-card2,rgba(0,0,0,.03)); }
+    .bf-sys-row:last-child{border-bottom:none}
+    .bf-sys-label{color:var(--text-muted)} .bf-sys-val{font-weight:600;font-variant-numeric:tabular-nums}
+    .bf-sys-val.ok{color:#4caf50} .bf-sys-val.delayed{color:#ff9800}
+
+    /* Quick nav */
+    .bf-quick { display:flex; gap:.5rem; margin-top:1rem; justify-content:center; flex-wrap:wrap; }
+    .bf-quick a { display:inline-flex; align-items:center; gap:.25rem; padding:.35rem .75rem; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--text); font-size:.75rem; transition:border-color .2s,transform .15s; }
+    .bf-quick a:hover{border-color:var(--accent);transform:translateY(-1px)}
 
     /* ════ RESPONSIVE ═══════════════════════════════════════════ */
-    @media (max-width:1000px) {
-      .bf-hero { grid-template-columns:1fr 1fr; grid-template-rows:auto; }
-      .bf-hero .bf-det-node { grid-column:1/3; grid-row:auto; }
-      .bf-hero .bf-node:not(.bf-det-node)::after { display:none; }
-      .bf-bottom { grid-template-columns:1fr 1fr; }
-      .bf-bottom .bf-sys { grid-column:1/3; }
+    @media(max-width:1000px){
+      .bf-flow{flex-direction:column;min-height:auto}
+      .bf-zone-mic{width:auto;border-radius:14px 14px 0 0;flex-direction:row;gap:.75rem;align-items:center}
+      .bf-mic-bars{height:40px;flex:1}
+      .bf-conn{width:auto;height:28px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-top:none;border-bottom:none}
+      .bf-conn-track{width:4px;height:60%}
+      .bf-conn-arrow{margin-top:0;margin-left:.2rem;transform:rotate(90deg)}
+      .bf-zone-engine{border-radius:0}
+      .bf-zone-det{width:auto;border-radius:0 0 14px 14px}
+      .bf-bottom{grid-template-columns:1fr 1fr}
+      .bf-bottom>.bf-card:last-child{grid-column:1/3}
     }
-    @media (max-width:640px) {
-      .bf-hero { grid-template-columns:1fr; }
-      .bf-hero .bf-det-node { grid-column:1; }
-      .bf-kpis { grid-template-columns:1fr 1fr; }
-      .bf-bottom { grid-template-columns:1fr; }
-      .bf-bottom .bf-sys { grid-column:auto; }
-      .bf-det-photo { width:100px; height:100px; }
+    @media(max-width:640px){
+      .bf-engine-body{flex-direction:column}
+      .bf-kpis{grid-template-columns:1fr 1fr}
+      .bf-bottom{grid-template-columns:1fr}
+      .bf-bottom>.bf-card:last-child{grid-column:auto}
+      .bf-det-photo{width:90px;height:90px}
     }
   </style>
 </head>
@@ -404,94 +345,95 @@
   <birdash-shell page="dashboard" :title="t('dash_title')">
     <p class="bf-baseline">{{t('dash_baseline')}}</p>
 
-    <!-- ════ HERO ═══════════════════════════════════════════════ -->
-    <div class="bf-hero">
+    <!-- ════ FLOW CORRIDOR ══════════════════════════════════════ -->
+    <div class="bf-flow">
 
-      <!-- 1. MIC -->
-      <div class="bf-node bf-mic" :class="{pulse: micActive}">
+      <!-- ── ZONE 1: MIC ──────────────────────────────────────── -->
+      <div class="bf-zone bf-zone-mic" :class="{pulse:micActive}">
         <div class="bf-mic-glow"></div>
-        <div class="bf-node-hdr">
-          <span class="bf-dot" :class="micActive?'live':''"></span>
-          {{t('dash_listening')}}
-        </div>
+        <div class="bf-zone-hdr"><span class="bf-dot" :class="micActive?'live':''"></span>{{t('dash_listening')}}</div>
         <div class="bf-mic-bars">
           <div v-for="(h,i) in micBars" :key="i" class="bf-mic-bar" :class="{hot:h>65}" :style="{height:h+'%'}"></div>
         </div>
         <div class="bf-mic-val">{{micDb}} <span>dB</span></div>
-        <div class="bf-mic-status" :class="{on:micActive}">{{micActive?t('dash_mic_active'):t('dash_mic_idle')}}</div>
+        <div class="bf-mic-sub" :class="{on:micActive}">{{micActive?t('dash_mic_active'):t('dash_mic_idle')}}</div>
       </div>
 
-      <!-- 2. PIPELINE -->
-      <div class="bf-node" :class="{pulse:enginePulse}">
-        <div class="bf-node-hdr">
-          <span class="bf-dot" :class="pipelineDotClass"></span>
-          {{t('dash_pipeline')}}
+      <!-- ── CONNECTOR 1 ──────────────────────────────────────── -->
+      <div class="bf-conn" :class="{active:conn1Active}">
+        <div class="bf-conn-track">
+          <div class="bf-conn-pulse" :class="{fire:conn1Fire}" @animationend="conn1Fire=false"></div>
         </div>
-        <div class="bf-pipe-stages">
+        <span class="bf-conn-arrow">▸</span>
+      </div>
+
+      <!-- ── ZONE 2: ENGINE (pipeline + dual AI unified) ──────── -->
+      <div class="bf-zone bf-zone-engine" :class="{pulse:enginePulse}">
+        <div class="bf-zone-hdr"><span class="bf-dot" :class="pipelineDotClass"></span>{{t('dash_pipeline')}} + {{t('dash_dual_ai')}}</div>
+
+        <!-- Pipeline stages -->
+        <div class="bf-pipe-row">
           <div class="bf-pipe-track"><div class="bf-pipe-fill" :style="{width:pipeFillPct+'%'}"></div></div>
           <div class="bf-pipe-stage" v-for="(s,i) in pipeStages" :key="i">
             <div class="bf-pipe-dot" :class="{active:s.on,warn:s.warn}"></div>
             <div class="bf-pipe-lbl">{{s.label}}</div>
           </div>
         </div>
-        <div class="bf-pipe-stats">
-          <div class="bf-pipe-stat">
-            <div class="bf-pipe-num" :class="{'warn-val':status.backlog>5}">{{status.backlog}}</div>
-            <div class="bf-pipe-label">{{t('dash_backlog')}}</div>
-          </div>
-          <div class="bf-pipe-stat">
-            <div class="bf-pipe-num" :class="{'warn-val':status.lagSecs>60}">{{fmtLag(status.lagSecs)}}</div>
-            <div class="bf-pipe-label">{{t('dash_lag')}}</div>
-          </div>
-          <div class="bf-pipe-stat">
-            <div class="bf-pipe-num">{{status.recordingLength}}s</div>
-            <div class="bf-pipe-label">{{t('dash_recording')}}</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- 3. DUAL AI -->
-      <div class="bf-node" :class="{pulse:enginePulse}">
-        <div class="bf-node-hdr">
-          <span class="bf-dot live"></span>
-          {{t('dash_dual_ai')}}
-        </div>
-        <div class="bf-cores">
-          <div class="bf-core birdnet" :class="{firing:enginePulse}">
-            <div class="bf-core-icon">🧠</div>
-            <div class="bf-core-name">{{status.modelLabel}}</div>
-            <div class="bf-core-time">{{status.inferenceTime ? status.inferenceTime+'s' : '\u2014'}}</div>
-          </div>
-          <div v-if="status.secondaryModel" class="bf-core perch" :class="{firing:enginePulse}">
-            <div class="bf-core-icon">🧬</div>
-            <div class="bf-core-name">{{status.secModelLabel}}</div>
-            <div class="bf-core-time">{{status.secondaryInferenceTime ? status.secondaryInferenceTime+'s' : '\u2014'}}</div>
-          </div>
-        </div>
-        <div class="bf-fusion" :class="{consensus:status.secondaryModel}">
-          <span class="bf-fusion-bar"></span>
-          <span>{{status.secondaryModel?t('dash_dual_consensus'):t('dash_single_model')}}</span>
-          <span class="bf-fusion-bar"></span>
-        </div>
-        <div class="bf-conf-row">{{t('dash_confidence_thresh')}}: <strong>{{(status.confidence*100).toFixed(0)}}%</strong></div>
-      </div>
-
-      <!-- 4. DUAL AI (row 2) — also on left side -->
-      <!-- We put pipeline stats here to fill row 2 under mic -->
-
-      <!-- 4. DETECTION — spans right column, both rows -->
-      <div class="bf-node bf-det-node" :class="{pulse:detPulse}">
-        <div class="bf-node-hdr">
-          <span class="bf-dot" :class="lastDet?'live':''"></span>
-          {{t('dash_latest')}}
-        </div>
-        <div v-if="lastDet" class="bf-det" :class="{['bf-det-enter']:detEnter}">
-          <div class="bf-det-photo-wrap">
-            <img class="bf-det-photo" :src="photoUrl(lastDet.sciName)" :alt="lastDet.comName"
-                 @error="e=>e.target.src='img/robin-logo.svg'">
-            <div class="bf-det-conf-ring" :class="confClass(lastDet.confidence)">
-              {{(lastDet.confidence*100).toFixed(0)}}
+        <!-- Dual AI + stats -->
+        <div class="bf-engine-body">
+          <div class="bf-ai-panel">
+            <div class="bf-cores">
+              <div class="bf-core birdnet" :class="{firing:enginePulse}">
+                <div class="bf-core-icon">🧠</div>
+                <div class="bf-core-name">{{status.modelLabel}}</div>
+                <div class="bf-core-time">{{status.inferenceTime?status.inferenceTime+'s':'\u2014'}}</div>
+              </div>
+              <div v-if="status.secondaryModel" class="bf-core perch" :class="{firing:enginePulse}">
+                <div class="bf-core-icon">🧬</div>
+                <div class="bf-core-name">{{status.secModelLabel}}</div>
+                <div class="bf-core-time">{{status.secondaryInferenceTime?status.secondaryInferenceTime+'s':'\u2014'}}</div>
+              </div>
             </div>
+            <div class="bf-fusion" :class="{consensus:status.secondaryModel}">
+              <span class="bf-fusion-bar"></span>
+              {{status.secondaryModel?t('dash_dual_consensus'):t('dash_single_model')}}
+              <span class="bf-fusion-bar"></span>
+            </div>
+          </div>
+
+          <div class="bf-eng-stats">
+            <div class="bf-eng-stat">
+              <div class="bf-eng-num" :class="{'warn-val':status.backlog>5}">{{status.backlog}}</div>
+              <div class="bf-eng-lbl">{{t('dash_backlog')}}</div>
+            </div>
+            <div class="bf-eng-stat">
+              <div class="bf-eng-num" :class="{'warn-val':status.lagSecs>60}">{{fmtLag(status.lagSecs)}}</div>
+              <div class="bf-eng-lbl">{{t('dash_lag')}}</div>
+            </div>
+            <div class="bf-eng-stat">
+              <div class="bf-eng-num">{{(status.confidence*100).toFixed(0)}}%</div>
+              <div class="bf-eng-lbl">{{t('dash_confidence_thresh')}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONNECTOR 2 ──────────────────────────────────────── -->
+      <div class="bf-conn" :class="{active:conn2Active}">
+        <div class="bf-conn-track">
+          <div class="bf-conn-pulse" :class="{fire:conn2Fire}" @animationend="conn2Fire=false"></div>
+        </div>
+        <span class="bf-conn-arrow">▸</span>
+      </div>
+
+      <!-- ── ZONE 3: DETECTION ────────────────────────────────── -->
+      <div class="bf-zone bf-zone-det" :class="{pulse:detPulse}">
+        <div class="bf-zone-hdr"><span class="bf-dot" :class="lastDet?'live':''"></span>{{t('dash_latest')}}</div>
+        <div v-if="lastDet" class="bf-det-main" :class="{['bf-det-enter']:detEnter}">
+          <div class="bf-det-photo-wrap">
+            <img class="bf-det-photo" :src="photoUrl(lastDet.sciName)" :alt="lastDet.comName" @error="e=>e.target.src='img/robin-logo.svg'">
+            <div class="bf-det-conf" :class="confClass(lastDet.confidence)">{{(lastDet.confidence*100).toFixed(0)}}</div>
           </div>
           <div class="bf-det-info">
             <div class="bf-det-name">{{spName(lastDet.comName,lastDet.sciName)}}</div>
@@ -504,111 +446,55 @@
           </div>
         </div>
         <div v-else class="bf-det-empty">{{t('dash_no_detection')}}</div>
+
+        <!-- Recent detections strip -->
+        <div v-if="recentSpecies.length>1" class="bf-det-recent">
+          <a v-for="sp in recentSpecies.slice(0,6)" :key="sp.sciName" class="bf-det-mini"
+             :href="'species.html?species='+encodeURIComponent(sp.comName)">
+            <img class="bf-det-mini-img" :src="photoUrl(sp.sciName)" @error="e=>e.target.src='img/robin-logo.svg'">
+            <div class="bf-det-mini-name">{{spName(sp.comName,sp.sciName)}}</div>
+          </a>
+        </div>
       </div>
     </div>
 
     <!-- ════ KPIs ═══════════════════════════════════════════════ -->
     <div class="bf-kpis">
-      <div class="bf-kpi">
-        <div class="bf-kpi-icon">🐦</div>
-        <div class="bf-kpi-body">
-          <div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{kpi.total}}</div>
-          <div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div>
-        </div>
-      </div>
-      <div class="bf-kpi">
-        <div class="bf-kpi-icon">🦜</div>
-        <div class="bf-kpi-body">
-          <div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{kpi.species}}</div>
-          <div class="bf-kpi-label">{{t('dash_kpi_species')}}</div>
-        </div>
-      </div>
-      <div class="bf-kpi">
-        <div class="bf-kpi-icon" :style="kpi.review>0?'background:rgba(255,152,0,.12)':''">✅</div>
-        <div class="bf-kpi-body">
-          <div class="bf-kpi-val" :style="kpi.review>0?'color:#ff9800':''">{{kpi.review}}</div>
-          <div class="bf-kpi-label">{{t('dash_kpi_review')}}</div>
-        </div>
-      </div>
-      <div class="bf-kpi">
-        <div class="bf-kpi-icon">💚</div>
-        <div class="bf-kpi-body">
-          <div class="bf-kpi-val" :style="kpi.healthStyle">{{kpi.healthLabel}}</div>
-          <div class="bf-kpi-label">{{t('dash_kpi_health')}}</div>
-          <div class="bf-kpi-sub" v-if="kpi.healthDetail">{{kpi.healthDetail}}</div>
-        </div>
-      </div>
+      <div class="bf-kpi"><div class="bf-kpi-icon">🐦</div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{kpi.total}}</div><div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon">🦜</div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{kpi.species}}</div><div class="bf-kpi-label">{{t('dash_kpi_species')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon" :style="kpi.review>0?'background:rgba(255,152,0,.12)':''">✅</div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.review>0?'color:#ff9800':''">{{kpi.review}}</div><div class="bf-kpi-label">{{t('dash_kpi_review')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon">💚</div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.healthStyle">{{kpi.healthLabel}}</div><div class="bf-kpi-label">{{t('dash_kpi_health')}}</div><div class="bf-kpi-sub" v-if="kpi.healthDetail">{{kpi.healthDetail}}</div></div></div>
     </div>
 
-    <!-- ════ BOTTOM: key events + recent species + system ═══════ -->
+    <!-- ════ BOTTOM ═════════════════════════════════════════════ -->
     <div class="bf-bottom">
-      <!-- Key events (curated from SSE) -->
-      <div class="bf-events">
-        <div class="bf-events-hdr">
-          <span>{{t('dash_key_events')}}</span>
-          <span style="font-size:.6rem">{{keyEvents.length}}</span>
-        </div>
-        <div v-if="keyEvents.length===0" style="padding:.5rem;text-align:center;color:var(--text-muted);font-size:.78rem">
-          {{t('dash_waiting')}}
-        </div>
+      <div class="bf-card">
+        <div class="bf-card-hdr"><span>{{t('dash_key_events')}}</span><span style="font-size:.58rem">{{keyEvents.length}}</span></div>
+        <div v-if="keyEvents.length===0" style="padding:.5rem;text-align:center;color:var(--text-muted);font-size:.75rem">{{t('dash_waiting')}}</div>
         <div v-for="ev in keyEvents" :key="ev.id" class="bf-evt">
-          <div class="bf-evt-icon" :class="ev.iconClass">{{ev.icon}}</div>
-          <div class="bf-evt-body">
-            <div class="bf-evt-msg">{{ev.msg}}</div>
-            <div class="bf-evt-time">{{ev.ts}}</div>
-          </div>
+          <div class="bf-evt-dot" :class="ev.dotClass"></div>
+          <span class="bf-evt-msg">{{ev.msg}}</span>
+          <span class="bf-evt-time">{{ev.ts}}</span>
         </div>
       </div>
-
-      <!-- Recent species today -->
-      <div class="bf-species">
-        <div class="bf-species-hdr">{{t('dash_recent_species')}}</div>
-        <div v-if="recentSpecies.length===0" style="padding:.5rem;text-align:center;color:var(--text-muted);font-size:.78rem">—</div>
-        <div class="bf-sp-list">
-          <a v-for="sp in recentSpecies" :key="sp.sciName"
-             class="bf-sp-item" :href="'species.html?species='+encodeURIComponent(sp.comName)">
-            <img class="bf-sp-img" :src="photoUrl(sp.sciName)" :alt="sp.comName"
-                 @error="e=>e.target.src='img/robin-logo.svg'">
-            <div>
-              <div class="bf-sp-name">{{spName(sp.comName,sp.sciName)}}</div>
-              <div class="bf-sp-count">{{sp.lastTime}}</div>
-            </div>
-            <span class="bf-sp-badge">{{sp.count}}</span>
-          </a>
-        </div>
+      <div class="bf-card">
+        <div class="bf-card-hdr"><span>{{t('dash_recent_species')}}</span><span style="font-size:.58rem">{{recentSpecies.length}}</span></div>
+        <a v-for="sp in recentSpecies" :key="sp.sciName" class="bf-sp-item" :href="'species.html?species='+encodeURIComponent(sp.comName)">
+          <img class="bf-sp-img" :src="photoUrl(sp.sciName)" @error="e=>e.target.src='img/robin-logo.svg'">
+          <span class="bf-sp-name">{{spName(sp.comName,sp.sciName)}}</span>
+          <span class="bf-sp-badge">{{sp.count}}</span>
+        </a>
       </div>
-
-      <!-- System status -->
-      <div class="bf-sys">
-        <div class="bf-sys-title">{{t('dash_sys_title')}}</div>
-        <div class="bf-sys-row">
-          <span class="bf-sys-label">{{t('dash_sys_model')}}</span>
-          <span class="bf-sys-val">{{status.modelLabel}}</span>
-        </div>
-        <div class="bf-sys-row" v-if="status.secondaryModel">
-          <span class="bf-sys-label">{{t('dash_sys_secondary')}}</span>
-          <span class="bf-sys-val">{{status.secModelLabel}}</span>
-        </div>
-        <div class="bf-sys-row">
-          <span class="bf-sys-label">{{t('dash_sys_sensitivity')}}</span>
-          <span class="bf-sys-val">{{status.sensitivity}}</span>
-        </div>
-        <div class="bf-sys-row">
-          <span class="bf-sys-label">{{t('dash_sys_lag')}}</span>
-          <span class="bf-sys-val" :class="status.lagSecs>60?'delayed':'ok'">{{fmtLag(status.lagSecs)}}</span>
-        </div>
-        <div class="bf-sys-row">
-          <span class="bf-sys-label">{{t('dash_sys_backlog')}}</span>
-          <span class="bf-sys-val" :class="status.backlog>5?'delayed':'ok'">{{status.backlog}}</span>
-        </div>
-        <div class="bf-sys-row">
-          <span class="bf-sys-label">{{t('dash_sys_rec_len')}}</span>
-          <span class="bf-sys-val">{{status.recordingLength}}s</span>
-        </div>
+      <div class="bf-card">
+        <div class="bf-card-hdr"><span>{{t('dash_sys_title')}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_model')}}</span><span class="bf-sys-val">{{status.modelLabel}}</span></div>
+        <div class="bf-sys-row" v-if="status.secondaryModel"><span class="bf-sys-label">{{t('dash_sys_secondary')}}</span><span class="bf-sys-val">{{status.secModelLabel}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_lag')}}</span><span class="bf-sys-val" :class="status.lagSecs>60?'delayed':'ok'">{{fmtLag(status.lagSecs)}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_backlog')}}</span><span class="bf-sys-val" :class="status.backlog>5?'delayed':'ok'">{{status.backlog}}</span></div>
+        <div class="bf-sys-row"><span class="bf-sys-label">{{t('dash_sys_rec_len')}}</span><span class="bf-sys-val">{{status.recordingLength}}s</span></div>
       </div>
     </div>
 
-    <!-- ════ Quick nav ═════════════════════════════════════════── -->
     <div class="bf-quick">
       <a href="spectrogram.html">📡 {{t('nav_spectrogram')}}</a>
       <a href="today.html">📅 {{t('nav_today')}}</a>
@@ -627,13 +513,12 @@ BIRDASH.ready.then(() => {
   const API = BIRD_CONFIG.apiUrl;
 
   const MODEL_SHORT = {
-    'BirdNET_GLOBAL_6K_V2.4_Model_FP16':'BirdNET V2.4',
-    'BirdNET_6K_GLOBAL_MODEL':'BirdNET V1',
-    'Perch_v2':'Perch V2','perch_v2_original':'Perch V2',
-    'perch_v2_fp16':'Perch V2 FP16','perch_v2_dynint8':'Perch V2 INT8',
-    'perch_v2_int8':'Perch V2 INT8',
+    'BirdNET_GLOBAL_6K_V2.4_Model_FP16':'BirdNET V2.4','BirdNET_6K_GLOBAL_MODEL':'BirdNET V1',
+    'Perch_v2':'Perch V2','perch_v2_original':'Perch V2','perch_v2_fp16':'Perch V2 FP16',
+    'perch_v2_dynint8':'Perch V2 INT8','perch_v2_int8':'Perch V2 INT8',
     'BirdNET-Go_classifier_20250916':'BirdNET-Go',
   };
+  const EVT_CLASS = {detection:'det',recording:'rec',birdweather:'bw',error:'err'};
 
   const app = createApp({
     setup() {
@@ -641,237 +526,160 @@ BIRDASH.ready.then(() => {
       const { spName } = useSpeciesNames();
 
       // ── Mic SSE ────────────────────────────────────────────
-      const micDb = ref('-\u221E');
-      const micActive = ref(false);
-      const micBars = ref(Array(16).fill(2));
+      const micDb = ref('-\u221E'), micActive = ref(false), micBars = ref(Array(18).fill(2));
       let micSource = null, micTimeout = null;
-
       function connectMic() {
         micSource = new EventSource(API + '/audio/monitor');
         micSource.onmessage = (e) => {
           try {
-            const d = JSON.parse(e.data);
-            const db = Math.max(-60, d.ch0_rms_db || -60);
+            const d = JSON.parse(e.data), db = Math.max(-60, d.ch0_rms_db||-60);
             micDb.value = db > -55 ? db.toFixed(0) : '-\u221E';
             micActive.value = db > -55;
-            const pct = Math.max(2, Math.min(100, ((db + 60) / 50) * 100));
-            const bars = [...micBars.value]; bars.shift(); bars.push(pct);
-            micBars.value = bars;
+            const pct = Math.max(2, Math.min(100, ((db+60)/50)*100));
+            const bars = [...micBars.value]; bars.shift(); bars.push(pct); micBars.value = bars;
             clearTimeout(micTimeout);
-            micTimeout = setTimeout(() => { micActive.value = false; }, 3000);
-          } catch(e) {}
+            micTimeout = setTimeout(()=>{micActive.value=false;},3000);
+          } catch(e){}
         };
-        micSource.onerror = () => {
-          micActive.value = false; micSource.close();
-          setTimeout(connectMic, 10000);
-        };
+        micSource.onerror = () => { micActive.value=false; micSource.close(); setTimeout(connectMic,10000); };
       }
 
-      // ── Pipeline ───────────────────────────────────────────
-      const pipeStageRec = ref(false);
-      const pipeStageInfer = ref(false);
-      const pipeStageStore = ref(false);
-      const pipeFillPct = ref(0);
+      // ── Connectors ─────────────────────────────────────────
+      const conn1Active = ref(false), conn1Fire = ref(false);
+      const conn2Active = ref(false), conn2Fire = ref(false);
 
-      const pipeStages = computed(() => [
-        { label: t('dash_stage_listen'), on: micActive.value, warn: false },
-        { label: t('dash_stage_record'), on: pipeStageRec.value, warn: false },
-        { label: t('dash_stage_analyze'), on: pipeStageInfer.value, warn: status.value.backlog > 5 },
-        { label: t('dash_stage_store'), on: pipeStageStore.value, warn: false },
+      // ── Pipeline ───────────────────────────────────────────
+      const pipeStageRec=ref(false), pipeStageInfer=ref(false), pipeStageStore=ref(false);
+      const pipeFillPct = ref(0);
+      const pipeStages = computed(()=>[
+        {label:t('dash_stage_listen'),on:micActive.value,warn:false},
+        {label:t('dash_stage_record'),on:pipeStageRec.value,warn:false},
+        {label:t('dash_stage_analyze'),on:pipeStageInfer.value,warn:status.value.backlog>5},
+        {label:t('dash_stage_store'),on:pipeStageStore.value,warn:false},
       ]);
-      const pipelineDotClass = computed(() => {
-        if (status.value.backlog > 5) return 'warn';
-        if (status.value.backlog > 0 || pipeStageRec.value || pipeStageInfer.value) return 'live';
-        return '';
+      const pipelineDotClass = computed(()=>{
+        if(status.value.backlog>5)return'warn';
+        if(status.value.backlog>0||pipeStageRec.value||pipeStageInfer.value)return'live';
+        return'';
       });
 
       function animatePipeline(stage) {
-        if (stage === 'recording') {
-          pipeFillPct.value = 33;
-          pipeStageRec.value = true;
-          setTimeout(() => { pipeStageRec.value = false; }, 2500);
-          setTimeout(() => { pipeFillPct.value = 0; }, 3000);
+        if (stage==='recording') {
+          conn1Active.value=true; conn1Fire.value=true;
+          pipeFillPct.value=33; pipeStageRec.value=true;
+          setTimeout(()=>{pipeStageRec.value=false;conn1Active.value=false;},2500);
+          setTimeout(()=>{pipeFillPct.value=0;},3000);
         }
-        if (stage === 'detection') {
-          pipeFillPct.value = 66;
-          pipeStageInfer.value = true;
-          setTimeout(() => { pipeFillPct.value = 100; pipeStageStore.value = true; }, 400);
-          setTimeout(() => { pipeStageInfer.value = false; }, 2500);
-          setTimeout(() => { pipeStageStore.value = false; pipeFillPct.value = 0; }, 3200);
+        if (stage==='detection') {
+          pipeFillPct.value=66; pipeStageInfer.value=true;
+          setTimeout(()=>{pipeFillPct.value=100;pipeStageStore.value=true;conn2Active.value=true;conn2Fire.value=true;},400);
+          setTimeout(()=>{pipeStageInfer.value=false;},2500);
+          setTimeout(()=>{pipeStageStore.value=false;pipeFillPct.value=0;conn2Active.value=false;},3200);
         }
       }
 
       // ── Logs SSE ───────────────────────────────────────────
-      const keyEvents = ref([]);
-      let tickId = 0;
-      const enginePulse = ref(false);
-      const detPulse = ref(false);
-      const detEnter = ref(false);
-      let logSource = null;
-
-      const EVT_ICONS = { detection: '🐦', recording: '🎤', birdweather: '🌐', error: '⚠️' };
-      const EVT_CLASS = { detection: 'det', recording: 'rec', birdweather: 'bw', error: 'err' };
-
+      const keyEvents=ref([]); let tickId=0;
+      const enginePulse=ref(false), detPulse=ref(false), detEnter=ref(false);
+      let logSource=null;
       function connectLogs() {
-        logSource = new EventSource(API + '/logs');
-        logSource.onmessage = (e) => {
+        logSource = new EventSource(API+'/logs');
+        logSource.onmessage = (e)=>{
           try {
-            const d = JSON.parse(e.data);
-            if (d.cat === 'api' || d.cat === 'cleanup' || d.cat === 'system') return;
-
-            // Key events only: detection, recording, birdweather, error
-            if (EVT_ICONS[d.cat]) {
+            const d=JSON.parse(e.data);
+            if(d.cat==='api'||d.cat==='cleanup'||d.cat==='system')return;
+            if(EVT_CLASS[d.cat]){
               tickId++;
-              keyEvents.value.unshift({
-                id: tickId, ts: d.ts, cat: d.cat, msg: d.msg,
-                icon: EVT_ICONS[d.cat], iconClass: EVT_CLASS[d.cat],
-              });
-              if (keyEvents.value.length > 20) keyEvents.value.length = 20;
+              keyEvents.value.unshift({id:tickId,ts:d.ts,msg:d.msg,dotClass:EVT_CLASS[d.cat]});
+              if(keyEvents.value.length>20)keyEvents.value.length=20;
             }
-
-            if (d.cat === 'recording') {
-              enginePulse.value = true;
+            if(d.cat==='recording'){
+              enginePulse.value=true;
               animatePipeline('recording');
-              setTimeout(() => { enginePulse.value = false; }, 1500);
+              setTimeout(()=>{enginePulse.value=false;},1500);
             }
-            if (d.cat === 'detection') {
-              enginePulse.value = true;
-              detPulse.value = true;
+            if(d.cat==='detection'){
+              enginePulse.value=true; detPulse.value=true;
               animatePipeline('detection');
-              setTimeout(() => { enginePulse.value = false; }, 2000);
-              setTimeout(() => { detPulse.value = false; }, 2200);
-              fetchLatestDetection();
-              fetchKpis();
+              setTimeout(()=>{enginePulse.value=false;},2000);
+              setTimeout(()=>{detPulse.value=false;},2200);
+              fetchLatestDetection(); fetchKpis();
             }
-          } catch(e) {}
+          }catch(e){}
         };
-        logSource.onerror = () => { logSource.close(); setTimeout(connectLogs, 10000); };
+        logSource.onerror=()=>{logSource.close();setTimeout(connectLogs,10000);};
       }
 
-      // ── Analysis status ────────────────────────────────────
-      const status = ref({
-        model:'', secondaryModel:null,
-        modelLabel:'...', secModelLabel:'',
-        backlog:0, lagSecs:0,
-        inferenceTime:null, secondaryInferenceTime:null,
-        confidence:0.7, sensitivity:1.0, recordingLength:45,
-      });
-      async function fetchStatus() {
-        try {
-          const r = await fetch(API + '/analysis-status');
-          const d = await r.json();
-          d.modelLabel = MODEL_SHORT[d.model] || d.model;
-          d.secModelLabel = d.secondaryModel ? (MODEL_SHORT[d.secondaryModel] || d.secondaryModel) : '';
-          status.value = d;
-        } catch(e) {}
-      }
+      // ── Status ─────────────────────────────────────────────
+      const status=ref({model:'',secondaryModel:null,modelLabel:'...',secModelLabel:'',backlog:0,lagSecs:0,inferenceTime:null,secondaryInferenceTime:null,confidence:.7,sensitivity:1,recordingLength:45});
+      async function fetchStatus(){try{const r=await fetch(API+'/analysis-status');const d=await r.json();d.modelLabel=MODEL_SHORT[d.model]||d.model;d.secModelLabel=d.secondaryModel?(MODEL_SHORT[d.secondaryModel]||d.secondaryModel):'';status.value=d;}catch(e){}}
 
       // ── Latest detection ───────────────────────────────────
-      const lastDet = ref(null);
-      let lastDetKey = '';
-      async function fetchLatestDetection() {
-        try {
-          const r = await fetch(API + '/query', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-              sql:'SELECT Date,Time,Sci_Name,Com_Name,Confidence,Model,File_Name FROM detections ORDER BY Date DESC,Time DESC LIMIT 1'
-            })
-          });
-          const d = await r.json();
-          if (d.rows && d.rows.length > 0) {
-            const row = d.rows[0];
-            const key = row[0]+row[1]+row[3];
-            const isNew = key !== lastDetKey;
-            lastDetKey = key;
-            lastDet.value = {
-              date:row[0],time:row[1],sciName:row[2],comName:row[3],
-              confidence:row[4],model:row[5],fileName:row[6],
-              modelShort:MODEL_SHORT[row[5]]||row[5],
-            };
-            if (isNew) {
-              detEnter.value = false;
-              await nextTick();
-              detEnter.value = true;
-              detPulse.value = true;
-              setTimeout(() => { detPulse.value = false; }, 2200);
-              setTimeout(() => { detEnter.value = false; }, 700);
-            }
+      const lastDet=ref(null); let lastDetKey='';
+      async function fetchLatestDetection(){
+        try{
+          const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Date,Time,Sci_Name,Com_Name,Confidence,Model,File_Name FROM detections ORDER BY Date DESC,Time DESC LIMIT 1'})});
+          const d=await r.json();
+          if(d.rows&&d.rows.length>0){
+            const row=d.rows[0],key=row[0]+row[1]+row[3],isNew=key!==lastDetKey;
+            lastDetKey=key;
+            lastDet.value={date:row[0],time:row[1],sciName:row[2],comName:row[3],confidence:row[4],model:row[5],fileName:row[6],modelShort:MODEL_SHORT[row[5]]||row[5]};
+            if(isNew){detEnter.value=false;await nextTick();detEnter.value=true;detPulse.value=true;setTimeout(()=>{detPulse.value=false;},2200);setTimeout(()=>{detEnter.value=false;},700);}
           }
-        } catch(e) {}
+        }catch(e){}
       }
+      function detStatus(d){return d&&d.confidence>=status.value.confidence?'accepted':'review';}
+      function detStatusLabel(d){return d&&d.confidence>=status.value.confidence?t('dash_accepted'):t('dash_review');}
+      function confClass(c){return c>=.7?'high':c>=.4?'mid':'low';}
+      function photoUrl(sci){return API+'/photo?sci='+encodeURIComponent(sci);}
 
-      function detStatus(det) { return det && det.confidence >= status.value.confidence ? 'accepted' : 'review'; }
-      function detStatusLabel(det) { return det && det.confidence >= status.value.confidence ? t('dash_accepted') : t('dash_review'); }
-      function confClass(c) { return c >= 0.7 ? 'high' : c >= 0.4 ? 'mid' : 'low'; }
-      function photoUrl(sci) { return API + '/photo?sci=' + encodeURIComponent(sci); }
-
-      // ── Recent species today ───────────────────────────────
-      const recentSpecies = ref([]);
-      async function fetchRecentSpecies() {
-        try {
-          const today = new Date().toISOString().slice(0,10);
-          const r = await fetch(API + '/query', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-              sql: 'SELECT Com_Name, Sci_Name, COUNT(*) as cnt, MAX(Time) as lt FROM detections WHERE Date=? GROUP BY Sci_Name ORDER BY lt DESC LIMIT 8',
-              params: [today]
-            })
-          });
-          const d = await r.json();
-          recentSpecies.value = (d.rows||[]).map(row => ({
-            comName:row[0], sciName:row[1], count:row[2], lastTime:row[3],
-          }));
-        } catch(e) {}
+      // ── Recent species ─────────────────────────────────────
+      const recentSpecies=ref([]);
+      async function fetchRecentSpecies(){
+        try{const today=new Date().toISOString().slice(0,10);
+        const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Com_Name,Sci_Name,COUNT(*)as cnt,MAX(Time)as lt FROM detections WHERE Date=? GROUP BY Sci_Name ORDER BY lt DESC LIMIT 8',params:[today]})});
+        const d=await r.json();
+        recentSpecies.value=(d.rows||[]).map(row=>({comName:row[0],sciName:row[1],count:row[2],lastTime:row[3]}));
+        }catch(e){}
       }
 
       // ── KPIs ───────────────────────────────────────────────
-      const kpi = ref({ total:0, species:0, review:0, healthLabel:'...', healthStyle:'', healthDetail:'' });
-      const kpiBump = ref({ total:false, species:false });
-      let prevTotal = -1;
-      async function fetchKpis() {
-        try {
-          const today = new Date().toISOString().slice(0,10);
-          const [statsR, reviewR] = await Promise.all([
-            fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as species FROM detections WHERE Date=?',params:[today]})}),
-            fetch(API+'/flagged-detections?dateFrom=1900-01-01&dateTo='+today+'&limit=1'),
-          ]);
-          const stats = await statsR.json();
-          const review = await reviewR.json();
-          const anlys = status.value;
-          const newTotal = stats.rows?.[0]?.[0]||0;
-          const newSpecies = stats.rows?.[0]?.[1]||0;
-          if (prevTotal>=0 && newTotal>prevTotal) { kpiBump.value.total=true; setTimeout(()=>{kpiBump.value.total=false;},500); }
-          if (prevTotal>=0 && newSpecies>kpi.value.species) { kpiBump.value.species=true; setTimeout(()=>{kpiBump.value.species=false;},500); }
-          prevTotal = newTotal;
-          let healthLabel,healthStyle,healthDetail;
-          if (anlys.lagSecs>300){healthLabel=t('dash_health_delayed');healthStyle='color:#ff9800';healthDetail=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
-          else if(anlys.lagSecs>60){healthLabel=t('dash_health_catching');healthStyle='color:#ff9800';healthDetail=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
-          else{healthLabel=t('dash_health_ok');healthStyle='color:#4caf50';healthDetail=anlys.backlog>0?(anlys.backlog+' '+t('dash_backlog')):'';}
-          kpi.value={total:newTotal,species:newSpecies,review:review.total||0,healthLabel,healthStyle,healthDetail};
-        } catch(e) {}
+      const kpi=ref({total:0,species:0,review:0,healthLabel:'...',healthStyle:'',healthDetail:''});
+      const kpiBump=ref({total:false,species:false}); let prevTotal=-1;
+      async function fetchKpis(){
+        try{const today=new Date().toISOString().slice(0,10);
+        const[statsR,reviewR]=await Promise.all([
+          fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*)as total,COUNT(DISTINCT Com_Name)as species FROM detections WHERE Date=?',params:[today]})}),
+          fetch(API+'/flagged-detections?dateFrom=1900-01-01&dateTo='+today+'&limit=1'),
+        ]);
+        const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value;
+        const nT=stats.rows?.[0]?.[0]||0,nS=stats.rows?.[0]?.[1]||0;
+        if(prevTotal>=0&&nT>prevTotal){kpiBump.value.total=true;setTimeout(()=>{kpiBump.value.total=false;},500);}
+        if(prevTotal>=0&&nS>kpi.value.species){kpiBump.value.species=true;setTimeout(()=>{kpiBump.value.species=false;},500);}
+        prevTotal=nT;
+        let hL,hS,hD;
+        if(anlys.lagSecs>300){hL=t('dash_health_delayed');hS='color:#ff9800';hD=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
+        else if(anlys.lagSecs>60){hL=t('dash_health_catching');hS='color:#ff9800';hD=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
+        else{hL=t('dash_health_ok');hS='color:#4caf50';hD=anlys.backlog>0?(anlys.backlog+' '+t('dash_backlog')):'';}
+        kpi.value={total:nT,species:nS,review:review.total||0,healthLabel:hL,healthStyle:hS,healthDetail:hD};
+        }catch(e){}
       }
       function fmtLag(s){if(!s||s<=0)return'0s';if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'min';return Math.floor(s/3600)+'h';}
 
       // ── Lifecycle ──────────────────────────────────────────
-      let statusIv,kpiIv,detIv,spIv;
+      let sIv,kIv,dIv,spIv;
       onMounted(async()=>{
-        connectMic(); connectLogs();
-        await fetchStatus();
-        fetchLatestDetection();
-        setTimeout(fetchKpis,300);
-        setTimeout(fetchRecentSpecies,600);
-        statusIv=setInterval(fetchStatus,30000);
-        kpiIv=setInterval(fetchKpis,15000);
-        detIv=setInterval(fetchLatestDetection,12000);
-        spIv=setInterval(fetchRecentSpecies,20000);
+        connectMic();connectLogs();
+        await fetchStatus(); fetchLatestDetection();
+        setTimeout(fetchKpis,300); setTimeout(fetchRecentSpecies,600);
+        sIv=setInterval(fetchStatus,30000);kIv=setInterval(fetchKpis,15000);
+        dIv=setInterval(fetchLatestDetection,12000);spIv=setInterval(fetchRecentSpecies,20000);
       });
-      onUnmounted(()=>{
-        if(micSource)micSource.close(); if(logSource)logSource.close();
-        clearInterval(statusIv);clearInterval(kpiIv);clearInterval(detIv);clearInterval(spIv);
-      });
+      onUnmounted(()=>{if(micSource)micSource.close();if(logSource)logSource.close();clearInterval(sIv);clearInterval(kIv);clearInterval(dIv);clearInterval(spIv);});
 
       return {
         t,spName,micDb,micActive,micBars,
+        conn1Active,conn1Fire,conn2Active,conn2Fire,
         status,enginePulse,detPulse,detEnter,
         pipeStages,pipelineDotClass,pipeFillPct,
         lastDet,detStatus,detStatusLabel,confClass,photoUrl,
