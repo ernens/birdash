@@ -692,7 +692,7 @@ BIRDASH.ready.then(() => {
       const lastDet=ref(null); let lastDetKey='';
       async function fetchLatestDetection(){
         try{
-          const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Date,Time,Sci_Name,Com_Name,Confidence,Model,File_Name FROM detections ORDER BY Date DESC,Time DESC LIMIT 1'})});
+          const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Date,Time,Sci_Name,Com_Name,Confidence,Model,File_Name FROM detections WHERE Confidence>=? ORDER BY Date DESC,Time DESC LIMIT 1',params:[BIRD_CONFIG.defaultConfidence]})});
           const d=await r.json();
           if(d.rows&&d.rows.length>0){
             const row=d.rows[0],key=row[0]+row[1]+row[3],isNew=key!==lastDetKey;
@@ -711,7 +711,7 @@ BIRDASH.ready.then(() => {
       const recentSpecies=ref([]);
       async function fetchRecentSpecies(){
         try{const today=new Date().toISOString().slice(0,10);
-        const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Com_Name,Sci_Name,COUNT(*)as cnt,MAX(Time)as lt FROM detections WHERE Date=? GROUP BY Sci_Name ORDER BY lt DESC LIMIT 8',params:[today]})});
+        const r=await fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT Com_Name,Sci_Name,COUNT(*)as cnt,MAX(Time)as lt FROM detections WHERE Date=? AND Confidence>=? GROUP BY Sci_Name ORDER BY lt DESC LIMIT 8',params:[today,BIRD_CONFIG.defaultConfidence]})});
         const d=await r.json();
         recentSpecies.value=(d.rows||[]).map(row=>({comName:row[0],sciName:row[1],count:row[2],lastTime:row[3]}));
         }catch(e){}
@@ -723,7 +723,7 @@ BIRDASH.ready.then(() => {
       async function fetchKpis(){
         try{const today=new Date().toISOString().slice(0,10);
         const[statsR,reviewR]=await Promise.all([
-          fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*)as total,COUNT(DISTINCT Com_Name)as species FROM detections WHERE Date=?',params:[today]})}),
+          fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*)as total,COUNT(DISTINCT Com_Name)as species FROM detections WHERE Date=? AND Confidence>=?',params:[today,BIRD_CONFIG.defaultConfidence]})}),
           fetch(API+'/flagged-detections?dateFrom=1900-01-01&dateTo='+today+'&limit=1'),
         ]);
         const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value;
