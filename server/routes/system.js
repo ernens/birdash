@@ -291,7 +291,7 @@ function handle(req, res, pathname, ctx) {
             inferenceTime = parseFloat(primaryMatch[primaryMatch.length - 1].match(/in ([\d.]+)s/)[1]);
           }
           // Secondary model timing (match any Perch variant)
-          const secMatch = logOut.match(/\[Perch_v2[^\]]*\] .+\.wav: \d+ detections in ([\d.]+)s/g);
+          const secMatch = logOut.match(/\[perch_v2[^\]]*\] .+\.wav: \d+ detections in ([\d.]+)s/gi);
           if (secMatch && secMatch.length > 0) {
             secondaryInferenceTime = parseFloat(secMatch[secMatch.length - 1].match(/in ([\d.]+)s/)[1]);
           }
