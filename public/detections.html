@@ -20,6 +20,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -222,6 +223,7 @@ const { useI18n, useTheme, useNav, useAudio, useFavorites, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf,
         localDateStr, daysAgo, getUrlParam, navigateTo,
         photoUrl, buildAudioUrl, shortModel } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 // Directive v-click-outside pour fermer le dropdown
 const vClickOutside = {
@@ -375,7 +377,7 @@ const app = createApp({
 
     async function loadSpecies() {
       try {
-        const r = await birdQuery(`SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC`);
+        const r = await birdQuery(...Q.allCommonNames());
         speciesList.value = r.map(x => x.Com_Name);
       } catch(e) { console.error(e); }
     }

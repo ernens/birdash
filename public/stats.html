@@ -21,6 +21,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -193,6 +194,7 @@ const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         useFilterPeriod, useFilterConfidence, buildWhereClause,
         birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, photoUrl, quickPlaySpecies } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 const app = createApp({
   setup() {
@@ -291,7 +293,7 @@ const app = createApp({
 
     async function loadConfData() {
       try {
-        const rows = await birdQuery(`SELECT CAST(CAST(Confidence*10 AS INT) AS TEXT)||'0%' as bucket, CAST(CAST(Confidence*10 AS INT)*10 AS INTEGER) as pct, COUNT(*) as n FROM detections GROUP BY CAST(Confidence*10 AS INT) ORDER BY pct ASC`);
+        const rows = await birdQuery(...Q.confidenceHistogram());
         confData.value = rows;
       } catch(e) {}
     }
@@ -302,7 +304,7 @@ const app = createApp({
         const where = buildWhere();
         const [maxDet]  = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fc.confidence.value]);
         const [maxSp]   = await birdQuery(`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fc.confidence.value]);
-        const [maxConf] = await birdQuery(`SELECT Date, Com_Name, Sci_Name, ROUND(Confidence*100,1) as conf FROM detections ORDER BY Confidence DESC LIMIT 1`);
+        const [maxConf] = await birdQuery(...Q.recordConfidence());
         records.value = { loading:false, maxDet, maxSp, maxConf };
       } catch(e) { records.value = { loading:false, maxDet:null, maxSp:null, maxConf:null }; }
     }

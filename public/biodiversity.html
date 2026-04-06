@@ -22,6 +22,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -172,6 +173,7 @@ const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
         birdQuery, escHtml, safeHtml, chartDefaults, daysAgo, localDateStr, navigateTo, photoUrl, quickPlaySpecies } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 const app = createApp({
   setup() {
@@ -408,7 +410,7 @@ const app = createApp({
     async function loadMatrix() {
       matrix.value.loading = true;
       try {
-        const topRows = await birdQuery(`SELECT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections WHERE Confidence>=? GROUP BY Com_Name ORDER BY COUNT(*) DESC LIMIT 20`,[fc.confidence.value]);
+        const topRows = await birdQuery(...Q.topSpeciesAllTime(20, fc.confidence.value));
         const topSp = topRows.map(r=>r.Com_Name);
         const sciMap = {}; topRows.forEach(r=>{sciMap[r.Com_Name]=r.Sci_Name;});
         if (!topSp.length) { matrix.value={loading:false,error:null,html:`<p class="error-msg">${t('no_data')}</p>`}; return; }

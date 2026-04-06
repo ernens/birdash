@@ -20,6 +20,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -342,6 +343,7 @@ const { useI18n, useTheme, useNav, useSpeciesNames, useFavorites,
         localDateStr, buildAudioUrl, buildSpeciesLinks,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav,
         navigateTo, useAudioPlayer } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 // PCM brut conservé entre loadDetection et applyClean (non réactif)
 let _rawPcm = null;
@@ -421,18 +423,9 @@ const app = createApp({
 
     async function loadKpis() {
       try {
-        const [d] = await birdQuery(
-          `SELECT COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp,
-                  ROUND(AVG(Confidence)*100,1) as conf,
-                  MAX(Date) as last_date, MAX(Time) as last_time
-           FROM detections WHERE Date=? AND Confidence>=?`, [today, minConf.value]);
-        const [lh] = await birdQuery(
-          `SELECT COUNT(*) as n FROM detections
-           WHERE Date=? AND Confidence>=? AND Time >= time('now','-1 hour','localtime')`,
-          [today, minConf.value]);
-        const nsRows = await birdQuery(
-          `SELECT Com_Name FROM detections WHERE Confidence>=?
-           GROUP BY Com_Name HAVING MIN(Date)=?`, [minConf.value, today]);
+        const [d] = await birdQuery(...Q.todayStatsExtended(today, minConf.value));
+        const [lh] = await birdQuery(...Q.lastHourCount(today, minConf.value));
+        const nsRows = await birdQuery(...Q.newSpeciesForDate(today, minConf.value));
         newSpeciesSet.value = new Set(nsRows.map(r => r.Com_Name));
         const ns = { n: nsRows.length };
         kpis.value = {
@@ -474,10 +467,7 @@ const app = createApp({
       currentDetIdx.value = 0;
       spectro.value       = { state: 'idle' };
       try {
-        const rows = await birdQuery(
-          `SELECT Time, Confidence, File_Name
-           FROM detections WHERE Date=? AND Com_Name=? AND Confidence>=?
-           ORDER BY Time DESC`, [today, sp.Com_Name, minConf.value]);
+        const rows = await birdQuery(...Q.detectionsForSpecies(today, sp.Com_Name, minConf.value));
         selectedDets.value = rows;
         if (!sp.imgUrl && sp.sci) sp.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sp.sci);
         await loadDetection(0);

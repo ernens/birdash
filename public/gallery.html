@@ -20,6 +20,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -142,6 +143,7 @@ async function renderMiniSpectro(url, canvas) {
 <script>
 const { createApp, ref, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
 const { birdQuery, buildAudioUrl, useFilterPeriod, useFilterConfidence, buildWhereClause } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 const app = createApp({
   setup() {
@@ -171,7 +173,7 @@ const app = createApp({
       loading.value = true;
       try {
         // Load new species for filter
-        const nsRows = await birdQuery(`SELECT Com_Name FROM detections GROUP BY Com_Name HAVING MIN(Date) >= ?`, [fp.dateFrom.value || '2000-01-01']);
+        const nsRows = await birdQuery(...Q.newSpeciesSince(fp.dateFrom.value));
         newSpeciesSet.value = new Set(nsRows.map(r => r.Com_Name));
         const wc = buildWhereClause({
           dateFrom: fp.dateFrom.value,

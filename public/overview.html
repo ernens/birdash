@@ -22,6 +22,7 @@
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-timeline.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -466,6 +467,7 @@ const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         localDateStr, daysAgo, chartDefaults, navigateTo,
         buildAudioUrl, photoUrl, shortModel, quickPlaySpecies,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 const app = createApp({
   setup() {
@@ -552,8 +554,8 @@ const app = createApp({
           `SELECT Com_Name, Sci_Name, Confidence, Time FROM detections
            WHERE Date=? ORDER BY Confidence DESC LIMIT 1`, [today]);
         // Counts
-        const [tc] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=?`, [today]);
-        const [yc] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=?`, [yesterday]);
+        const [tc] = await birdQuery(...Q.countForDate(today));
+        const [yc] = await birdQuery(...Q.countForDate(yesterday));
         morning.value = {
           newSpecies: (newRows || []).map(r => r.Com_Name),
           bestDet: best || null,
@@ -611,7 +613,7 @@ const app = createApp({
     async function loadKpis() {
       try {
         const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf FROM detections WHERE Date=?`,[today]);
-        const [tot] = await birdQuery(`SELECT COUNT(*) as n FROM detections`);
+        const [tot] = await birdQuery(...Q.totalDetections());
         // Détections dernière heure
         const now = new Date();
         const hh = String(now.getHours()).padStart(2,'0');
@@ -621,7 +623,7 @@ const app = createApp({
         const mm0 = String(oneHourAgo.getMinutes()).padStart(2,'0');
         const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=? AND Time>=? AND Time<=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`]);
         // Espèces rares aujourd'hui (≤5 détections all-time)
-        const rares = await birdQuery(`WITH today_sp AS (SELECT DISTINCT Com_Name FROM detections WHERE Date=?), rare_sp AS (SELECT Com_Name FROM detections GROUP BY Com_Name HAVING COUNT(*)<=5) SELECT COUNT(*) as n FROM today_sp INNER JOIN rare_sp USING(Com_Name)`,[today]);
+        const rares = await birdQuery(...Q.rareTodayCount(today));
         kpis.value = {
           det: td?td.det.toLocaleString():'0', sp: td?td.sp:'0',
           conf: td&&td.conf?td.conf+'%':'—', total: tot?tot.n.toLocaleString():'0',
@@ -634,7 +636,7 @@ const app = createApp({
     async function loadLastDet() {
       lastDet.value.loading = true;
       try {
-        const [row] = await birdQuery(`SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model FROM detections ORDER BY Date DESC,Time DESC LIMIT 1`);
+        const [row] = await birdQuery(...Q.latestDetectionRaw());
         const photo = row?.Sci_Name ? photoUrl(row.Sci_Name) : null;
         lastDet.value = { loading:false, row:row||null, photoUrl: photo };
         // Charger le spectrogramme automatiquement
@@ -787,13 +789,13 @@ const app = createApp({
 
     async function load7dData() {
       try {
-        const rows = await birdQuery(`SELECT Date, COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE Date>=? AND Date<=? GROUP BY Date ORDER BY Date ASC`,[daysAgo(6),today]);
+        const rows = await birdQuery(...Q.dailyStats(daysAgo(6), today));
         data7d.value = rows;
       } catch(e) { console.error(e); }
     }
     async function loadTopData() {
       try {
-        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Confidence>=? GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT ?`,[daysAgo(6),CONF,BIRD_CONFIG.topSpeciesCount]);
+        const rows = await birdQuery(...Q.topSpecies(daysAgo(6), BIRD_CONFIG.topSpeciesCount, CONF));
         dataTop.value = rows;
       } catch(e) { console.error(e); }
     }

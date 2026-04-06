@@ -21,6 +21,7 @@
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -440,6 +441,7 @@ const { useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesN
         birdQuery, fmtDate, fmtTime, fmtConf,
         daysAgo, getUrlParam, navigateTo,
         buildSpeciesLinks, chartDefaults, shortModel, authHeaders } = BIRDASH;
+      const Q = BIRDASH_QUERIES;
 
 const app = createApp({
   setup() {
@@ -763,7 +765,7 @@ const app = createApp({
 
     async function loadHourlyData(name) {
       try {
-        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM detections WHERE Com_Name=? GROUP BY h ORDER BY h ASC`,[name]);
+        const rows = await birdQuery(...Q.hourlyBySpecies(name));
         const vals = Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         hourlyData.value = vals;
@@ -790,7 +792,7 @@ const app = createApp({
     async function load30dData(name) {
       try {
         const from = daysAgo(29);
-        const rows = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE Com_Name=? AND Date>=? GROUP BY Date ORDER BY Date ASC`,[name,from]);
+        const rows = await birdQuery(...Q.dailyBySpecies(name, from));
         const map={};
         rows.forEach(r=>{map[r.Date]=r.n;});
         const vals=[];
@@ -832,7 +834,7 @@ const app = createApp({
 
     async function loadFeed(name) {
       try {
-        const rows = await birdQuery(`SELECT Date,Time,Confidence,File_Name,Model FROM detections WHERE Com_Name=? ORDER BY Date DESC,Time DESC LIMIT 15`,[name]);
+        const rows = await birdQuery(...Q.speciesDetections(name, 15));
         feed.value = rows;
       } catch(e) { feed.value=[]; }
     }
@@ -1041,7 +1043,7 @@ const app = createApp({
       BIRDASH_UTILS.loadTaxonomy(lang.value);
       // Always load species list for the inline picker
       try {
-        const rows = await birdQuery(`SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC`);
+        const rows = await birdQuery(...Q.allSpeciesNames());
         speciesList.value = rows.map(r => ({ com: r.Com_Name, sci: r.Sci_Name }));
       } catch(e) {}
 
@@ -1144,16 +1146,16 @@ const app = createApp({
       }
       manageDets.value.result = results;
       // Check if species still has detections
-      const [check] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Com_Name=?`, [sp.value.name]);
+      const [check] = await birdQuery(...Q.speciesExists(sp.value.name));
       if (!check || !check.n) {
         // Species gone — close modal, load last detected species
         manageDets.value = { open: false, items: [], selected: new Set(), result: null };
         try {
-          const [last] = await birdQuery(`SELECT Com_Name FROM detections ORDER BY Date DESC, Time DESC LIMIT 1`);
+          const [last] = await birdQuery(...Q.latestDetectionRaw());
           if (last) { await loadDetail(last.Com_Name); }
           else { mode.value = 'picker'; }
           // Refresh species list
-          const spRows = await birdQuery(`SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC`);
+          const spRows = await birdQuery(...Q.allSpeciesNames());
           speciesList.value = spRows.map(r => ({ com: r.Com_Name, sci: r.Sci_Name }));
         } catch(e) { mode.value = 'picker'; }
         return;
