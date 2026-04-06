@@ -70,6 +70,9 @@ async function writeBirdnetConf(updates) {
   await fsp.writeFile(tmpFile, result.join('\n'));
   await execCmd('sudo', ['cp', tmpFile, BIRDNET_CONF]);
   await fsp.unlink(tmpFile).catch(() => {});
+  // Invalidate cache so next read picks up new values
+  _birdnetConfCache = null;
+  _birdnetConfTs = 0;
 }
 
 function execCmd(cmd, args) {
