@@ -1728,7 +1728,7 @@
     }
     if (filters.dateFrom) { clauses.push('Date >= ?'); params.push(filters.dateFrom); }
     if (filters.dateTo)   { clauses.push('Date <= ?'); params.push(filters.dateTo); }
-    if (filters.confidence > 0) { clauses.push('Confidence >= ?'); params.push(filters.confidence); }
+    { const c = filters.confidence > 0 ? filters.confidence : (filters.noConfidenceDefault ? 0 : BIRD_CONFIG.defaultConfidence); if (c > 0) { clauses.push('Confidence >= ?'); params.push(c); } }
     if (filters.extraWhere) {
       for (let i = 0; i < filters.extraWhere.length; i++) {
         clauses.push(filters.extraWhere[i]);

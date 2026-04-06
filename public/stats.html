@@ -224,10 +224,8 @@ const app = createApp({
     }
 
     function buildWhere() {
-      const parts = [`Confidence>=?`];
-      if (fp.dateFrom.value) parts.push(`Date>='${fp.dateFrom.value}'`);
-      if (fp.dateTo.value)   parts.push(`Date<='${fp.dateTo.value}'`);
-      return parts.join(' AND ');
+      const { where, params } = Q.buildWhere({ dateFrom: fp.dateFrom.value, dateTo: fp.dateTo.value, conf: fc.confidence.value });
+      return { where, params };
     }
 
     const kpis     = ref({ loading:true });
@@ -251,8 +249,8 @@ const app = createApp({
       kpis.value.loading = true;
       try {
         const where = buildWhere();
-        const [g]  = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last FROM detections WHERE ${where}`,[fc.confidence.value]);
-        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date)`,[fc.confidence.value]);
+        const [g]  = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last FROM detections WHERE ${where}`,wp);
+        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date)`,wp);
         const days = Math.round((new Date(g.last)-new Date(g.first))/86400000)+1;
         kpis.value = { loading:false, total:g.total.toLocaleString(), sp:g.sp, avgConf:g.avg_conf, maxConf:g.max_conf, perDay:Math.round(pd.avg||0).toLocaleString(), days:days.toLocaleString() };
       } catch(e) { kpis.value = { loading:false }; }
@@ -261,7 +259,7 @@ const app = createApp({
     async function loadMonthlyData() {
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY ym ORDER BY ym ASC`,[fc.confidence.value]);
+        const rows = await birdQuery(`SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY ym ORDER BY ym ASC`,wp);
         monthlyData.value = rows;
       } catch(e) {}
     }
@@ -275,7 +273,7 @@ const app = createApp({
       topCount.value.loading = true;
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT 15`,[fc.confidence.value]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT 15`,wp);
         topCount.value = { loading:false, rows };
         loadPhotosFor(topCount, rows);
       } catch(e) { topCount.value = { loading:false, rows:[] }; }
@@ -285,7 +283,7 @@ const app = createApp({
       topConf.value.loading = true;
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,[fc.confidence.value]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,wp);
         topConf.value = { loading:false, rows };
         loadPhotosFor(topConf, rows);
       } catch(e) { topConf.value = { loading:false, rows:[] }; }
@@ -302,8 +300,8 @@ const app = createApp({
       records.value.loading = true;
       try {
         const where = buildWhere();
-        const [maxDet]  = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fc.confidence.value]);
-        const [maxSp]   = await birdQuery(`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,[fc.confidence.value]);
+        const [maxDet]  = await birdQuery(`SELECT Date, COUNT(*) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,wp);
+        const [maxSp]   = await birdQuery(`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`,wp);
         const [maxConf] = await birdQuery(...Q.recordConfidence());
         records.value = { loading:false, maxDet, maxSp, maxConf };
       } catch(e) { records.value = { loading:false, maxDet:null, maxSp:null, maxConf:null }; }
@@ -312,7 +310,7 @@ const app = createApp({
     async function loadYearlyData() {
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT SUBSTR(Date,1,4) as year, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY year ORDER BY year ASC`,[fc.confidence.value]);
+        const rows = await birdQuery(`SELECT SUBSTR(Date,1,4) as year, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${where} GROUP BY year ORDER BY year ASC`,wp);
         yearlyData.value = rows;
       } catch(e) {}
     }
@@ -364,7 +362,7 @@ const app = createApp({
     async function exportCsv() {
       try {
         const where = buildWhere();
-        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n, ROUND(AVG(Confidence)*100,1) as avg_conf, MIN(Date) as first_date, MAX(Date) as last_date, COUNT(DISTINCT Date) as days FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC`,[fc.confidence.value]);
+        const rows = await birdQuery(`SELECT Com_Name, Sci_Name, COUNT(*) as n, ROUND(AVG(Confidence)*100,1) as avg_conf, MIN(Date) as first_date, MAX(Date) as last_date, COUNT(DISTINCT Date) as days FROM detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC`,wp);
         if (!rows.length) return;
         const headers = ['Species','Scientific_Name','Detections','Avg_Confidence','First_Date','Last_Date','Days_Detected'];
         const csvRows = [headers.join(',')];

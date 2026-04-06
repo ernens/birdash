@@ -431,6 +431,51 @@
     },
   };
 
+  // ═══════════════════════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Build a WHERE clause with guaranteed confidence filter.
+     * @param {Object} opts
+     * @param {string}   opts.dateFrom   — start date
+     * @param {string}   opts.dateTo     — end date
+     * @param {string}   opts.species    — single Com_Name
+     * @param {string[]} opts.speciesList — multiple Com_Names
+     * @param {string}   opts.sciName    — Sci_Name filter
+     * @param {number}   opts.conf       — confidence threshold (auto-defaults)
+     * @param {string[]} opts.extra      — additional raw WHERE clauses
+     * @returns {{ where: string, params: any[] }}
+     */
+    buildWhere(opts = {}) {
+      const c = opts.conf || C();
+      const clauses = ['Confidence>=?'];
+      const params = [c];
+      if (opts.dateFrom) { clauses.push('Date>=?'); params.push(opts.dateFrom); }
+      if (opts.dateTo)   { clauses.push('Date<=?'); params.push(opts.dateTo); }
+      if (opts.species)  { clauses.push('Com_Name=?'); params.push(opts.species); }
+      if (opts.speciesList && opts.speciesList.length) {
+        clauses.push('Com_Name IN (' + opts.speciesList.map(() => '?').join(',') + ')');
+        params.push(...opts.speciesList);
+      }
+      if (opts.sciName)  { clauses.push('Sci_Name=?'); params.push(opts.sciName); }
+      if (opts.extra) { for (const e of opts.extra) clauses.push(e); }
+      return { where: clauses.join(' AND '), params };
+    },
+
+    /**
+     * Shorthand: wrap a SELECT query with buildWhere filters.
+     * @param {string} select — SELECT ... FROM detections WHERE
+     * @param {Object} opts   — same as buildWhere
+     * @param {string} suffix — ORDER BY / GROUP BY / LIMIT appended after WHERE
+     * @returns [sql, params]
+     */
+    query(select, opts = {}, suffix = '') {
+      const { where, params } = Q.buildWhere(opts);
+      return [select + ' ' + where + (suffix ? ' ' + suffix : ''), params];
+    },
+  };
+
   window.BIRDASH_QUERIES = Q;
 
 })(BIRD_CONFIG);

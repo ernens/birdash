@@ -424,7 +424,7 @@ const app = createApp({
       }
       if (fp.dateFrom.value) { wheres.push('Date>=?');       params.push(fp.dateFrom.value); }
       if (fp.dateTo.value)   { wheres.push('Date<=?');       params.push(fp.dateTo.value); }
-      if (fc.confidence.value > 0) { wheres.push('Confidence>=?'); params.push(fc.confidence.value); }
+      { const c = fc.confidence.value > 0 ? fc.confidence.value : Q.confidence(); wheres.push('Confidence>=?'); params.push(c); }
       return { where:wheres.join(' AND '), params };
     }
 
