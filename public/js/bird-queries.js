@@ -429,24 +429,12 @@
     totalSpeciesCount(where, c) {
       return [`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?${where ? ' AND ' + where : ''}`, [c || C()]];
     },
-  };
 
-  // ═══════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════
     //  HELPERS
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Build a WHERE clause with guaranteed confidence filter.
-     * @param {Object} opts
-     * @param {string}   opts.dateFrom   — start date
-     * @param {string}   opts.dateTo     — end date
-     * @param {string}   opts.species    — single Com_Name
-     * @param {string[]} opts.speciesList — multiple Com_Names
-     * @param {string}   opts.sciName    — Sci_Name filter
-     * @param {number}   opts.conf       — confidence threshold (auto-defaults)
-     * @param {string[]} opts.extra      — additional raw WHERE clauses
-     * @returns {{ where: string, params: any[] }}
-     */
+    /** Build a parameterized WHERE clause with guaranteed confidence. */
     buildWhere(opts = {}) {
       const c = opts.conf || C();
       const clauses = ['Confidence>=?'];
@@ -458,22 +446,19 @@
         clauses.push('Com_Name IN (' + opts.speciesList.map(() => '?').join(',') + ')');
         params.push(...opts.speciesList);
       }
-      if (opts.sciName)  { clauses.push('Sci_Name=?'); params.push(opts.sciName); }
+      if (opts.sciName) { clauses.push('Sci_Name=?'); params.push(opts.sciName); }
       if (opts.extra) { for (const e of opts.extra) clauses.push(e); }
       return { where: clauses.join(' AND '), params };
     },
 
-    /**
-     * Shorthand: wrap a SELECT query with buildWhere filters.
-     * @param {string} select — SELECT ... FROM detections WHERE
-     * @param {Object} opts   — same as buildWhere
-     * @param {string} suffix — ORDER BY / GROUP BY / LIMIT appended after WHERE
-     * @returns [sql, params]
-     */
+    /** Shorthand: SELECT ... FROM detections WHERE {buildWhere} [suffix]. */
     query(select, opts = {}, suffix = '') {
       const { where, params } = Q.buildWhere(opts);
       return [select + ' ' + where + (suffix ? ' ' + suffix : ''), params];
     },
+
+    /** Current confidence threshold. */
+    confidence() { return C(); },
   };
 
   window.BIRDASH_QUERIES = Q;
