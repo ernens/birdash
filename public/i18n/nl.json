@@ -1041,5 +1041,22 @@
   "dash_health_ok": "OK",
   "dash_health_delayed": "Vertraagd",
   "dash_health_catching": "Inhalen",
-  "nav_dashboard": "Bird Flow"
+  "nav_dashboard": "Bird Flow",
+  "dash_baseline": "Luistert, analyseert en valideert vogelactiviteit in real-time.",
+  "dash_dual_consensus": "Dubbel consensus",
+  "dash_single_model": "Enkel model",
+  "dash_accepted": "Geaccepteerd",
+  "dash_review": "Controleren",
+  "dash_stage_listen": "Luister",
+  "dash_stage_record": "Opname",
+  "dash_stage_analyze": "Analyse",
+  "dash_stage_store": "Opslaan",
+  "dash_events": "gebeurtenissen",
+  "dash_sys_title": "Systeemstatus",
+  "dash_sys_model": "Primair model",
+  "dash_sys_secondary": "Secundair model",
+  "dash_sys_sensitivity": "Gevoeligheid",
+  "dash_sys_lag": "Vertraging",
+  "dash_sys_backlog": "Wachtrij",
+  "dash_sys_rec_len": "Opnameduur"
 }

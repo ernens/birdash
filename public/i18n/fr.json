@@ -1041,5 +1041,22 @@
   "dash_health_ok": "OK",
   "dash_health_delayed": "Retard",
   "dash_health_catching": "Rattrapage",
-  "nav_dashboard": "Bird Flow"
+  "nav_dashboard": "Bird Flow",
+  "dash_baseline": "Ecoute, analyse et valide l'activite aviaire en temps reel.",
+  "dash_dual_consensus": "Consensus dual",
+  "dash_single_model": "Modele unique",
+  "dash_accepted": "Accepte",
+  "dash_review": "A valider",
+  "dash_stage_listen": "Ecoute",
+  "dash_stage_record": "Enreg.",
+  "dash_stage_analyze": "Analyse",
+  "dash_stage_store": "Stockage",
+  "dash_events": "evenements",
+  "dash_sys_title": "Etat du systeme",
+  "dash_sys_model": "Modele principal",
+  "dash_sys_secondary": "Modele secondaire",
+  "dash_sys_sensitivity": "Sensibilite",
+  "dash_sys_lag": "Retard",
+  "dash_sys_backlog": "File attente",
+  "dash_sys_rec_len": "Duree enreg."
 }

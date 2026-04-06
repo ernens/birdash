@@ -1041,5 +1041,22 @@
   "dash_health_ok": "OK",
   "dash_health_delayed": "Verzögert",
   "dash_health_catching": "Aufholen",
-  "nav_dashboard": "Bird Flow"
+  "nav_dashboard": "Bird Flow",
+  "dash_baseline": "Lauscht, analysiert und validiert Vogelaktivitat in Echtzeit.",
+  "dash_dual_consensus": "Dual-Konsensus",
+  "dash_single_model": "Einzelmodell",
+  "dash_accepted": "Akzeptiert",
+  "dash_review": "Prufen",
+  "dash_stage_listen": "Horen",
+  "dash_stage_record": "Aufn.",
+  "dash_stage_analyze": "Analyse",
+  "dash_stage_store": "Speicher",
+  "dash_events": "Ereignisse",
+  "dash_sys_title": "Systemstatus",
+  "dash_sys_model": "Primarmodell",
+  "dash_sys_secondary": "Sekundarmodell",
+  "dash_sys_sensitivity": "Empfindlichkeit",
+  "dash_sys_lag": "Verzogerung",
+  "dash_sys_backlog": "Warteschlange",
+  "dash_sys_rec_len": "Aufnahmedauer"
 }

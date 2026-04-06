@@ -1041,5 +1041,22 @@
   "dash_health_ok": "OK",
   "dash_health_delayed": "Delayed",
   "dash_health_catching": "Catching up",
-  "nav_dashboard": "Bird Flow"
+  "nav_dashboard": "Bird Flow",
+  "dash_baseline": "Listening, analyzing and validating bird activity in real time.",
+  "dash_dual_consensus": "Dual consensus",
+  "dash_single_model": "Single model",
+  "dash_accepted": "Accepted",
+  "dash_review": "Review",
+  "dash_stage_listen": "Listen",
+  "dash_stage_record": "Record",
+  "dash_stage_analyze": "Analyze",
+  "dash_stage_store": "Store",
+  "dash_events": "events",
+  "dash_sys_title": "System status",
+  "dash_sys_model": "Primary model",
+  "dash_sys_secondary": "Secondary model",
+  "dash_sys_sensitivity": "Sensitivity",
+  "dash_sys_lag": "Lag",
+  "dash_sys_backlog": "Backlog",
+  "dash_sys_rec_len": "Rec. length"
 }
