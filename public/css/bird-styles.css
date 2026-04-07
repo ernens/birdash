@@ -2130,6 +2130,7 @@ a:hover { opacity: .85; }
 .bell-item-critical:hover, .bell-item-warning:hover { background: var(--bg-card2, rgba(0,0,0,.04)); }
 
 /* ── BirdIcon component (Lucide SVG) ─────────────────────── */
+.bird-icon-wrap { display: inline-flex; align-items: center; justify-content: center; }
 .bird-icon { display: inline-block; flex-shrink: 0; vertical-align: -.15em; }
 .bird-icon.icon-sm { width: 14px; height: 14px; }
 .bird-icon.icon-md { width: 18px; height: 18px; }

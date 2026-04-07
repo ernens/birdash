@@ -2380,13 +2380,19 @@
       size: { type: [Number, String], default: 18 },
     },
     setup(props) {
-      const content = computed(() => {
+      const svgHtml = computed(() => {
         const icons = window.BIRDASH_ICONS || {};
-        return icons[props.name] || '';
+        const inner = icons[props.name] || '';
+        if (!inner) return '';
+        const sz = props.size || 18;
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz +
+               '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+               ' stroke-linecap="round" stroke-linejoin="round" class="bird-icon" data-icon="' +
+               props.name + '">' + inner + '</svg>';
       });
-      return { content };
+      return { svgHtml };
     },
-    template: `<svg xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bird-icon" v-html="content" :data-icon="name"></svg>`
+    template: `<span class="bird-icon-wrap" v-html="svgHtml"></span>`
   };
 
   // ── Composant BirdImg ────────────────────────────────────────────────────
