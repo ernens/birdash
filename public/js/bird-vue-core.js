@@ -2013,8 +2013,9 @@
       function refreshWarning() {
         const items = [];
         const today = U.localDateStr();
-        // Review queue
-        fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=1900-01-01&dateTo=${today}&limit=1`)
+        const weekAgo = U.daysAgo(6); // last 7 days, matching review.html default
+        // Review queue (same date range + limit as review.html)
+        fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${weekAgo}&dateTo=${today}&limit=2000`)
           .then(r => r.json()).then(d => {
             if (d.total > 0) {
               items.push({
@@ -2116,7 +2117,7 @@
       // Review badge count
       const reviewCount = ref(0);
       function refreshReviewCount() {
-        fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=1900-01-01&dateTo=${U.localDateStr()}&limit=2000`)
+        fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(6)}&dateTo=${U.localDateStr()}&limit=2000`)
           .then(r => r.json()).then(d => { reviewCount.value = d.total || 0; }).catch(() => {});
       }
       refreshReviewCount();
