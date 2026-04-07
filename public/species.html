@@ -157,27 +157,27 @@
               🔗 {{t('share')}}
             </button>
           </div>
-        </div>
-      </div>
 
-      <!-- ── Action cards: deep tools ─────────────────────────── -->
-      <div v-if="sp.name" class="sp-actions">
-        <a class="sp-action-card" :href="'phenology.html?species='+encodeURIComponent(sp.name)">
-          <div class="sp-action-icon">📅</div>
-          <div class="sp-action-body">
-            <div class="sp-action-title">{{t('nav_phenology')}}</div>
-            <div class="sp-action-sub">{{t('sp_action_pheno_sub')}}</div>
+          <!-- ── Action cards: deep tools ─────────────────────────── -->
+          <div v-if="sp.name" class="sp-actions">
+            <a class="sp-action-card" :href="'phenology.html?species='+encodeURIComponent(sp.name)">
+              <div class="sp-action-icon">📅</div>
+              <div class="sp-action-body">
+                <div class="sp-action-title">{{t('nav_phenology')}}</div>
+                <div class="sp-action-sub">{{t('sp_action_pheno_sub')}}</div>
+              </div>
+              <div class="sp-action-arrow">→</div>
+            </a>
+            <a class="sp-action-card" :href="'analyses.html?species='+encodeURIComponent(sp.name)">
+              <div class="sp-action-icon">🔬</div>
+              <div class="sp-action-body">
+                <div class="sp-action-title">{{t('analyze_deep')}}</div>
+                <div class="sp-action-sub">{{t('sp_action_analyses_sub')}}</div>
+              </div>
+              <div class="sp-action-arrow">→</div>
+            </a>
           </div>
-          <div class="sp-action-arrow">→</div>
-        </a>
-        <a class="sp-action-card" :href="'analyses.html?species='+encodeURIComponent(sp.name)">
-          <div class="sp-action-icon">🔬</div>
-          <div class="sp-action-body">
-            <div class="sp-action-title">{{t('analyze_deep')}}</div>
-            <div class="sp-action-sub">{{t('sp_action_analyses_sub')}}</div>
-          </div>
-          <div class="sp-action-arrow">→</div>
-        </a>
+        </div>
       </div>
 
       <!-- ── Personal notes ─────────────────────────────────────── -->
