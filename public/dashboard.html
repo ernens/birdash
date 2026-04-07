@@ -177,19 +177,57 @@
     .bf-cores { display: flex; gap: .4rem; flex: 1; }
     .bf-core {
       flex: 1; border: 1.5px solid transparent; border-radius: 10px;
-      padding: .5rem; text-align: center;
+      padding: .65rem .55rem .55rem; text-align: center;
+      position: relative; overflow: hidden;
       transition: border-color .4s, background .4s, box-shadow .5s;
       display: flex; flex-direction: column; justify-content: center;
     }
-    .bf-core.birdnet { background:rgba(66,165,245,.06); border-color:rgba(66,165,245,.25); }
-    .bf-core.birdnet.firing { border-color:#42a5f5; box-shadow:0 0 16px -3px rgba(66,165,245,.45); }
-    .bf-core.perch { background:rgba(38,166,154,.06); border-color:rgba(38,166,154,.25); }
-    .bf-core.perch.firing { border-color:#26a69a; box-shadow:0 0 16px -3px rgba(38,166,154,.45); }
-    .bf-core-icon { font-size: 1rem; line-height: 1; font-weight: 800; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto .1rem; }
-    .bf-icon-bn { background: rgba(66,165,245,.15); color: #42a5f5; }
-    .bf-icon-perch { background: rgba(38,166,154,.15); color: #26a69a; }
-    .bf-core-name { font-size: .72rem; font-weight: 700; margin-top: .1rem; }
-    .bf-core-time { font-size: .62rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    /* Top accent bar — ::before for color identity */
+    .bf-core::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      transition: opacity .4s, box-shadow .5s, height .3s;
+      opacity: .5;
+    }
+    .bf-core.birdnet {
+      background: rgba(66,165,245,.06);
+      border-color: rgba(66,165,245,.25);
+    }
+    .bf-core.birdnet::before { background: #42a5f5; }
+    .bf-core.birdnet.firing {
+      border-color: #42a5f5;
+      box-shadow: 0 0 18px -3px rgba(66,165,245,.5);
+    }
+    .bf-core.birdnet.firing::before {
+      opacity: 1; height: 4px;
+      box-shadow: 0 0 8px #42a5f5;
+    }
+    .bf-core.perch {
+      background: rgba(38,166,154,.06);
+      border-color: rgba(38,166,154,.25);
+    }
+    .bf-core.perch::before { background: #26a69a; }
+    .bf-core.perch.firing {
+      border-color: #26a69a;
+      box-shadow: 0 0 18px -3px rgba(38,166,154,.5);
+    }
+    .bf-core.perch.firing::before {
+      opacity: 1; height: 4px;
+      box-shadow: 0 0 8px #26a69a;
+    }
+    .bf-core-name {
+      font-size: 1rem; font-weight: 800; line-height: 1.15;
+      margin-top: .1rem; letter-spacing: -.01em;
+    }
+    .bf-core.birdnet .bf-core-name { color: #42a5f5; }
+    .bf-core.perch .bf-core-name { color: #26a69a; }
+    .bf-core-time {
+      font-size: .65rem; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      display: inline-flex; align-items: center; gap: .2rem;
+      margin-top: .15rem;
+    }
+    .bf-core-time::before { content: '⚡'; font-size: .7rem; opacity: .8; }
     .bf-core-species {
       font-size: .68rem; font-weight: 600; margin-top: .25rem;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -391,7 +429,6 @@
         <div class="bf-ai-panel">
             <div class="bf-cores">
               <div class="bf-core birdnet" :class="{firing:enginePulse}">
-                <div class="bf-core-icon bf-icon-bn">BN</div>
                 <div class="bf-core-name">{{status.model ? status.modelLabel : '…'}}</div>
                 <div class="bf-core-time">{{bnLive.time ? bnLive.time+'s' : (status.inferenceTime?status.inferenceTime+'s':'\u2014')}}</div>
                 <div v-if="bnLive.species" class="bf-core-species" :class="{stale: bnLive.detections===0}">{{bnLive.species}}</div>
@@ -399,7 +436,6 @@
                 <div v-if="!bnLive.species" class="bf-core-idle">{{t('dash_model_listening')}}</div>
               </div>
               <div v-if="status.secondaryModel" class="bf-core perch" :class="{firing:enginePulse}">
-                <div class="bf-core-icon bf-icon-perch">P2</div>
                 <div class="bf-core-name">{{status.secModelLabel}}</div>
                 <div class="bf-core-time">{{p2Live.time ? p2Live.time+'s' : (status.secondaryInferenceTime?status.secondaryInferenceTime+'s':'\u2014')}}</div>
                 <div v-if="p2Live.species" class="bf-core-species" :class="{stale: p2Live.detections===0}">{{p2Live.species}}</div>
