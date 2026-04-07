@@ -2128,3 +2128,10 @@ a:hover { opacity: .85; }
 .bell-item-warning  { border-left: 3px solid #ff9800; cursor: pointer; }
 .bell-item-birds    { border-left: 3px solid #4caf50; }
 .bell-item-critical:hover, .bell-item-warning:hover { background: var(--bg-card2, rgba(0,0,0,.04)); }
+
+/* ── BirdIcon component (Lucide SVG) ─────────────────────── */
+.bird-icon { display: inline-block; flex-shrink: 0; vertical-align: -.15em; }
+.bird-icon.icon-sm { width: 14px; height: 14px; }
+.bird-icon.icon-md { width: 18px; height: 18px; }
+.bird-icon.icon-lg { width: 22px; height: 22px; }
+.bird-icon.icon-xl { width: 32px; height: 32px; }

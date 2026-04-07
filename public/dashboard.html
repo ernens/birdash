@@ -19,6 +19,7 @@
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <style>
     /* ════════════════════════════════════════════════════════════
@@ -500,10 +501,10 @@
 
     <!-- ════ KPIs ═══════════════════════════════════════════════ -->
     <div class="bf-kpis">
-      <div class="bf-kpi"><div class="bf-kpi-icon">🐦</div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{kpi.total}}</div><div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div></div></div>
-      <div class="bf-kpi"><div class="bf-kpi-icon">🦜</div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{kpi.species}}</div><div class="bf-kpi-label">{{t('dash_kpi_species')}}</div></div></div>
-      <div class="bf-kpi"><div class="bf-kpi-icon" :style="kpi.review>0?'background:rgba(255,152,0,.12)':''">✅</div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.review>0?'color:#ff9800':''">{{kpi.review}}</div><div class="bf-kpi-label">{{t('dash_kpi_review')}}</div></div></div>
-      <div class="bf-kpi"><div class="bf-kpi-icon">💚</div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.healthStyle">{{kpi.healthLabel}}</div><div class="bf-kpi-label">{{t('dash_kpi_health')}}</div><div class="bf-kpi-sub" v-if="kpi.healthDetail">{{kpi.healthDetail}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20" /></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{kpi.total}}</div><div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20" /></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{kpi.species}}</div><div class="bf-kpi-label">{{t('dash_kpi_species')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon" :style="kpi.review>0?'background:rgba(255,152,0,.12)':''"><bird-icon name="check-circle" :size="20" /></div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.review>0?'color:#ff9800':''">{{kpi.review}}</div><div class="bf-kpi-label">{{t('dash_kpi_review')}}</div></div></div>
+      <div class="bf-kpi"><div class="bf-kpi-icon"><bird-icon name="activity" :size="20" /></div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.healthStyle">{{kpi.healthLabel}}</div><div class="bf-kpi-label">{{t('dash_kpi_health')}}</div><div class="bf-kpi-sub" v-if="kpi.healthDetail">{{kpi.healthDetail}}</div></div></div>
     </div>
 
     <!-- ════ BOTTOM ═════════════════════════════════════════════ -->
@@ -537,11 +538,11 @@
     </div>
 
     <div class="bf-quick">
-      <a href="spectrogram.html">📡 {{t('nav_spectrogram')}}</a>
-      <a href="today.html">📅 {{t('nav_today')}}</a>
-      <a href="species.html">🦜 {{t('nav_species')}}</a>
-      <a href="review.html">✅ {{t('nav_review')}}</a>
-      <a href="system.html">🖥️ {{t('nav_system')}}</a>
+      <a href="spectrogram.html"><bird-icon name="radio" :size="14" /> {{t('nav_spectrogram')}}</a>
+      <a href="today.html"><bird-icon name="calendar-days" :size="14" /> {{t('nav_today')}}</a>
+      <a href="species.html"><bird-icon name="bird" :size="14" /> {{t('nav_species')}}</a>
+      <a href="review.html"><bird-icon name="check-circle" :size="14" /> {{t('nav_review')}}</a>
+      <a href="system.html"><bird-icon name="monitor" :size="14" /> {{t('nav_system')}}</a>
     </div>
   </birdash-shell>
 </div>

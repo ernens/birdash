@@ -19,6 +19,7 @@
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <style>
     .ph-hero { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -239,7 +240,7 @@
       <!-- ── Inferred phases ──────────────────────────────────── -->
       <div v-if="phases.length" class="ph-phases">
         <div v-for="ph in phases" :key="ph.id" class="ph-phase-card" :class="ph.kind">
-          <div class="ph-phase-label"><span class="ph-phase-icon">{{ph.icon}}</span>{{ph.label}}</div>
+          <div class="ph-phase-label"><bird-icon :name="ph.icon" :size="14" class="ph-phase-icon" />{{ph.label}}</div>
           <div class="ph-phase-value">{{ph.value}}</div>
           <div v-if="ph.sub" class="ph-phase-sub">{{ph.sub}}</div>
         </div>
@@ -425,7 +426,7 @@ BIRDASH.ready.then(() => {
 
         // Active period (first to last week with any detection)
         out.push({
-          id: 'active', kind: '', icon: '📅',
+          id: 'active', kind: '', icon: 'calendar',
           label: t('pheno_phase_active'),
           value: 'Sem. ' + minWeek + ' → Sem. ' + maxWeek,
           sub: weeks.length + ' / 53 ' + t('pheno_active_weeks_sub'),
@@ -434,12 +435,12 @@ BIRDASH.ready.then(() => {
         // First / last observation
         if (stats.value.first_date) {
           out.push({
-            id: 'first', kind: 'info', icon: '🛬',
+            id: 'first', kind: 'info', icon: 'plane-landing',
             label: t('pheno_first_obs'),
             value: fmtDate(stats.value.first_date),
           });
           out.push({
-            id: 'last', kind: 'info', icon: '🛫',
+            id: 'last', kind: 'info', icon: 'plane-takeoff',
             label: t('pheno_last_obs'),
             value: fmtDate(stats.value.last_date),
           });
@@ -454,7 +455,7 @@ BIRDASH.ready.then(() => {
             const pk1 = Math.min(...peakWeeks);
             const pk2 = Math.max(...peakWeeks);
             out.push({
-              id: 'peak', kind: '', icon: '📈',
+              id: 'peak', kind: '', icon: 'trending-up',
               label: t('pheno_phase_peak'),
               value: 'Sem. ' + pk1 + ' → Sem. ' + pk2,
               sub: peakWeeks.length + ' ' + t('pheno_peak_weeks_sub'),
@@ -468,7 +469,7 @@ BIRDASH.ready.then(() => {
           if (dawnWeeks.length >= 3) {
             const dw = dawnWeeks.map(w => w.week);
             out.push({
-              id: 'dawn', kind: '', icon: '🎵',
+              id: 'dawn', kind: '', icon: 'music',
               label: t('pheno_phase_dawn_chorus'),
               value: 'Sem. ' + Math.min(...dw) + ' → Sem. ' + Math.max(...dw),
               sub: t('pheno_dawn_chorus_sub'),
@@ -487,14 +488,14 @@ BIRDASH.ready.then(() => {
         }
         if (maxGap >= 4) {
           out.push({
-            id: 'migrant', kind: 'warn', icon: '🌍',
+            id: 'migrant', kind: 'warn', icon: 'globe',
             label: t('pheno_migrant_likely'),
             value: maxGap + ' ' + t('pheno_gap_weeks_sub'),
             sub: t('pheno_migrant_sub'),
           });
         } else if (weeks.length >= 40) {
           out.push({
-            id: 'resident', kind: 'info', icon: '🏠',
+            id: 'resident', kind: 'info', icon: 'home',
             label: t('pheno_resident_likely'),
             value: weeks.length + ' / 53 ' + t('pheno_active_weeks_sub'),
           });

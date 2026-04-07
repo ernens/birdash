@@ -2338,11 +2338,11 @@
     <div v-for="t in toasts" :key="t.id" :style="{padding:'.5rem 1rem',borderRadius:'8px',fontSize:'.82rem',boxShadow:'0 2px 12px rgba(0,0,0,.3)',color:'#fff',background:t.type==='error'?'var(--danger,#e53935)':t.type==='success'?'var(--accent,#4caf50)':'var(--warning,#ff9800)'}">{{t.msg}}</div>
   </div>
   <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}"><span class="mob-nav-icon">🏠</span>{{t('nav_overview')}}</a>
-    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}"><span class="mob-nav-icon">📅</span>{{t('nav_today')}}</a>
-    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon">🦜</span>{{t('nav_species')}}</a>
+    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}"><span class="mob-nav-icon"><bird-icon name="home" :size="20" /></span>{{t('nav_overview')}}</a>
+    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}"><span class="mob-nav-icon"><bird-icon name="calendar-days" :size="20" /></span>{{t('nav_today')}}</a>
+    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon"><bird-icon name="bird" :size="20" /></span>{{t('nav_species')}}</a>
     <a href="stats.html" class="mob-nav-item" :class="{active: currentPage==='stats'}"><span class="mob-nav-icon">📈</span>{{t('nav_stats')}}</a>
-    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer"><span class="mob-nav-icon">☰</span>{{t('nav_more')}}</button>
+    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer"><span class="mob-nav-icon"><bird-icon name="menu" :size="20" /></span>{{t('nav_more')}}</button>
   </nav>
   <transition name="drawer">
     <div v-if="drawerOpen" class="mob-drawer-overlay" @click.self="drawerOpen=false">
@@ -2368,6 +2368,25 @@
     </div>
   </transition>
 </div>`
+  };
+
+  // ── Composant BirdIcon ───────────────────────────────────────────────────
+  // Inline SVG icon (Lucide). Pulls path data from window.BIRDASH_ICONS.
+  // Usage: <bird-icon name="calendar-days" />
+  //        <bird-icon name="bird" :size="24" />
+  const BirdIcon = {
+    props: {
+      name: { type: String, required: true },
+      size: { type: [Number, String], default: 18 },
+    },
+    setup(props) {
+      const content = computed(() => {
+        const icons = window.BIRDASH_ICONS || {};
+        return icons[props.name] || '';
+      });
+      return { content };
+    },
+    template: `<svg xmlns="http://www.w3.org/2000/svg" :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bird-icon" v-html="content" :data-icon="name"></svg>`
   };
 
   // ── Composant BirdImg ────────────────────────────────────────────────────
@@ -2915,6 +2934,7 @@
   function registerComponents(app) {
     app.directive('swipe', vSwipe);
     app.component('birdash-shell', PibirdShell);
+    app.component('bird-icon', BirdIcon);
     app.component('bird-img', BirdImg);
     app.component('spectro-modal', SpectroModal);
     app.component('filter-period', FilterPeriod);
@@ -2930,7 +2950,7 @@
     // Filter composables
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components
-    PibirdShell, registerComponents, MODEL_LABELS, vSwipe,
+    PibirdShell, BirdIcon, registerComponents, MODEL_LABELS, vSwipe,
     // Wrapper with reactive lang injection (calls BIRDASH_UTILS under the hood)
     buildSpeciesLinks,
     // Re-exports from BIRDASH_UTILS for backward compatibility

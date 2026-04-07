@@ -22,6 +22,7 @@
   <script src="js/bird-config.js"></script>
   <script src="js/bird-shared.js"></script>
   <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
 </head>
 <body>
@@ -161,7 +162,7 @@
           <!-- ── Action cards: deep tools ─────────────────────────── -->
           <div v-if="sp.name" class="sp-actions">
             <a class="sp-action-card" :href="'phenology.html?species='+encodeURIComponent(sp.name)">
-              <div class="sp-action-icon">📅</div>
+              <div class="sp-action-icon"><bird-icon name="calendar-days" :size="24" /></div>
               <div class="sp-action-body">
                 <div class="sp-action-title">{{t('nav_phenology')}}</div>
                 <div class="sp-action-sub">{{t('sp_action_pheno_sub')}}</div>
@@ -169,7 +170,7 @@
               <div class="sp-action-arrow">→</div>
             </a>
             <a class="sp-action-card" :href="'analyses.html?species='+encodeURIComponent(sp.name)">
-              <div class="sp-action-icon">🔬</div>
+              <div class="sp-action-icon"><bird-icon name="microscope" :size="24" /></div>
               <div class="sp-action-body">
                 <div class="sp-action-title">{{t('analyze_deep')}}</div>
                 <div class="sp-action-sub">{{t('sp_action_analyses_sub')}}</div>
