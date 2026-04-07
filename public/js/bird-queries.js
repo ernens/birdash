@@ -76,9 +76,16 @@
       ];
     },
 
-    /** Latest N detections — dashboard, overview, species */
+    /**
+     * Latest N detections — dashboard, overview, species.
+     * Deduplicates same-clip same-species across models (BirdNET + Perch),
+     * keeping the highest-confidence row via SQLite bare-column MAX trick.
+     */
     latestDetections(n = 1, c) {
-      return ['SELECT Date, Time, Sci_Name, Com_Name, Confidence, Model, File_Name FROM detections WHERE Confidence>=? ORDER BY Date DESC, Time DESC LIMIT ?', [c || C(), n]];
+      return [
+        'SELECT Date, Time, Sci_Name, Com_Name, MAX(Confidence) as Confidence, Model, File_Name FROM detections WHERE Confidence>=? GROUP BY Date, Time, Com_Name ORDER BY Date DESC, Time DESC LIMIT ?',
+        [c || C(), n]
+      ];
     },
 
     /** Latest detection (unfiltered) — overview */
