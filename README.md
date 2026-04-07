@@ -14,7 +14,7 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 ### Live
 | Dashboard | Today | Spectrogram |
 |:-:|:-:|:-:|
-| ![Dashboard](screenshots/index.png) | ![Today](screenshots/today.png) | ![Spectrogram](screenshots/spectrogram.png) |
+| ![Dashboard](screenshots/dashboard.png) | ![Today](screenshots/today.png) | ![Spectrogram](screenshots/spectrogram.png) |
 
 ### History
 | Calendar | Timeline | Detections | Review |
@@ -24,7 +24,7 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 ### Species
 | Species | Recordings | Gallery | Rarities |
 |:-:|:-:|:-:|:-:|
-| ![Species](screenshots/species.png) | ![Recordings](screenshots/recordings.png) | ![Gallery](screenshots/gallery-best.png) | ![Rarities](screenshots/rarities.png) |
+| ![Species](screenshots/species.png) | ![Recordings](screenshots/recordings.png) | ![Gallery](screenshots/gallery.png) | ![Rarities](screenshots/rarities.png) |
 
 ### Insights
 | Weather | Statistics | Analyses | Biodiversity |
