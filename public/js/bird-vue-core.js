@@ -72,6 +72,12 @@
   "dash_consensus_agree": "Consensus",
   "dash_consensus_disagree": "Divergence",
   "dash_model_listening": "En attente...",
+  "update_available": "Mise à jour disponible",
+  "update_title": "Nouvelle version disponible",
+  "update_dismiss": "Ignorer cette version",
+  "update_view_github": "Voir sur GitHub",
+  "update_how_to": "Comment mettre à jour",
+  "update_how_title": "Sur le Raspberry Pi : git pull && npm install && sudo systemctl restart birdash",
   "dash_sys_title": "Etat du systeme",
   "dash_sys_model": "Modele principal",
   "dash_sys_secondary": "Modele secondaire",
@@ -1956,6 +1962,48 @@
 
       const currentPage = props.page;
 
+      // Version check (GitHub releases, cached 24h server-side)
+      const updateInfo = ref({ current: '', latest: '', hasUpdate: false });
+      const updateModalOpen = ref(false);
+      function fetchVersion() {
+        fetch(`${BIRD_CONFIG.apiUrl}/version-check`).then(r => r.json()).then(d => {
+          if (d && !d.error) {
+            updateInfo.value = d;
+            // Auto-dismiss if user already saw this version
+            const dismissed = localStorage.getItem('birdash_dismissed_version');
+            if (dismissed === d.latest) updateInfo.value.hasUpdate = false;
+          }
+        }).catch(() => {});
+      }
+      fetchVersion();
+      function dismissUpdate() {
+        localStorage.setItem('birdash_dismissed_version', updateInfo.value.latest);
+        updateInfo.value.hasUpdate = false;
+        updateModalOpen.value = false;
+      }
+      function openUpdateModal() { updateModalOpen.value = true; }
+      function closeUpdateModal() { updateModalOpen.value = false; }
+      // Format release notes (basic markdown → HTML)
+      const updateNotesHtml = computed(() => {
+        const notes = updateInfo.value.releaseNotes || '';
+        return notes
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+          .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+          .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/^- (.+)$/gm, '<li>$1</li>')
+          .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+          .replace(/<\/ul>\s*<ul>/g, '')
+          .replace(/\n\n/g, '</p><p>')
+          .replace(/^/, '<p>').replace(/$/, '</p>')
+          .replace(/<p>(<h\d>)/g, '$1').replace(/(<\/h\d>)<\/p>/g, '$1')
+          .replace(/<p>(<ul>)/g, '$1').replace(/(<\/ul>)<\/p>/g, '$1');
+      });
+
       // Review badge count
       const reviewCount = ref(0);
       function refreshReviewCount() {
@@ -2018,6 +2066,11 @@
           </button>
         </div>
       </div>
+      <!-- Update available badge -->
+      <button v-if="updateInfo.hasUpdate" class="hdr-update-btn" @click="openUpdateModal" :title="t('update_available') + ' v' + updateInfo.latest">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 12 12 3 21 12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+        <span class="hdr-update-dot"></span>
+      </button>
       <!-- Notification bell -->
       <div class="hdr-bell" v-click-outside="()=>bellOpen=false">
         <button class="bell-btn" @click="toggleBell" :aria-label="t('notifications')">
@@ -2095,6 +2148,24 @@
     <slot></slot>
   </main>
   <spectro-modal></spectro-modal>
+  <!-- Update modal -->
+  <div v-if="updateModalOpen" class="update-modal-backdrop" @click.self="closeUpdateModal">
+    <div class="update-modal">
+      <div class="update-modal-hdr">
+        <div>
+          <div class="update-modal-title">{{t('update_title')}}</div>
+          <div class="update-modal-version">v{{updateInfo.current}} → <strong>v{{updateInfo.latest}}</strong></div>
+        </div>
+        <button class="update-modal-close" @click="closeUpdateModal" aria-label="Close">✕</button>
+      </div>
+      <div class="update-modal-body" v-html="updateNotesHtml"></div>
+      <div class="update-modal-footer">
+        <button class="update-btn-secondary" @click="dismissUpdate">{{t('update_dismiss')}}</button>
+        <a :href="updateInfo.releaseUrl" target="_blank" rel="noopener" class="update-btn-secondary">{{t('update_view_github')}}</a>
+        <button class="update-btn-primary" @click="closeUpdateModal" style="margin-left:auto" :title="t('update_how_title')">{{t('update_how_to')}}</button>
+      </div>
+    </div>
+  </div>
   <div v-if="toasts.length" style="position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:.4rem;max-width:90vw;">
     <div v-for="t in toasts" :key="t.id" :style="{padding:'.5rem 1rem',borderRadius:'8px',fontSize:'.82rem',boxShadow:'0 2px 12px rgba(0,0,0,.3)',color:'#fff',background:t.type==='error'?'var(--danger,#e53935)':t.type==='success'?'var(--accent,#4caf50)':'var(--warning,#ff9800)'}">{{t.msg}}</div>
   </div>

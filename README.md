@@ -199,6 +199,40 @@ The installer handles everything: system packages, Caddy, ttyd, databases, model
 
 Your dashboard will be available at `http://yourpi.local/birds/`
 
+
+
+## Updating
+
+Birdash checks for new releases on GitHub once per day. When a new version is available, an update badge appears in the header.
+
+### Manual update
+
+```bash
+cd ~/birdash
+git pull
+npm install
+sudo systemctl restart birdash
+```
+
+If the engine or models changed:
+
+```bash
+sudo systemctl restart birdengine birdengine-recording
+```
+
+### How update detection works
+
+- Backend route `/api/version-check` polls `api.github.com/repos/ernens/birdash/releases/latest` once per 24 hours
+- Result is cached server-side, no GitHub call on each page load
+- Frontend reads the cached result and shows a badge in the header if a newer version is available
+- Click the badge to see release notes; "Dismiss" hides the badge until the next release
+
+### Backup before updating
+
+```bash
+~/birdash/scripts/backup.sh
+```
+
 ## What the Installer Does
 
 | Step | Action |

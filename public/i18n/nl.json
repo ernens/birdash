@@ -1065,5 +1065,11 @@
   "dash_evt_recording": "Opname bezig...",
   "dash_consensus_agree": "Consensus",
   "dash_consensus_disagree": "Afwijking",
-  "dash_model_listening": "Luistert..."
+  "dash_model_listening": "Luistert...",
+  "update_available": "Update beschikbaar",
+  "update_title": "Nieuwe versie beschikbaar",
+  "update_dismiss": "Deze versie negeren",
+  "update_view_github": "Bekijk op GitHub",
+  "update_how_to": "Hoe bij te werken",
+  "update_how_title": "Op de Raspberry Pi: git pull && npm install && sudo systemctl restart birdash"
 }

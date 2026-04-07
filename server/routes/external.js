@@ -3,6 +3,8 @@
  * External API routes — BirdWeather, eBird notable, weather
  */
 const https = require('https');
+const path = require('path');
+const fs = require('fs');
 
 let _bwCache = null, _bwCacheTs = 0;
 const BW_TTL = 5 * 60 * 1000;
@@ -10,6 +12,8 @@ let _ebirdCache = null, _ebirdCacheTs = 0;
 const EBIRD_TTL = 3600 * 1000;
 let _weatherCache = null, _weatherCacheTs = 0;
 const WEATHER_TTL = 3600 * 1000;
+let _versionCache = null, _versionCacheTs = 0;
+const VERSION_TTL = 24 * 3600 * 1000; // Check GitHub once per day
 
 // Fetch JSON from HTTPS URL
 function fetchJson(url, extraHeaders = {}) {
@@ -201,7 +205,217 @@ function handle(req, res, pathname, ctx) {
   }
 
 
+  // ── Route : GET /api/version-check ────────────────────────────────────────
+
+
+
+  // Check GitHub for latest release. Cached 24h.
+
+
+
+  if (req.method === 'GET' && pathname === '/api/version-check') {
+
+
+
+    (async () => {
+
+
+
+      try {
+
+
+
+        // Read local version from package.json
+
+
+
+        const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+
+
+
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+
+
+        const current = pkg.version || '0.0.0';
+
+
+
+  
+
+
+
+        // Use cache if fresh
+
+
+
+        if (_versionCache && (Date.now() - _versionCacheTs) < VERSION_TTL) {
+
+
+
+          const result = { ..._versionCache, current, hasUpdate: cmpVersions(_versionCache.latest, current) > 0 };
+
+
+
+          res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
+
+
+
+          res.end(JSON.stringify(result));
+
+
+
+          return;
+
+
+
+        }
+
+
+
+  
+
+
+
+        // Fetch latest release from GitHub
+
+
+
+        const data = await fetchJson('https://api.github.com/repos/ernens/birdash/releases/latest');
+
+
+
+        if (!data || !data.tag_name) {
+
+
+
+          // Fallback: just return current with no update info
+
+
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+
+
+
+          res.end(JSON.stringify({ current, latest: current, hasUpdate: false, error: 'github_unreachable' }));
+
+
+
+          return;
+
+
+
+        }
+
+
+
+  
+
+
+
+        const latest = (data.tag_name || '').replace(/^v/, '');
+
+
+
+        _versionCache = {
+
+
+
+          latest,
+
+
+
+          releaseUrl: data.html_url || 'https://github.com/ernens/birdash/releases',
+
+
+
+          releaseNotes: (data.body || '').substring(0, 4000),
+
+
+
+          releaseName: data.name || data.tag_name,
+
+
+
+          publishedAt: data.published_at,
+
+
+
+        };
+
+
+
+        _versionCacheTs = Date.now();
+
+
+
+  
+
+
+
+        const result = { ..._versionCache, current, hasUpdate: cmpVersions(latest, current) > 0 };
+
+
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'MISS' });
+
+
+
+        res.end(JSON.stringify(result));
+
+
+
+      } catch(e) {
+
+
+
+        console.error('[version-check]', e.message);
+
+
+
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+
+
+
+        res.end(JSON.stringify({ error: 'version_check_failed', message: e.message }));
+
+
+
+      }
+
+
+
+    })();
+
+
+
+    return true;
+
+
+
+  }
+
+
+
+  
+
+
+
   return false;
+
+
+
+  }
+
+// Compare semantic versions: returns >0 if a > b, <0 if a < b, 0 if equal
+function cmpVersions(a, b) {
+  const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+  }
+  return 0;
 }
 
 module.exports = { handle };

@@ -1065,5 +1065,11 @@
   "dash_evt_recording": "Recording...",
   "dash_consensus_agree": "Agreement",
   "dash_consensus_disagree": "Disagreement",
-  "dash_model_listening": "Listening..."
+  "dash_model_listening": "Listening...",
+  "update_available": "Update available",
+  "update_title": "New version available",
+  "update_dismiss": "Dismiss this version",
+  "update_view_github": "View on GitHub",
+  "update_how_to": "How to update",
+  "update_how_title": "On the Raspberry Pi: git pull && npm install && sudo systemctl restart birdash"
 }
