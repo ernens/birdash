@@ -2374,25 +2374,35 @@
   // Inline SVG icon (Lucide). Pulls path data from window.BIRDASH_ICONS.
   // Usage: <bird-icon name="calendar-days" />
   //        <bird-icon name="bird" :size="24" />
+  // Render function: parses the icon SVG string into a real DOM SVG node,
+  // then sets it as innerHTML of a span. The browser parses inside a <span>
+  // context but the SVG element still becomes a real SVGElement because the
+  // span gets replaced with actual DOM after mount.
+  // Cleanest: use a template ref + onMounted to inject innerHTML directly.
   const BirdIcon = {
     props: {
       name: { type: String, required: true },
       size: { type: [Number, String], default: 18 },
     },
     setup(props) {
-      const svgHtml = computed(() => {
+      const wrapRef = ref(null);
+      function render() {
+        if (!wrapRef.value) return;
         const icons = window.BIRDASH_ICONS || {};
         const inner = icons[props.name] || '';
-        if (!inner) return '';
+        if (!inner) { wrapRef.value.innerHTML = ''; return; }
         const sz = props.size || 18;
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz +
-               '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-               ' stroke-linecap="round" stroke-linejoin="round" class="bird-icon" data-icon="' +
-               props.name + '">' + inner + '</svg>';
-      });
-      return { svgHtml };
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz +
+                    '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+                    ' stroke-linecap="round" stroke-linejoin="round" class="bird-icon" data-icon="' +
+                    props.name + '">' + inner + '</svg>';
+        wrapRef.value.innerHTML = svg;
+      }
+      onMounted(render);
+      watch(() => [props.name, props.size], render);
+      return { wrapRef };
     },
-    template: `<span class="bird-icon-wrap" v-html="svgHtml"></span>`
+    template: `<span ref="wrapRef" class="bird-icon-wrap"></span>`
   };
 
   // ── Composant BirdImg ────────────────────────────────────────────────────
