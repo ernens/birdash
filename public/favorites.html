@@ -52,7 +52,7 @@
              style="flex:1;min-width:120px;padding:.35rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text-main);font-size:.82rem;">
       <div style="display:flex;gap:.3rem;">
         <button v-for="s in sortOptions" :key="s.key" @click="sortBy=s.key"
-                :style="{padding:'.3rem .6rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'pointer',fontSize:'.78rem',background:sortBy===s.key?'var(--accent)':'var(--card-bg)',color:sortBy===s.key?'#fff':'var(--text-muted)'}">
+                :style="{padding:'.3rem .6rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'pointer',fontSize:'.78rem',background:sortBy===s.key?'var(--accent)':'var(--bg-card)',color:sortBy===s.key?'#fff':'var(--text-muted)'}">
           {{s.label}}
         </button>
       </div>

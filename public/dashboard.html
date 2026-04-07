@@ -35,7 +35,7 @@
 
     /* ── Zone base ─────────────────────────────────────────────── */
     .bf-zone {
-      background: var(--card-bg);
+      background: var(--bg-card);
       border: 1px solid var(--border);
       padding: 1rem;
       position: relative;
@@ -91,7 +91,7 @@
       width: 32px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       position: relative;
-      background: var(--card-bg);
+      background: var(--bg-card);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
     }
@@ -293,7 +293,7 @@
     .bf-det-conf {
       position: absolute; bottom: -6px; right: -6px;
       width: 46px; height: 46px; border-radius: 50%;
-      background: var(--card-bg); border: 3px solid var(--border);
+      background: var(--bg-card); border: 3px solid var(--border);
       display: flex; align-items: center; justify-content: center;
       font-size: .85rem; font-weight: 800; font-variant-numeric: tabular-nums;
       transition: border-color .3s, color .3s, transform .3s;
@@ -346,7 +346,7 @@
     /* ════ KPIs ═════════════════════════════════════════════════ */
     .bf-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-bottom:1.15rem; }
     .bf-kpi {
-      background:var(--card-bg); border:1px solid var(--border); border-radius:10px;
+      background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
       padding:.5rem .65rem; display:flex; align-items:center; gap:.5rem;
     }
     .bf-kpi-icon { font-size:1.15rem; flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--bg-card2,rgba(0,0,0,.05)); }
@@ -358,7 +358,7 @@
 
     /* ════ BOTTOM ═══════════════════════════════════════════════ */
     .bf-bottom { display:grid; grid-template-columns:1fr 1fr 220px; gap:.75rem; margin-bottom:1rem; }
-    .bf-card { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; max-height:200px; overflow-y:auto; }
+    .bf-card { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; max-height:200px; overflow-y:auto; }
     .bf-card-hdr { font-size:.64rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.4rem; display:flex; justify-content:space-between; }
     /* Key events */
     .bf-evt { display:flex; align-items:center; gap:.45rem; padding:.3rem .35rem; border-radius:5px; margin-bottom:.15rem; animation:bfEvt .35s cubic-bezier(.22,1,.36,1); }
@@ -381,7 +381,7 @@
 
     /* Quick nav */
     .bf-quick { display:flex; gap:.5rem; margin-top:1rem; justify-content:center; flex-wrap:wrap; }
-    .bf-quick a { display:inline-flex; align-items:center; gap:.25rem; padding:.35rem .75rem; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--text); font-size:.75rem; transition:border-color .2s,transform .15s; }
+    .bf-quick a { display:inline-flex; align-items:center; gap:.25rem; padding:.35rem .75rem; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--text); font-size:.75rem; transition:border-color .2s,transform .15s; }
     .bf-quick a:hover{border-color:var(--accent);transform:translateY(-1px)}
 
     /* ════ RESPONSIVE ═══════════════════════════════════════════ */

@@ -979,7 +979,7 @@ a:hover { opacity: .85; }
 /* ── Weather widget ───────────────────────────────────────────────────────── */
 .weather-widget {
   display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem .8rem; background: var(--card-bg); border: 1px solid var(--border);
+  padding: .4rem .8rem; background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); color: var(--text-main); transition: border-color .15s;
 }
 .weather-widget:hover { border-color: var(--accent); }
@@ -999,7 +999,7 @@ a:hover { opacity: .85; }
 .quick-link {
   display: inline-flex; align-items: center; gap: .3rem;
   padding: .35rem .7rem; font-size: .78rem; font-weight: 500;
-  background: var(--card-bg); border: 1px solid var(--border);
+  background: var(--bg-card); border: 1px solid var(--border);
   border-radius: 999px; color: var(--text-main); text-decoration: none;
   transition: background .15s, border-color .15s;
 }
@@ -1010,7 +1010,7 @@ a:hover { opacity: .85; }
   .mobile-bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
     display: flex; justify-content: space-around; align-items: center;
-    background: var(--card-bg); border-top: 1px solid var(--border);
+    background: var(--bg-card); border-top: 1px solid var(--border);
     padding: .3rem 0 env(safe-area-inset-bottom, .3rem);
     box-shadow: 0 -2px 12px rgba(0,0,0,.2);
   }
@@ -1064,7 +1064,7 @@ a:hover { opacity: .85; }
 .bell-panel {
   position: absolute; right: 0; top: 100%; margin-top: 4px;
   width: 280px; max-height: 360px; overflow-y: auto;
-  background: var(--card-bg); border: 1px solid var(--border);
+  background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.3);
   z-index: 200;
 }
@@ -1940,7 +1940,7 @@ a:hover { opacity: .85; }
   .mob-drawer {
     position: absolute; bottom: 0; left: 0; right: 0;
     max-height: 75vh; overflow-y: auto;
-    background: var(--card-bg); border-radius: 16px 16px 0 0;
+    background: var(--bg-card); border-radius: 16px 16px 0 0;
     padding: 0 0 env(safe-area-inset-bottom, .5rem);
     box-shadow: 0 -4px 24px rgba(0,0,0,.3);
     animation: drawerSlideUp .25s ease-out;
@@ -2018,7 +2018,7 @@ a:hover { opacity: .85; }
 }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 .update-modal {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
   max-width: 640px;
@@ -2090,7 +2090,7 @@ a:hover { opacity: .85; }
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--border);
-  background: var(--card-bg);
+  background: var(--bg-card);
   color: var(--text);
   transition: all .15s;
 }

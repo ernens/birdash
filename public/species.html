@@ -63,8 +63,8 @@
             </div>
             <!-- Attribution -->
             <div v-if="photos.length" style="display:flex;gap:.3rem;justify-content:center;margin:.3rem 0 .2rem;">
-              <button @click.stop="setPreferredPhoto" :title="t('photo_set_preferred')" style="background:var(--card-bg);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--accent);">⭐ {{t('photo_set_preferred')}}</button>
-              <button @click.stop="banCurrentPhoto" :title="t('photo_ban')" style="background:var(--card-bg);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--danger);" v-if="photos.length>1">🚫 {{t('photo_ban')}}</button>
+              <button @click.stop="setPreferredPhoto" :title="t('photo_set_preferred')" style="background:var(--bg-card);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--accent);">⭐ {{t('photo_set_preferred')}}</button>
+              <button @click.stop="banCurrentPhoto" :title="t('photo_ban')" style="background:var(--bg-card);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--danger);" v-if="photos.length>1">🚫 {{t('photo_ban')}}</button>
             </div>
             <div v-if="photos[photoIdx]?.attr" class="sp-photo-attr">
               {{photos[photoIdx].attr}}
@@ -153,7 +153,7 @@
                :title="l.label" style="font-size:.75rem;padding:.2rem .5rem;">
               {{l.icon}} {{l.label}}
             </a>
-            <button class="ext-link" @click="shareSpecies" style="border:none;cursor:pointer;background:var(--card-bg);font-size:.75rem;padding:.2rem .5rem;">
+            <button class="ext-link" @click="shareSpecies" style="border:none;cursor:pointer;background:var(--bg-card);font-size:.75rem;padding:.2rem .5rem;">
               🔗 {{t('share')}}
             </button>
             <a class="ext-link" :href="'analyses.html?species='+encodeURIComponent(sp.name)" style="font-weight:600;color:var(--accent);font-size:.75rem;padding:.2rem .5rem;">
