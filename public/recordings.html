@@ -383,20 +383,22 @@ const app = createApp({
         const where = 'WHERE ' + wc.where;
         const params = wc.params;
 
-        const rows = await birdQuery(
-          `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name, Model
+        // Fetch one row per species (the best detection) + count, in a single
+        // aggregate query. SQLite's MAX() bare-column trick returns Date/Time/
+        // File_Name/Model from the row that has the max Confidence, so we get
+        // the "best recording" without dragging every detection over the wire
+        // (which used to blow past the server's 10 000-row safety limit).
+        const best = await birdQuery(
+          `SELECT Com_Name, Sci_Name,
+                  Date, Time, File_Name, Model,
+                  MAX(Confidence) AS Confidence,
+                  COUNT(*)        AS rec_count
            FROM detections
            ${where}
-           ORDER BY Com_Name ASC, Confidence DESC`,
+           GROUP BY Com_Name
+           ORDER BY Com_Name ASC`,
           params
         );
-
-        // 1 seul enregistrement par espèce — le meilleur (premier car trié DESC)
-        const seen = new Set();
-        const best = [];
-        for (const r of rows) {
-          if (!seen.has(r.Com_Name)) { seen.add(r.Com_Name); best.push(r); }
-        }
 
         // Enrichir
         const enriched = best.map(r => ({
@@ -410,12 +412,9 @@ const app = createApp({
         // Charger les données dans allRecs
         allRecs.value = enriched;
 
-        // Liste espèces pour le filtre (avec compteur sur rows complet)
-        const spMap = {};
-        const sciMap = {};
-        for (const r of rows) { spMap[r.Com_Name] = (spMap[r.Com_Name]||0)+1; sciMap[r.Com_Name] = r.Sci_Name; }
-        availableSpecies.value = Object.entries(spMap)
-          .map(([name, count]) => ({ name, sci: sciMap[name], count }))
+        // Liste espèces pour le filtre — déjà groupée par Com_Name
+        availableSpecies.value = best
+          .map(r => ({ name: r.Com_Name, sci: r.Sci_Name, count: r.rec_count }))
           .sort((a,b) => spName(a.name, a.sci).localeCompare(spName(b.name, b.sci)));
 
         // Photos : URL directe vers /api/photo — le serveur gère le cache disque.

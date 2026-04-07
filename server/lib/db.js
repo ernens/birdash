@@ -124,9 +124,9 @@ try {
 }
 
 // ── Taxonomy database ─────────────────────────────────────────────────────────
-const TAXONOMY_DB_PATH = path.join(__dirname, '..', 'config', 'taxonomy.db');
+const TAXONOMY_DB_PATH = path.join(process.env.HOME, 'birdash', 'config', 'taxonomy.db');
 const TAXONOMY_CSV_URL = 'https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=csv&cat=species';
-const TAXONOMY_CACHE_PATH = path.join(__dirname, '..', 'config', 'ebird-taxonomy.csv');
+const TAXONOMY_CACHE_PATH = path.join(process.env.HOME, 'birdash', 'config', 'ebird-taxonomy.csv');
 const TAXONOMY_SYNONYMS = {
   'Charadrius dubius': 'Thinornis dubius',
   'Corvus monedula': 'Coloeus monedula',
