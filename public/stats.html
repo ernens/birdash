@@ -31,8 +31,8 @@
 
     <!-- Tab switcher -->
     <div class="gallery-tabs">
-      <a href="stats.html" class="gallery-tab active">📈 {{t('nav_stats')}}</a>
-      <a href="models.html" class="gallery-tab">🤖 {{t('nav_models')}}</a>
+      <a href="stats.html" class="gallery-tab active"><bird-icon name="trending-up" :size="14" /> {{t('nav_stats')}}</a>
+      <a href="models.html" class="gallery-tab"><bird-icon name="cpu" :size="14" /> {{t('nav_models')}}</a>
     </div>
 
     <div class="det-layout">
@@ -97,7 +97,7 @@
                 <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
                 <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-card2);">
                   <bird-img v-if="r.photoUrl" :src="r.photoUrl" :alt="r.Com_Name" style="width:100%;height:100%;object-fit:cover;"></bird-img>
-                  <span v-else style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:.75rem;">🐦</span>
+                  <span v-else style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:.75rem;"><bird-icon name="bird" :size="16" /></span>
                 </div>
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -122,7 +122,7 @@
                 <div style="font-size:.7rem;color:var(--text-faint);min-width:18px;text-align:right;font-family:monospace;">{{i+1}}</div>
                 <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-card2);">
                   <bird-img v-if="r.photoUrl" :src="r.photoUrl" :alt="r.Com_Name" style="width:100%;height:100%;object-fit:cover;"></bird-img>
-                  <span v-else style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:.75rem;">🐦</span>
+                  <span v-else style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:.75rem;"><bird-icon name="bird" :size="16" /></span>
                 </div>
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -150,7 +150,7 @@
             <div v-if="records.loading" class="spinner"><div></div><div></div><div></div></div>
             <div v-else style="display:flex;flex-direction:column;gap:.75rem;padding:.25rem 0;">
               <div class="det-item">
-                <div style="font-size:1.5rem;">📊</div>
+                <div style="font-size:1.5rem;"><bird-icon name="bar-chart-3" :size="16" /></div>
                 <div style="flex:1;">
                   <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_most_det')}}</div>
                   <div><strong>{{records.maxDet ? fmtDate(records.maxDet.Date) : '—'}}</strong></div>
@@ -158,7 +158,7 @@
                 <div class="kpi-value" style="font-size:1.4rem;">{{records.maxDet ? records.maxDet.n.toLocaleString() : '—'}}</div>
               </div>
               <div class="det-item">
-                <div style="font-size:1.5rem;">🦜</div>
+                <div style="font-size:1.5rem;"><bird-icon name="bird" :size="16" /></div>
                 <div style="flex:1;">
                   <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_most_sp')}}</div>
                   <div><strong>{{records.maxSp ? fmtDate(records.maxSp.Date) : '—'}}</strong></div>
@@ -166,7 +166,7 @@
                 <div class="kpi-value amber" style="font-size:1.4rem;">{{records.maxSp ? records.maxSp.n : '—'}}</div>
               </div>
               <div class="det-item">
-                <div style="font-size:1.5rem;">🎯</div>
+                <div style="font-size:1.5rem;"><bird-icon name="target" :size="16" /></div>
                 <div style="flex:1;">
                   <div style="font-size:.82rem;color:var(--text-muted);">{{t('stats_record_max_conf')}}</div>
                   <div style="font-size:.85rem;"><strong>{{records.maxConf ? spName(records.maxConf.Com_Name, records.maxConf.Sci_Name) : '—'}}</strong></div>

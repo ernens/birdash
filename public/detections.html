@@ -166,13 +166,13 @@
               <tr v-for="d in displayRows" :key="d._key">
                 <td style="padding:.3rem .4rem;">
                   <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" ></bird-img>
-                  <div v-else class="det-thumb-ph">🐦</div>
+                  <div v-else class="det-thumb-ph"><bird-icon name="bird" :size="16" /></div>
                 </td>
                 <td style="white-space:nowrap;">
                   <button v-if="d.File_Name" class="play-btn" :class="{playing:playingFile===d.File_Name}"
                           @click="toggleAudio(d.File_Name)" :title="t('play')" :aria-label="t('play')">▶</button>
                   <span v-else style="width:28px;display:inline-block;"></span>
-                  <button v-if="d.File_Name" class="play-btn" @click="openSpectro(d)" title="Spectrogramme" style="font-size:.65rem;margin-left:2px;">⛶</button>
+                  <button v-if="d.File_Name" class="play-btn" @click="openSpectro(d)" title="Spectrogramme" style="font-size:.65rem;margin-left:2px;"><bird-icon name="maximize-2" :size="16" /></button>
                 </td>
                 <!-- Download -->
                 <td>
@@ -197,7 +197,7 @@
                   <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
                 </td>
                 <td style="width:30px;">
-                  <button class="chart-dl-btn" @click="deleteDet(d)" title="Supprimer" style="opacity:.3;font-size:.75rem;">🗑</button>
+                  <button class="chart-dl-btn" @click="deleteDet(d)" title="Supprimer" style="opacity:.3;font-size:.75rem;"><bird-icon name="trash-2" :size="16" /></button>
                 </td>
               </tr>
             </tbody>

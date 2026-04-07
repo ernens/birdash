@@ -2,7 +2,7 @@
 
         <!-- ═══ Disk Management ═══ -->
         <div class="card">
-          <div class="section-title">💾 {{t('set_disk_mgmt')}}</div>
+          <div class="section-title"><bird-icon name="save" :size="14" /> {{t('set_disk_mgmt')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_full_disk')}} <button class="info-btn" @click="helpKey='full_disk'">i</button></span>
             <select v-model="conf.FULL_DISK" class="set-select" style="width:120px;">
@@ -37,7 +37,7 @@
 
         <!-- ═══ Notifications — configuration du canal ═══ -->
         <div class="card" style="grid-column:1/-1;">
-          <div class="section-title">🔔 {{t('set_notifications')}}</div>
+          <div class="section-title"><bird-icon name="bell" :size="14" /> {{t('set_notifications')}}</div>
 
           <!-- Apprise URLs -->
           <div class="set-row" style="flex-direction:column;align-items:stretch;">

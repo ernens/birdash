@@ -1,7 +1,7 @@
 
       <!-- ═══ Backup Configuration ═══ -->
       <div class="card" style="margin-top:1.2rem;">
-        <div class="section-title">💾 {{t('set_backup')}} <button class="info-btn" @click="helpKey='backup'">i</button></div>
+        <div class="section-title"><bird-icon name="save" :size="14" /> {{t('set_backup')}} <button class="info-btn" @click="helpKey='backup'">i</button></div>
 
         <div class="settings-grid">
 
@@ -169,7 +169,7 @@
               </label>
               <label class="set-check" @change="toggleBackupContent('audio')">
                 <input type="checkbox" :checked="bkp.content.includes('all') || bkp.content.includes('audio')" :disabled="bkp.content.includes('all')">
-                <span>🎵 {{t('set_backup_content_audio')}} <span style="font-size:.75rem;color:var(--text-faint);">BirdSongs/</span></span>
+                <span><bird-icon name="music" :size="14" /> {{t('set_backup_content_audio')}} <span style="font-size:.75rem;color:var(--text-faint);">BirdSongs/</span></span>
               </label>
               <label class="set-check" @change="toggleBackupContent('config')">
                 <input type="checkbox" :checked="bkp.content.includes('all') || bkp.content.includes('config')" :disabled="bkp.content.includes('all')">

@@ -1143,7 +1143,7 @@ const app = createApp({
       const h = (HELP[lang.value] || HELP.en)[helpKey.value] || HELP.en[helpKey.value];
       if (!h) return '';
       let html = h.body;
-      if (h.rec) html += `<div class="info-rec">💡 ${h.rec}</div>`;
+      if (h.rec) html += `<div class="info-rec"><bird-icon name="lightbulb" :size="14" /> ${h.rec}</div>`;
       return html;
     });
 

@@ -93,7 +93,7 @@
                    @click.stop="navigateTo('species.html',{species:s.Com_Name})">
                 <bird-img v-if="s.photoUrl" :src="s.photoUrl" :alt="s.Com_Name"
                      style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;"></bird-img>
-                <div v-else style="width:32px;height:32px;border-radius:6px;background:var(--bg-card2);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;">🐦</div>
+                <div v-else style="width:32px;height:32px;border-radius:6px;background:var(--bg-card2);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;"><bird-icon name="bird" :size="16" /></div>
                 <div style="flex:1;min-width:0;text-align:left;">
                   <div style="font-size:.82rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(s.Com_Name, s.sci)}}</div>
                   <div style="font-size:.68rem;color:var(--text-muted);font-style:italic;">{{s.sci}}</div>
@@ -174,7 +174,7 @@
 
           <div v-if="loadingList" class="spinner" style="padding:2rem;"><div></div><div></div><div></div></div>
           <div v-else-if="!speciesList.length" class="hint-empty">
-            <div class="hint-icon">🌿</div>
+            <div class="hint-icon"><bird-icon name="leaf" :size="16" /></div>
             <div>{{t('no_data')}}</div>
           </div>
           <div v-else class="species-list">
@@ -183,7 +183,7 @@
                  @click="selectSpecies(s)">
               <div class="sp-thumb">
                 <bird-img v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name" ></bird-img>
-                <span v-else>🦜</span>
+                <span v-else><bird-icon name="bird" :size="16" /></span>
               </div>
               <div class="sp-info">
                 <div class="sp-name-row">
@@ -212,7 +212,7 @@
 
         <!-- Pas de sélection -->
         <div v-if="!selected" class="card hint-empty">
-          <div class="hint-icon">🎵</div>
+          <div class="hint-icon"><bird-icon name="music" :size="16" /></div>
           <div style="color:var(--text-muted);">{{t('select_species_prompt')}}</div>
           <div style="font-size:.78rem;">{{t('listen_spectro_hint')}}</div>
         </div>
@@ -224,7 +224,7 @@
           <div class="player-header">
             <div class="player-photo">
               <bird-img v-if="selected.imgUrl" :src="selected.imgUrl" :alt="selected.Com_Name" ></bird-img>
-              <span v-else>🦜</span>
+              <span v-else><bird-icon name="bird" :size="16" /></span>
             </div>
             <div class="player-species">
               <a class="player-name" @click="navigateTo('species.html',{species:selected.Com_Name})" style="cursor:pointer;text-decoration:none;color:inherit;" @mouseenter="$event.target.style.color='var(--accent)'" @mouseleave="$event.target.style.color='inherit'">{{spName(selected.Com_Name, selected.sci)}}</a>
@@ -274,7 +274,7 @@
             <!-- Bouton ouvrir spectro-modal -->
             <button v-if="spectro.state==='ready'" class="spectro-expand-btn"
                     @click.stop="openSpectroModal(currentDet)"
-                    :title="t('spectro_expand')||'Agrandir le spectrogramme'">⛶</button>
+                    :title="t('spectro_expand')||'Agrandir le spectrogramme'"><bird-icon name="maximize-2" :size="16" /></button>
             <!-- Badge mode nettoyé -->
             <div v-if="cleanMode && spectro.state==='ready'"
                  style="position:absolute;top:6px;left:8px;z-index:3;
@@ -296,7 +296,7 @@
             <!-- Overlay erreur avec diagnostic + navigation -->
             <div v-if="spectro.state==='error'" class="spectro-placeholder"
                  style="position:absolute;inset:0;z-index:2;">
-              <div style="font-size:1.5rem;opacity:.4;">🔇</div>
+              <div style="font-size:1.5rem;opacity:.4;"><bird-icon name="volume-x" :size="16" /></div>
               <div style="font-size:.82rem;">{{spectro.msg || t('audio_unavailable')}}</div>
               <div v-if="spectro.detail" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;max-width:90%;word-break:break-all;">
                 {{spectro.detail}}
@@ -355,8 +355,8 @@
                       ? 'background:var(--accent);color:#fff;border-color:var(--accent);'
                       : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
               <span v-if="processingClean">⏳ {{t('audio_clean_progress')}}</span>
-              <span v-else-if="cleanMode">✨ {{t('audio_clean_done')}}</span>
-              <span v-else>🎛 {{t('audio_clean_btn')}}</span>
+              <span v-else-if="cleanMode"><bird-icon name="sparkles" :size="14" /> {{t('audio_clean_done')}}</span>
+              <span v-else><bird-icon name="sliders-horizontal" :size="14" /> {{t('audio_clean_btn')}}</span>
             </button>
             <template v-if="cleanMode && !processingClean">
               <span style="font-size:.72rem;color:var(--text-muted);align-self:center;white-space:nowrap;">

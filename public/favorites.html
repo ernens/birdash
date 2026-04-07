@@ -75,7 +75,7 @@
            style="cursor:pointer;">
         <div class="sp-thumb">
           <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
-          <span v-else>🦜</span>
+          <span v-else><bird-icon name="bird" :size="16" /></span>
         </div>
         <div class="sp-info" style="flex:1;min-width:0;">
           <div class="sp-name-row">
