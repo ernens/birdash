@@ -70,7 +70,7 @@
         <button class="rv-btn rv-btn-ok" @click="bulkAction('confirmed')" :disabled="!selected.size" :title="t('review_confirm')">✓ {{selected.size || ''}}</button>
         <button class="rv-btn rv-btn-maybe" @click="bulkAction('doubtful')" :disabled="!selected.size" title="?">? {{selected.size || ''}}</button>
         <button class="rv-btn rv-btn-no" @click="bulkAction('rejected')" :disabled="!selected.size" :title="t('review_reject')">✗ {{selected.size || ''}}</button>
-        <button class="rv-btn rv-btn-no" @click="deleteSelected" :disabled="!selected.size" title="Supprimer définitivement"><bird-icon name="trash-2" :size="14" /> {{selected.size || ''}}</button>
+        <button class="rv-btn rv-btn-no" @click="deleteSelected" :disabled="!selected.size" title="Supprimer définitivement"><bird-icon name="trash-2" :size="14" ></bird-icon> {{selected.size || ''}}</button>
       </div>
 
       <!-- Row 3: Reject by rule + purge (only if applicable) -->
@@ -116,7 +116,7 @@
             </div>
           </div>
           <button v-if="det.file_name" class="rv-mini" @click="playAudio(det)" :aria-label="playingDet===detKey(det)?'Stop':'Play'">{{playingDet===detKey(det)?'⏹':'▶'}}</button>
-          <button v-if="det.file_name" class="rv-mini" @click="openSpectro(det)" title="Spectrogramme" aria-label="Spectrogramme"><bird-icon name="maximize-2" :size="16" /></button>
+          <button v-if="det.file_name" class="rv-mini" @click="openSpectro(det)" title="Spectrogramme" aria-label="Spectrogramme"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
           <div class="rv-actions">
             <button class="rv-btn rv-btn-ok" @click="validate(det,'confirmed')" :disabled="det.validation==='confirmed' || validatingKey===detKey(det)">✓</button>
             <button class="rv-btn rv-btn-maybe" @click="validate(det,'doubtful')" :disabled="det.validation==='doubtful' || validatingKey===detKey(det)">?</button>

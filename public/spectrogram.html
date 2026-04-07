@@ -157,7 +157,7 @@
 
         <!-- Volume -->
         <div class="toolbar-group">
-          <label><bird-icon name="volume-2" :size="16" /></label>
+          <label><bird-icon name="volume-2" :size="16" ></bird-icon></label>
           <input type="range" min="0" max="1" step="0.05" v-model.number="volume"
                  aria-label="Volume"
                  style="width:60px;accent-color:var(--accent);"
@@ -172,8 +172,8 @@
                   class="stb-pill" :class="{'stb-pill-active': cleanMode}"
                   style="font-weight:600;padding:.15rem .5rem;">
             <span v-if="processingClean">⏳</span>
-            <span v-else-if="cleanMode"><bird-icon name="sparkles" :size="14" /> {{t('clean')}}</span>
-            <span v-else><bird-icon name="sliders-horizontal" :size="14" /> {{t('clean')}}</span>
+            <span v-else-if="cleanMode"><bird-icon name="sparkles" :size="14" ></bird-icon> {{t('clean')}}</span>
+            <span v-else><bird-icon name="sliders-horizontal" :size="14" ></bird-icon> {{t('clean')}}</span>
           </button>
           <template v-if="cleanMode">
             <input type="range" min="0.2" max="1.0" step="0.05"
@@ -253,9 +253,9 @@
       <!-- Overlay démarrage / erreur -->
       <div v-if="status !== 'live'" class="spectro-overlay">
         <div class="overlay-icon">
-          <span v-if="status==='idle'"><bird-icon name="radio" :size="16" /></span>
+          <span v-if="status==='idle'"><bird-icon name="radio" :size="16" ></bird-icon></span>
           <span v-else-if="status==='connecting'">⏳</span>
-          <span v-else><bird-icon name="ban" :size="16" /></span>
+          <span v-else><bird-icon name="ban" :size="16" ></bird-icon></span>
         </div>
         <p v-if="status==='idle'">
           {{t('spectro_idle_msg')}}<br>

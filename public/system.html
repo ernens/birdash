@@ -69,7 +69,7 @@
       <button v-for="tab in tabs" :key="tab.id"
               class="sys-tab-btn" :class="{active: activeTab === tab.id}"
               @click="switchTab(tab.id)">
-        <span class="sys-tab-icon"><bird-icon :name="tab.icon" :size="16" /></span>
+        <span class="sys-tab-icon"><bird-icon :name="tab.icon" :size="16" ></bird-icon></span>
         <span class="sys-tab-label">{{tab.label || t(tab.labelKey)}}</span>
       </button>
     </div>
@@ -394,7 +394,7 @@
             </div>
             <!-- Disks -->
             <div v-for="d in hw.disks" :key="d.name" class="hw-item">
-              <span class="hw-icon"><bird-icon name="save" :size="16" /></span>
+              <span class="hw-icon"><bird-icon name="save" :size="16" ></bird-icon></span>
               <div class="hw-info">
                 <div class="hw-name">{{d.model || d.name}}</div>
                 <div class="hw-detail">/dev/{{d.name}} · {{fmtBytes(d.size)}} · {{d.transport.toUpperCase()}}
@@ -405,7 +405,7 @@
             </div>
             <!-- Sound cards -->
             <div v-for="sc in hw.soundCards" :key="sc.id" class="hw-item">
-              <span class="hw-icon"><bird-icon name="mic" :size="16" /></span>
+              <span class="hw-icon"><bird-icon name="mic" :size="16" ></bird-icon></span>
               <div class="hw-info">
                 <div class="hw-name">{{sc.name}}</div>
                 <div class="hw-detail">Card #{{sc.id}} · {{sc.shortName}}</div>
@@ -413,7 +413,7 @@
             </div>
             <!-- USB devices -->
             <div v-for="u in hw.usbDevices" :key="u.id" class="hw-item">
-              <span class="hw-icon"><bird-icon name="plug" :size="16" /></span>
+              <span class="hw-icon"><bird-icon name="plug" :size="16" ></bird-icon></span>
               <div class="hw-info">
                 <div class="hw-name">{{u.name}}</div>
                 <div class="hw-detail">{{u.id}} · Bus {{u.bus}}</div>

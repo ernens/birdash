@@ -54,7 +54,7 @@
             <div v-else-if="photosLoading" class="sp-carousel-placeholder">
               <div class="spinner"><div></div><div></div><div></div></div>
             </div>
-            <div v-else class="sp-carousel-placeholder"><bird-icon name="bird" :size="16" /></div>
+            <div v-else class="sp-carousel-placeholder"><bird-icon name="bird" :size="16" ></bird-icon></div>
             <!-- Navigation arrows -->
             <button v-if="photos.length>1" class="sp-arrow sp-arrow-l" @click="prevPhoto">‹</button>
             <button v-if="photos.length>1" class="sp-arrow sp-arrow-r" @click="nextPhoto">›</button>
@@ -65,7 +65,7 @@
             <!-- Attribution -->
             <div v-if="photos.length" style="display:flex;gap:.3rem;justify-content:center;margin:.3rem 0 .2rem;">
               <button @click.stop="setPreferredPhoto" :title="t('photo_set_preferred')" style="background:var(--bg-card);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--accent);">⭐ {{t('photo_set_preferred')}}</button>
-              <button @click.stop="banCurrentPhoto" :title="t('photo_ban')" style="background:var(--bg-card);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--danger);" v-if="photos.length>1"><bird-icon name="ban" :size="14" /> {{t('photo_ban')}}</button>
+              <button @click.stop="banCurrentPhoto" :title="t('photo_ban')" style="background:var(--bg-card);border:1px solid var(--border);cursor:pointer;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;color:var(--danger);" v-if="photos.length>1"><bird-icon name="ban" :size="14" ></bird-icon> {{t('photo_ban')}}</button>
             </div>
             <div v-if="photos[photoIdx]?.attr" class="sp-photo-attr">
               {{photos[photoIdx].attr}}
@@ -108,8 +108,8 @@
               {{speciesInfo.familyCom || speciesInfo.family}}
               <span v-if="speciesInfo.familyCom" style="font-size:.68rem;opacity:.7;"> ({{speciesInfo.family}})</span>
             </span>
-            <span v-if="speciesInfo.size" class="sp-taxo-badge"><bird-icon name="ruler" :size="14" /> {{speciesInfo.size}}</span>
-            <span v-if="speciesInfo.wingspan" class="sp-taxo-badge"><bird-icon name="bird" :size="14" /> {{speciesInfo.wingspan}}</span>
+            <span v-if="speciesInfo.size" class="sp-taxo-badge"><bird-icon name="ruler" :size="14" ></bird-icon> {{speciesInfo.size}}</span>
+            <span v-if="speciesInfo.wingspan" class="sp-taxo-badge"><bird-icon name="bird" :size="14" ></bird-icon> {{speciesInfo.wingspan}}</span>
             <span v-if="conservation" class="sp-conservation" :class="'cons-'+conservationClass">
               {{conservation}}
             </span>
@@ -162,7 +162,7 @@
           <!-- ── Action cards: deep tools ─────────────────────────── -->
           <div v-if="sp.name" class="sp-actions">
             <a class="sp-action-card" :href="'phenology.html?species='+encodeURIComponent(sp.name)">
-              <div class="sp-action-icon"><bird-icon name="calendar-days" :size="24" /></div>
+              <div class="sp-action-icon"><bird-icon name="calendar-days" :size="24" ></bird-icon></div>
               <div class="sp-action-body">
                 <div class="sp-action-title">{{t('nav_phenology')}}</div>
                 <div class="sp-action-sub">{{t('sp_action_pheno_sub')}}</div>
@@ -170,7 +170,7 @@
               <div class="sp-action-arrow">→</div>
             </a>
             <a class="sp-action-card" :href="'analyses.html?species='+encodeURIComponent(sp.name)">
-              <div class="sp-action-icon"><bird-icon name="microscope" :size="24" /></div>
+              <div class="sp-action-icon"><bird-icon name="microscope" :size="24" ></bird-icon></div>
               <div class="sp-action-body">
                 <div class="sp-action-title">{{t('analyze_deep')}}</div>
                 <div class="sp-action-sub">{{t('sp_action_analyses_sub')}}</div>
@@ -183,7 +183,7 @@
 
       <!-- ── Personal notes ─────────────────────────────────────── -->
       <div class="card">
-        <div class="card-title"><bird-icon name="file-text" :size="14" /> {{t('personal_notes')}}</div>
+        <div class="card-title"><bird-icon name="file-text" :size="14" ></bird-icon> {{t('personal_notes')}}</div>
         <textarea v-model="personalNote" @blur="savePersonalNote"
                   :placeholder="t('personal_notes')+'...'"
                   style="width:100%;min-height:80px;box-sizing:border-box;padding:.5rem;font-size:.85rem;
@@ -244,7 +244,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
           <div class="card-title" style="margin:0;">{{t('recent_detections')}}</div>
           <div style="display:flex;gap:.3rem;">
-            <button class="sp-edit-btn" @click="openManageDets" :title="t('del_manage')"><bird-icon name="trash-2" :size="14" /> {{t('del_manage')}}</button>
+            <button class="sp-edit-btn" @click="openManageDets" :title="t('del_manage')"><bird-icon name="trash-2" :size="14" ></bird-icon> {{t('del_manage')}}</button>
             <button class="sp-edit-btn" :class="{active:deleteMode}" @click="deleteMode=!deleteMode"
                     style="font-size:.7rem;">
               {{deleteMode ? '✕' : '✏️'}}
@@ -259,12 +259,12 @@
                     :class="{playing:playingFile===d.File_Name}"
                     @click="toggleAudio(d.File_Name)">▶</button>
             <button v-else-if="deleteMode" class="sp-del-btn"
-                    @click="confirmDeleteOne(d)" :title="t('del_this')"><bird-icon name="trash-2" :size="16" /></button>
+                    @click="confirmDeleteOne(d)" :title="t('del_this')"><bird-icon name="trash-2" :size="16" ></bird-icon></button>
             <span v-else style="width:22px;display:inline-block;"></span>
             <div class="det-time">{{fmtDate(d.Date)}}</div>
             <div class="det-time" style="min-width:44px;">{{fmtTime(d.Time)}}</div>
             <button v-if="!deleteMode" class="det-note-btn" :class="{noted: detNoteMap[d.Date+'T'+d.Time]}"
-                    @click="toggleDetNote(d)" :title="t('personal_notes')"><bird-icon name="file-text" :size="16" /></button>
+                    @click="toggleDetNote(d)" :title="t('personal_notes')"><bird-icon name="file-text" :size="16" ></bird-icon></button>
             <div style="flex:1;"></div>
             <span v-if="d.Model" class="model-tag" style="margin-right:.3rem;">{{shortModel(d.Model)}}</span>
             <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':parseFloat(d.Confidence)>=0.6?'conf-mid':'conf-low')">
@@ -330,7 +330,7 @@
             </div>
             <div class="del-result-card">
               <div class="del-result-row">
-                <span class="del-result-icon"><bird-icon name="bird" :size="16" /></span>
+                <span class="del-result-icon"><bird-icon name="bird" :size="16" ></bird-icon></span>
                 <span class="del-result-label">{{t('species_name')}}</span>
                 <span class="del-result-val">{{deleteResult.name}}</span>
               </div>
@@ -340,7 +340,7 @@
                 <span class="del-result-val del-result-accent">{{deleteResult.deleted}}</span>
               </div>
               <div class="del-result-row">
-                <span class="del-result-icon"><bird-icon name="music" :size="16" /></span>
+                <span class="del-result-icon"><bird-icon name="music" :size="16" ></bird-icon></span>
                 <span class="del-result-label">{{t('del_files_removed')}}</span>
                 <span class="del-result-val del-result-accent">{{deleteResult.filesDeleted}}</span>
               </div>
@@ -361,7 +361,7 @@
 
       <!-- ── Single delete toast ──────────────────────────────────── -->
       <div v-if="deleteToast" class="sp-toast" @click="deleteToast=null">
-        <span style="font-size:1rem;"><bird-icon name="check-circle" :size="16" /></span>
+        <span style="font-size:1rem;"><bird-icon name="check-circle" :size="16" ></bird-icon></span>
         <div style="flex:1;">
           <div style="font-weight:600;font-size:.85rem;">{{t('del_done_title')}}</div>
           <div style="font-size:.78rem;color:var(--text-muted);">
@@ -377,7 +377,7 @@
     <div v-if="manageDets.open" class="tl-popup-overlay" @click.self="manageDets.open=false" @keydown.escape="manageDets.open=false" role="dialog" aria-modal="true">
       <div class="tl-popup" style="max-width:650px;max-height:85vh;display:flex;flex-direction:column;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
-          <div style="font-weight:600;font-size:1rem;"><bird-icon name="trash-2" :size="14" /> {{t('del_manage')}} — {{sp.name}} ({{manageDets.items.length}})</div>
+          <div style="font-weight:600;font-size:1rem;"><bird-icon name="trash-2" :size="14" ></bird-icon> {{t('del_manage')}} — {{sp.name}} ({{manageDets.items.length}})</div>
           <button class="tl-popup-close" @click="manageDets.open=false">✕</button>
         </div>
 
@@ -406,7 +406,7 @@
             <span style="font-size:.7rem;color:var(--text-faint);">{{d.Model ? shortModel(d.Model) : ''}}</span>
             <span style="flex:1;"></span>
             <button v-if="d.File_Name" class="rv-mini" @click="toggleAudio(d.File_Name)">{{playingFile===d.File_Name?'⏹':'▶'}}</button>
-            <button v-if="d.File_Name" class="rv-mini" @click="openManageSpectro(d)"><bird-icon name="maximize-2" :size="16" /></button>
+            <button v-if="d.File_Name" class="rv-mini" @click="openManageSpectro(d)"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
           </div>
         </div>
 

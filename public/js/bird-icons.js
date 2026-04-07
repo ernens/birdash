@@ -9,9 +9,9 @@
  * stroke-width=2, stroke-linecap="round", stroke-linejoin="round".
  *
  * Usage in templates:
- *   <bird-icon name="calendar-days" />
- *   <bird-icon name="bird" :size="24" />
- *   <bird-icon name="bell" class="text-accent" />
+ *   <bird-icon name="calendar-days" ></bird-icon>
+ *   <bird-icon name="bird" :size="24" ></bird-icon>
+ *   <bird-icon name="bell" class="text-accent" ></bird-icon>
  */
 (function () {
   'use strict';

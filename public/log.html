@@ -61,7 +61,7 @@
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
       <div style="display:flex;align-items:center;gap:.8rem;">
-        <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="list" :size="14" /> {{t('nav_log')}}</h2>
+        <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="list" :size="14" ></bird-icon> {{t('nav_log')}}</h2>
         <span class="log-status">
           <span class="log-status-dot" :class="{paused: paused, disconnected: !connected}"></span>
           {{connected ? (paused ? t('log_paused') : t('log_live')) : t('log_disconnected')}}
@@ -69,7 +69,7 @@
       </div>
       <div style="display:flex;gap:.4rem;">
         <button class="rv-btn-outline" @click="paused = !paused">{{paused ? '▶' : '⏸'}} {{paused ? t('log_resume') : t('log_pause')}}</button>
-        <button class="rv-btn-outline" @click="logs = []; counts = {detection:0,birdweather:0,error:0,api:0}"><bird-icon name="trash-2" :size="14" /> {{t('log_clear')}}</button>
+        <button class="rv-btn-outline" @click="logs = []; counts = {detection:0,birdweather:0,error:0,api:0}"><bird-icon name="trash-2" :size="14" ></bird-icon> {{t('log_clear')}}</button>
       </div>
     </div>
 

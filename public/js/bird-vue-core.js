@@ -2298,14 +2298,14 @@
               class="nav-section-btn"
               :class="{active: openSection === si, 'has-active-page': sec.items.some(p => p.active)}"
               @click="navSectionClick(si)">
-        <span class="nav-section-icon"><bird-icon :name="sec.icon" :size="16" /></span>
+        <span class="nav-section-icon"><bird-icon :name="sec.icon" :size="16" ></bird-icon></span>
         {{sec.section}}
       </button>
     </div>
     <div v-if="openSection >= 0 && navSections[openSection]" class="nav-pages">
       <a v-for="p in navSections[openSection].items" :key="p.id" :href="p.file"
          class="nav-link" :class="{active:p.active}" :aria-current="p.active?'page':null">
-        <span class="nav-icon" aria-hidden="true"><bird-icon :name="p.icon" :size="16" /></span>
+        <span class="nav-icon" aria-hidden="true"><bird-icon :name="p.icon" :size="16" ></bird-icon></span>
         <span class="nav-label">{{p.label}}</span>
         <span v-if="p.id==='review' && reviewCount > 0" class="nav-badge">{{reviewCount}}</span>
       </a>
@@ -2338,11 +2338,11 @@
     <div v-for="t in toasts" :key="t.id" :style="{padding:'.5rem 1rem',borderRadius:'8px',fontSize:'.82rem',boxShadow:'0 2px 12px rgba(0,0,0,.3)',color:'#fff',background:t.type==='error'?'var(--danger,#e53935)':t.type==='success'?'var(--accent,#4caf50)':'var(--warning,#ff9800)'}">{{t.msg}}</div>
   </div>
   <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}"><span class="mob-nav-icon"><bird-icon name="home" :size="20" /></span>{{t('nav_overview')}}</a>
-    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}"><span class="mob-nav-icon"><bird-icon name="calendar-days" :size="20" /></span>{{t('nav_today')}}</a>
-    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon"><bird-icon name="bird" :size="20" /></span>{{t('nav_species')}}</a>
+    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}"><span class="mob-nav-icon"><bird-icon name="home" :size="20" ></bird-icon></span>{{t('nav_overview')}}</a>
+    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}"><span class="mob-nav-icon"><bird-icon name="calendar-days" :size="20" ></bird-icon></span>{{t('nav_today')}}</a>
+    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon"><bird-icon name="bird" :size="20" ></bird-icon></span>{{t('nav_species')}}</a>
     <a href="stats.html" class="mob-nav-item" :class="{active: currentPage==='stats'}"><span class="mob-nav-icon">📈</span>{{t('nav_stats')}}</a>
-    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer"><span class="mob-nav-icon"><bird-icon name="menu" :size="20" /></span>{{t('nav_more')}}</button>
+    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer"><span class="mob-nav-icon"><bird-icon name="menu" :size="20" ></bird-icon></span>{{t('nav_more')}}</button>
   </nav>
   <transition name="drawer">
     <div v-if="drawerOpen" class="mob-drawer-overlay" @click.self="drawerOpen=false">
@@ -2353,13 +2353,13 @@
         </div>
         <div v-for="(sec, si) in navSections" :key="si" class="mob-drawer-section">
           <button class="mob-drawer-sec-btn" @click="drawerNavClick(si)">
-            <span><bird-icon :name="sec.icon" :size="16" /> {{sec.section}}</span>
+            <span><bird-icon :name="sec.icon" :size="16" ></bird-icon> {{sec.section}}</span>
             <svg :class="{rotated: openSection===si}" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           </button>
           <div v-if="openSection===si" class="mob-drawer-pages">
             <a v-for="p in sec.items" :key="p.id" :href="p.file"
                class="mob-drawer-link" :class="{active: p.active}">
-              <span><bird-icon :name="p.icon" :size="16" /> {{p.label}}</span>
+              <span><bird-icon :name="p.icon" :size="16" ></bird-icon> {{p.label}}</span>
               <span v-if="p.id==='review' && reviewCount > 0" class="nav-badge">{{reviewCount}}</span>
             </a>
           </div>
@@ -2372,8 +2372,8 @@
 
   // ── Composant BirdIcon ───────────────────────────────────────────────────
   // Inline SVG icon (Lucide). Pulls path data from window.BIRDASH_ICONS.
-  // Usage: <bird-icon name="calendar-days" />
-  //        <bird-icon name="bird" :size="24" />
+  // Usage: <bird-icon name="calendar-days" ></bird-icon>
+  //        <bird-icon name="bird" :size="24" ></bird-icon>
   // Render function: parses the icon SVG string into a real DOM SVG node,
   // then sets it as innerHTML of a span. The browser parses inside a <span>
   // context but the SVG element still becomes a real SVGElement because the

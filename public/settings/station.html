@@ -2,7 +2,7 @@
 
         <!-- ═══ Location ═══ -->
         <div class="card">
-          <div class="section-title"><bird-icon name="map-pin" :size="14" /> {{t('set_location')}}</div>
+          <div class="section-title"><bird-icon name="map-pin" :size="14" ></bird-icon> {{t('set_location')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_site_brand')}} <button class="info-btn" @click="helpKey='site_brand'">i</button></span>
             <input v-model="conf.SITE_BRAND" class="set-input" placeholder="BirdStation">
@@ -23,7 +23,7 @@
 
         <!-- ═══ Language & Images ═══ -->
         <div class="card">
-          <div class="section-title"><bird-icon name="globe" :size="14" /> {{t('set_language')}}</div>
+          <div class="section-title"><bird-icon name="globe" :size="14" ></bird-icon> {{t('set_language')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_language')}} <button class="info-btn" @click="helpKey='database_lang'">i</button></span>
             <select v-model="conf.DATABASE_LANG" class="set-select">

@@ -43,7 +43,7 @@
           — {{String(Math.floor(viewEnd)).padStart(2,'0')}}:{{String(Math.round((viewEnd%1)*60)).padStart(2,'0')}}
         </span>
         <span class="rv-sep" style="height:24px;"></span>
-        <span style="font-size:.72rem;color:var(--text-muted);"><bird-icon name="bird" :size="14" /> {{t('tl_density_label_short')}}</span>
+        <span style="font-size:.72rem;color:var(--text-muted);"><bird-icon name="bird" :size="14" ></bird-icon> {{t('tl_density_label_short')}}</span>
         <input type="range" v-model.number="confSlider" min="0" max="100" step="2" @change="onSliderChange"
                style="width:360px;accent-color:var(--accent);">
         <span style="font-size:.72rem;min-width:90px;color:var(--text-main);">{{sliderLabel}} · ≥{{Math.round(sliderToConf(confSlider)*100)}}%</span>
@@ -184,7 +184,7 @@
         <div class="tl-popup-conf">{{t('tl_confidence')}} : <span>{{Math.round(popupEvent.confidence * 100)}}%</span></div>
         <div class="tl-popup-actions">
           <button class="tl-popup-btn" @click="quickPlay(popupEvent.commonName)">▶ {{t('tl_listen')}}</button>
-          <button class="tl-popup-btn" @click="navigateTo('species.html',{species:popupEvent.commonName})"><bird-icon name="microscope" :size="14" /> {{t('tl_see_species')}}</button>
+          <button class="tl-popup-btn" @click="navigateTo('species.html',{species:popupEvent.commonName})"><bird-icon name="microscope" :size="14" ></bird-icon> {{t('tl_see_species')}}</button>
           <button v-if="popupEvent.confidence >= 0.7" class="tl-popup-btn"
                   @click="navigateTo(selectedDate === todayStr ? 'today.html' : 'calendar.html', {species:popupEvent.commonName, date:selectedDate})">
             📅 {{t('tl_see_today')}}

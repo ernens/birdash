@@ -30,13 +30,13 @@
 
     <!-- ── Tab switcher ────────────────────────────────────────────── -->
     <div class="gallery-tabs">
-      <a href="gallery.html" class="gallery-tab"><bird-icon name="trophy" :size="14" /> {{t('gallery_tab_best')}}</a>
-      <a href="recordings.html" class="gallery-tab active"><bird-icon name="headphones" :size="14" /> {{t('gallery_tab_library')}}</a>
+      <a href="gallery.html" class="gallery-tab"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('gallery_tab_best')}}</a>
+      <a href="recordings.html" class="gallery-tab active"><bird-icon name="headphones" :size="14" ></bird-icon> {{t('gallery_tab_library')}}</a>
     </div>
 
     <!-- ── Titre + tri global ────────────────────────────────────── -->
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="trophy" :size="14" /> {{t('best_recordings')}}</h2>
+      <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('best_recordings')}}</h2>
       <div class="filter-sort" style="margin-left:auto;">
         <label>{{t('sort_by')}}</label>
         <select class="bird-select" v-model="sortBy" style="padding:.3rem .6rem;font-size:.78rem;">
@@ -104,7 +104,7 @@
             <a :href="'species.html?species='+encodeURIComponent(rec.Com_Name)" class="rec-photo" style="position:relative;display:block;">
               <bird-img v-if="rec.imgUrl" :src="rec.imgUrl" class="rec-photo-img"
                    :alt="rec.Com_Name"></bird-img>
-              <div v-else class="rec-photo-placeholder"><bird-icon name="bird" :size="16" /></div>
+              <div v-else class="rec-photo-placeholder"><bird-icon name="bird" :size="16" ></bird-icon></div>
             </a>
 
             <!-- Noms + confiance -->
@@ -123,7 +123,7 @@
 
             <!-- Meta -->
             <div class="rec-meta">
-              <span class="rec-meta-item"><bird-icon name="calendar-days" :size="14" /> {{rec.Date}}</span>
+              <span class="rec-meta-item"><bird-icon name="calendar-days" :size="14" ></bird-icon> {{rec.Date}}</span>
               <span class="rec-meta-item">🕐 {{rec.Time.substring(0,5)}}</span>
             </div>
 
@@ -166,7 +166,7 @@
               <!-- Bouton ouvrir spectro-modal -->
               <button v-if="!spectroLoading" class="spectro-expand-btn"
                       @click.stop="openSpectroModal(rec)"
-                      :title="t('spectro_expand')||'Agrandir le spectrogramme'"><bird-icon name="maximize-2" :size="16" /></button>
+                      :title="t('spectro_expand')||'Agrandir le spectrogramme'"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
               <!-- Badge CLEAN sur le spectrogramme -->
               <div v-if="cleanState[rec.uid]?.mode"
                    style="position:absolute;top:5px;right:36px;z-index:3;
@@ -187,8 +187,8 @@
                         class="stb-pill" style="font-weight:600;padding:.14rem .5rem;"
                         :class="{'stb-pill-active': cleanState[rec.uid]?.mode}">
                   <span v-if="cleanState[rec.uid]?.processing">⏳</span>
-                  <span v-else-if="cleanState[rec.uid]?.mode"><bird-icon name="sparkles" :size="14" /> {{t('cleaned')}}</span>
-                  <span v-else><bird-icon name="sliders-horizontal" :size="14" /> {{t('clean_audio')}}</span>
+                  <span v-else-if="cleanState[rec.uid]?.mode"><bird-icon name="sparkles" :size="14" ></bird-icon> {{t('cleaned')}}</span>
+                  <span v-else><bird-icon name="sliders-horizontal" :size="14" ></bird-icon> {{t('clean_audio')}}</span>
                 </button>
                 <template v-if="cleanState[rec.uid]?.mode && !cleanState[rec.uid]?.processing">
                   <input type="range" min="0.2" max="1.0" step="0.05"

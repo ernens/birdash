@@ -73,7 +73,7 @@
         <div v-if="corr" style="margin-top:.75rem;padding:.5rem;background:var(--bg-deep);border-radius:var(--radius);font-size:.82rem;">
           <div style="font-weight:600;margin-bottom:.4rem;">{{t('weather_correlation')}}</div>
           <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
-            <span><bird-icon name="thermometer" :size="14" /> {{t('temperature')}} : <strong :style="{color: corr.temp > 0.3 ? '#5a9e3a' : corr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.temp.toFixed(2)}}</strong></span>
+            <span><bird-icon name="thermometer" :size="14" ></bird-icon> {{t('temperature')}} : <strong :style="{color: corr.temp > 0.3 ? '#5a9e3a' : corr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.temp.toFixed(2)}}</strong></span>
             <span>🌧️ {{t('precipitation')}} : <strong :style="{color: corr.precip > 0.3 ? '#5a9e3a' : corr.precip < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.precip.toFixed(2)}}</strong></span>
             <span>🌬️ {{t('wind')}} : <strong :style="{color: corr.wind > 0.3 ? '#5a9e3a' : corr.wind < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.wind.toFixed(2)}}</strong></span>
           </div>

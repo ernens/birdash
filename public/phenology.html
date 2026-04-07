@@ -240,7 +240,7 @@
       <!-- ── Inferred phases ──────────────────────────────────── -->
       <div v-if="phases.length" class="ph-phases">
         <div v-for="ph in phases" :key="ph.id" class="ph-phase-card" :class="ph.kind">
-          <div class="ph-phase-label"><bird-icon :name="ph.icon" :size="14" class="ph-phase-icon" />{{ph.label}}</div>
+          <div class="ph-phase-label"><bird-icon :name="ph.icon" :size="14" class="ph-phase-icon" ></bird-icon>{{ph.label}}</div>
           <div class="ph-phase-value">{{ph.value}}</div>
           <div v-if="ph.sub" class="ph-phase-sub">{{ph.sub}}</div>
         </div>

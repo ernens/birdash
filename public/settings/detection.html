@@ -1,7 +1,7 @@
 
       <!-- ═══ Model Selection ═══ -->
       <div class="card">
-        <div class="section-title"><bird-icon name="cpu" :size="14" /> {{t('set_model')}} <button class="info-btn" @click="helpKey='model'">i</button></div>
+        <div class="section-title"><bird-icon name="cpu" :size="14" ></bird-icon> {{t('set_model')}} <button class="info-btn" @click="helpKey='model'">i</button></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;">
           <div v-for="m in models" :key="m"
                class="model-card" :class="{ active: conf.MODEL === m }"
@@ -32,7 +32,7 @@
                      @change="conf.DUAL_MODEL_ENABLED = $event.target.checked ? 1 : 0">
               {{t('dual_model')}}
             </label>
-            <span style="font-size:1.1em;"><bird-icon name="zap" :size="16" /></span>
+            <span style="font-size:1.1em;"><bird-icon name="zap" :size="16" ></bird-icon></span>
             <span style="font-size:.82em;opacity:.6;">{{t('dual_desc')}}</span>
           </div>
 
@@ -76,7 +76,7 @@
 
         <!-- ═══ BirdNET Parameters ═══ -->
         <div class="card">
-          <div class="section-title"><bird-icon name="bird" :size="14" /> BirdNET {{t('set_params')}}</div>
+          <div class="section-title"><bird-icon name="bird" :size="14" ></bird-icon> BirdNET {{t('set_params')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_birdnet_conf')}} <button class="info-btn" @click="helpKey='birdnet_confidence'">i</button></span>
             <span class="set-range-val">{{conf.BIRDNET_CONFIDENCE || conf.CONFIDENCE || 0.65}}</span>
@@ -96,7 +96,7 @@
 
         <!-- ═══ Perch Parameters ═══ -->
         <div class="card" v-if="conf.DUAL_MODEL_ENABLED == 1 || (conf.MODEL && conf.MODEL.includes('perch'))">
-          <div class="section-title"><bird-icon name="microscope" :size="14" /> Perch V2 {{t('set_params')}}</div>
+          <div class="section-title"><bird-icon name="microscope" :size="14" ></bird-icon> Perch V2 {{t('set_params')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_perch_conf')}} <button class="info-btn" @click="helpKey='perch_confidence'">i</button></span>
             <span class="set-range-val">{{conf.PERCH_CONFIDENCE || 0.25}}</span>
@@ -111,7 +111,7 @@
 
         <!-- ═══ Shared Parameters ═══ -->
         <div class="card">
-          <div class="section-title"><bird-icon name="globe" :size="14" /> {{t('set_shared_params')}}</div>
+          <div class="section-title"><bird-icon name="globe" :size="14" ></bird-icon> {{t('set_shared_params')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_species_freq_thresh')}} <button class="info-btn" @click="helpKey='sf_thresh'">i</button></span>
             <span class="set-range-val">{{conf.SF_THRESH}}</span>
@@ -121,7 +121,7 @@
 
         <!-- ═══ Recording ═══ -->
         <div class="card">
-          <div class="section-title"><bird-icon name="mic" :size="14" /> {{t('set_recording')}}</div>
+          <div class="section-title"><bird-icon name="mic" :size="14" ></bird-icon> {{t('set_recording')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_rec_length')}} <button class="info-btn" @click="helpKey='rec_length'">i</button></span>
             <input v-model="conf.RECORDING_LENGTH" type="number" min="6" max="120" class="set-input">
