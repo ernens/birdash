@@ -15,7 +15,6 @@ let _backupSizeCache = 0, _backupSizeRefreshing = false;
 
 async function updateBackupCron(config) {
   const cronTag = '# BIRDASH_BACKUP';
-  const oldBackupPattern = /backup-biloute\.sh/;
   const scriptPath = path.join(PROJECT_ROOT, 'scripts', 'backup.sh');
   const cfgPath = path.join(PROJECT_ROOT, 'config', 'backup.json');
   try {
@@ -27,11 +26,6 @@ async function updateBackupCron(config) {
     for (const line of lines) {
       // Remove old BIRDASH_BACKUP lines
       if (line.includes(cronTag)) continue;
-      // Comment out old backup-biloute.sh if new schedule is active
-      if (config.schedule && config.schedule !== 'manual' && oldBackupPattern.test(line) && !line.trim().startsWith('#')) {
-        result.push('# [disabled by birdash] ' + line);
-        continue;
-      }
       result.push(line);
     }
     if (config.schedule && config.schedule !== 'manual') {
@@ -233,105 +227,6 @@ function handle(req, res, pathname, ctx) {
           }
         } catch(e) {}
 
-        // If no new-style backup is running, detect legacy backup-biloute.sh
-        if (status.state === 'idle' || status.state === 'completed' || status.state === 'failed' || status.state === 'stopped') {
-          try {
-            const psOut = await execCmd('pgrep', ['-af', 'backup-biloute\\.sh']);
-            if (psOut.trim()) {
-              // Legacy backup has 4 steps: db(0-5%), config(5-10%), projects(10-25%), audio(25-100%)
-              let step = 'init', detail = 'backup-biloute.sh (legacy)', percent = 2;
-
-              // Detect current step from log file
-              // Use grep to find last step marker (log can be huge with rsync output)
-              try {
-                // Find the last "Étape N" line in the log
-                let lastStep = '';
-                try {
-                  lastStep = await execCmd('bash', ['-c', "grep -n 'tape [1-4]' /var/log/backup-biloute.log | tail -1"]);
-                } catch(eG) {}
-                // Also check completion markers
-                let completionLines = '';
-                try {
-                  completionLines = await execCmd('tail', ['-5', '/var/log/backup-biloute.log']);
-                } catch(eT) {}
-
-                if (/tape 4/i.test(lastStep) || /BirdSongs/i.test(lastStep)) {
-                  step = 'audio'; detail = 'BirdSongs rsync (legacy)'; percent = 25;
-                  // Parse rsync progress from the last lines of the log
-                  // Multiple rsync instances may interleave — take the max percentage
-                  try {
-                    const logTail = await execCmd('tail', ['-50', '/var/log/backup-biloute.log']);
-                    const pctMatches = logTail.match(/\b(\d{1,3})%/g);
-                    if (pctMatches && pctMatches.length) {
-                      const allPcts = pctMatches.map(m => parseInt(m)).filter(n => !isNaN(n) && n >= 0 && n <= 100);
-                      if (allPcts.length) {
-                        const maxPct = Math.max(...allPcts);
-                        percent = 25 + Math.round(maxPct * 73 / 100); // Scale 0-100% into 25-98%
-                        // Extract last synced filename from log lines (lines without %)
-                        const fileLines = logTail.split('\n').filter(l => l.trim() && !/\d+%/.test(l) && !l.startsWith('['));
-                        const lastFile = fileLines.length ? fileLines[fileLines.length - 1].trim() : '';
-                        if (lastFile) {
-                          // Show just the filename, not the full path
-                          const shortName = lastFile.split('/').pop();
-                          detail = shortName;
-                        } else {
-                          detail = 'Synchronisation BirdSongs…';
-                        }
-                      }
-                    }
-                  } catch(eR) {}
-                  // If finished
-                  if (/BirdSongs OK/i.test(completionLines)) { percent = 98; detail = 'Finalisation...'; }
-                } else if (/tape 3/i.test(lastStep)) {
-                  step = 'projects'; detail = 'Sync projets (legacy)'; percent = 15;
-                  // Extract current file from log
-                  try {
-                    const logTail3 = await execCmd('tail', ['-20', '/var/log/backup-biloute.log']);
-                    const fileLines3 = logTail3.split('\n').filter(l => l.trim() && !/\d+%/.test(l) && !l.startsWith('[') && !/rsync error/i.test(l));
-                    if (fileLines3.length) {
-                      const shortName = fileLines3[fileLines3.length - 1].trim().split('/').pop();
-                      if (shortName) detail = shortName;
-                    }
-                  } catch(eF) {}
-                  if (/Projets OK/i.test(completionLines)) { percent = 24; }
-                } else if (/tape 2/i.test(lastStep)) {
-                  step = 'config'; detail = 'Configuration (legacy)'; percent = 8;
-                  if (/Configurations OK/i.test(completionLines)) { percent = 10; }
-                } else if (/tape 1/i.test(lastStep)) {
-                  step = 'db'; detail = 'Bases de données (legacy)'; percent = 3;
-                  if (/Bases de donn.*OK/i.test(completionLines)) { percent = 5; }
-                }
-              } catch(eLog) {
-                // Fallback: detect step from running processes
-                try {
-                  const rsyncPs = await execCmd('pgrep', ['-af', 'rsync.*BirdSongs']);
-                  if (rsyncPs.trim()) { step = 'audio'; detail = 'BirdSongs rsync (legacy)'; percent = 50; }
-                } catch(e2) {
-                  try {
-                    const rsyncPs2 = await execCmd('pgrep', ['-af', 'rsync.*/mnt/backup']);
-                    if (rsyncPs2.trim()) { step = 'projects'; detail = 'Sync projets (legacy)'; percent = 15; }
-                  } catch(e3) {}
-                }
-              }
-
-              let startedAt = null;
-              try {
-                const pid = psOut.trim().split('\n')[0].trim().split(/\s+/)[0];
-                const elapsed = await execCmd('ps', ['-o', 'etimes=', '-p', pid]);
-                const secs = parseInt(elapsed.trim());
-                if (!isNaN(secs)) startedAt = new Date(Date.now() - secs * 1000).toISOString();
-              } catch(e4) {}
-              // Check if paused (SIGSTOP → T state)
-              let paused = false;
-              try {
-                const statOut = await execCmd('bash', ['-c', "ps -eo pid,state,args | grep 'backup-biloute' | grep -v grep | head -1"]);
-                if (/\bT\b/.test(statOut)) paused = true;
-              } catch(e5) {}
-              status = { state: paused ? 'paused' : 'running', percent, step, detail, startedAt, updatedAt: new Date().toISOString(), legacy: true };
-            }
-          } catch(e) { /* pgrep returns 1 when no match */ }
-        }
-
         // Enrich with disk info for any running/paused backup
         if (status.state === 'running' || status.state === 'paused') {
           const nfsPath = (_localConfig && _localConfig.nfsMountPath) || '/mnt/backup';
@@ -419,7 +314,7 @@ function handle(req, res, pathname, ctx) {
       try {
         // Find backup process (new or legacy)
         let pids = [];
-        for (const pattern of ['backup-biloute\\.sh', 'scripts/backup\\.sh']) {
+        for (const pattern of ['scripts/backup\\.sh']) {
           try {
             const out = await execCmd('pgrep', ['-f', pattern]);
             pids.push(...out.trim().split('\n').filter(Boolean));
@@ -481,7 +376,7 @@ function handle(req, res, pathname, ctx) {
     (async () => {
       try {
         let pids = [];
-        for (const pattern of ['backup-biloute\\.sh', 'scripts/backup\\.sh']) {
+        for (const pattern of ['scripts/backup\\.sh']) {
           try {
             const out = await execCmd('pgrep', ['-f', pattern]);
             pids.push(...out.trim().split('\n').filter(Boolean));

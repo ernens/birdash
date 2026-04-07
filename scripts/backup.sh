@@ -110,7 +110,7 @@ BIRDNET_DIR="$HOME/birdash/engine"
 SONGS_DIR="$HOME/BirdSongs"
 BIRDASH_DIR="$HOME/birdash"
 
-# rsync with low IO/CPU priority (same as backup-biloute.sh)
+# rsync with low IO/CPU priority
 RSYNC="ionice -c3 nice -n 19 rsync"
 RSYNC_OPTS="-avh --delete --partial --info=progress2"
 

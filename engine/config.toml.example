@@ -5,15 +5,10 @@ longitude = 0.0
 language = "en"
 
 [audio]
-# Source: "local" (local mic) or "rsync" (pull WAV files from remote)
-source = "local"
-# Remote host for rsync mode (optional)
-remote_host = ""
-remote_path = ""
-# Local directories (relative to $HOME)
+# Local directories for incoming WAVs (from local recording service)
 incoming_dir = "BIRDASH_HOME/birdash/engine/audio/incoming"
 processed_dir = "BIRDASH_HOME/birdash/engine/audio/processed"
-# Rsync interval in seconds
+# Main loop interval in seconds
 rsync_interval = 30
 
 [detection]
@@ -52,6 +47,3 @@ enabled = false
 [output]
 # Local database path
 local_db = "BIRDASH_HOME/birdash/data/birds.db"
-# Sync results to a remote host (optional)
-sync_to_biloute = false
-biloute_db = ""

@@ -352,7 +352,6 @@ enabled = true
 
 [output]
 local_db = "~/birdash/data/birds.db"
-sync_to_biloute = false
 ```
 
 ### /etc/birdnet/birdnet.conf (shared with birdash UI)

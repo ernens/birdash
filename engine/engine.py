@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """BirdEngine — Modern bird detection engine for Raspberry Pi 5.
 
-Watches for WAV files (via rsync from biloute or local recording),
+Watches for WAV files from local recording,
 runs BirdNET or Perch inference, and writes detections to SQLite.
 """
 
@@ -485,39 +485,6 @@ def write_detection(conn, det):
     return True
 
 
-def _det_to_sql(det):
-    """Convert a detection dict to an INSERT SQL statement."""
-    def esc(v):
-        return str(v).replace("'", "''")
-    return (
-        f"INSERT INTO detections VALUES("
-        f"'{esc(det['date'])}','{esc(det['time'])}','{esc(det['sci_name'])}',"
-        f"'{esc(det['com_name'])}',{det['confidence']},{det['lat']},{det['lon']},"
-        f"{det['cutoff']},{det['week']},{det['sens']},{det['overlap']},"
-        f"'{esc(det['file_name'])}','{esc(det['model'])}');"
-    )
-
-
-def sync_detections_to_remote(detections, remote_host, remote_db):
-    """Write multiple detections to a remote SQLite database via SSH stdin."""
-    if not detections:
-        return True
-    sql = "BEGIN;\n" + "\n".join(_det_to_sql(d) for d in detections) + "\nCOMMIT;\n"
-    try:
-        result = subprocess.run(
-            ["ssh", remote_host, f"sqlite3 '{remote_db}'"],
-            input=sql, capture_output=True, text=True, timeout=30
-        )
-        if result.returncode != 0:
-            log.error("Remote DB batch sync failed: %s", result.stderr.strip())
-            return False
-        log.info("Synced %d detections to biloute", len(detections))
-        return True
-    except Exception as e:
-        log.error("Remote DB sync error: %s", e)
-        return False
-
-
 # ---------------------------------------------------------------------------
 # Notifications
 # ---------------------------------------------------------------------------
@@ -911,21 +878,6 @@ def extract_clip(wav_path, det, config):
         except Exception as e:
             log.warning("Spectrogram generation failed: %s", e)
 
-        # Sync clip + spectrogram to biloute (for biloute's birdash)
-        if config["output"].get("sync_to_biloute", False):
-            remote_host = config["audio"]["remote_host"]
-            remote_dir = f"/home/bjorn/BirdSongs/Extracted/By_Date/{det['date']}/{com_name_safe}"
-            try:
-                subprocess.run(["ssh", remote_host, f"mkdir -p '{remote_dir}'"],
-                               capture_output=True, timeout=10)
-                files = [mp3_path]
-                if os.path.exists(png_path):
-                    files.append(png_path)
-                subprocess.run(["scp"] + files + [f"{remote_host}:{remote_dir}/"],
-                               capture_output=True, timeout=30)
-            except Exception as e:
-                log.warning("Clip sync to biloute failed: %s", e)
-
         return clip_name
     except Exception as e:
         log.error("Extract clip error: %s", e)
@@ -955,35 +907,6 @@ class WavHandler(FileSystemEventHandler):
             time.sleep(0.5)
             self.process_fn(event.dest_path)
 
-
-# ---------------------------------------------------------------------------
-# Rsync
-# ---------------------------------------------------------------------------
-
-def rsync_audio(config):
-    """Pull new WAV files from biloute via rsync."""
-    audio = config["audio"]
-    src = f"{audio['remote_host']}:{audio['remote_path']}"
-    dst = audio["incoming_dir"] + "/"
-
-    cmd = [
-        "rsync", "-avz", "--include=*.wav", "--exclude=*",
-        "--remove-source-files",
-        src, dst
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        # Count transferred files
-        transferred = [l for l in result.stdout.splitlines() if l.endswith(".wav")]
-        if transferred:
-            log.info("Rsync: %d new files", len(transferred))
-        return len(transferred)
-    except subprocess.TimeoutExpired:
-        log.warning("Rsync timed out")
-        return 0
-    except Exception as e:
-        log.error("Rsync error: %s", e)
-        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -1172,10 +1095,6 @@ class BirdEngine:
                 if dets:
                     def _sec_post(detections, fpath, cfg, notifier):
                         try:
-                            if cfg["output"].get("sync_to_biloute", False):
-                                remote_host = cfg["audio"]["remote_host"]
-                                remote_db = cfg["output"]["biloute_db"]
-                                sync_detections_to_remote(detections, remote_host, remote_db)
                             for d in detections:
                                 extract_clip(fpath, d, cfg)
                             upload_to_birdweather(fpath, detections, cfg)
@@ -1268,10 +1187,6 @@ class BirdEngine:
             if detections:
                 def _post_process(dets, fpath, cfg, notifier):
                     try:
-                        if cfg["output"].get("sync_to_biloute", False):
-                            remote_host = cfg["audio"]["remote_host"]
-                            remote_db = cfg["output"]["biloute_db"]
-                            sync_detections_to_remote(dets, remote_host, remote_db)
                         for d in dets:
                             extract_clip(fpath, d, cfg)
                         for d in dets:
@@ -1418,15 +1333,12 @@ class BirdEngine:
         observer.start()
         log.info("Watching %s for new WAV files", incoming_dir)
 
-        # Rsync loop
-        source = self.config["audio"].get("source", "rsync")
+        # Main loop
         rsync_interval = self.config["audio"].get("rsync_interval", 30)
 
         purge_counter = 0
         try:
             while not self.shutdown:
-                if source == "rsync":
-                    rsync_audio(self.config)
                 # Every 10 cycles (~5 min): purge old WAVs + check model change
                 purge_counter += 1
                 if purge_counter >= 10:
