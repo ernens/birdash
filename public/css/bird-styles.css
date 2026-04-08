@@ -7,8 +7,10 @@
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Forest (défaut) — Emerald dark ───────────────────────────────────────── */
+/* Also serves as the dark side of [data-theme="auto"] (light side = paper). */
 :root,
-[data-theme="forest"] {
+[data-theme="forest"],
+[data-theme="auto"] {
   --bg-deep:      #0c1014;
   --bg-page:      #0f1418;
   --bg-card:      #151b20;
@@ -286,6 +288,81 @@
   --data-cat-8: #dc2626;
 }
 
+/* ── Auto — follows OS prefers-color-scheme ───────────────────────────────
+   [data-theme="auto"] inherits the forest tokens by default (see the forest
+   selector group at the top). When the OS reports prefers-color-scheme:
+   light, the rule below re-declares the paper token set on top, switching
+   the page to the light palette without any JS.
+
+   This block must come AFTER both the [data-theme="paper"] block (so its
+   own data-* overrides aren't dragged in) and the global :root data-viz
+   palette (because :root has the same specificity as [data-theme="auto"]
+   — both are 0,1,0 — so source order is what makes auto win in the cascade). */
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] {
+    --bg-deep:      #f4f1ec;
+    --bg-page:      #faf8f4;
+    --bg-card:      #ffffff;
+    --bg-card2:     #f0ede6;
+    --bg-hover:     #ebe7de;
+    --bg-input:     #f5f2ec;
+    --border:       #d8d2c4;
+    --border-light: #c4bca8;
+
+    --surface-1:    var(--bg-card);
+    --surface-2:    var(--bg-card2);
+    --surface-3:    var(--bg-hover);
+
+    --accent:       #0d9488;
+    --accent-dim:   #0a736a;
+    --accent-glow:  rgba(13,148,136,.10);
+    --on-accent:    #ffffff;
+    --focus-ring:   rgba(13,148,136,.40);
+
+    --amber:        #d97706;
+    --amber-dim:    #92400e;
+    --danger:       #dc2626;
+    --warning:      #d97706;
+    --success:      #16a34a;
+    --info:         #2563eb;
+    --blue:         #2563eb;
+
+    --text-main:    #1c1917;
+    --text-muted:   #57534e;
+    --text-faint:   #8a847d;
+
+    --bg-spectro:   #1c1917;
+    --text-spectro: #0d948880;
+    --scrollbar-thumb: #c4bca8;
+    --scrollbar-track: #f0ede6;
+
+    --shadow:       0 4px 24px rgba(28,25,23,.10);
+    --shadow-card:  0 1px 2px rgba(28,25,23,.06), 0 1px 3px rgba(28,25,23,.08);
+    --overlay-scrim: rgba(28,25,23,.45);
+    --overlay-line:  rgba(28,25,23,.10);
+
+    /* Data-viz overrides for the light side (same as paper) */
+    --data-night:  #1a237e;
+    --data-dawn:   #b8860f;
+    --data-day:    #2e7d32;
+    --data-dusk:   #d84315;
+
+    --data-abundance-0: #8bc34a;
+    --data-abundance-1: #689f38;
+    --data-abundance-2: #33691e;
+    --data-abundance-3: #1b3a0e;
+
+    --data-cat-1: #0d9488;
+    --data-cat-2: #2563eb;
+    --data-cat-3: #db2777;
+    --data-cat-4: #d97706;
+    --data-cat-5: #7c3aed;
+    --data-cat-6: #0891b2;
+    --data-cat-7: #ea580c;
+    --data-cat-8: #dc2626;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    THEME TRANSITION — smooth fade between themes on the page chrome only.
    Targeting html/body and the major shell containers (not `*`) so we don't
@@ -500,6 +577,8 @@ a:hover { opacity: .85; }
 .theme-dot[data-t="paper"]  { background: linear-gradient(135deg, #0d9488, #faf8f4); }
 .theme-dot[data-t="ocean"]  { background: linear-gradient(135deg, #22d3ee, #0a1220); }
 .theme-dot[data-t="dusk"]   { background: linear-gradient(135deg, #f472b6, #161218); }
+/* Auto: split half-dark / half-light to evoke "follows OS" */
+.theme-dot[data-t="auto"]   { background: linear-gradient(135deg, #0f1418 0%, #0f1418 50%, #faf8f4 50%, #faf8f4 100%); }
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
 .app-nav {

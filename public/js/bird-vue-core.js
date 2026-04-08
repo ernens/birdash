@@ -1247,6 +1247,7 @@
 
   // ── useTheme ──────────────────────────────────────────────────────────────
   const THEMES = [
+    { id:'auto',   label:'Auto',    colors:['#0f1418','#faf8f4'] },
     { id:'forest', label:'Forest',  colors:['#34d399','#0f1418'] },
     { id:'night',  label:'Night',   colors:['#a78bfa','#0e1018'] },
     { id:'paper',  label:'Paper',   colors:['#0d9488','#faf8f4'] },
