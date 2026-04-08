@@ -8,6 +8,75 @@ Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Architecture dua
 
 > [English](README.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md)
 
+## Captures d'écran
+
+<details>
+<summary><b>En direct</b> — Tableau de bord · Aujourd'hui · Spectrogramme</summary>
+
+<p align="center">
+  <img src="screenshots/dashboard.png"   width="240" alt="Tableau de bord">
+  <img src="screenshots/today.png"       width="240" alt="Aujourd'hui">
+  <img src="screenshots/spectrogram.png" width="240" alt="Spectrogramme">
+</p>
+</details>
+
+<details>
+<summary><b>Historique</b> — Calendrier · Timeline · Détections · Validation</summary>
+
+<p align="center">
+  <img src="screenshots/calendar.png"   width="240" alt="Calendrier">
+  <img src="screenshots/timeline.png"   width="240" alt="Timeline">
+  <img src="screenshots/detections.png" width="240" alt="Détections">
+  <img src="screenshots/review.png"     width="240" alt="Validation">
+</p>
+</details>
+
+<details>
+<summary><b>Espèces</b> — Espèce · Enregistrements · Galerie · Raretés</summary>
+
+<p align="center">
+  <img src="screenshots/species.png"    width="240" alt="Espèce">
+  <img src="screenshots/recordings.png" width="240" alt="Enregistrements">
+  <img src="screenshots/gallery.png"    width="240" alt="Galerie">
+  <img src="screenshots/rarities.png"   width="240" alt="Raretés">
+</p>
+</details>
+
+<details>
+<summary><b>Indicateurs</b> — Météo · Statistiques · Analyses · Biodiversité · Phénologie</summary>
+
+<p align="center">
+  <img src="screenshots/weather.png"      width="240" alt="Météo">
+  <img src="screenshots/stats.png"        width="240" alt="Statistiques">
+  <img src="screenshots/analyses.png"     width="240" alt="Analyses">
+  <img src="screenshots/biodiversity.png" width="240" alt="Biodiversité">
+  <img src="screenshots/phenology.png"    width="240" alt="Phénologie">
+</p>
+</details>
+
+<details>
+<summary><b>Station</b> — Santé système, réglages &amp; terminal</summary>
+
+<p align="center">
+  <img src="screenshots/system.png"          width="240" alt="Santé système">
+  <img src="screenshots/system-model.png"    width="240" alt="Moniteur des modèles">
+  <img src="screenshots/system-data.png"     width="240" alt="Données système">
+  <img src="screenshots/system-external.png" width="240" alt="Externe">
+</p>
+<p align="center">
+  <img src="screenshots/settings-detection.png" width="240" alt="Détection">
+  <img src="screenshots/settings-audio.png"     width="240" alt="Audio">
+  <img src="screenshots/settings-notif.png"     width="240" alt="Notifications">
+  <img src="screenshots/settings-station.png"   width="240" alt="Station">
+</p>
+<p align="center">
+  <img src="screenshots/settings-services.png" width="240" alt="Services">
+  <img src="screenshots/settings-species.png"  width="240" alt="Espèces">
+  <img src="screenshots/settings-backup.png"   width="240" alt="Sauvegarde">
+  <img src="screenshots/settings-terminal.png" width="240" alt="Terminal">
+</p>
+</details>
+
 ## Architecture
 
 ```

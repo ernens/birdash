@@ -6,6 +6,75 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 
 > [English](README.md) | [Francais](README.fr.md) | [Nederlands](README.nl.md)
 
+## Screenshots
+
+<details>
+<summary><b>Live</b> — Dashboard · Heute · Spektrogramm</summary>
+
+<p align="center">
+  <img src="screenshots/dashboard.png"   width="240" alt="Dashboard">
+  <img src="screenshots/today.png"       width="240" alt="Heute">
+  <img src="screenshots/spectrogram.png" width="240" alt="Spektrogramm">
+</p>
+</details>
+
+<details>
+<summary><b>Verlauf</b> — Kalender · Timeline · Erkennungen · Prüfung</summary>
+
+<p align="center">
+  <img src="screenshots/calendar.png"   width="240" alt="Kalender">
+  <img src="screenshots/timeline.png"   width="240" alt="Timeline">
+  <img src="screenshots/detections.png" width="240" alt="Erkennungen">
+  <img src="screenshots/review.png"     width="240" alt="Prüfung">
+</p>
+</details>
+
+<details>
+<summary><b>Arten</b> — Art · Aufnahmen · Galerie · Seltenheiten</summary>
+
+<p align="center">
+  <img src="screenshots/species.png"    width="240" alt="Art">
+  <img src="screenshots/recordings.png" width="240" alt="Aufnahmen">
+  <img src="screenshots/gallery.png"    width="240" alt="Galerie">
+  <img src="screenshots/rarities.png"   width="240" alt="Seltenheiten">
+</p>
+</details>
+
+<details>
+<summary><b>Auswertungen</b> — Wetter · Statistiken · Analysen · Biodiversität · Phänologie</summary>
+
+<p align="center">
+  <img src="screenshots/weather.png"      width="240" alt="Wetter">
+  <img src="screenshots/stats.png"        width="240" alt="Statistiken">
+  <img src="screenshots/analyses.png"     width="240" alt="Analysen">
+  <img src="screenshots/biodiversity.png" width="240" alt="Biodiversität">
+  <img src="screenshots/phenology.png"    width="240" alt="Phänologie">
+</p>
+</details>
+
+<details>
+<summary><b>Station</b> — Systemzustand, Einstellungen &amp; Terminal</summary>
+
+<p align="center">
+  <img src="screenshots/system.png"          width="240" alt="Systemzustand">
+  <img src="screenshots/system-model.png"    width="240" alt="Modellmonitor">
+  <img src="screenshots/system-data.png"     width="240" alt="Systemdaten">
+  <img src="screenshots/system-external.png" width="240" alt="Extern">
+</p>
+<p align="center">
+  <img src="screenshots/settings-detection.png" width="240" alt="Erkennung">
+  <img src="screenshots/settings-audio.png"     width="240" alt="Audio">
+  <img src="screenshots/settings-notif.png"     width="240" alt="Benachrichtigungen">
+  <img src="screenshots/settings-station.png"   width="240" alt="Station">
+</p>
+<p align="center">
+  <img src="screenshots/settings-services.png" width="240" alt="Dienste">
+  <img src="screenshots/settings-species.png"  width="240" alt="Arten">
+  <img src="screenshots/settings-backup.png"   width="240" alt="Backup">
+  <img src="screenshots/settings-terminal.png" width="240" alt="Terminal">
+</p>
+</details>
+
 ## Funktionen
 
 - 🤖 **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 parallel
