@@ -44,7 +44,7 @@
     .badge-advanced { background:rgba(200,168,75,.15); color:#c8a84b; }
     .badge-experimental { background:rgba(168,92,58,.15); color:#a85c3a; }
     .save-bar { position:sticky; bottom:0; background:var(--bg-body); padding:1rem 0; border-top:1px solid var(--border); display:flex; gap:1rem; align-items:center; flex-wrap:wrap; z-index:10; }
-    .btn-save { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:.7rem 2rem; font-size:1rem; font-weight:600; cursor:pointer; transition:opacity .2s; }
+    .btn-save { background:var(--accent); color:var(--on-accent); border:none; border-radius:8px; padding:.7rem 2rem; font-size:1rem; font-weight:600; cursor:pointer; transition:opacity .2s; }
     .btn-save:hover { opacity:.9; }
     .btn-save:disabled { opacity:.5; cursor:not-allowed; }
     .btn-outline { background:transparent; color:var(--text-secondary); border:1px solid var(--border); border-radius:8px; padding:.7rem 1.5rem; font-size:.9rem; cursor:pointer; }
@@ -56,8 +56,8 @@
     .svc-row:last-child { border-bottom:none; }
     .svc-name { font-family:monospace; font-size:.88rem; }
     .svc-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:.5rem; }
-    .svc-active { background:#5a9e3a; }
-    .svc-inactive { background:#c84b4b; }
+    .svc-active { background:var(--success); }
+    .svc-inactive { background:var(--danger); }
     .svc-btn { background:transparent; border:1px solid var(--border); border-radius:5px; padding:.3rem .7rem; font-size:.8rem; cursor:pointer; color:var(--text-secondary); }
     .svc-btn:hover { border-color:var(--accent); color:var(--accent); }
     .section-title { font-size:1.1rem; font-weight:700; margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
@@ -72,10 +72,10 @@
       font-family:Georgia,serif; line-height:1; transition:all .15s;
       background:transparent; padding:0;
     }
-    .info-btn:hover { background:var(--accent); color:#fff; }
+    .info-btn:hover { background:var(--accent); color:var(--on-accent); }
     .info-overlay {
       position:fixed; inset:0; z-index:1000;
-      background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center;
+      background:var(--overlay-scrim); display:none; align-items:center; justify-content:center;
       padding:1rem; animation:fadeIn .15s;
     }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }

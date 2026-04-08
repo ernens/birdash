@@ -281,10 +281,10 @@ const app = createApp({
     // ── Confidence badge color ───────────────────────────────────────
     function confStyle(c) {
       const pct = c * 100;
-      if (pct >= 90) return 'background:#4caf50;color:#fff';
-      if (pct >= 70) return 'background:#8bc34a;color:#222';
-      if (pct >= 50) return 'background:#ff9800;color:#222';
-      return 'background:#f44336;color:#fff';
+      if (pct >= 90) return 'background:var(--success);color:#fff';
+      if (pct >= 70) return 'background:var(--data-abundance-0);color:#222';
+      if (pct >= 50) return 'background:var(--warning);color:#222';
+      return 'background:var(--danger);color:#fff';
     }
 
     // ── Open spectrogram modal ──────────────────────────────────────

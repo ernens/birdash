@@ -86,7 +86,7 @@
               </div>
               <div class="ms-actions">
                 <button class="ms-action-btn"
-                        :style="allSpeciesSelected ? 'background:var(--accent);color:#fff;' : ''"
+                        :style="allSpeciesSelected ? 'background:var(--accent);color:var(--on-accent);' : ''"
                         @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))">
                   {{allSpeciesSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
                 </button>

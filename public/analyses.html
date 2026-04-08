@@ -88,7 +88,7 @@
               <div class="sp-topn-bar" style="flex-wrap:wrap;">
                 <div style="display:flex;gap:.4rem;width:100%;">
                   <button class="sp-topn-btn" style="flex:1;"
-                          :style="allFiltersSelected ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''"
+                          :style="allFiltersSelected ? 'background:var(--accent);color:var(--on-accent);border-color:var(--accent);' : ''"
                           @click="allFiltersSelected ? clearSelection() : selectAllFiltered()">
                     {{allFiltersSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
                   </button>

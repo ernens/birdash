@@ -33,14 +33,14 @@
     .rv-actions { display:flex; gap:.25rem; }
     .rv-btn { border:none; padding:.3rem .55rem; border-radius:.3rem; cursor:pointer; font-size:.78rem; font-weight:600; }
     .rv-btn:disabled { opacity:.4; cursor:default; }
-    .rv-btn-ok { background:#38a169; color:#fff; }
-    .rv-btn-no { background:#e53e3e; color:#fff; }
-    .rv-btn-maybe { background:#dd6b20; color:#fff; }
+    .rv-btn-ok { background:var(--success); color:#fff; }
+    .rv-btn-no { background:var(--danger); color:#fff; }
+    .rv-btn-maybe { background:var(--warning); color:#fff; }
     .rv-btn-outline { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:.25rem .5rem; border-radius:.3rem; cursor:pointer; font-size:.75rem; }
-    .rv-badge { display:inline-block; background:rgba(221,107,32,.15); color:#dd6b20; font-size:.7rem; padding:.12rem .35rem; border-radius:.25rem; margin-right:.2rem; }
+    .rv-badge { display:inline-block; background:color-mix(in srgb, var(--warning) 15%, transparent); color:var(--warning); font-size:.7rem; padding:.12rem .35rem; border-radius:.25rem; margin-right:.2rem; }
     .rv-pill { display:inline-flex; align-items:center; padding:.2rem .5rem; border-radius:1rem; font-size:.75rem; font-weight:600; background:var(--bg-card2); color:var(--text-muted); }
     .rv-mini { cursor:pointer; padding:.2rem .4rem; border-radius:.3rem; border:1px solid var(--border); background:var(--bg-card2); font-size:.75rem; }
-    .rv-mini:hover { background:var(--accent); color:#fff; }
+    .rv-mini:hover { background:var(--accent); color:var(--on-accent); }
     .rv-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
   </style>
 </head>
