@@ -1247,12 +1247,17 @@
 
   // ── useTheme ──────────────────────────────────────────────────────────────
   const THEMES = [
-    { id:'auto',   label:'Auto',    colors:['#0f1418','#faf8f4'] },
-    { id:'forest', label:'Forest',  colors:['#34d399','#0f1418'] },
-    { id:'night',  label:'Night',   colors:['#a78bfa','#0e1018'] },
-    { id:'paper',  label:'Paper',   colors:['#0d9488','#faf8f4'] },
-    { id:'ocean',  label:'Ocean',   colors:['#22d3ee','#0a1220'] },
-    { id:'dusk',   label:'Dusk',    colors:['#f472b6','#161218'] },
+    { id:'auto',        label:'Auto',         colors:['#0f1418','#faf8f4'] },
+    { id:'forest',      label:'Forest',       colors:['#34d399','#0f1418'] },
+    { id:'night',       label:'Night',        colors:['#a78bfa','#0e1018'] },
+    { id:'paper',       label:'Paper',        colors:['#0d9488','#faf8f4'] },
+    { id:'ocean',       label:'Ocean',        colors:['#22d3ee','#0a1220'] },
+    { id:'dusk',        label:'Dusk',         colors:['#f472b6','#161218'] },
+    { id:'sepia',       label:'Sepia',        colors:['#8b5a2b','#f5ecd9'] },
+    { id:'solar-light', label:'Solar Light',  colors:['#2aa198','#fdf6e3'] },
+    { id:'solar-dark',  label:'Solar Dark',   colors:['#2aa198','#002b36'] },
+    { id:'nord',        label:'Nord',         colors:['#88c0d0','#2e3440'] },
+    { id:'hicontrast',  label:'High Contrast',colors:['#00ff88','#000000'] },
   ];
 
   function useTheme() {

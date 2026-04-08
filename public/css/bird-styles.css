@@ -215,12 +215,240 @@
   --overlay-scrim: rgba(10,4,10,.70);
 }
 
+/* ── Sepia — Warm parchment, sepia ink ────────────────────────────────────
+   2nd light theme. Tuned for long reading sessions, e-reader vibes. */
+[data-theme="sepia"] {
+  --bg-deep:      #ede4d3;
+  --bg-page:      #f5ecd9;
+  --bg-card:      #fbf3e0;
+  --bg-card2:     #f0e6cc;
+  --bg-hover:     #e8dcc0;
+  --bg-input:     #f8efd9;
+  --border:       #d8c8a8;
+  --border-light: #c0a878;
+
+  --accent:     #8b5a2b;
+  --accent-dim: #6b4220;
+  --on-accent:  #fbf3e0;
+
+  --amber:     #a0660f;
+  --amber-dim: #6b4408;
+  --warning:   #a0660f;
+
+  --danger:  #b91c1c;
+  --success: #4d7c0f;
+  --info:    #1e40af;
+  --blue:    #1e40af;
+
+  --text-main:  #3a2818;
+  --text-muted: #6b4f30;
+  --text-faint: #8c7050; /* decorative only */
+
+  --bg-spectro:      #3a2818;
+  --text-spectro:    #8b5a2b80;
+  --scrollbar-thumb: #c0a878;
+  --scrollbar-track: #f0e6cc;
+
+  --shadow:        0 4px 24px rgba(58,40,24,.12);
+  --shadow-card:   0 1px 2px rgba(58,40,24,.08), 0 1px 3px rgba(58,40,24,.10);
+  --overlay-scrim: rgba(58,40,24,.45);
+  --overlay-line:  rgba(58,40,24,.10);
+}
+
+/* Sepia data-viz: warm earth tones */
+[data-theme="sepia"] {
+  --data-night:  #1e3a5f;
+  --data-dawn:   #a0660f;
+  --data-day:    #4d7c0f;
+  --data-dusk:   #c2410c;
+
+  --data-abundance-0: #a3a06b;
+  --data-abundance-1: #6b6b3a;
+  --data-abundance-2: #4d4920;
+  --data-abundance-3: #2e2810;
+}
+
+/* ── High-contrast — Pure black, saturated accent ─────────────────────────
+   WCAG AAA target. Stronger borders, max-opacity text, no decorative greys. */
+[data-theme="hicontrast"] {
+  --bg-deep:      #000000;
+  --bg-page:      #000000;
+  --bg-card:      #0a0a0a;
+  --bg-card2:     #141414;
+  --bg-hover:     #1f1f1f;
+  --bg-input:     #0a0a0a;
+  --border:       #555555;
+  --border-light: #777777;
+
+  --accent:     #00ff88;
+  --accent-dim: #00cc66;
+  --on-accent:  #000000;
+
+  --danger:  #ff4040;
+  --success: #00ff88;
+  --info:    #44aaff;
+  --blue:    #44aaff;
+
+  --text-main:  #ffffff;
+  --text-muted: #d8d8d8; /* AAA on black: 12.6:1 */
+  --text-faint: #b0b0b0; /* still AA — usable for body in this theme */
+
+  --bg-spectro:      #000000;
+  --text-spectro:    #00ff8880;
+  --scrollbar-thumb: #777777;
+  --scrollbar-track: #0a0a0a;
+
+  --shadow:        0 0 0 1px #555555, 0 4px 24px rgba(0,0,0,.85);
+  --shadow-card:   0 0 0 1px #444444;
+  --overlay-scrim: rgba(0,0,0,.85);
+}
+
+/* ── Solar Dark — Solarized Dark by Ethan Schoonover ──────────────────── */
+[data-theme="solar-dark"] {
+  --bg-deep:      #001f27;
+  --bg-page:      #002b36;
+  --bg-card:      #073642;
+  --bg-card2:     #0d4654;
+  --bg-hover:     #185b6e;
+  --bg-input:     #073642;
+  --border:       #1a4956;
+  --border-light: #2a5e6e;
+
+  --accent:     #2aa198;
+  --accent-dim: #1f7a73;
+  --on-accent:  #002b36;
+
+  --danger:  #dc322f;
+  --success: #859900;
+  --info:    #268bd2;
+  --blue:    #268bd2;
+
+  --text-main:  #93a1a1; /* base1 */
+  --text-muted: #839496; /* base0 */
+  --text-faint: #586e75; /* base01 — decorative */
+
+  --bg-spectro:      #001f27;
+  --text-spectro:    #2aa19880;
+  --scrollbar-thumb: #2a5e6e;
+  --scrollbar-track: #002b36;
+
+  --shadow:        0 4px 24px rgba(0,15,20,.55);
+  --shadow-card:   0 1px 3px rgba(0,15,20,.35), 0 1px 2px rgba(0,15,20,.20);
+  --overlay-scrim: rgba(0,15,20,.70);
+}
+
+/* ── Solar Light — Solarized Light by Ethan Schoonover ────────────────── */
+[data-theme="solar-light"] {
+  --bg-deep:      #fdf6e3;
+  --bg-page:      #fdf6e3;
+  --bg-card:      #ffffff;
+  --bg-card2:     #eee8d5;
+  --bg-hover:     #e0dac3;
+  --bg-input:     #faf3d8;
+  --border:       #d6cfae;
+  --border-light: #b8b189;
+
+  --accent:     #2aa198;
+  --accent-dim: #1f7a73;
+  --on-accent:  #ffffff;
+
+  --amber:     #b58900;
+  --amber-dim: #806000;
+  --warning:   #b58900;
+
+  --danger:  #dc322f;
+  --success: #859900;
+  --info:    #268bd2;
+  --blue:    #268bd2;
+
+  --text-main:  #586e75; /* base01 — official Solarized Light text */
+  --text-muted: #657b83; /* base00 */
+  --text-faint: #93a1a1; /* base1 — decorative */
+
+  --bg-spectro:      #002b36;
+  --text-spectro:    #2aa19880;
+  --scrollbar-thumb: #b8b189;
+  --scrollbar-track: #eee8d5;
+
+  --shadow:        0 4px 24px rgba(88,110,117,.12);
+  --shadow-card:   0 1px 2px rgba(88,110,117,.08), 0 1px 3px rgba(88,110,117,.10);
+  --overlay-scrim: rgba(88,110,117,.45);
+  --overlay-line:  rgba(88,110,117,.10);
+}
+
+/* Solar Light data-viz: muted Solarized accents */
+[data-theme="solar-light"] {
+  --data-night:  #073642;
+  --data-dawn:   #b58900;
+  --data-day:    #859900;
+  --data-dusk:   #cb4b16;
+
+  --data-abundance-0: #b8c97a;
+  --data-abundance-1: #859900;
+  --data-abundance-2: #5e7000;
+  --data-abundance-3: #2a3a00;
+}
+
+/* ── Nord — Arctic palette by Arctic Ice Studio ─────────────────────────── */
+[data-theme="nord"] {
+  --bg-deep:      #242933;
+  --bg-page:      #2e3440; /* nord0 */
+  --bg-card:      #3b4252; /* nord1 */
+  --bg-card2:     #434c5e; /* nord2 */
+  --bg-hover:     #4c566a; /* nord3 */
+  --bg-input:     #353c4a;
+  --border:       #434c5e;
+  --border-light: #4c566a;
+
+  --accent:     #88c0d0; /* nord8 — frost */
+  --accent-dim: #5e81ac; /* nord10 */
+  --on-accent:  #2e3440;
+
+  --danger:  #bf616a; /* nord11 */
+  --success: #a3be8c; /* nord14 */
+  --info:    #81a1c1; /* nord9 */
+  --blue:    #81a1c1;
+
+  --text-main:  #eceff4; /* nord6 */
+  --text-muted: #d8dee9; /* nord4 */
+  --text-faint: #8c97a8;
+
+  --bg-spectro:      #242933;
+  --text-spectro:    #88c0d080;
+  --scrollbar-thumb: #4c566a;
+  --scrollbar-track: #2e3440;
+
+  --shadow:        0 4px 24px rgba(0,0,0,.40);
+  --shadow-card:   0 1px 3px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.18);
+  --overlay-scrim: rgba(36,41,51,.70);
+}
+
+/* Nord data-viz: aurora colors */
+[data-theme="nord"] {
+  --data-night:  #5e81ac;
+  --data-dawn:   #ebcb8b;
+  --data-day:    #a3be8c;
+  --data-dusk:   #d08770;
+
+  --data-cat-1: #88c0d0;
+  --data-cat-2: #81a1c1;
+  --data-cat-3: #b48ead;
+  --data-cat-4: #ebcb8b;
+  --data-cat-5: #5e81ac;
+  --data-cat-6: #8fbcbb;
+  --data-cat-7: #d08770;
+  --data-cat-8: #bf616a;
+}
+
 /* ── Tokens shared by every dark-mode theme ─────────────────────────────── */
 [data-theme="forest"],
 [data-theme="night"],
 [data-theme="ocean"],
 [data-theme="dusk"],
-[data-theme="auto"] {
+[data-theme="auto"],
+[data-theme="hicontrast"],
+[data-theme="solar-dark"],
+[data-theme="nord"] {
   --overlay-line: rgba(255,255,255,.10);
 }
 
@@ -561,13 +789,18 @@ a:hover { opacity: .85; }
   border-radius: 50%;
   flex-shrink:   0;
 }
-.theme-dot[data-t="forest"] { background: linear-gradient(135deg, #34d399, #0f1418); }
-.theme-dot[data-t="night"]  { background: linear-gradient(135deg, #a78bfa, #0e1018); }
-.theme-dot[data-t="paper"]  { background: linear-gradient(135deg, #0d9488, #faf8f4); }
-.theme-dot[data-t="ocean"]  { background: linear-gradient(135deg, #22d3ee, #0a1220); }
-.theme-dot[data-t="dusk"]   { background: linear-gradient(135deg, #f472b6, #161218); }
+.theme-dot[data-t="forest"]     { background: linear-gradient(135deg, #34d399, #0f1418); }
+.theme-dot[data-t="night"]      { background: linear-gradient(135deg, #a78bfa, #0e1018); }
+.theme-dot[data-t="paper"]      { background: linear-gradient(135deg, #0d9488, #faf8f4); }
+.theme-dot[data-t="ocean"]      { background: linear-gradient(135deg, #22d3ee, #0a1220); }
+.theme-dot[data-t="dusk"]       { background: linear-gradient(135deg, #f472b6, #161218); }
+.theme-dot[data-t="sepia"]      { background: linear-gradient(135deg, #8b5a2b, #f5ecd9); }
+.theme-dot[data-t="hicontrast"] { background: linear-gradient(135deg, #00ff88, #000000); }
+.theme-dot[data-t="solar-dark"] { background: linear-gradient(135deg, #2aa198, #002b36); }
+.theme-dot[data-t="solar-light"]{ background: linear-gradient(135deg, #2aa198, #fdf6e3); }
+.theme-dot[data-t="nord"]       { background: linear-gradient(135deg, #88c0d0, #2e3440); }
 /* Auto: split half-dark / half-light to evoke "follows OS" */
-.theme-dot[data-t="auto"]   { background: linear-gradient(135deg, #0f1418 0%, #0f1418 50%, #faf8f4 50%, #faf8f4 100%); }
+.theme-dot[data-t="auto"]       { background: linear-gradient(135deg, #0f1418 0%, #0f1418 50%, #faf8f4 50%, #faf8f4 100%); }
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
 .app-nav {
