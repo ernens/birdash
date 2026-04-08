@@ -18,22 +18,38 @@
   --border:       #243030;
   --border-light: #2e3e3a;
 
+  /* Elevation aliases (use --surface-* in new code) */
+  --surface-1:    var(--bg-card);
+  --surface-2:    var(--bg-card2);
+  --surface-3:    var(--bg-hover);
+
   --accent:       #34d399;
   --accent-dim:   #0d9668;
   --accent-glow:  rgba(52,211,153,.12);
+  --on-accent:    #062018;
+  --focus-ring:   rgba(52,211,153,.45);
+
   --amber:        #fbbf24;
   --amber-dim:    #b8860f;
   --danger:       #f87171;
   --warning:      #fbbf24;
+  --success:      #4ade80;
+  --info:         #60a5fa;
   --blue:         #60a5fa;
 
   --text-main:    #e8edf2;
-  --text-muted:   #7a8a8e;
-  --text-faint:   #4a5a5e;
+  --text-muted:   #8b9ba0; /* bumped from #7a8a8e for AA on --bg-card */
+  --text-faint:   #5a6a6e; /* decorative only — not WCAG AA for body text */
 
   --bg-spectro:   #080c0e;
   --text-spectro: #34d39980;
   --scrollbar-thumb: #2e3e3a;
+  --scrollbar-track: #0f1418;
+
+  --shadow:       0 4px 24px rgba(0,0,0,.45);
+  --shadow-card:  0 1px 3px rgba(0,0,0,.30), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(0,0,0,.65);
+  --overlay-line:  rgba(255,255,255,.10);
 }
 
 /* ── Night — Indigo/violet dark ───────────────────────────────────────────── */
@@ -47,22 +63,37 @@
   --border:       #262a48;
   --border-light: #363c60;
 
+  --surface-1:    var(--bg-card);
+  --surface-2:    var(--bg-card2);
+  --surface-3:    var(--bg-hover);
+
   --accent:       #a78bfa;
   --accent-dim:   #7c5cd4;
   --accent-glow:  rgba(167,139,250,.12);
+  --on-accent:    #15102a;
+  --focus-ring:   rgba(167,139,250,.45);
+
   --amber:        #fbbf24;
   --amber-dim:    #b8860f;
   --danger:       #fb7185;
   --warning:      #fbbf24;
+  --success:      #4ade80;
+  --info:         #67e8f9;
   --blue:         #67e8f9;
 
   --text-main:    #e4e2f0;
-  --text-muted:   #7878a8;
-  --text-faint:   #3e3e68;
+  --text-muted:   #9090c0; /* bumped from #7878a8 */
+  --text-faint:   #4e4e78; /* decorative only */
 
   --bg-spectro:   #06060e;
   --text-spectro: #a78bfa80;
   --scrollbar-thumb: #363c60;
+  --scrollbar-track: #0e1018;
+
+  --shadow:       0 4px 24px rgba(0,0,0,.50);
+  --shadow-card:  0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(8,6,20,.70);
+  --overlay-line:  rgba(255,255,255,.10);
 }
 
 /* ── Paper — Clean warm light ─────────────────────────────────────────────── */
@@ -76,22 +107,38 @@
   --border:       #d8d2c4;
   --border-light: #c4bca8;
 
+  --surface-1:    var(--bg-card);
+  --surface-2:    var(--bg-card2);
+  --surface-3:    var(--bg-hover);
+
   --accent:       #0d9488;
   --accent-dim:   #0a736a;
   --accent-glow:  rgba(13,148,136,.10);
+  --on-accent:    #ffffff;
+  --focus-ring:   rgba(13,148,136,.40);
+
   --amber:        #d97706;
   --amber-dim:    #92400e;
   --danger:       #dc2626;
   --warning:      #d97706;
+  --success:      #16a34a;
+  --info:         #2563eb;
   --blue:         #2563eb;
 
   --text-main:    #1c1917;
-  --text-muted:   #78716c;
-  --text-faint:   #a8a29e;
+  --text-muted:   #57534e; /* bumped from #78716c for AA on white */
+  --text-faint:   #8a847d; /* decorative only — bumped from #a8a29e */
 
   --bg-spectro:   #1c1917;
   --text-spectro: #0d948880;
   --scrollbar-thumb: #c4bca8;
+  --scrollbar-track: #f0ede6;
+
+  /* Soft shadow tuned for light bg — was hidden by global black */
+  --shadow:       0 4px 24px rgba(28,25,23,.10);
+  --shadow-card:  0 1px 2px rgba(28,25,23,.06), 0 1px 3px rgba(28,25,23,.08);
+  --overlay-scrim: rgba(28,25,23,.45);
+  --overlay-line:  rgba(28,25,23,.10);
 }
 
 /* ── Ocean — Deep navy, cyan accent ───────────────────────────────────────── */
@@ -105,22 +152,37 @@
   --border:       #1e3050;
   --border-light: #2a4268;
 
+  --surface-1:    var(--bg-card);
+  --surface-2:    var(--bg-card2);
+  --surface-3:    var(--bg-hover);
+
   --accent:       #22d3ee;
   --accent-dim:   #0891b2;
   --accent-glow:  rgba(34,211,238,.12);
+  --on-accent:    #04141a;
+  --focus-ring:   rgba(34,211,238,.45);
+
   --amber:        #fbbf24;
   --amber-dim:    #b8860f;
   --danger:       #fb7185;
   --warning:      #fbbf24;
+  --success:      #34d399;
+  --info:         #818cf8;
   --blue:         #818cf8;
 
   --text-main:    #e0f0f8;
-  --text-muted:   #5a8098;
-  --text-faint:   #2a4a60;
+  --text-muted:   #7898b0; /* bumped from #5a8098 */
+  --text-faint:   #4a6a80; /* decorative only — bumped from #2a4a60 (was 2.0:1) */
 
   --bg-spectro:   #040810;
   --text-spectro: #22d3ee80;
   --scrollbar-thumb: #2a4268;
+  --scrollbar-track: #0a1220;
+
+  --shadow:       0 4px 24px rgba(0,0,0,.50);
+  --shadow-card:  0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(4,8,16,.70);
+  --overlay-line:  rgba(255,255,255,.10);
 }
 
 /* ── Dusk — Warm rose dark ────────────────────────────────────────────────── */
@@ -134,22 +196,37 @@
   --border:       #3a2c38;
   --border-light: #4e3c4a;
 
+  --surface-1:    var(--bg-card);
+  --surface-2:    var(--bg-card2);
+  --surface-3:    var(--bg-hover);
+
   --accent:       #f472b6;
   --accent-dim:   #c0447a;
   --accent-glow:  rgba(244,114,182,.12);
+  --on-accent:    #2a0a18;
+  --focus-ring:   rgba(244,114,182,.45);
+
   --amber:        #fbbf24;
   --amber-dim:    #b8860f;
   --danger:       #f87171;
   --warning:      #fbbf24;
+  --success:      #4ade80;
+  --info:         #67e8f9;
   --blue:         #67e8f9;
 
   --text-main:    #f0e4ea;
-  --text-muted:   #907888;
-  --text-faint:   #584050;
+  --text-muted:   #a890a0; /* bumped from #907888 */
+  --text-faint:   #685060; /* decorative only — bumped from #584050 */
 
   --bg-spectro:   #0a060a;
   --text-spectro: #f472b680;
   --scrollbar-thumb: #4e3c4a;
+  --scrollbar-track: #161218;
+
+  --shadow:       0 4px 24px rgba(0,0,0,.50);
+  --shadow-card:  0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(10,4,10,.70);
+  --overlay-line:  rgba(255,255,255,.10);
 }
 
 /* ── Polices & constantes (non-thémées) ─────────────────────────────────── */
@@ -158,8 +235,28 @@
   --font-body:    'Inter', system-ui, -apple-system, sans-serif;
   --radius:       8px;
   --radius-lg:    14px;
-  --shadow:       0 4px 24px rgba(0,0,0,.25);
-  --shadow-card:  0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+  /* --shadow / --shadow-card are defined per theme (paper needs a softer shadow than dark themes) */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   THEME TRANSITION — smooth fade between themes on the page chrome only.
+   Targeting html/body and the major shell containers (not `*`) so we don't
+   override hover transitions on small components. Honors prefers-reduced-motion.
+   ══════════════════════════════════════════════════════════════════════════════ */
+html, body,
+.app-shell, .app-header, .app-footer,
+.app-main, .nav-bar, .nav-section, .mobile-nav, .mobile-drawer {
+  transition:
+    background-color .25s ease,
+    border-color     .25s ease,
+    color            .25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body,
+  .app-shell, .app-header, .app-footer,
+  .app-main, .nav-bar, .nav-section, .mobile-nav, .mobile-drawer {
+    transition: none;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
