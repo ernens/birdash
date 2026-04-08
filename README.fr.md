@@ -106,62 +106,62 @@ Raspberry Pi 5 + SSD
 ## Fonctionnalites
 
 ### Moteur de detection (BirdEngine)
-- 🤖 **Inference dual-modele** — BirdNET V2.4 (rapide, ~2s) + Perch V2 (precis, ~2s) en parallele
-- 🎙️ **Enregistrement local** — interface USB via ALSA avec gain configurable
-- 🎚️ **Normalisation adaptative** — gain logiciel automatique selon le bruit ambiant, protection clipping, gel activite, mode observateur
-- 🔇 **Filtres audio** — passe-haut + passe-bas (bandpass), reduction de bruit spectrale (gating stationnaire), normalisation RMS
-- 📡 **BirdWeather** — upload automatique des paysages sonores + detections
-- 🔔 **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece, favoris (pas chaque moineau)
-- ⚡ **Post-traitement async** — extraction MP3, spectrogrammes, sync DB ne bloquent pas l'inference
+- <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Inference dual-modele** — BirdNET V2.4 (rapide, ~2s) + Perch V2 (precis, ~2s) en parallele
+- <img src="docs/icons/mic.svg" width="16" align="top" alt=""> **Enregistrement local** — interface USB via ALSA avec gain configurable
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Normalisation adaptative** — gain logiciel automatique selon le bruit ambiant, protection clipping, gel activite, mode observateur
+- <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Filtres audio** — passe-haut + passe-bas (bandpass), reduction de bruit spectrale (gating stationnaire), normalisation RMS
+- <img src="docs/icons/radio.svg" width="16" align="top" alt=""> **BirdWeather** — upload automatique des paysages sonores + detections
+- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece, favoris (pas chaque moineau)
+- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Post-traitement async** — extraction MP3, spectrogrammes, sync DB ne bloquent pas l'inference
 
 ### Dashboard
-- 📊 Vue d'ensemble avec KPIs, graphiques, resume matinal
-- 🌅 **Timeline** — timeline interactive avec gradient de ciel, marqueurs lever/coucher de soleil SVG, zoom par clic sur la barre de densite, disposition verticale par confiance, details enrichis en zoom profond, clustering d'evenements
-- 🎵 **Spectrogramme live** — audio en temps reel du micro avec noms d'oiseaux
-- 🎧 Fil de detections avec lecture audio integree et filtres gain/passe-haut/passe-bas
-- 🦜 Fiches especes avec photos, statut UICN, favoris (SQLite), notes personnelles, phenologie calendaire, comparaison annee/annee, export PNG
-- 🧬 Matrice biodiversite, indice de Shannon, taxonomie
-- ⭐ **Favoris** — page dediee avec KPIs, recherche, tri ; toggle coeur sur toutes les listes d'especes
-- 💎 Suivi des especes rares
-- 📈 Statistiques et classements avec onglet comparaison de modeles
-- 🏆 Galerie des meilleures captures avec bibliotheque audio
-- 🔬 Analyses avancees (diagrammes polaires, heatmaps, series temporelles)
-- 🌦️ **Meteo** — page dediee avec correlation meteo/activite, prevision J+1, especes par conditions
-- 📆 **Calendrier** — vue unifiee timeline + especes + lecteur audio par date
-- 🌅 **Timeline pleine page** — zoom par glisser, slider densite unifie, badges filtres avec clignotement
+- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> Vue d'ensemble avec KPIs, graphiques, resume matinal
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — timeline interactive avec gradient de ciel, marqueurs lever/coucher de soleil SVG, zoom par clic sur la barre de densite, disposition verticale par confiance, details enrichis en zoom profond, clustering d'evenements
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Spectrogramme live** — audio en temps reel du micro avec noms d'oiseaux
+- <img src="docs/icons/headphones.svg" width="16" align="top" alt=""> Fil de detections avec lecture audio integree et filtres gain/passe-haut/passe-bas
+- <img src="docs/icons/bird.svg" width="16" align="top" alt=""> Fiches especes avec photos, statut UICN, favoris (SQLite), notes personnelles, phenologie calendaire, comparaison annee/annee, export PNG
+- <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Matrice biodiversite, indice de Shannon, taxonomie
+- <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favoris** — page dediee avec KPIs, recherche, tri ; toggle coeur sur toutes les listes d'especes
+- <img src="docs/icons/gem.svg" width="16" align="top" alt=""> Suivi des especes rares
+- <img src="docs/icons/trending-up.svg" width="16" align="top" alt=""> Statistiques et classements avec onglet comparaison de modeles
+- <img src="docs/icons/trophy.svg" width="16" align="top" alt=""> Galerie des meilleures captures avec bibliotheque audio
+- <img src="docs/icons/microscope.svg" width="16" align="top" alt=""> Analyses avancees (diagrammes polaires, heatmaps, series temporelles)
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Meteo** — page dediee avec correlation meteo/activite, prevision J+1, especes par conditions
+- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Calendrier** — vue unifiee timeline + especes + lecteur audio par date
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline pleine page** — zoom par glisser, slider densite unifie, badges filtres avec clignotement
 
 ### Station
-- 📋 **Log live** — dashboard temps reel (SSE) avec categories colorees, filtres, KPIs (detections/BirdWeather/erreurs), pause/reprise, auto-scroll
+- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Log live** — dashboard temps reel (SSE) avec categories colorees, filtres, KPIs (detections/BirdWeather/erreurs), pause/reprise, auto-scroll
 
 ### Navigation
 - 5 sections (En direct, Historique, Especes, Analyses, Station)
 - Barre de navigation mobile, recherche globale espece+date, cloche notifications, badge "A valider"
 
 ### Revue des detections
-- 🔍 **Auto-flagging** — especes nocturnes de jour, migrateurs hors saison, confiance faible isolee, especes non-europeennes
-- ✅ **Actions en masse** — confirmer/rejeter/supprimer par regle ou par selection avec apercu
-- 🎵 Spectrogramme complet avec filtres et selection de boucle pour verification manuelle
-- 🗑️ **Suppression definitive** — apercu avant suppression (DB + fichiers audio), rapport de resultat
+- <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Auto-flagging** — especes nocturnes de jour, migrateurs hors saison, confiance faible isolee, especes non-europeennes
+- <img src="docs/icons/check-circle.svg" width="16" align="top" alt=""> **Actions en masse** — confirmer/rejeter/supprimer par regle ou par selection avec apercu
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> Spectrogramme complet avec filtres et selection de boucle pour verification manuelle
+- <img src="docs/icons/trash-2.svg" width="16" align="top" alt=""> **Suppression definitive** — apercu avant suppression (DB + fichiers audio), rapport de resultat
 
 ### Configuration audio
-- 🎙️ Detection automatique des peripheriques USB audio
-- 🎚️ **Gain adaptatif** — estimation bruit de fond, protection clipping, mode observateur/application
-- 🔇 **Bandpass + debruitage** — filtre passe-bas (4-15 kHz), reduction spectrale (noisereduce), activable par profil
-- 👁️ **Previsualisation filtres** — spectrogrammes avant/apres depuis le micro pour visualiser l'effet des filtres
-- 🎛️ 6 profils d'environnement (jardin, foret, bord de route, ville, nuit, test)
-- ⚖️ Assistant de calibration inter-canaux pour micros EM272
-- 📊 VU-metres en temps reel via SSE
+- <img src="docs/icons/mic.svg" width="16" align="top" alt=""> Detection automatique des peripheriques USB audio
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Gain adaptatif** — estimation bruit de fond, protection clipping, mode observateur/application
+- <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Bandpass + debruitage** — filtre passe-bas (4-15 kHz), reduction spectrale (noisereduce), activable par profil
+- <img src="docs/icons/eye.svg" width="16" align="top" alt=""> **Previsualisation filtres** — spectrogrammes avant/apres depuis le micro pour visualiser l'effet des filtres
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> 6 profils d'environnement (jardin, foret, bord de route, ville, nuit, test)
+- <img src="docs/icons/scale.svg" width="16" align="top" alt=""> Assistant de calibration inter-canaux pour micros EM272
+- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> VU-metres en temps reel via SSE
 
 ### Reglages et systeme
-- 🔧 Interface complete — modeles, parametres d'analyse, notifications, audio, sauvegarde
-- 🖥️ Sante systeme — CPU, RAM, disque, temperature, services
-- 💻 **Terminal web** — bash complet dans le navigateur, supporte Claude Code
-- 💾 **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
-- 🎨 **11 themes** — 7 sombres (Foret, Nuit, Ocean, Crepuscule, Solar Dark, Nord, High Contrast AAA), 3 clairs (Papier, Sepia, Solar Light), plus un mode **Auto** qui suit le `prefers-color-scheme` du systeme. Mini-apercus de page dans le selecteur, fondu doux entre themes, systeme de design entierement par tokens (voir [`docs/THEMES.md`](docs/THEMES.md))
-- 📷 **Gestion des photos** — bannir/remplacer, definir la photo preferee par espece
-- 🏷️ **Branding personnalisable** — nom de station et en-tete configurables dans les reglages
-- 🌐 **Traduction des noms d'especes** — noms affiches dans la langue choisie sur toutes les pages
-- 🌍 4 langues UI (FR/EN/NL/DE) + 36 langues pour les noms d'especes
+- <img src="docs/icons/wrench.svg" width="16" align="top" alt=""> Interface complete — modeles, parametres d'analyse, notifications, audio, sauvegarde
+- <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> Sante systeme — CPU, RAM, disque, temperature, services
+- <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Terminal web** — bash complet dans le navigateur, supporte Claude Code
+- <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 themes** — 7 sombres (Foret, Nuit, Ocean, Crepuscule, Solar Dark, Nord, High Contrast AAA), 3 clairs (Papier, Sepia, Solar Light), plus un mode **Auto** qui suit le `prefers-color-scheme` du systeme. Mini-apercus de page dans le selecteur, fondu doux entre themes, systeme de design entierement par tokens (voir [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Gestion des photos** — bannir/remplacer, definir la photo preferee par espece
+- <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Branding personnalisable** — nom de station et en-tete configurables dans les reglages
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Traduction des noms d'especes** — noms affiches dans la langue choisie sur toutes les pages
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 langues UI (FR/EN/NL/DE) + 36 langues pour les noms d'especes
 
 ## Modeles Perch V2 optimises
 

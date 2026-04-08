@@ -77,25 +77,25 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 
 ## Kenmerken
 
-- 🤖 **Dual-model inferentie** — BirdNET V2.4 + Perch V2 parallel
-- 🌅 **Timeline** — volledig scherm met drag-to-zoom, uniforme dichtheidsslider, SVG-iconen, filter-badges met knippermarkering
-- 📆 **Kalender** — uniforme dagweergave met timeline + soortenlijst + audiospeler
-- 🌦️ **Weer** — correlatieanalyse (Pearson r), prognose, soorten per omstandigheden
-- 🎵 **Live spectrogram** — real-time audio met vogelnamen
-- 🔍 **Review** — auto-flagging, spectrogram-modal met filters en loop-selectie, verwijderen met voorbeeldweergave
-- ⭐ **Favorieten** — speciale pagina met KPIs, zoeken, sorteren; harttoggle op alle soortenlijsten
-- 📝 **Notities** per soort en per detectie
-- 🦜 **Soortkaarten** — fenologiekalender, jaarlijkse vergelijking, PNG-export
-- 📱 **Mobiel** — navigatiebalk onderaan, veeggebaren, globale zoekfunctie (soort + datum)
-- 🔔 **Meldingen** — ntfy.sh + in-app belletje
-- 📋 **Live log** — realtime dashboard (SSE) met kleurgecodeerde categorieën, filters, KPIs
-- 💻 **Web terminal** — bash in browser
-- 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
-- 📷 **Fotobeheer** — blokkeren/vervangen, standaardfoto per soort
-- 🏷️ **Aanpasbare branding** — stationnaam en header configureerbaar via instellingen
-- 🌐 **Soortnaamvertaling** — vogelnamen in gekozen taal op alle pagina's
-- 🌍 4 UI-talen (FR/EN/NL/DE) + 36 talen voor soortnamen
-- 🎨 **11 thema's** — 7 donker (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 licht (Paper, Sepia, Solar Light), plus een **Auto**-modus die de OS-instelling volgt. Mini-paginavoorbeelden in de kiezer, vloeiende overgangen, volledig token-gebaseerd ontwerpsysteem (zie [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-model inferentie** — BirdNET V2.4 + Perch V2 parallel
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — volledig scherm met drag-to-zoom, uniforme dichtheidsslider, SVG-iconen, filter-badges met knippermarkering
+- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — uniforme dagweergave met timeline + soortenlijst + audiospeler
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weer** — correlatieanalyse (Pearson r), prognose, soorten per omstandigheden
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live spectrogram** — real-time audio met vogelnamen
+- <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Review** — auto-flagging, spectrogram-modal met filters en loop-selectie, verwijderen met voorbeeldweergave
+- <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favorieten** — speciale pagina met KPIs, zoeken, sorteren; harttoggle op alle soortenlijsten
+- <img src="docs/icons/pencil.svg" width="16" align="top" alt=""> **Notities** per soort en per detectie
+- <img src="docs/icons/bird.svg" width="16" align="top" alt=""> **Soortkaarten** — fenologiekalender, jaarlijkse vergelijking, PNG-export
+- <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> **Mobiel** — navigatiebalk onderaan, veeggebaren, globale zoekfunctie (soort + datum)
+- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Meldingen** — ntfy.sh + in-app belletje
+- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Live log** — realtime dashboard (SSE) met kleurgecodeerde categorieën, filters, KPIs
+- <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Web terminal** — bash in browser
+- <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
+- <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Fotobeheer** — blokkeren/vervangen, standaardfoto per soort
+- <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Aanpasbare branding** — stationnaam en header configureerbaar via instellingen
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Soortnaamvertaling** — vogelnamen in gekozen taal op alle pagina's
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI-talen (FR/EN/NL/DE) + 36 talen voor soortnamen
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 thema's** — 7 donker (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 licht (Paper, Sepia, Solar Light), plus een **Auto**-modus die de OS-instelling volgt. Mini-paginavoorbeelden in de kiezer, vloeiende overgangen, volledig token-gebaseerd ontwerpsysteem (zie [`docs/THEMES.md`](docs/THEMES.md))
 
 ## Geoptimaliseerde Perch V2 Modellen
 

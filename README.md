@@ -107,45 +107,45 @@ Raspberry Pi 5 + SSD
 ## Features
 
 ### Detection Engine (BirdEngine)
-- 🤖 **Dual-model inference** — BirdNET V2.4 (fast, ~2s) + Perch V2 (precise, ~2s) in parallel
-- 🎙️ **Local recording** — any USB audio interface via ALSA with configurable gain
-- 🎚️ **Adaptive noise normalization** — automatic software gain based on ambient noise, with clip guard, activity hold, and observer mode
-- 🔇 **Audio filters** — configurable highpass + lowpass (bandpass), spectral noise reduction (stationary gating), RMS normalization
-- 📡 **BirdWeather** — automatic upload of soundscapes + detections
-- 🔔 **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
-- ⚡ **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
+- <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-model inference** — BirdNET V2.4 (fast, ~2s) + Perch V2 (precise, ~2s) in parallel
+- <img src="docs/icons/mic.svg" width="16" align="top" alt=""> **Local recording** — any USB audio interface via ALSA with configurable gain
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Adaptive noise normalization** — automatic software gain based on ambient noise, with clip guard, activity hold, and observer mode
+- <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Audio filters** — configurable highpass + lowpass (bandpass), spectral noise reduction (stationary gating), RMS normalization
+- <img src="docs/icons/radio.svg" width="16" align="top" alt=""> **BirdWeather** — automatic upload of soundscapes + detections
+- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
+- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
 ### Dashboard (22 pages)
 
 **Home**
-- ⚡ **Bird Flow** — animated pipeline landing page showing live audio levels (SSE), dual-model inference with per-model species + confidence, detection flow with animated connectors, today's KPIs, key events feed, recent species gallery
-- 📊 **Overview** — dashboard with KPIs, weather widget, quick links, morning summary, "What's New" alerts
-- 🕐 **Recent activity** — latest detections across all species
-- 🎵 **Live spectrogram** — real-time audio from mic with bird name overlay
-- 📅 **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
-- 🌐 **Species name translation** — bird names displayed in the user's chosen language across all pages
+- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Bird Flow** — animated pipeline landing page showing live audio levels (SSE), dual-model inference with per-model species + confidence, detection flow with animated connectors, today's KPIs, key events feed, recent species gallery
+- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> **Overview** — dashboard with KPIs, weather widget, quick links, morning summary, "What's New" alerts
+- <img src="docs/icons/clock.svg" width="16" align="top" alt=""> **Recent activity** — latest detections across all species
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live spectrogram** — real-time audio from mic with bird name overlay
+- <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Species name translation** — bird names displayed in the user's chosen language across all pages
 
 **History**
-- 📆 **Calendar** — unified day-by-day view with timeline visualization, species list, audio player
-- 🌅 **Timeline** — full-page interactive timeline with drag-to-zoom, unified bird density slider (0-100%), SVG sunrise/sunset/moon icons, type filter badges with blink highlight, confidence-mapped vertical layout
-- 📋 **Detections** — full filterable table with favorites, new species filter, per-detection delete, CSV/eBird export
-- ✅ **Review** — auto-flagged detections with spectro modal, bulk confirm/reject/delete with preview, purge rejected
+- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Calendar** — unified day-by-day view with timeline visualization, species list, audio player
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — full-page interactive timeline with drag-to-zoom, unified bird density slider (0-100%), SVG sunrise/sunset/moon icons, type filter badges with blink highlight, confidence-mapped vertical layout
+- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Detections** — full filterable table with favorites, new species filter, per-detection delete, CSV/eBird export
+- <img src="docs/icons/check-circle.svg" width="16" align="top" alt=""> **Review** — auto-flagged detections with spectro modal, bulk confirm/reject/delete with preview, purge rejected
 
 **Species**
-- 🦜 Species cards with photos (iNaturalist + Wikipedia), IUCN status, favorites (SQLite-backed), personal notes (per-species and per-detection), phenology calendar (12-month dot map), year-over-year monthly comparison, chart PNG export, Web Share API
-- ⭐ **Favorites** — dedicated page with KPIs, search, sort; heart toggle on all species lists
-- 💎 Rare species tracking
-- 🏆 Best recordings gallery with audio library tab
+- <img src="docs/icons/bird.svg" width="16" align="top" alt=""> Species cards with photos (iNaturalist + Wikipedia), IUCN status, favorites (SQLite-backed), personal notes (per-species and per-detection), phenology calendar (12-month dot map), year-over-year monthly comparison, chart PNG export, Web Share API
+- <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favorites** — dedicated page with KPIs, search, sort; heart toggle on all species lists
+- <img src="docs/icons/gem.svg" width="16" align="top" alt=""> Rare species tracking
+- <img src="docs/icons/trophy.svg" width="16" align="top" alt=""> Best recordings gallery with audio library tab
 
 **Analysis**
-- 🌦️ **Weather** — dedicated page with correlation analysis (Pearson r), tomorrow's forecast, species by weather conditions
-- 📈 Statistics and rankings with model comparison tab
-- 🔬 Advanced analyses (polar charts, heatmaps, time series, narrative)
-- 🧬 Biodiversity — Shannon index, taxonomy breakdown, phenology
-- 📅 **Phenology calendar** — observed annual cycle per species (presence/abundance/hourly modes), inferred phases (active period, peak abundance, dawn chorus, migrant detection), 53-week ribbon visualization
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weather** — dedicated page with correlation analysis (Pearson r), tomorrow's forecast, species by weather conditions
+- <img src="docs/icons/trending-up.svg" width="16" align="top" alt=""> Statistics and rankings with model comparison tab
+- <img src="docs/icons/microscope.svg" width="16" align="top" alt=""> Advanced analyses (polar charts, heatmaps, time series, narrative)
+- <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Biodiversity — Shannon index, taxonomy breakdown, phenology
+- <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Phenology calendar** — observed annual cycle per species (presence/abundance/hourly modes), inferred phases (active period, peak abundance, dawn chorus, migrant detection), 53-week ribbon visualization
 
 **Station**
-- 📋 **Live log** — real-time streaming dashboard (SSE) with color-coded categories, filters, KPIs (detections/BirdWeather/errors), pause/resume, auto-scroll
+- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Live log** — real-time streaming dashboard (SSE) with color-coded categories, filters, KPIs (detections/BirdWeather/errors), pause/resume, auto-scroll
 
 **Navigation**
 - 6 intent-based sections: Home, Live, History, Species, Indicators, Station
@@ -156,29 +156,29 @@ Raspberry Pi 5 + SSD
 - Cross-navigation between settings and system pages
 
 ### Detection Review
-- 🔍 **Auto-flagging** — nocturnal birds by day, out-of-season migrants, low confidence isolates, non-European species
-- ✅ **Bulk actions** — confirm/reject/delete by rule, per-selection, or purge all rejected
-- 🎵 Full spectrogram modal with gain/highpass/lowpass filters and loop selection for manual verification
-- 🗑️ **Permanent deletion** — preview modal listing what will be deleted (DB + audio files), with result report
+- <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Auto-flagging** — nocturnal birds by day, out-of-season migrants, low confidence isolates, non-European species
+- <img src="docs/icons/check-circle.svg" width="16" align="top" alt=""> **Bulk actions** — confirm/reject/delete by rule, per-selection, or purge all rejected
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> Full spectrogram modal with gain/highpass/lowpass filters and loop selection for manual verification
+- <img src="docs/icons/trash-2.svg" width="16" align="top" alt=""> **Permanent deletion** — preview modal listing what will be deleted (DB + audio files), with result report
 
 ### Audio Configuration
-- 🎙️ Auto-detection of USB audio devices with one-click selection
-- 🎚️ **Adaptive gain** — noise floor estimation, clip guard, activity hold, observer/apply modes
-- 🔇 **Bandpass + denoise** — lowpass filter (4-15 kHz), spectral gating (noisereduce), all toggleable per profile
-- 👁️ **Filter preview** — before/after spectrograms from live mic to visualize filter effects
-- 🎛️ 6 environment profiles (garden, forest, roadside, urban, night, test)
-- ⚖️ Inter-channel calibration wizard for dual EM272 microphones
-- 📊 Real-time VU meters via SSE
+- <img src="docs/icons/mic.svg" width="16" align="top" alt=""> Auto-detection of USB audio devices with one-click selection
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Adaptive gain** — noise floor estimation, clip guard, activity hold, observer/apply modes
+- <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Bandpass + denoise** — lowpass filter (4-15 kHz), spectral gating (noisereduce), all toggleable per profile
+- <img src="docs/icons/eye.svg" width="16" align="top" alt=""> **Filter preview** — before/after spectrograms from live mic to visualize filter effects
+- <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> 6 environment profiles (garden, forest, roadside, urban, night, test)
+- <img src="docs/icons/scale.svg" width="16" align="top" alt=""> Inter-channel calibration wizard for dual EM272 microphones
+- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> Real-time VU meters via SSE
 
 ### Settings & System
-- 🔧 Full settings UI — models, analysis parameters, notifications, audio, backup
-- 🖥️ System health — CPU, RAM, disk, temperature, services
-- 💻 **Web terminal** — full bash in browser, supports Claude Code
-- 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV with scheduling
-- 🎨 **11 themes** — 7 dark (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 light (Paper, Sepia, Solar Light), plus an **Auto** mode that follows the OS `prefers-color-scheme`. Mini page previews in the picker, smooth cross-fade between themes, fully token-driven (design system documented in [`docs/THEMES.md`](docs/THEMES.md))
-- 📷 **Photo management** — ban/replace photos, set preferred photo per species
-- 🏷️ **Customizable branding** — configurable station name and header brand via settings
-- 🌍 4 UI languages (FR/EN/NL/DE) + 36 languages for species names
+- <img src="docs/icons/wrench.svg" width="16" align="top" alt=""> Full settings UI — models, analysis parameters, notifications, audio, backup
+- <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> System health — CPU, RAM, disk, temperature, services
+- <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Web terminal** — full bash in browser, supports Claude Code
+- <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV with scheduling
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 themes** — 7 dark (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 light (Paper, Sepia, Solar Light), plus an **Auto** mode that follows the OS `prefers-color-scheme`. Mini page previews in the picker, smooth cross-fade between themes, fully token-driven (design system documented in [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Photo management** — ban/replace photos, set preferred photo per species
+- <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Customizable branding** — configurable station name and header brand via settings
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI languages (FR/EN/NL/DE) + 36 languages for species names
 
 ## Optimized Perch V2 Models
 

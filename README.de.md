@@ -77,25 +77,25 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 
 ## Funktionen
 
-- 🤖 **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 parallel
-- 🌅 **Timeline** — Ganzseitige Timeline mit Drag-to-Zoom, einheitlicher Dichte-Slider, SVG-Icons, Filter-Badges mit Blink
-- 📆 **Kalender** — Vereinigte Tagesansicht mit Timeline + Artenliste + Audioplayer
-- 🌦️ **Wetter** — Korrelationsanalyse (Pearson r), Prognose, Arten nach Bedingungen
-- 🎵 **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
-- 🔍 **Uberprufung** — Auto-Flagging, Spektrogramm-Modal mit Filtern und Loop-Auswahl, Loschen mit Vorschau
-- ⭐ **Favoriten** — eigene Seite mit KPIs, Suche, Sortierung; Herz-Toggle auf allen Artenlisten
-- 📝 **Notizen** pro Art und pro Erkennung
-- 🦜 **Artenkarten** — Phonologie-Kalender, Jahresvergleich, PNG-Export
-- 📱 **Mobil** — Bottom-Navigation, Touch-Gesten, globale Suche (Art + Datum)
-- 🔔 **Benachrichtigungen** — ntfy.sh + In-App-Glocke
-- 📋 **Live-Log** — Echtzeit-Dashboard (SSE) mit farbcodierten Kategorien, Filtern, KPIs
-- 💻 **Web-Terminal** — Bash im Browser
-- 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
-- 📷 **Fotoverwaltung** — Sperren/Ersetzen, Standardfoto pro Art
-- 🏷️ **Anpassbares Branding** — Stationsname und Header uber Einstellungen konfigurierbar
-- 🌐 **Artnamenubersetzung** — Vogelnamen in gewahlter Sprache auf allen Seiten
-- 🌍 4 UI-Sprachen (FR/EN/NL/DE) + 36 Sprachen fur Artnamen
-- 🎨 **11 Themes** — 7 dunkel (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 hell (Paper, Sepia, Solar Light), plus ein **Auto**-Modus, der `prefers-color-scheme` des Betriebssystems folgt. Mini-Seitenvorschauen im Theme-Picker, fließende Übergänge, vollständig token-basiertes Designsystem (siehe [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 parallel
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — Ganzseitige Timeline mit Drag-to-Zoom, einheitlicher Dichte-Slider, SVG-Icons, Filter-Badges mit Blink
+- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — Vereinigte Tagesansicht mit Timeline + Artenliste + Audioplayer
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Wetter** — Korrelationsanalyse (Pearson r), Prognose, Arten nach Bedingungen
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
+- <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Uberprufung** — Auto-Flagging, Spektrogramm-Modal mit Filtern und Loop-Auswahl, Loschen mit Vorschau
+- <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favoriten** — eigene Seite mit KPIs, Suche, Sortierung; Herz-Toggle auf allen Artenlisten
+- <img src="docs/icons/pencil.svg" width="16" align="top" alt=""> **Notizen** pro Art und pro Erkennung
+- <img src="docs/icons/bird.svg" width="16" align="top" alt=""> **Artenkarten** — Phonologie-Kalender, Jahresvergleich, PNG-Export
+- <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> **Mobil** — Bottom-Navigation, Touch-Gesten, globale Suche (Art + Datum)
+- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Benachrichtigungen** — ntfy.sh + In-App-Glocke
+- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Live-Log** — Echtzeit-Dashboard (SSE) mit farbcodierten Kategorien, Filtern, KPIs
+- <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Web-Terminal** — Bash im Browser
+- <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV
+- <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Fotoverwaltung** — Sperren/Ersetzen, Standardfoto pro Art
+- <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Anpassbares Branding** — Stationsname und Header uber Einstellungen konfigurierbar
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Artnamenubersetzung** — Vogelnamen in gewahlter Sprache auf allen Seiten
+- <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI-Sprachen (FR/EN/NL/DE) + 36 Sprachen fur Artnamen
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 Themes** — 7 dunkel (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 hell (Paper, Sepia, Solar Light), plus ein **Auto**-Modus, der `prefers-color-scheme` des Betriebssystems folgt. Mini-Seitenvorschauen im Theme-Picker, fließende Übergänge, vollständig token-basiertes Designsystem (siehe [`docs/THEMES.md`](docs/THEMES.md))
 
 ## Optimierte Perch V2 Modelle
 
