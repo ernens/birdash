@@ -95,6 +95,7 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - 🏷️ **Aanpasbare branding** — stationnaam en header configureerbaar via instellingen
 - 🌐 **Soortnaamvertaling** — vogelnamen in gekozen taal op alle pagina's
 - 🌍 4 UI-talen (FR/EN/NL/DE) + 36 talen voor soortnamen
+- 🎨 **11 thema's** — 7 donker (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 licht (Paper, Sepia, Solar Light), plus een **Auto**-modus die de OS-instelling volgt. Mini-paginavoorbeelden in de kiezer, vloeiende overgangen, volledig token-gebaseerd ontwerpsysteem (zie [`docs/THEMES.md`](docs/THEMES.md))
 
 ## Geoptimaliseerde Perch V2 Modellen
 

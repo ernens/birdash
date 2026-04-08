@@ -157,7 +157,7 @@ Raspberry Pi 5 + SSD
 - 🖥️ Sante systeme — CPU, RAM, disque, temperature, services
 - 💻 **Terminal web** — bash complet dans le navigateur, supporte Claude Code
 - 💾 **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
-- 🎨 5 themes (Foret, Nuit, Papier, Ocean, Crepuscule)
+- 🎨 **11 themes** — 7 sombres (Foret, Nuit, Ocean, Crepuscule, Solar Dark, Nord, High Contrast AAA), 3 clairs (Papier, Sepia, Solar Light), plus un mode **Auto** qui suit le `prefers-color-scheme` du systeme. Mini-apercus de page dans le selecteur, fondu doux entre themes, systeme de design entierement par tokens (voir [`docs/THEMES.md`](docs/THEMES.md))
 - 📷 **Gestion des photos** — bannir/remplacer, definir la photo preferee par espece
 - 🏷️ **Branding personnalisable** — nom de station et en-tete configurables dans les reglages
 - 🌐 **Traduction des noms d'especes** — noms affiches dans la langue choisie sur toutes les pages

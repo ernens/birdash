@@ -175,7 +175,7 @@ Raspberry Pi 5 + SSD
 - 🖥️ System health — CPU, RAM, disk, temperature, services
 - 💻 **Web terminal** — full bash in browser, supports Claude Code
 - 💾 **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV with scheduling
-- 🎨 5 themes (Forest, Night, Paper, Ocean, Dusk)
+- 🎨 **11 themes** — 7 dark (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 light (Paper, Sepia, Solar Light), plus an **Auto** mode that follows the OS `prefers-color-scheme`. Mini page previews in the picker, smooth cross-fade between themes, fully token-driven (design system documented in [`docs/THEMES.md`](docs/THEMES.md))
 - 📷 **Photo management** — ban/replace photos, set preferred photo per species
 - 🏷️ **Customizable branding** — configurable station name and header brand via settings
 - 🌍 4 UI languages (FR/EN/NL/DE) + 36 languages for species names
@@ -350,7 +350,7 @@ birdash/
 │   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
 │   │   └── bird-timeline.js       # Timeline rendering (sky, stars, markers)
 │   ├── i18n/                      # Translation files (fr/en/de/nl.json)
-│   ├── css/                       # Styles + 5 themes
+│   ├── css/                       # Styles + 11 themes (see docs/THEMES.md)
 │   ├── settings/                  # Lazy-loaded settings tab fragments
 │   └── sw.js                      # Service Worker (offline cache)
 ├── engine/                        # BirdEngine (Python detection engine)
