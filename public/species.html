@@ -717,9 +717,9 @@ const app = createApp({
           if (tax.familyCom) speciesInfo.familyCom = tax.familyCom;
         }
 
-        // Load all data in parallel
+        // Load photos FIRST (user sees them immediately), then charts in parallel
+        loadSpeciesInfo(stats.sci || speciesName);
         await Promise.all([
-          loadSpeciesInfo(stats.sci || speciesName),
           loadHourlyData(speciesName),
           loadMonthlyData(speciesName),
           load30dData(speciesName),
