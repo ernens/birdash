@@ -26,6 +26,7 @@ const _photoRoutes   = require('./routes/photos');
 const _externalRoutes = require('./routes/external');
 const _settingsRoutes = require('./routes/settings');
 const _comparisonRoutes = require('./routes/comparison');
+const _weeklyReport = require('./lib/weekly-report');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
 const PORT    = process.env.BIRDASH_PORT || 7474;
@@ -121,6 +122,10 @@ setTimeout(() => {
   try { aggregates.rebuildAll(dbWrite); } catch(e) { console.error('[BIRDASH] Aggregate rebuild error:', e.message); }
   aggregates.startPeriodicRefresh(dbWrite);
 }, 5000);
+// Weekly report: check every hour if it's Sunday evening
+setInterval(() => {
+  try { _weeklyReport.checkAndSend(db, birdashDb, 'BirdStation'); } catch(e) {}
+}, 60 * 60 * 1000);
 
 // ── Route context ────────────────────────────────────────────────────────────
 const _routeCtx = {

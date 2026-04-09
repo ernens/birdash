@@ -751,6 +751,68 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/reports/weekly ──────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/reports/weekly') {
+    (async () => {
+      try {
+        const qs = new URL(req.url, 'http://x').searchParams;
+        const weeklyReport = require('../lib/weekly-report');
+
+        // If ?generate=true, compute a fresh report
+        if (qs.get('generate') === 'true') {
+          const end = qs.get('end') || new Date().toISOString().split('T')[0];
+          const startD = new Date(end + 'T12:00:00');
+          startD.setDate(startD.getDate() - 6);
+          const start = startD.toISOString().split('T')[0];
+          const report = weeklyReport.generateReport(db, start, end);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(report));
+          return;
+        }
+
+        // Otherwise return saved reports
+        const reportPath = require('path').join(process.env.HOME, 'birdash', 'config', 'weekly-reports.json');
+        try {
+          const raw = await require('fs').promises.readFile(reportPath, 'utf8');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(raw);
+        } catch(e) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end('[]');
+        }
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
+  // ── Route : POST /api/reports/weekly/send ──────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/reports/weekly/send') {
+    if (!requireAuth(req, res)) return true;
+    (async () => {
+      try {
+        const weeklyReport = require('../lib/weekly-report');
+        const end = new Date().toISOString().split('T')[0];
+        const startD = new Date(); startD.setDate(startD.getDate() - 6);
+        const start = startD.toISOString().split('T')[0];
+        const report = weeklyReport.generateReport(db, start, end);
+        const text = weeklyReport.formatText(report, 'BirdStation');
+        const sent = await weeklyReport.sendReport(
+          `BirdStation Weekly — ${report.overall.species} species`,
+          text
+        );
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, sent, report }));
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
   // ── Route : POST /api/admin/rebuild-stats ─────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/admin/rebuild-stats') {
     if (!requireAuth(req, res)) return true;
