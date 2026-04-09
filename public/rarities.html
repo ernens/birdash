@@ -118,8 +118,8 @@
                 <!-- Play -->
                 <button v-if="d.File_Name" class="play-btn"
                         style="width:24px;height:24px;font-size:.65rem;"
-                        :class="{playing:playingFile===d.File_Name}"
-                        @click.stop="toggleAudio(d.File_Name)">▶</button>
+                        @click.stop="BIRDASH.openSpectroModal({fileName:d.File_Name, speciesName:d.Com_Name, sciName:d.Sci_Name||d.sci, confidence:d.Confidence, date:d.Date, time:d.Time})"
+                        title="Spectrogramme">▶</button>
                 <!-- Download -->
                 <a v-if="d.File_Name" :href="buildAudioUrl(d.File_Name)"
                    :download="d.Com_Name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+d.Date+'.mp3'"

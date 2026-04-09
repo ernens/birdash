@@ -177,10 +177,8 @@
                   <div v-else class="det-thumb-ph"><bird-icon name="bird" :size="16" ></bird-icon></div>
                 </td>
                 <td style="white-space:nowrap;">
-                  <button v-if="d.File_Name" class="play-btn" :class="{playing:playingFile===d.File_Name}"
-                          @click="toggleAudio(d.File_Name)" :title="t('play')" :aria-label="t('play')">▶</button>
+                  <button v-if="d.File_Name" class="play-btn" @click="openSpectro(d)" :title="t('play')">▶</button>
                   <span v-else style="width:28px;display:inline-block;"></span>
-                  <button v-if="d.File_Name" class="play-btn" @click="openSpectro(d)" title="Spectrogramme" style="font-size:.65rem;margin-left:2px;"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
                 </td>
                 <!-- Download -->
                 <td>

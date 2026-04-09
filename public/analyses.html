@@ -219,7 +219,7 @@
                     {{Math.round(d.Confidence*100)}}%
                   </span>
                   <button v-if="d.File_Name" class="pd-det-play"
-                          @click="toggleAudioFile(d.File_Name)">▶</button>
+                          @click="BIRDASH.openSpectroModal({fileName:d.File_Name, speciesName:selCtx.species[0]||'', sciName:sciFor(selCtx.species[0])||'', confidence:d.Confidence, time:d.Time})">▶</button>
                   <span v-else style="width:22px;"></span>
                 </div>
               </div>

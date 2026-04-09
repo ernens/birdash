@@ -229,6 +229,7 @@
             <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(lastDet.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
             <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
             <span class="idx-duration">{{richDuration}}</span>
+            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="BIRDASH.openSpectroModal({fileName:lastDet.row.File_Name, speciesName:lastDet.row.Com_Name, sciName:lastDet.row.Sci_Name, confidence:lastDet.row.Confidence, date:lastDet.row.Date, time:lastDet.row.Time})" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
           </div>
           <div v-if="lastDet.row.File_Name" class="idx-spectro-wrap">
             <div class="idx-spectro-freqs">
@@ -438,12 +439,11 @@
           <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name"></bird-img>
           <div v-else class="det-thumb-ph"><bird-icon name="bird" :size="16" ></bird-icon></div>
           <button v-if="d.File_Name" class="play-btn" style="width:22px;height:22px;font-size:.6rem;"
-                  :class="{playing:playingFile===d.File_Name}" @click="toggleAudio(d.File_Name)">▶</button>
+                  @click="BIRDASH.openSpectroModal({fileName:d.File_Name, speciesName:d.Com_Name, sciName:d.Sci_Name, confidence:d.Confidence, date:d.Date, time:d.Time})">▶</button>
           <span v-else style="width:22px;display:inline-block;"></span>
           <div class="det-time">{{fmtTime(d.Time)}}</div>
           <div class="det-species">
             <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">{{spName(d.Com_Name, d.Sci_Name)}}</a>
-            <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(d.Com_Name)"><bird-icon name="volume-2" :size="16" ></bird-icon></button>
           </div>
           <span v-if="d.isRare" class="rare-badge"><bird-icon name="gem" :size="14" ></bird-icon> {{d.totalDet}}×</span>
           <span v-else style="display:flex;align-items:center;gap:.25rem;">

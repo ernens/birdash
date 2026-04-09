@@ -404,13 +404,19 @@
 
   async function quickPlaySpecies(comName) {
     const rows = await birdQuery(
-      "SELECT File_Name FROM detections WHERE Com_Name=? AND File_Name IS NOT NULL ORDER BY Confidence DESC LIMIT 1",
+      "SELECT File_Name, Sci_Name, Com_Name, Date, Time, Confidence FROM detections WHERE Com_Name=? AND File_Name IS NOT NULL ORDER BY Confidence DESC LIMIT 1",
       [comName]
     );
-    if (!rows.length) return null;
-    var url = buildAudioUrl(rows[0].File_Name);
+    if (!rows.length || !rows[0].File_Name) return null;
+    const r = rows[0];
+    // Open spectro modal with full filters instead of simple audio play
+    if (window.BIRDASH && typeof window.BIRDASH.openSpectroModal === 'function') {
+      window.BIRDASH.openSpectroModal({ fileName: r.File_Name, speciesName: r.Com_Name, sciName: r.Sci_Name, confidence: r.Confidence, date: r.Date, time: r.Time });
+      return null;
+    }
+    // Fallback: simple audio play if modal not available
+    var url = buildAudioUrl(r.File_Name);
     if (!url) return null;
-    // Use a shared audio element
     if (!window._birdashQuickAudio) window._birdashQuickAudio = new Audio();
     var audio = window._birdashQuickAudio;
     if (audio.src === url && !audio.paused) { audio.pause(); return audio; }
