@@ -66,7 +66,16 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="spinner" style="padding:3rem;"><div></div><div></div><div></div></div>
+    <div v-if="loading" style="padding:1rem;">
+      <div class="skeleton-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem;">
+        <div class="skeleton skeleton-kpi"></div><div class="skeleton skeleton-kpi"></div><div class="skeleton skeleton-kpi"></div><div class="skeleton skeleton-kpi"></div>
+      </div>
+      <div v-for="i in 3" :key="i" class="skeleton-row" style="padding:.8rem 0;border-bottom:1px solid var(--border);">
+        <div class="skeleton skeleton-avatar"></div>
+        <div style="flex:1"><div class="skeleton skeleton-text" style="width:40%"></div><div class="skeleton skeleton-text" style="width:25%"></div></div>
+        <div class="skeleton" style="width:70px;height:1.2rem;border-radius:10px;"></div>
+      </div>
+    </div>
 
     <!-- Favorites list -->
     <div v-if="!loading && favList.length" class="species-list" style="margin-top:.6rem;">

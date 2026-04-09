@@ -29,8 +29,29 @@
 <div id="app">
   <birdash-shell page="species" :title="t('nav_species')">
 
-    <!-- Spinner initial -->
-    <div v-if="mode==='loading'" class="spinner" style="padding:4rem;"><div></div><div></div><div></div></div>
+    <!-- Skeleton loading -->
+    <div v-if="mode==='loading'" style="padding:1.5rem;">
+      <div style="display:flex;gap:1.5rem;">
+        <div class="skeleton" style="width:340px;height:280px;border-radius:10px;flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div class="skeleton skeleton-title" style="width:50%;"></div>
+          <div class="skeleton skeleton-text" style="width:35%;"></div>
+          <div class="skeleton-grid" style="margin-top:1rem;">
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+          </div>
+          <div class="skeleton skeleton-text" style="width:90%;margin-top:1.2rem;"></div>
+          <div class="skeleton skeleton-text" style="width:75%;"></div>
+          <div class="skeleton skeleton-text" style="width:80%;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+        <div class="skeleton skeleton-chart" style="flex:1;"></div>
+        <div class="skeleton skeleton-chart" style="flex:1;"></div>
+      </div>
+    </div>
 
     <!-- Fiche espèce -->
     <div v-if="mode==='detail' || mode==='picker'">

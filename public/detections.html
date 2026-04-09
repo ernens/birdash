@@ -147,7 +147,15 @@
           </span>
         </div>
         <div class="card" style="padding:0;overflow:hidden;">
-          <div v-if="loading" class="spinner" style="padding:3rem;"><div></div><div></div><div></div></div>
+          <div v-if="loading" style="padding:1rem;">
+            <div v-for="i in 8" :key="i" class="skeleton-row" style="border-bottom:1px solid var(--border);">
+              <div class="skeleton" style="width:48px;height:48px;border-radius:4px;flex-shrink:0;"></div>
+              <div class="skeleton" style="width:70px;height:.85rem;"></div>
+              <div class="skeleton" style="width:50px;height:.85rem;"></div>
+              <div style="flex:1"><div class="skeleton skeleton-text" style="width:45%;"></div></div>
+              <div class="skeleton" style="width:55px;height:1.1rem;border-radius:10px;"></div>
+            </div>
+          </div>
           <div v-else-if="!displayRows.length" class="error-msg" style="padding:2rem;">{{t('no_data')}}</div>
           <div v-else class="det-table-wrap">
           <table class="bird-table">

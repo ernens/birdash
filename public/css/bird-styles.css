@@ -1221,6 +1221,24 @@ a:hover { opacity: .85; }
   40%           { transform: scale(1);  opacity: 1;  }
 }
 
+/* ── Skeleton loading ───────────────────────────────────────────────────── */
+.skeleton { position:relative; overflow:hidden; border-radius:6px; background:var(--bg-card2, #1a2a2a); }
+.skeleton::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.04) 40%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 60%, transparent 100%);
+  animation:skeleton-shimmer 1.5s infinite;
+}
+@keyframes skeleton-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+.skeleton-text   { height:.85rem; margin:.35rem 0; }
+.skeleton-title  { height:1.2rem; width:60%; margin:.5rem 0; }
+.skeleton-kpi    { height:3.5rem; border-radius:8px; }
+.skeleton-chart  { height:180px; border-radius:8px; }
+.skeleton-card   { height:80px; border-radius:8px; }
+.skeleton-avatar { width:48px; height:48px; border-radius:50%; }
+.skeleton-row    { display:flex; gap:.8rem; align-items:center; padding:.5rem 0; }
+.skeleton-grid   { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.8rem; }
+
 /* ── Image loader (wave dots overlay) ────────────────────────────────────── */
 .img-wrap {
   position: relative;
