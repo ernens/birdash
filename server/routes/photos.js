@@ -104,9 +104,26 @@ async function cacheExternalPhoto(sciName, externalUrl, index) {
 }
 
 
-// ── species-info result cache (avoid hitting iNaturalist/Wikipedia on every page visit) ──
+// ── species-info result cache — persisted to disk, survives restarts ──────
 const _speciesInfoCache = new Map(); // key: "sciName|lang" → { json, ts }
-const SPECIES_INFO_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const SPECIES_INFO_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days (photos rarely change)
+const SPECIES_INFO_DISK = path.join(PHOTO_CACHE_DIR, '_species-info-cache.json');
+
+// Load cache from disk at startup
+try {
+  const raw = fs.readFileSync(SPECIES_INFO_DISK, 'utf8');
+  const entries = JSON.parse(raw);
+  for (const [k, v] of entries) _speciesInfoCache.set(k, v);
+  console.log(`[BIRDASH] Species-info cache loaded: ${_speciesInfoCache.size} entries`);
+} catch(e) { /* no cache file yet */ }
+
+// Persist cache to disk periodically (every 5 min)
+setInterval(() => {
+  try {
+    const entries = [..._speciesInfoCache.entries()].filter(([, v]) => Date.now() - v.ts < SPECIES_INFO_TTL);
+    fs.writeFileSync(SPECIES_INFO_DISK, JSON.stringify(entries));
+  } catch(e) {}
+}, 5 * 60 * 1000);
 
 const _speciesNamesCache = {}; // lang → { sci: comName }
 let _detectedSpeciesCache = null;
@@ -322,7 +339,7 @@ function handle(req, res, pathname, ctx) {
 
     (async () => {
       try {
-        // Check cache first
+        // Check cache first — use sciName only (photos/taxonomy are lang-independent)
         const infoCacheKey = `${sciName}|${infoLang}`;
         const infoCached = _speciesInfoCache.get(infoCacheKey);
         if (infoCached && (Date.now() - infoCached.ts) < SPECIES_INFO_TTL) {
@@ -330,10 +347,44 @@ function handle(req, res, pathname, ctx) {
           res.end(infoCached.json);
           return;
         }
+        // Also check other lang variant — reuse photos/taxonomy, just fetch missing summary
+        const altLang = infoLang === 'en' ? 'fr' : 'en';
+        const altCached = _speciesInfoCache.get(`${sciName}|${altLang}`);
 
         const result = { photos: [], summary: '', summaryFr: '', habitat: '', range: '', conservation: '', family: '', order: '', wingspan: '', size: '', diet: '' };
         const tn = encodeURIComponent(sciName);
+        const wikiTitle = sciName.replace(/ /g, '_');
 
+        // If we have a cached result for another lang, reuse photos/taxonomy
+        if (altCached) {
+          try {
+            const alt = JSON.parse(altCached.json);
+            result.photos = alt.photos;
+            result.conservation = alt.conservation;
+            result.family = alt.family;
+            result.order = alt.order;
+            result.wingspan = alt.wingspan;
+            result.size = alt.size;
+            result.diet = alt.diet;
+            result.summary = alt.summary;
+            result.summaryFr = alt.summaryFr;
+            // Just fetch the missing localized Wikipedia summary
+            if (infoLang !== 'en' && !result.summaryFr) {
+              const wl = await fetchJson(`https://${infoLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
+              if (wl?.extract) result.summaryFr = wl.extract;
+            } else if (infoLang === 'en' && !result.summary) {
+              const we = await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`);
+              if (we?.extract) result.summary = we.extract;
+            }
+            const jsonStr = JSON.stringify(result);
+            _speciesInfoCache.set(infoCacheKey, { json: jsonStr, ts: Date.now() });
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' });
+            res.end(jsonStr);
+            return;
+          } catch(e) { /* fallthrough to full fetch */ }
+        }
+
+        // ── Fetch from external APIs (sequential, reliable) ──────────────
         // 1. iNaturalist — taxon info + observation photos
         const inatData = await fetchJson(
           `https://api.inaturalist.org/v1/taxa?q=${tn}&rank=species&per_page=5`
@@ -341,13 +392,11 @@ function handle(req, res, pathname, ctx) {
         const taxon = inatData?.results?.find(t => t.name.toLowerCase() === sciName.toLowerCase());
 
         if (taxon) {
-          // Default photo
           const dp = taxon.default_photo;
           if (dp) {
             const medUrl = dp.medium_url || dp.url;
             if (medUrl) result.photos.push({ url: medUrl, attr: dp.attribution || '', src: 'iNaturalist' });
           }
-          // Taxonomy
           if (taxon.iconic_taxon_name) result.order = taxon.iconic_taxon_name;
           if (taxon.ancestors) {
             const fam = taxon.ancestors.find(a => a.rank === 'family');
@@ -356,7 +405,6 @@ function handle(req, res, pathname, ctx) {
             if (ord) result.order = ord.name;
           }
 
-          // Observation photos (research-grade, top-voted — diverse angles)
           const obsData = await fetchJson(
             `https://api.inaturalist.org/v1/observations?taxon_id=${taxon.id}&quality_grade=research&photos=true&per_page=10&order=desc&order_by=votes`
           );
@@ -373,7 +421,6 @@ function handle(req, res, pathname, ctx) {
             }
           }
 
-          // Conservation status
           if (taxon.conservation_status) {
             result.conservation = taxon.conservation_status.status_name || taxon.conservation_status.status || '';
           } else if (taxon.conservation_statuses?.length) {
@@ -382,8 +429,7 @@ function handle(req, res, pathname, ctx) {
           }
         }
 
-        // 2. English Wikipedia — summary
-        const wikiTitle = sciName.replace(/ /g, '_');
+        // 2. Wikipedia EN
         const wiki = await fetchJson(
           `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`
         );
@@ -394,17 +440,15 @@ function handle(req, res, pathname, ctx) {
           }
         }
 
-        // 3. Localized Wikipedia — description in user's language
+        // 3. Localized Wikipedia
         if (infoLang !== 'en') {
           const wikiLocal = await fetchJson(
             `https://${infoLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`
           );
-          if (wikiLocal?.extract) {
-            result.summaryFr = wikiLocal.extract;
-          }
+          if (wikiLocal?.extract) result.summaryFr = wikiLocal.extract;
         }
 
-        // 4. Try Wikidata for structured data (size, wingspan, habitat, diet)
+        // 4. Wikidata for structured data
         try {
           const wdSearch = await fetchJson(
             `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${tn}&language=en&format=json&limit=1`
@@ -416,7 +460,6 @@ function handle(req, res, pathname, ctx) {
             );
             const claims = wdEntity?.entities?.[wdId]?.claims;
             if (claims) {
-              // P2050 = wingspan, P2048 = height/length
               const getAmount = (prop) => {
                 const c = claims[prop]?.[0]?.mainsnak?.datavalue?.value;
                 return c?.amount ? parseFloat(c.amount) : null;
@@ -425,8 +468,6 @@ function handle(req, res, pathname, ctx) {
               if (ws) result.wingspan = ws > 10 ? `${Math.round(ws)} cm` : `${Math.round(ws*100)} cm`;
               const sz = getAmount('P2048');
               if (sz) result.size = sz > 10 ? `${Math.round(sz)} cm` : `${Math.round(sz*100)} cm`;
-
-              // P2572 = IUCN conservation status label (if not already set)
               if (!result.conservation && claims['P141']?.[0]?.mainsnak?.datavalue?.value?.id) {
                 const csId = claims['P141'][0].mainsnak.datavalue.value.id;
                 const csMap = { Q211005:'Least Concern', Q719675:'Near Threatened', Q278113:'Vulnerable',
@@ -446,17 +487,38 @@ function handle(req, res, pathname, ctx) {
           return true;
         });
 
-        // Cache all photos locally and replace external URLs with local ones
-        const cachedPhotos = await Promise.all(
-          result.photos.map(async (p, i) => {
-            const localUrl = await cacheExternalPhoto(sciName, p.url, i);
-            return { url: localUrl || p.url, attr: p.attr, src: p.src };
-          })
-        );
-        result.photos = cachedPhotos;
-
+        // Replace external URLs with local cache URLs immediately
+        // Download photos in background (don't block the response)
+        const photosToCache = result.photos.map((p, i) => ({ ...p, idx: i }));
+        result.photos = result.photos.map((p, i) => {
+          const key = photoCacheKey(sciName);
+          const suffix = i > 0 ? `_${i}` : '';
+          const jpgPath = path.join(PHOTO_CACHE_DIR, `${key}${suffix}.jpg`);
+          // If already cached on disk, use local URL
+          if (fs.existsSync(jpgPath)) {
+            return { url: `/birds/api/photo-idx?sci=${encodeURIComponent(sciName)}&idx=${i}`, attr: p.attr, src: p.src };
+          }
+          // Not yet cached — use external URL now, cache in background
+          return { url: p.url, attr: p.attr, src: p.src };
+        });
         const jsonStr = JSON.stringify(result);
-        _speciesInfoCache.set(infoCacheKey, { json: jsonStr, ts: Date.now() });
+        // Only cache if we got meaningful data (at least 1 photo or a summary)
+        if (result.photos.length > 0 || result.summary || result.summaryFr) {
+          _speciesInfoCache.set(infoCacheKey, { json: jsonStr, ts: Date.now() });
+        }
+
+        // Fire-and-forget: download uncached photos in background
+        Promise.all(photosToCache.map(p => cacheExternalPhoto(sciName, p.url, p.idx).catch(() => null)))
+          .then(() => {
+            // Update cache with local URLs once all photos are downloaded
+            const updated = photosToCache.map((p, i) => ({
+              url: `/birds/api/photo-idx?sci=${encodeURIComponent(sciName)}&idx=${i}`,
+              attr: p.attr, src: p.src
+            }));
+            const updatedResult = JSON.parse(jsonStr);
+            updatedResult.photos = updated;
+            _speciesInfoCache.set(infoCacheKey, { json: JSON.stringify(updatedResult), ts: Date.now() });
+          }).catch(() => {});
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=86400',
