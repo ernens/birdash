@@ -172,7 +172,7 @@
   "nav_biodiversity": "Biodiversité",
   "nav_rarities": "Rarités",
   "nav_stats": "Statistiques",
-  "nav_system": "Monitoring",
+  "nav_system": "Supervision",
   "nav_analyses": "Analyses",
   "nav_models": "Modèles",
   "nav_terminal": "Terminal",
@@ -1808,14 +1808,16 @@
   // Usage : <birdash-shell page="species"> … contenu … </birdash-shell>
   // ── Model display names ────────────────────────────────────────────────
   const MODEL_LABELS = {
-    'BirdNET_GLOBAL_6K_V2.4_Model_FP16': 'BirdNET V2.4',
-    'BirdNET_6K_GLOBAL_MODEL':           'BirdNET V1',
-    'Perch_v2':                          'Perch V2',
-    'Perch_v2_int8':                     'Perch V2 INT8',
-    'perch_v2_original':                 'Perch V2 (FP32)',
-    'perch_v2_fp16':                     'Perch V2 (FP16)',
-    'perch_v2_dynint8':                  'Perch V2 (INT8)',
-    'BirdNET-Go_classifier_20250916':    'BirdNET-Go',
+    'BirdNET_GLOBAL_6K_V2.4_Model_FP16':           'BirdNET V2.4',
+    'BirdNET_GLOBAL_6K_V2.4_MData_Model_FP16':     'BirdNET V2.4 MData',
+    'BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16':  'BirdNET V2.4 MData V2',
+    'BirdNET_6K_GLOBAL_MODEL':                      'BirdNET V1',
+    'Perch_v2':                                     'Perch V2',
+    'Perch_v2_int8':                                'Perch V2 INT8',
+    'perch_v2_original':                            'Perch V2 FP32',
+    'perch_v2_fp16':                                'Perch V2 FP16',
+    'perch_v2_dynint8':                             'Perch V2 INT8',
+    'BirdNET-Go_classifier_20250916':               'BirdNET-Go',
   };
 
   const PibirdShell = {

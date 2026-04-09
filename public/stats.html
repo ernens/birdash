@@ -32,7 +32,7 @@
     <!-- Tab switcher -->
     <div class="gallery-tabs">
       <a href="stats.html" class="gallery-tab active"><bird-icon name="trending-up" :size="14" ></bird-icon> {{t('nav_stats')}}</a>
-      <a href="models.html" class="gallery-tab"><bird-icon name="cpu" :size="14" ></bird-icon> {{t('nav_models')}}</a>
+      <a href="models.html" class="gallery-tab" @mouseenter="$el.querySelector&&!document.querySelector('link[href*=models]')&&document.head.appendChild(Object.assign(document.createElement('link'),{rel:'prefetch',href:'models.html'}))"><bird-icon name="cpu" :size="14" ></bird-icon> {{t('nav_models')}}</a>
     </div>
 
     <div class="det-layout">

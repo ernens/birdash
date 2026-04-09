@@ -277,10 +277,21 @@
       </div>
     </div>
 
-    <!-- ── Empty state ────────────────────────────────────────── -->
+    <!-- ── Empty state with suggestions ─────────────────────── -->
     <div v-if="!currentSpecies" class="ph-empty">
       <div class="ph-empty-title">{{t('pheno_pick_species_title')}}</div>
       <div>{{t('pheno_pick_species_sub')}}</div>
+      <div v-if="topSpecies.length" style="margin-top:1.2rem;">
+        <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:.5rem;">Suggestions</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+          <button v-for="sp in topSpecies" :key="sp" @click="selectSpecies(sp)"
+                  style="padding:.4rem .8rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-main);font-size:.82rem;cursor:pointer;transition:all .15s;"
+                  onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                  onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-main)'">
+            {{sp}}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ── Hero (species info) ────────────────────────────────── -->
@@ -442,6 +453,7 @@ BIRDASH.ready.then(() => {
 
       // ── State ────────────────────────────────────────────────
       const allSpecies     = ref([]);
+      const topSpecies = ref([]);
       const speciesSearch  = ref('');
       const currentSpecies = ref('');
       const sciName        = ref('');
@@ -469,6 +481,11 @@ BIRDASH.ready.then(() => {
         try {
           const rows = await birdQuery(...Q.allSpeciesNames());
           allSpecies.value = rows;
+          // Load top species by frequency for suggestions
+          try {
+            const top = await birdQuery('SELECT Com_Name, COUNT(*) as n FROM detections WHERE Confidence >= 0.7 GROUP BY Com_Name ORDER BY n DESC LIMIT 8', []);
+            topSpecies.value = top.map(r => r.Com_Name);
+          } catch(e) {}
           if (initialSpecies) {
             const match = rows.find(r => r.Com_Name === initialSpecies);
             if (match) {
@@ -740,7 +757,7 @@ BIRDASH.ready.then(() => {
 
       return {
         t, spName, fmtDate, photoUrl, phenoColor, hourColor,
-        allSpecies, speciesSearch, onSpeciesPicked,
+        allSpecies, topSpecies, speciesSearch, onSpeciesPicked, selectSpecies,
         currentSpecies, sciName, availableYears, selectedYear,
         viewMode, loaded, stats, ribbonCells, phases,
         reloadData,

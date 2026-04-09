@@ -30,7 +30,7 @@
 
     <!-- ── Tab switcher ────────────────────────────────────────────── -->
     <div class="gallery-tabs">
-      <a href="gallery.html" class="gallery-tab"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('gallery_tab_best')}}</a>
+      <a href="gallery.html" class="gallery-tab" @mouseenter="$el.querySelector&&!document.querySelector('link[href*=gallery]')&&document.head.appendChild(Object.assign(document.createElement('link'),{rel:'prefetch',href:'gallery.html'}))"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('gallery_tab_best')}}</a>
       <a href="recordings.html" class="gallery-tab active"><bird-icon name="headphones" :size="14" ></bird-icon> {{t('gallery_tab_library')}}</a>
     </div>
 
