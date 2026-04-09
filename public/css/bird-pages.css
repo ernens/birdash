@@ -1824,3 +1824,13 @@
       font-size: .75rem; transition: all .15s; opacity: .4;
     }
     .gallery-del-btn:hover { opacity: 1; border-color: #e53e3e; background: rgba(229,62,62,.1); }
+
+
+/* ── Quick validate buttons (inline on species cards) ────────────── */
+.qval-btn {
+  background: none; border: 1px solid transparent; border-radius: 4px;
+  cursor: pointer; font-size: .75rem; padding: .1rem .25rem;
+  opacity: .35; transition: all .15s; line-height: 1;
+}
+.qval-btn:hover { opacity: 1; border-color: currentColor; }
+.qval-btn.active { opacity: 1; border-color: currentColor; background: color-mix(in srgb, currentColor 15%, transparent); font-weight: 700; }

@@ -372,13 +372,32 @@ function handle(req, res, pathname, ctx) {
       return;
     }
     try {
+      const qs = new URL(req.url, 'http://x').searchParams;
+      const date = qs.get('date');
+      let whereClause = '', params = [];
+      if (date) { whereClause = ' WHERE date = ?'; params = [date]; }
+
       const rows = birdashDb.prepare(
-        'SELECT status, COUNT(*) as count FROM validations GROUP BY status'
-      ).all();
+        'SELECT status, COUNT(*) as count FROM validations' + whereClause + ' GROUP BY status'
+      ).all(...params);
       const stats = { confirmed: 0, doubtful: 0, rejected: 0 };
       for (const r of rows) stats[r.status] = r.count;
+
+      // Per-species aggregation (majority status per species for the date)
+      let bySpecies = {};
+      if (date) {
+        const spRows = birdashDb.prepare(
+          'SELECT sci_name, status, COUNT(*) as n FROM validations WHERE date = ? GROUP BY sci_name, status ORDER BY sci_name, n DESC'
+        ).all(date);
+        // Keep majority status per species
+        const seen = {};
+        for (const r of spRows) {
+          if (!seen[r.sci_name]) { seen[r.sci_name] = r.status; bySpecies[r.sci_name] = r.status; }
+        }
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(stats));
+      res.end(JSON.stringify({ ...stats, bySpecies }));
     } catch (err) {
       console.error('[validation-stats]', err.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
