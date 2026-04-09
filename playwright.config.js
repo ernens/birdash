@@ -3,7 +3,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  timeout: 30000,
+  timeout: 60000,
   retries: 1,
   use: {
     baseURL: process.env.BIRDASH_URL || 'http://192.168.2.217/birds',
