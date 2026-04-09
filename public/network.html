@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>BirdStation — Network</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js" integrity="sha384-wdamyDHEiblYHsu/XTokGtIeFekZu7xN37Yvkl0NZ7PnhwRB+nwE1ByT7VlwiypE" crossorigin="anonymous"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+</head>
+<body>
+<div id="app">
+  <birdash-shell page="network" :title="t('nav_network')">
+
+    <div style="max-width:900px;">
+
+      <!-- Local station -->
+      <div class="card" style="margin-bottom:1.2rem;">
+        <div class="card-title"><bird-icon name="radio" :size="16"></bird-icon> {{t('network_local')}}</div>
+        <div v-if="local" style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+          <div>
+            <div style="font-size:1.3rem;font-weight:700;">{{local.name}}</div>
+            <div style="font-size:.78rem;color:var(--text-muted);" v-if="local.lat">{{local.lat?.toFixed(3)}}, {{local.lon?.toFixed(3)}}</div>
+          </div>
+          <div class="kpi-card" style="padding:.6rem 1rem;"><div class="kpi-value">{{(local.total||0).toLocaleString()}}</div><div class="kpi-label">{{t('detections')}}</div></div>
+          <div class="kpi-card" style="padding:.6rem 1rem;"><div class="kpi-value amber">{{local.species||0}}</div><div class="kpi-label">{{t('species')}}</div></div>
+        </div>
+        <div v-else class="spinner"><div></div><div></div><div></div></div>
+      </div>
+
+      <!-- Peer stations -->
+      <div class="card" style="margin-bottom:1.2rem;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span><bird-icon name="globe" :size="16"></bird-icon> {{t('network_peers')}}</span>
+          <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" @click="showAdd=!showAdd">+ {{t('network_add')}}</button>
+        </div>
+
+        <!-- Add form -->
+        <div v-if="showAdd" style="padding:.8rem;background:var(--bg-card2);border-radius:8px;margin-bottom:1rem;">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <input v-model="newStation.id" placeholder="ID (e.g. biloute)" class="set-input" style="width:120px;">
+            <input v-model="newStation.name" placeholder="Name" class="set-input" style="width:160px;">
+            <input v-model="newStation.url" placeholder="http://192.168.x.x/birds" class="set-input" style="flex:1;min-width:200px;">
+            <button class="btn btn-primary" @click="addStation" style="padding:.4rem .8rem;">{{t('network_add')}}</button>
+          </div>
+        </div>
+
+        <div v-if="!peers.length" style="font-size:.85rem;color:var(--text-muted);padding:1rem;text-align:center;">
+          {{t('network_no_peers')}}
+        </div>
+
+        <div v-for="p in peers" :key="p.id" style="display:flex;align-items:center;gap:1rem;padding:.8rem 0;border-bottom:1px solid var(--border);">
+          <div style="width:10px;height:10px;border-radius:50;" :style="{background: p.snapshot ? 'var(--success)' : 'var(--text-faint)'}"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;">{{p.name}}</div>
+            <div style="font-size:.72rem;color:var(--text-faint);">{{p.url}}</div>
+            <div v-if="p.snapshot?.summary" style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem;">
+              {{p.snapshot.summary.species || 0}} {{t('species')}} · {{(p.snapshot.summary.total || 0).toLocaleString()}} det
+            </div>
+            <div v-if="p.lastSync" style="font-size:.68rem;color:var(--text-faint);">{{t('network_last_sync')}}: {{new Date(p.lastSync).toLocaleString()}}</div>
+          </div>
+          <button class="btn btn-secondary" style="font-size:.75rem;padding:.3rem .6rem;" @click="syncStation(p)">
+            {{syncing===p.id ? '...' : t('network_sync')}}
+          </button>
+          <button class="btn btn-secondary" style="font-size:.75rem;padding:.3rem .6rem;color:var(--danger);" @click="removeStation(p)">&#10007;</button>
+        </div>
+      </div>
+
+      <!-- Public API info -->
+      <div class="card">
+        <div class="card-title"><bird-icon name="share-2" :size="16"></bird-icon> Public API</div>
+        <div style="font-size:.82rem;color:var(--text-muted);">
+          <p>Other BirdStation instances can connect to this station using:</p>
+          <code style="display:block;padding:.5rem;background:var(--bg-card2);border-radius:6px;margin:.5rem 0;font-size:.78rem;">
+            GET /birds/api/public/station-info<br>
+            GET /birds/api/public/summary?date=YYYY-MM-DD<br>
+            GET /birds/api/public/species?date=YYYY-MM-DD
+          </code>
+        </div>
+      </div>
+
+    </div>
+
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue;
+const { useI18n, useTheme, useNav } = BIRDASH;
+
+const app = createApp({
+  setup() {
+    const { t } = useI18n();
+    useTheme(); useNav();
+
+    const local = ref(null);
+    const peers = ref([]);
+    const showAdd = ref(false);
+    const syncing = ref(null);
+    const newStation = ref({ id: '', name: '', url: '' });
+
+    async function loadOverview() {
+      try {
+        const resp = await fetch(`${BIRD_CONFIG.apiUrl}/network/overview`);
+        const data = await resp.json();
+        local.value = data.local;
+        peers.value = data.peers || [];
+      } catch(e) { console.error('network:', e); }
+    }
+
+    async function addStation() {
+      const s = newStation.value;
+      if (!s.id || !s.name || !s.url) return;
+      try {
+        await fetch(`${BIRD_CONFIG.apiUrl}/stations`, {
+          method: 'POST',
+          headers: BIRDASH.authHeaders(),
+          body: JSON.stringify(s),
+        });
+        newStation.value = { id: '', name: '', url: '' };
+        showAdd.value = false;
+        loadOverview();
+      } catch(e) { console.error(e); }
+    }
+
+    async function removeStation(p) {
+      if (!confirm(`Remove ${p.name}?`)) return;
+      try {
+        await fetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}`, {
+          method: 'DELETE', headers: BIRDASH.authHeaders(),
+        });
+        loadOverview();
+      } catch(e) { console.error(e); }
+    }
+
+    async function syncStation(p) {
+      syncing.value = p.id;
+      try {
+        await fetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}/sync`, {
+          method: 'POST', headers: BIRDASH.authHeaders(),
+        });
+        await loadOverview();
+      } catch(e) { console.error(e); }
+      syncing.value = null;
+    }
+
+    onMounted(loadOverview);
+
+    return { t, local, peers, showAdd, syncing, newStation, addStation, removeStation, syncStation };
+  }
+});
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
+</script>
+</body>
+</html>
