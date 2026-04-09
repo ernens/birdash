@@ -6,7 +6,7 @@ module.exports = defineConfig({
   timeout: 60000,
   retries: 1,
   use: {
-    baseURL: process.env.BIRDASH_URL || 'http://192.168.2.217/birds',
+    baseURL: process.env.BIRDASH_URL || 'http://192.168.2.217',
     headless: true,
     viewport: { width: 1440, height: 900 },
     ignoreHTTPSErrors: true,

@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
-const BASE = process.env.BIRDASH_URL || 'http://192.168.2.217/birds';
+const BASE = (process.env.BIRDASH_URL || 'http://192.168.2.217') + '/birds';
 
 test('GET /api/health returns ok', async ({ request }) => {
   const resp = await request.get(`${BASE}/api/health`);
