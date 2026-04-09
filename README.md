@@ -12,12 +12,21 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 ## Screenshots
 
 <details>
-<summary><b>Live</b> — Dashboard · Today · Spectrogram</summary>
+<summary><b>Home</b> — Overview · Today</summary>
+
+<p align="center">
+  <img src="screenshots/overview.png"    width="360" alt="Overview">
+  <img src="screenshots/today.png"       width="360" alt="Today">
+</p>
+</details>
+
+<details>
+<summary><b>Live</b> — Dashboard · Spectrogram · Log</summary>
 
 <p align="center">
   <img src="screenshots/dashboard.png"   width="240" alt="Dashboard">
-  <img src="screenshots/today.png"       width="240" alt="Today">
   <img src="screenshots/spectrogram.png" width="240" alt="Spectrogram">
+  <img src="screenshots/log.png"         width="240" alt="Live log">
 </p>
 </details>
 
@@ -33,22 +42,24 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 </details>
 
 <details>
-<summary><b>Species</b> — Species · Recordings · Gallery · Rarities</summary>
+<summary><b>Species</b> — Species · Recordings · Gallery · Rarities · Favorites</summary>
 
 <p align="center">
   <img src="screenshots/species.png"    width="240" alt="Species">
   <img src="screenshots/recordings.png" width="240" alt="Recordings">
   <img src="screenshots/gallery.png"    width="240" alt="Gallery">
   <img src="screenshots/rarities.png"   width="240" alt="Rarities">
+  <img src="screenshots/favorites.png"  width="240" alt="Favorites">
 </p>
 </details>
 
 <details>
-<summary><b>Insights</b> — Weather · Statistics · Analyses · Biodiversity · Phenology</summary>
+<summary><b>Indicators</b> — Weather · Statistics · Models · Analyses · Biodiversity · Phenology</summary>
 
 <p align="center">
   <img src="screenshots/weather.png"      width="240" alt="Weather">
   <img src="screenshots/stats.png"        width="240" alt="Statistics">
+  <img src="screenshots/models.png"       width="240" alt="Models">
   <img src="screenshots/analyses.png"     width="240" alt="Analyses">
   <img src="screenshots/biodiversity.png" width="240" alt="Biodiversity">
   <img src="screenshots/phenology.png"    width="240" alt="Phenology">
@@ -115,15 +126,17 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
-### Dashboard (22 pages)
+### Dashboard (20 pages)
 
 **Home**
-- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Bird Flow** — animated pipeline landing page showing live audio levels (SSE), dual-model inference with per-model species + confidence, detection flow with animated connectors, today's KPIs, key events feed, recent species gallery
-- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> **Overview** — dashboard with KPIs, weather widget, quick links, morning summary, "What's New" alerts
-- <img src="docs/icons/clock.svg" width="16" align="top" alt=""> **Recent activity** — latest detections across all species
-- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live spectrogram** — real-time audio from mic with bird name overlay
+- <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> **Overview** (landing page) — 6 KPIs, bird of the day, weather context, hourly activity, "What's New" alerts, latest detections
 - <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Today** — species list with audio player, spectrograms, gain/highpass/lowpass filters, new species filter
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Species name translation** — bird names displayed in the user's chosen language across all pages
+
+**Live**
+- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Bird Flow** — animated pipeline showing live audio levels (SSE), dual-model inference with per-model species + confidence, detection flow with animated connectors, today's KPIs, key events feed
+- <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live spectrogram** — real-time audio from mic with bird name overlay
+- <img src="docs/icons/scroll-text.svg" width="16" align="top" alt=""> **Live log** — real-time streaming dashboard (SSE) with color-coded categories, KPIs, pause/resume
 
 **History**
 - <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Calendar** — unified day-by-day view with timeline visualization, species list, audio player
@@ -137,22 +150,19 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/gem.svg" width="16" align="top" alt=""> Rare species tracking
 - <img src="docs/icons/trophy.svg" width="16" align="top" alt=""> Best recordings gallery with audio library tab
 
-**Analysis**
+**Indicators**
 - <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weather** — dedicated page with correlation analysis (Pearson r), tomorrow's forecast, species by weather conditions
-- <img src="docs/icons/trending-up.svg" width="16" align="top" alt=""> Statistics and rankings with model comparison tab
+- <img src="docs/icons/trending-up.svg" width="16" align="top" alt=""> **Statistics** — rankings, records, distributions, annual evolution; integrated **Models** tab for dual-model comparison (daily chart, exclusive species, overlap analysis)
 - <img src="docs/icons/microscope.svg" width="16" align="top" alt=""> Advanced analyses (polar charts, heatmaps, time series, narrative)
-- <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Biodiversity — Shannon index, taxonomy breakdown, phenology
-- <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Phenology calendar** — observed annual cycle per species (presence/abundance/hourly modes), inferred phases (active period, peak abundance, dawn chorus, migrant detection), 53-week ribbon visualization
-
-**Station**
-- <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Live log** — real-time streaming dashboard (SSE) with color-coded categories, filters, KPIs (detections/BirdWeather/errors), pause/resume, auto-scroll
+- <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Biodiversity — Shannon index, adaptive richness chart, taxonomy heatmap
+- <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Phenology calendar** — observed annual cycle per species (presence/abundance/hourly modes), inferred phases (active period, peak abundance, dawn chorus, migrant detection), 53-week ribbon visualization, species suggestions on empty state
 
 **Navigation**
 - 6 intent-based sections: Home, Live, History, Species, Indicators, Station
-- Mobile bottom nav (4 quick links + hamburger drawer with all 22 pages)
+- Mobile bottom nav (4 quick links + hamburger drawer with all 20 pages)
 - Global species+date search, notification bell, review badge counter
 - Keyboard shortcuts on 5 pages, swipe gestures on species photos
-- Toast notifications for API errors
+- Skeleton loading states for data-heavy pages
 - Cross-navigation between settings and system pages
 
 ### Detection Review
@@ -318,7 +328,8 @@ birdash/
 │       ├── timeline.js            # Timeline with SunCalc astronomy
 │       └── whats-new.js           # Daily overview cards
 ├── public/                        # Static frontend (Vue 3 CDN)
-│   ├── index.html                 # Redirect to dashboard.html
+│   ├── index.html                 # Redirect to overview.html
+│   ├── overview.html               # Landing page — KPIs, bird of the day, weather
 │   ├── dashboard.html              # Bird Flow — live pipeline visualization
 │   ├── today.html                 # Today's detections with audio filters
 │   ├── calendar.html              # Calendar (timeline + species + audio)
@@ -329,19 +340,18 @@ birdash/
 │   ├── gallery.html               # Best recordings + audio library
 │   ├── favorites.html             # Favorites with stats + management
 │   ├── weather.html               # Weather/activity correlation
-│   ├── stats.html                 # Statistics + model comparison tab
+│   ├── stats.html                 # Statistics + integrated Models tab
 │   ├── analyses.html              # Per-species deep analysis
-│   ├── biodiversity.html          # Shannon index, taxonomy, phenology
-│   ├── phenology.html              # Observed phenology calendar (per species)
+│   ├── biodiversity.html          # Shannon index, adaptive richness chart
+│   ├── phenology.html             # Observed phenology calendar (per species)
 │   ├── spectrogram.html           # Live spectrogram + clip playback
 │   ├── settings.html              # Full settings (9 tabs)
 │   ├── system.html                # System health + terminal
 │   ├── log.html                   # Live log dashboard (SSE)
-│   ├── overview.html               # Dashboard overview + weather widget
-│   ├── recent.html                 # Recent activity
-│   ├── recordings.html             # Best recordings
-│   ├── models.html                 # Model comparison
-│   ├── rarities.html               # Rare species tracker
+│   ├── recordings.html            # Audio library with photos
+│   ├── rarities.html              # Rare species tracker
+│   ├── recent.html                # Redirect to calendar.html
+│   ├── models.html                # Redirect to stats.html?tab=models
 │   ├── js/
 │   │   ├── bird-config.js         # Navigation, API config
 │   │   ├── bird-queries.js        # Shared SQL query library (56 queries)
@@ -390,7 +400,7 @@ birdash/
 
 ## Security
 
-- Rate limiting: 120 req/min per IP
+- Rate limiting: 300 req/min per IP
 - Strict SQL validation (read-only, parameterized)
 - Centralized SQL query library (`bird-queries.js`) — 56 parameterized queries with automatic confidence filtering
 - Lucide icon system (`bird-icons.js` + `<bird-icon>` component) — 98 modern SVG icons replacing emojis across the UI
