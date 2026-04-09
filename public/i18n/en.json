@@ -1123,5 +1123,20 @@
   "detections": "detections",
   "loading": "Loading",
   "sp_action_pheno_sub": "Observed annual cycle · inferred phases · hourly activity",
-  "sp_action_analyses_sub": "Detailed statistics · trends · comparisons"
+  "sp_action_analyses_sub": "Detailed statistics · trends · comparisons",
+  "nav_comparison": "Comparison",
+  "nav_network": "Network",
+  "comparison_week": "Week",
+  "comparison_new_arrivals": "New arrivals",
+  "comparison_departed": "Absent this year",
+  "comparison_common": "Common species",
+  "comparison_none": "None",
+  "today_btn": "Today",
+  "network_title": "Station network",
+  "network_local": "Local station",
+  "network_peers": "Peer stations",
+  "network_add": "Add station",
+  "network_sync": "Sync",
+  "network_no_peers": "No stations configured",
+  "network_last_sync": "Last sync"
 }

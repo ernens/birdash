@@ -1123,5 +1123,20 @@
   "detections": "detecties",
   "loading": "Laden",
   "sp_action_pheno_sub": "Waargenomen jaarcyclus · afgeleide fasen · uurlijkse activiteit",
-  "sp_action_analyses_sub": "Gedetailleerde statistieken · trends · vergelijkingen"
+  "sp_action_analyses_sub": "Gedetailleerde statistieken · trends · vergelijkingen",
+  "nav_comparison": "Vergelijking",
+  "nav_network": "Netwerk",
+  "comparison_week": "Week",
+  "comparison_new_arrivals": "Nieuw aangekomen",
+  "comparison_departed": "Afwezig dit jaar",
+  "comparison_common": "Gemeenschappelijke soorten",
+  "comparison_none": "Geen",
+  "today_btn": "Vandaag",
+  "network_title": "Stationsnetwerk",
+  "network_local": "Lokaal station",
+  "network_peers": "Verbonden stations",
+  "network_add": "Station toevoegen",
+  "network_sync": "Synchroniseren",
+  "network_no_peers": "Geen stations geconfigureerd",
+  "network_last_sync": "Laatste sync"
 }

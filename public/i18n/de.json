@@ -1123,5 +1123,20 @@
   "detections": "Erkennungen",
   "loading": "Laden",
   "sp_action_pheno_sub": "Beobachteter Jahreszyklus · abgeleitete Phasen · stündliche Aktivität",
-  "sp_action_analyses_sub": "Detaillierte Statistiken · Trends · Vergleiche"
+  "sp_action_analyses_sub": "Detaillierte Statistiken · Trends · Vergleiche",
+  "nav_comparison": "Vergleich",
+  "nav_network": "Netzwerk",
+  "comparison_week": "Woche",
+  "comparison_new_arrivals": "Neuankömmlinge",
+  "comparison_departed": "Dieses Jahr abwesend",
+  "comparison_common": "Gemeinsame Arten",
+  "comparison_none": "Keine",
+  "today_btn": "Heute",
+  "network_title": "Stationsnetzwerk",
+  "network_local": "Lokale Station",
+  "network_peers": "Verbundene Stationen",
+  "network_add": "Station hinzufügen",
+  "network_sync": "Synchronisieren",
+  "network_no_peers": "Keine Stationen konfiguriert",
+  "network_last_sync": "Letzte Sync"
 }
