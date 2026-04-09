@@ -457,11 +457,15 @@ const app = createApp({
         detData.push(map[ds]?map[ds].det:0);
       }
       const base=chartDefaults();
+      const useLine = labels.length > 14;
+      const spDataset = useLine
+        ? {label:t('species'), data:spData, borderColor:'#5a9e3a', backgroundColor:'rgba(90,158,58,.15)', fill:true, pointRadius:labels.length>60?0:2, tension:0.3, order:1}
+        : {label:t('species'), data:spData, backgroundColor:'rgba(90,158,58,.55)', borderColor:'#5a9e3a', borderWidth:1, borderRadius:3, maxBarThickness:40, order:1};
       mountRichness(canvasRichness, ()=>({
-        type:'bar',
+        type: useLine ? 'line' : 'bar',
         data:{labels, datasets:[
-          {label:t('species'), data:spData, backgroundColor:'rgba(90,158,58,.55)', borderColor:'#5a9e3a', borderWidth:1, borderRadius:3, maxBarThickness:40, order:1},
-          {label:t('detections'), data:detData, type:'line', borderColor:'rgba(200,168,75,.6)', backgroundColor:'transparent', pointRadius:0, tension:0.3, yAxisID:'y2', order:0}
+          spDataset,
+          {label:t('detections'), data:detData, type:'line', borderColor:'rgba(200,168,75,.6)', backgroundColor:'transparent', pointRadius:labels.length>60?0:2, tension:0.3, yAxisID:'y2', order:0}
         ]},
         options:{...base, scales:{...base.scales,
           x:{...base.scales.x,ticks:{maxTicksLimit:15,font:{size:9}}},

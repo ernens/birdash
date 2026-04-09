@@ -75,7 +75,7 @@ const BIRD_CONFIG = {
       { id: 'stats',        icon: 'trending-up', file: 'stats.html'        },
       { id: 'analyses',     icon: 'microscope', file: 'analyses.html'     },
       { id: 'biodiversity', icon: 'leaf', file: 'biodiversity.html' },
-      { id: 'models',       icon: 'cpu', file: 'models.html'       },
+      { id: 'models',       icon: 'cpu', file: 'stats.html?tab=models' },
       { id: 'phenology',    icon: 'calendar-days', file: 'phenology.html'    },
     ]},
     { section: 'nav_sec_system', icon: 'settings', items: [
