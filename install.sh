@@ -259,9 +259,33 @@ if [ ! -f "$BIRDASH_DIR/public/js/birdash-local.js" ]; then
 fi
 
 # ALSA config for shared mic access
-# .asoundrc is auto-generated when user selects a device in Settings → Audio
-# No hardcoded device here — works with any USB audio interface
-ok "Audio device will be configured via Settings → Audio"
+# Auto-detect USB audio device and configure
+USB_CARD=$(arecord -l 2>/dev/null | grep -oP 'card \K\d+(?=:.*USB)' | head -1)
+if [ -n "$USB_CARD" ]; then
+    USB_NAME=$(arecord -l 2>/dev/null | grep "card ${USB_CARD}:" | sed 's/.*: \(.*\) \[.*/\1/')
+    ALSA_DEV="plughw:${USB_CARD},0"
+    echo "  Detected USB audio: card $USB_CARD — $USB_NAME"
+    # Update audio_config.json with detected device
+    if [ -f "$BIRDASH_DIR/config/audio_config.json" ]; then
+        python3 -c "
+import json
+with open('$BIRDASH_DIR/config/audio_config.json') as f: d=json.load(f)
+d['device_id'] = '$ALSA_DEV'
+d['device_name'] = '$USB_NAME'
+with open('$BIRDASH_DIR/config/audio_config.json','w') as f: json.dump(d, f, indent=2)
+" 2>/dev/null
+    fi
+    # Create .asoundrc for the detected device
+    cat > "$BIRDASH_HOME/.asoundrc" <<ASOUND
+pcm.birdash {
+    type plug
+    slave.pcm "hw:${USB_CARD},0"
+}
+ASOUND
+    ok "Audio configured: $USB_NAME (card $USB_CARD)"
+else
+    warn "No USB audio device detected — configure via Settings → Audio after plugging in a mic"
+fi
 
 # FUSE config for SSHFS
 if ! grep -q "^user_allow_other" /etc/fuse.conf 2>/dev/null; then

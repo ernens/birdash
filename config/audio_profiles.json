@@ -1,4 +1,18 @@
 {
+  "default": {
+    "profile_name": "default",
+    "highpass_enabled": true,
+    "highpass_cutoff_hz": 100,
+    "lowpass_enabled": true,
+    "lowpass_cutoff_hz": 8000,
+    "denoise_enabled": false,
+    "denoise_strength": 0.3,
+    "hop_size_s": 2.5,
+    "channel_strategy": "left",
+    "rms_normalize": true,
+    "rms_target": 0.05,
+    "builtin": true
+  },
   "jardin": {
     "profile_name": "jardin",
     "highpass_enabled": true,
