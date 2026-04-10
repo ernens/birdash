@@ -1143,5 +1143,9 @@
   "today_detections_of_day": "Detecties van vandaag",
   "stats_hourly_totals": "Activiteit per uur",
   "stats_daily_totals": "Dagelijkse totalen",
-  "stats_weekly_totals": "Wekelijkse totalen"
+  "stats_weekly_totals": "Wekelijkse totalen",
+  "set_model_restarting": "Model gewijzigd — motor herstart...",
+  "set_model_changed": "Model succesvol gewijzigd, motor herstart",
+  "set_model_restart_warning": "Model opgeslagen maar motor moet handmatig herstart worden",
+  "set_model_restart_error": "Model opgeslagen maar herstart mislukt"
 }

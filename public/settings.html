@@ -594,6 +594,10 @@ const app = createApp({
         Object.assign(conf, defaults, confData);
         models.value = modelData.models || [];
         languages.value = langData.languages || [];
+        // Track initial model state for change detection
+        _savedModel = conf.MODEL || '';
+        _savedSecondary = conf.SECONDARY_MODEL || '';
+        _savedDual = String(conf.DUAL_MODEL_ENABLED || '0');
         includeList.value = (listsData.include || []).join('\n');
         excludeList.value = (listsData.exclude || []).join('\n');
       } catch(e) {
@@ -620,12 +624,22 @@ const app = createApp({
       svcLoading.value = false;
     }
 
+    // Track initial model to detect changes
+    let _savedModel = '', _savedSecondary = '', _savedDual = '';
+
     async function saveAll() {
       saving.value = true;
       saveMsg.value = '';
       saveErr.value = false;
       try {
-        // Save all configs in parallel: settings + audio + adaptive gain + apprise + species lists + alerts
+        // Detect model change before saving
+        const modelChanged = _savedModel && (
+          conf.MODEL !== _savedModel ||
+          conf.SECONDARY_MODEL !== _savedSecondary ||
+          String(conf.DUAL_MODEL_ENABLED) !== String(_savedDual)
+        );
+
+        // Save all configs in parallel
         const [res] = await Promise.all([
           fetch(API + '/settings', {
             method: 'POST',
@@ -651,10 +665,37 @@ const app = createApp({
         ]);
         const data = await res.json();
         if (data.ok) {
-          saveMsg.value = t('set_saved');
-          // Update header immediately
           BIRDASH.updateSiteIdentity(conf.SITE_NAME, conf.SITE_BRAND);
+
+          if (modelChanged) {
+            // Auto-restart engine after model change
+            saveMsg.value = t('set_model_restarting') || 'Model changed — restarting engine...';
+            try {
+              await fetch(API + '/services/restart', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ service: 'birdengine' }) });
+              await new Promise(r => setTimeout(r, 3000));
+              // Verify engine is running
+              const healthResp = await fetch(API + '/health');
+              const health = await healthResp.json();
+              if (health.status === 'ok') {
+                saveMsg.value = (t('set_model_changed') || 'Model changed successfully') +
+                  ' — ' + conf.MODEL + (conf.DUAL_MODEL_ENABLED === '1' || conf.DUAL_MODEL_ENABLED === 1 ? ' + ' + conf.SECONDARY_MODEL : '');
+                window.dispatchEvent(new CustomEvent('birdash:success', { detail: saveMsg.value }));
+              } else {
+                saveMsg.value = t('set_model_restart_warning') || 'Model saved but engine may need manual restart';
+                saveErr.value = true;
+              }
+            } catch(e) {
+              saveMsg.value = (t('set_model_restart_error') || 'Model saved but engine restart failed') + ': ' + e.message;
+              saveErr.value = true;
+            }
+          } else {
+            saveMsg.value = t('set_saved');
+          }
           if (data.warnings) saveMsg.value += ' (' + data.warnings.join(', ') + ')';
+          // Update saved state
+          _savedModel = conf.MODEL;
+          _savedSecondary = conf.SECONDARY_MODEL;
+          _savedDual = String(conf.DUAL_MODEL_ENABLED);
         } else {
           saveMsg.value = data.error || 'Error';
           saveErr.value = true;

@@ -1143,5 +1143,9 @@
   "today_detections_of_day": "Erkennungen des Tages",
   "stats_hourly_totals": "Stündliche Aktivität",
   "stats_daily_totals": "Tägliche Summen",
-  "stats_weekly_totals": "Wöchentliche Summen"
+  "stats_weekly_totals": "Wöchentliche Summen",
+  "set_model_restarting": "Modell geändert — Motor wird neu gestartet...",
+  "set_model_changed": "Modell erfolgreich geändert, Motor neu gestartet",
+  "set_model_restart_warning": "Modell gespeichert aber Motor muss manuell neu gestartet werden",
+  "set_model_restart_error": "Modell gespeichert aber Neustart fehlgeschlagen"
 }

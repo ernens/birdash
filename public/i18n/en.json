@@ -1143,5 +1143,9 @@
   "today_detections_of_day": "Today's detections",
   "stats_hourly_totals": "Hourly activity",
   "stats_daily_totals": "Daily totals",
-  "stats_weekly_totals": "Weekly totals"
+  "stats_weekly_totals": "Weekly totals",
+  "set_model_restarting": "Model changed — restarting engine...",
+  "set_model_changed": "Model changed successfully, engine restarted",
+  "set_model_restart_warning": "Model saved but engine may need manual restart",
+  "set_model_restart_error": "Model saved but engine restart failed"
 }
