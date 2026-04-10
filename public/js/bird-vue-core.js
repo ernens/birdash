@@ -606,6 +606,7 @@
   "audio_clean_progress": "Nettoyage…",
   "audio_clean_done": "Nettoyé",
   "audio_clean_btn": "Nettoyer le son",
+  "today_detections_of_day": "Détections du jour",
   "svc_engine": "Moteur de détection",
   "svc_recording": "Capture audio",
   "svc_web": "Serveur web",

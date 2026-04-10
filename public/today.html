@@ -290,7 +290,7 @@
                       : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
               <span v-if="processingClean">⏳ {{t('audio_clean_progress')}}</span>
               <span v-else-if="cleanMode"><bird-icon name="sparkles" :size="14" ></bird-icon> {{t('audio_clean_done')}}</span>
-              <span v-else><bird-icon name="sliders-horizontal" :size="14" ></bird-icon> Nettoyer le son</span>
+              <span v-else><bird-icon name="sliders-horizontal" :size="14" ></bird-icon> {{t('audio_clean_btn')}}</span>
             </button>
             <template v-if="cleanMode && !processingClean">
               <span style="font-size:.72rem;color:var(--text-muted);align-self:center;white-space:nowrap;">
@@ -314,7 +314,7 @@
           <div v-if="selectedDets.length > 1"
                style="border-top:1px solid var(--border);">
             <div style="padding:.45rem .75rem;font-size:.75rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border);">
-              {{t('detections')}} du jour — {{selectedDets.length}}
+              {{t('today_detections_of_day')}} — {{selectedDets.length}}
             </div>
             <div class="det-scroll">
               <div v-for="(d,i) in selectedDets" :key="d.Time+d.File_Name"

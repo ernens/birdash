@@ -1139,5 +1139,6 @@
   "network_last_sync": "Last sync",
   "review_conf_select": "Select by confidence",
   "review_delete_selection": "Delete selection",
-  "set_my_location": "My location"
+  "set_my_location": "My location",
+  "today_detections_of_day": "Today's detections"
 }

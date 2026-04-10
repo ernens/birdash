@@ -1139,5 +1139,6 @@
   "network_last_sync": "Laatste sync",
   "review_conf_select": "Selecteren op betrouwbaarheid",
   "review_delete_selection": "Selectie verwijderen",
-  "set_my_location": "Mijn locatie"
+  "set_my_location": "Mijn locatie",
+  "today_detections_of_day": "Detecties van vandaag"
 }
