@@ -2314,16 +2314,16 @@
           </div>
         </div>
         <div class="hdr-dropdown" :class="{open:langOpen}" v-click-outside="()=>langOpen=false">
-          <button class="hdr-toggle" @click="langOpen=!langOpen" :aria-expanded="langOpen">
-            <span class="lang-flag">{{currentLang.flag}}</span>
-            <span class="hdr-label">{{lang.toUpperCase()}}</span>
+          <button class="hdr-toggle lang-toggle" @click="langOpen=!langOpen" :aria-expanded="langOpen">
+            <bird-icon name="globe" :size="15"></bird-icon>
+            <span class="lang-code">{{lang.toUpperCase()}}</span>
             <svg class="hdr-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           </button>
           <div class="hdr-menu" v-show="langOpen">
             <button v-for="l in langs" :key="l.code" class="hdr-option"
                     :class="{active:lang===l.code}"
                     @click="setLang(l.code);langOpen=false">
-              <span class="lang-flag">{{l.flag}}</span>
+              <span class="lang-code" style="width:28px;text-align:center;">{{l.code.toUpperCase()}}</span>
               <span class="hdr-option-label">{{l.label}}</span>
               <span class="hdr-check" v-if="lang===l.code">✓</span>
             </button>
