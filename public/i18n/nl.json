@@ -1140,5 +1140,8 @@
   "review_conf_select": "Selecteren op betrouwbaarheid",
   "review_delete_selection": "Selectie verwijderen",
   "set_my_location": "Mijn locatie",
-  "today_detections_of_day": "Detecties van vandaag"
+  "today_detections_of_day": "Detecties van vandaag",
+  "stats_hourly_totals": "Activiteit per uur",
+  "stats_daily_totals": "Dagelijkse totalen",
+  "stats_weekly_totals": "Wekelijkse totalen"
 }

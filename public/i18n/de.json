@@ -1140,5 +1140,8 @@
   "review_conf_select": "Nach Konfidenz auswählen",
   "review_delete_selection": "Auswahl löschen",
   "set_my_location": "Mein Standort",
-  "today_detections_of_day": "Erkennungen des Tages"
+  "today_detections_of_day": "Erkennungen des Tages",
+  "stats_hourly_totals": "Stündliche Aktivität",
+  "stats_daily_totals": "Tägliche Summen",
+  "stats_weekly_totals": "Wöchentliche Summen"
 }

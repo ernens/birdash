@@ -95,7 +95,7 @@
 
           <div class="card">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              {{t('monthly_totals')}}
+              {{timeResLabel}}
               <button @click="exportCsv" class="chart-dl-btn" title="Export CSV">⬇ CSV</button>
             </div>
             <div class="chart-wrap chart-wrap-tall"><canvas ref="canvasMonthly"></canvas></div>
@@ -191,10 +191,7 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-title">{{t('stats_annual_evolution')}}</div>
-            <div class="chart-wrap"><canvas ref="canvasYearly"></canvas></div>
-          </div>
+          <!-- Annual evolution removed — merged into adaptive time chart -->
         </div>
       </div>
     </div>
@@ -307,7 +304,6 @@ const app = createApp({
     const { spName } = useSpeciesNames();
     const { mountChart: mountMonthly }= useChart();
     const { mountChart: mountConf }   = useChart();
-    const { mountChart: mountYearly } = useChart();
 
     // ── Tab management ───────────────────────────────────────────
     const urlTab = new URL(window.location.href).searchParams.get('tab');
@@ -327,7 +323,6 @@ const app = createApp({
     // ══════════════════════════════════════════════════════════════
     const canvasMonthly = ref(null);
     const canvasConf    = ref(null);
-    const canvasYearly  = ref(null);
 
     const fp = useFilterPeriod({ default:'1d', buttons:['1d','7d','30d','90d','6m','1y','all'], onChange:()=>loadAll() });
     const fc = useFilterConfidence({ onChange:()=>loadAll() });
@@ -344,10 +339,14 @@ const app = createApp({
     const topCount = ref({loading:true, rows:[]});
     const topConf  = ref({loading:true, rows:[]});
     const records  = ref({loading:true, maxDet:null, maxSp:null, maxConf:null});
-    const monthlyData = ref(null), confData = ref(null), yearlyData = ref(null);
+    const timeData = ref(null), timeRes = ref('daily'), confData = ref(null);
+    const timeResLabel = computed(() => {
+      const labels = { hourly: t('stats_hourly_totals') || 'Hourly totals', daily: t('stats_daily_totals') || 'Daily totals', weekly: t('stats_weekly_totals') || 'Weekly totals', monthly: t('monthly_totals') };
+      return labels[timeRes.value] || t('monthly_totals');
+    });
     const chartColor = i => BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length];
 
-    async function loadAll() { await Promise.all([loadKpis(),loadMonthlyData(),loadTopCount(),loadTopConf(),loadConfData(),loadRecords(),loadYearlyData()]); }
+    async function loadAll() { await Promise.all([loadKpis(),loadTimeData(),loadTopCount(),loadTopConf(),loadConfData(),loadRecords()]); }
 
     async function loadKpis() {
       kpis.value.loading = true;
@@ -360,17 +359,46 @@ const app = createApp({
       } catch(e) { kpis.value = {loading:false}; }
     }
 
-    async function loadMonthlyData() { try { buildWhere(); monthlyData.value = await birdQuery(`SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${_w} GROUP BY ym ORDER BY ym ASC`,_wp); } catch(e){} }
+    async function loadTimeData() {
+      try {
+        const ats = Q.adaptiveTimeSeries(fp.dateFrom.value, fp.dateTo.value, fc.confidence.value);
+        timeRes.value = ats.resolution;
+        let rows = await birdQuery(ats.sql, ats.params);
+        if (ats.resolution === 'weekly' && ats.days > 90) rows = Q.aggregateWeekly(rows);
+        timeData.value = { rows, labelFn: ats.labelFn, resolution: ats.resolution };
+      } catch(e) { console.error('[loadTimeData]', e); }
+    }
     function loadPhotosFor(r,rows) { rows.forEach(r=>{r.photoUrl=photoUrl(r.Sci_Name);}); r.value={...r.value,rows:[...rows]}; }
     async function loadTopCount() { topCount.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name ORDER BY n DESC LIMIT 15`,_wp); topCount.value={loading:false,rows}; loadPhotosFor(topCount,rows); } catch(e){topCount.value={loading:false,rows:[]};} }
     async function loadTopConf() { topConf.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,_wp); topConf.value={loading:false,rows}; loadPhotosFor(topConf,rows); } catch(e){topConf.value={loading:false,rows:[]};} }
     async function loadConfData() { try { confData.value = await birdQuery(...Q.confidenceHistogram()); } catch(e){} }
     async function loadRecords() { records.value.loading=true; try { buildWhere(); const [maxDet]=await birdQuery(`SELECT Date,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxSp]=await birdQuery(`SELECT Date,COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxConf]=await birdQuery(...Q.recordConfidence()); records.value={loading:false,maxDet,maxSp,maxConf}; } catch(e){records.value={loading:false,maxDet:null,maxSp:null,maxConf:null};} }
-    async function loadYearlyData() { try { buildWhere(); yearlyData.value = await birdQuery(`SELECT SUBSTR(Date,1,4) as year, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE ${_w} GROUP BY year ORDER BY year ASC`,_wp); } catch(e){} }
+    // loadYearlyData removed — merged into adaptive loadTimeData
 
-    watch([monthlyData,lang], async()=>{ await nextTick(); const d=monthlyData.value; if(!d||!canvasMonthly.value) return; const labels=d.map(r=>{const [y,m]=r.ym.split('-');return `${t('months_short')[parseInt(m)-1]} ${y.slice(2)}`;}); const base=chartDefaults(); const useLine=labels.length>12; const detDs=useLine?{label:t('detections'),data:d.map(r=>r.det),borderColor:'#5a9e3a',backgroundColor:'rgba(90,158,58,.15)',fill:true,pointRadius:labels.length>30?0:2,tension:0.3}:{label:t('detections'),data:d.map(r=>r.det),backgroundColor:'rgba(90,158,58,.55)',borderColor:'#5a9e3a',borderWidth:1,borderRadius:3,maxBarThickness:40}; mountMonthly(canvasMonthly,()=>({type:useLine?'line':'bar',data:{labels,datasets:[detDs,{label:t('species'),data:d.map(r=>r.sp),type:'line',borderColor:'#c8a84b',backgroundColor:'transparent',pointRadius:labels.length>30?0:2,tension:0.3,yAxisID:'y2'}]},options:{...base,scales:{...base.scales,x:{...base.scales.x,ticks:{maxTicksLimit:18,font:{size:9}}},y:{...base.scales.y,beginAtZero:true},y2:{position:'right',beginAtZero:true,ticks:{color:'#c8a84b'},grid:{drawOnChartArea:false}}}}})); });
+    watch([timeData,lang], async()=>{
+      await nextTick();
+      const td=timeData.value; if(!td||!td.rows.length||!canvasMonthly.value) return;
+      const rows=td.rows, lFn=td.labelFn, n=rows.length;
+      const labels=rows.map(r=>lFn(r,t));
+      const base=chartDefaults();
+      const useLine=n>30;
+      const detDs=useLine
+        ? {label:t('detections'),data:rows.map(r=>r.det),borderColor:'#5a9e3a',backgroundColor:'rgba(90,158,58,.15)',fill:true,pointRadius:n>60?0:2,tension:0.3}
+        : {label:t('detections'),data:rows.map(r=>r.det),backgroundColor:'rgba(90,158,58,.55)',borderColor:'#5a9e3a',borderWidth:1,borderRadius:3,maxBarThickness:40};
+      mountMonthly(canvasMonthly,()=>({
+        type:useLine?'line':'bar',
+        data:{labels,datasets:[detDs,
+          {label:t('species'),data:rows.map(r=>r.sp),type:'line',borderColor:'#c8a84b',backgroundColor:'transparent',pointRadius:n>60?0:2,tension:0.3,yAxisID:'y2'}
+        ]},
+        options:{...base,scales:{...base.scales,
+          x:{...base.scales.x,ticks:{maxTicksLimit:20,font:{size:9}}},
+          y:{...base.scales.y,beginAtZero:true},
+          y2:{position:'right',beginAtZero:true,ticks:{color:'#c8a84b'},grid:{drawOnChartArea:false}}
+        }}
+      }));
+    });
     watch([confData,lang], async()=>{ await nextTick(); const d=confData.value; if(!d||!canvasConf.value) return; const base=chartDefaults(); mountConf(canvasConf,()=>({type:'bar',data:{labels:d.map(r=>r.bucket),datasets:[{label:t('detections'),data:d.map(r=>r.n),backgroundColor:d.map(r=>r.pct>=80?'rgba(90,158,58,.75)':r.pct>=60?'rgba(200,168,75,.65)':'rgba(224,108,74,.5)'),borderWidth:1,borderRadius:2}]},options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{...base.scales,y:{...base.scales.y,beginAtZero:true}}}})); });
-    watch([yearlyData,lang], async()=>{ await nextTick(); const d=yearlyData.value; if(!d||!canvasYearly.value) return; const base=chartDefaults(); mountYearly(canvasYearly,()=>({type:'bar',data:{labels:d.map(r=>r.year),datasets:[{label:t('detections'),data:d.map(r=>r.det),backgroundColor:'rgba(90,158,58,.65)',borderColor:'#5a9e3a',borderWidth:1,borderRadius:4},{label:t('species'),data:d.map(r=>r.sp),type:'line',borderColor:'#c8a84b',backgroundColor:'rgba(200,168,75,.1)',pointRadius:5,pointBackgroundColor:'#c8a84b',tension:0.2,yAxisID:'y2'}]},options:{...base,scales:{...base.scales,y:{...base.scales.y,beginAtZero:true},y2:{position:'right',beginAtZero:true,ticks:{color:'#c8a84b'},grid:{drawOnChartArea:false}}}}})); });
+    // yearlyData watcher removed — merged into adaptive timeData
 
     async function exportCsv() { try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,COUNT(*) as n,ROUND(AVG(Confidence)*100,1) as avg_conf,MIN(Date) as first_date,MAX(Date) as last_date,COUNT(DISTINCT Date) as days FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name ORDER BY n DESC`,_wp); if(!rows.length) return; const h=['Species','Scientific_Name','Detections','Avg_Confidence','First_Date','Last_Date','Days_Detected']; const csv=[h.join(',')]; for(const r of rows) csv.push(['"'+(r.Com_Name||'').replace(/"/g,'""')+'"','"'+(r.Sci_Name||'').replace(/"/g,'""')+'"',r.n,r.avg_conf+'%',r.first_date,r.last_date,r.days].join(',')); const blob=new Blob([csv.join('\n')],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='birdash-stats-'+localDateStr()+'.csv'; a.click(); URL.revokeObjectURL(url); } catch(e){console.error('[export]',e);} }
 
@@ -426,7 +454,7 @@ const app = createApp({
       lang, t, spName, tab, switchTab,
       // Stats
       fp, fc, kpis, topCount, topConf, records,
-      canvasMonthly, canvasConf, canvasYearly,
+      canvasMonthly, canvasConf, timeResLabel,
       fmtDate, navigateTo, chartColor, loadAll, resetDefaults, exportCsv,
       quickPlay(comName) { quickPlaySpecies(comName); },
       // Models

@@ -542,6 +542,105 @@
 
     /** Current confidence threshold. */
     confidence() { return C(); },
+
+    /**
+     * Adaptive time-series query — auto-selects resolution based on date range.
+     * Returns { sql, params, resolution, labelFn }
+     *   resolution: 'hourly' | 'daily' | 'weekly' | 'monthly'
+     *   labelFn(row): formats the bucket label for Chart.js
+     *
+     * @param {string} dateFrom — 'YYYY-MM-DD'
+     * @param {string} dateTo   — 'YYYY-MM-DD'
+     * @param {number} [conf]   — confidence threshold
+     */
+    adaptiveTimeSeries(dateFrom, dateTo, conf) {
+      const c = conf || C();
+      const d0 = new Date(dateFrom + 'T00:00:00');
+      const d1 = new Date(dateTo + 'T23:59:59');
+      const days = Math.max(1, Math.round((d1 - d0) / 86400000));
+
+      let resolution, selectExpr, groupExpr, orderExpr;
+
+      if (days <= 1) {
+        // Hourly: 24 bars
+        resolution = 'hourly';
+        selectExpr = 'CAST(SUBSTR(Time,1,2) AS INTEGER) as bucket';
+        groupExpr  = 'CAST(SUBSTR(Time,1,2) AS INTEGER)';
+        orderExpr  = 'bucket ASC';
+      } else if (days <= 90) {
+        // Daily
+        resolution = 'daily';
+        selectExpr = 'Date as bucket';
+        groupExpr  = 'Date';
+        orderExpr  = 'bucket ASC';
+      } else if (days <= 365) {
+        // Weekly (ISO week approximation via 7-day buckets)
+        resolution = 'weekly';
+        selectExpr = "Date as bucket";
+        groupExpr  = "Date";
+        orderExpr  = "bucket ASC";
+      } else {
+        // Monthly
+        resolution = 'monthly';
+        selectExpr = 'SUBSTR(Date,1,7) as bucket';
+        groupExpr  = 'SUBSTR(Date,1,7)';
+        orderExpr  = 'bucket ASC';
+      }
+
+      const sql = `SELECT ${selectExpr}, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections WHERE Confidence>=? AND Date>=? AND Date<=? GROUP BY ${groupExpr} ORDER BY ${orderExpr}`;
+      const params = [c, dateFrom, dateTo];
+
+      // Label formatter for Chart.js
+      const monthsShort = null; // will be passed at render time
+      const labelFn = function(row, t) {
+        const b = String(row.bucket);
+        switch(resolution) {
+          case 'hourly':  return b + 'h';
+          case 'daily': {
+            const parts = b.split('-');
+            const ms = t ? t('months_short') : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return parseInt(parts[2]) + ' ' + (ms[parseInt(parts[1])-1] || parts[1]);
+          }
+          case 'weekly': {
+            const parts = b.split('-');
+            const ms = t ? t('months_short') : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return parseInt(parts[2]) + ' ' + (ms[parseInt(parts[1])-1] || parts[1]);
+          }
+          case 'monthly': {
+            const parts = b.split('-');
+            const ms = t ? t('months_short') : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return (ms[parseInt(parts[1])-1] || parts[1]) + ' ' + parts[0].slice(2);
+          }
+          default: return b;
+        }
+      };
+
+      return { sql, params, resolution, days, labelFn };
+    },
+
+    /**
+     * Post-process adaptiveTimeSeries results for weekly resolution:
+     * aggregate daily rows into 7-day buckets.
+     */
+    aggregateWeekly(rows) {
+      if (!rows.length) return rows;
+      const buckets = [];
+      let current = null;
+      for (const r of rows) {
+        const d = new Date(r.bucket + 'T12:00:00');
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay() + 1); // Monday
+        const key = weekStart.toISOString().split('T')[0];
+        if (!current || current.bucket !== key) {
+          current = { bucket: key, det: 0, sp: 0, _species: new Set() };
+          buckets.push(current);
+        }
+        current.det += r.det;
+        // sp is approximate (can't deduplicate across days without raw data)
+        current.sp = Math.max(current.sp, r.sp);
+      }
+      return buckets;
+    },
   };
 
   window.BIRDASH_QUERIES = Q;

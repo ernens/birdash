@@ -1140,5 +1140,8 @@
   "review_conf_select": "Select by confidence",
   "review_delete_selection": "Delete selection",
   "set_my_location": "My location",
-  "today_detections_of_day": "Today's detections"
+  "today_detections_of_day": "Today's detections",
+  "stats_hourly_totals": "Hourly activity",
+  "stats_daily_totals": "Daily totals",
+  "stats_weekly_totals": "Weekly totals"
 }
