@@ -192,7 +192,7 @@
   "this_week": "Deze week",
   "this_month": "Deze maand",
   "all_time": "Totaal",
-  "detections": "Detecties",
+  "detections": "detecties",
   "species": "Soorten",
   "avg_confidence": "Gem. betrouwbaarheid",
   "last_detection": "Laatste detectie",
@@ -205,7 +205,7 @@
   "recent_detections": "Recente detecties",
   "today_log": "Dagboek",
   "no_data": "Geen gegevens",
-  "loading": "Laden…",
+  "loading": "Laden",
   "error": "Fout",
   "network_error": "Netwerkfout",
   "date": "Datum",
@@ -1120,8 +1120,6 @@
   "pheno_week_top_detections": "Beste detecties",
   "pheno_week_prev_year": "zelfde week in",
   "pheno_week_loading": "Week laden…",
-  "detections": "detecties",
-  "loading": "Laden",
   "sp_action_pheno_sub": "Waargenomen jaarcyclus · afgeleide fasen · uurlijkse activiteit",
   "sp_action_analyses_sub": "Gedetailleerde statistieken · trends · vergelijkingen",
   "nav_comparison": "Vergelijking",
@@ -1140,5 +1138,6 @@
   "network_no_peers": "Geen stations geconfigureerd",
   "network_last_sync": "Laatste sync",
   "review_conf_select": "Selecteren op betrouwbaarheid",
-  "review_delete_selection": "Selectie verwijderen"
+  "review_delete_selection": "Selectie verwijderen",
+  "set_my_location": "Mijn locatie"
 }

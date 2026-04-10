@@ -11,13 +11,20 @@
             <span class="set-label">{{t('set_site_name')}} <button class="info-btn" @click="helpKey='site_name'">i</button></span>
             <input v-model="conf.SITE_NAME" class="set-input">
           </div>
-          <div class="set-row">
-            <span class="set-label">{{t('set_latitude')}} <button class="info-btn" @click="helpKey='latitude'">i</button></span>
-            <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
-          </div>
-          <div class="set-row">
-            <span class="set-label">{{t('set_longitude')}} <button class="info-btn" @click="helpKey='longitude'">i</button></span>
-            <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;">
+          <!-- Interactive map for GPS coordinates -->
+          <div id="station-map" style="height:280px;border-radius:8px;border:1px solid var(--border);margin-bottom:.6rem;background:var(--bg-card2);"></div>
+          <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;">
+            <div class="set-row" style="flex:1;min-width:120px;">
+              <span class="set-label">{{t('set_latitude')}}</span>
+              <input v-model="conf.LATITUDE" type="number" step="0.0001" class="set-input" style="width:120px;" @change="updateMapFromInputs">
+            </div>
+            <div class="set-row" style="flex:1;min-width:120px;">
+              <span class="set-label">{{t('set_longitude')}}</span>
+              <input v-model="conf.LONGITUDE" type="number" step="0.0001" class="set-input" style="width:120px;" @change="updateMapFromInputs">
+            </div>
+            <button class="btn btn-secondary" style="font-size:.78rem;padding:.35rem .7rem;white-space:nowrap;" @click="geolocateMe">
+              <bird-icon name="map-pin" :size="13"></bird-icon> {{t('set_my_location') || 'Ma position'}}
+            </button>
           </div>
         </div>
 

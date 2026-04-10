@@ -192,7 +192,7 @@
   "this_week": "This week",
   "this_month": "This month",
   "all_time": "All time",
-  "detections": "Detections",
+  "detections": "detections",
   "species": "Species",
   "avg_confidence": "Avg confidence",
   "last_detection": "Last detection",
@@ -205,7 +205,7 @@
   "recent_detections": "Recent detections",
   "today_log": "Today's log",
   "no_data": "No data",
-  "loading": "Loading…",
+  "loading": "Loading",
   "error": "Error",
   "network_error": "Network error",
   "date": "Date",
@@ -1120,8 +1120,6 @@
   "pheno_week_top_detections": "Top detections",
   "pheno_week_prev_year": "same week in",
   "pheno_week_loading": "Loading week…",
-  "detections": "detections",
-  "loading": "Loading",
   "sp_action_pheno_sub": "Observed annual cycle · inferred phases · hourly activity",
   "sp_action_analyses_sub": "Detailed statistics · trends · comparisons",
   "nav_comparison": "Comparison",
@@ -1140,5 +1138,6 @@
   "network_no_peers": "No stations configured",
   "network_last_sync": "Last sync",
   "review_conf_select": "Select by confidence",
-  "review_delete_selection": "Delete selection"
+  "review_delete_selection": "Delete selection",
+  "set_my_location": "My location"
 }

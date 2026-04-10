@@ -220,6 +220,7 @@
   "set_site_brand": "Nom principal (header)",
   "set_latitude": "Latitude",
   "set_longitude": "Longitude",
+  "set_my_location": "Ma position",
   "set_model": "Modèle de détection",
   "set_model_choice": "Modèle IA",
   "set_species_freq_thresh": "Seuil fréquence espèces",

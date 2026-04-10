@@ -1519,7 +1519,10 @@ const app = createApp({
       tabComponents[id] = _makeTabComponent(id);
     });
 
-    onMounted(() => { reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); dbLoadTables(); loadAgConf(); loadAgState(); });
+    onMounted(() => {
+      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); dbLoadTables(); loadAgConf(); loadAgState();
+      if (activeTab.value === 'station') setTimeout(initStationMap, 500);
+    });
 
 
     // ── Provide context to lazy-loaded tab components ──────────────
@@ -1554,11 +1557,81 @@ const app = createApp({
       bkpSchedule, bkpHistory,
       tabComponents,
     };
+    // ── Station map (Leaflet) ──────────────────────────────────────
+    let _stationMap = null, _stationMarker = null, _leafletLoaded = false;
+
+    function _loadLeaflet() {
+      if (_leafletLoaded) return Promise.resolve();
+      return new Promise((resolve) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = () => { _leafletLoaded = true; resolve(); };
+        document.head.appendChild(script);
+      });
+    }
+
+    async function initStationMap() {
+      await _loadLeaflet();
+      await new Promise(r => setTimeout(r, 100)); // let DOM settle
+      const el = document.getElementById('station-map');
+      if (!el || _stationMap) return;
+      const lat = parseFloat(conf.LATITUDE) || 50.5;
+      const lon = parseFloat(conf.LONGITUDE) || 4.5;
+      _stationMap = L.map(el).setView([lat, lon], conf.LATITUDE ? 14 : 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap', maxZoom: 19
+      }).addTo(_stationMap);
+      _stationMarker = L.marker([lat, lon], { draggable: true }).addTo(_stationMap);
+      _stationMarker.on('dragend', () => {
+        const p = _stationMarker.getLatLng();
+        conf.LATITUDE = p.lat.toFixed(4);
+        conf.LONGITUDE = p.lng.toFixed(4);
+      });
+      _stationMap.on('click', (e) => {
+        _stationMarker.setLatLng(e.latlng);
+        conf.LATITUDE = e.latlng.lat.toFixed(4);
+        conf.LONGITUDE = e.latlng.lng.toFixed(4);
+      });
+    }
+
+    function updateMapFromInputs() {
+      if (!_stationMap || !_stationMarker) return;
+      const lat = parseFloat(conf.LATITUDE), lon = parseFloat(conf.LONGITUDE);
+      if (isFinite(lat) && isFinite(lon)) {
+        _stationMarker.setLatLng([lat, lon]);
+        _stationMap.setView([lat, lon], _stationMap.getZoom());
+      }
+    }
+
+    function geolocateMe() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((pos) => {
+        conf.LATITUDE = pos.coords.latitude.toFixed(4);
+        conf.LONGITUDE = pos.coords.longitude.toFixed(4);
+        updateMapFromInputs();
+      });
+    }
+
+    // Init map when station tab is opened
+    const _origSwitch = switchTab;
+    function switchTabWithMap(id) {
+      _origSwitch(id);
+      if (id === 'station') setTimeout(initStationMap, 200);
+    }
+    // Replace switchTab
+    settingsCtx.switchTab = switchTabWithMap;
+    settingsCtx.updateMapFromInputs = updateMapFromInputs;
+    settingsCtx.geolocateMe = geolocateMe;
+
     provide('settingsCtx', settingsCtx);
 
     return {
       t, lang, safeHtml, conf, models, analysisStatus, languages, services,
-      tabs, activeTab, switchTab,
+      tabs, activeTab, switchTab: switchTabWithMap,
       tabComponents,
       // Audio
       audioConf, audioDevices, audioProfiles, audioSubTab, audioSubTabs,
