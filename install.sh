@@ -435,10 +435,12 @@ sudo tee /etc/caddy/Caddyfile > /dev/null <<EOF
         root * $SONGS_DIR/Extracted
         file_server
     }
-    handle /birds* {
+    @birds path /birds /birds/*
+    handle @birds {
         encode zstd gzip
         uri strip_prefix /birds
         root * $BIRDASH_DIR/public
+        header Cache-Control "public, no-cache"
         file_server
     }
     redir / /birds/ permanent
