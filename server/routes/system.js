@@ -614,7 +614,7 @@ function handle(req, res, pathname, ctx) {
         }
 
         // Use birdnetlib pip package to get models
-        const venvDir = '/tmp/birdnet-download-' + Date.now();
+        const venvDir = path.join(PROJECT_ROOT, '.birdnet-download-' + Date.now());
         const { execSync } = require('child_process');
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
