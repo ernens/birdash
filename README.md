@@ -211,7 +211,7 @@ Benchmarked on 20 real bird recordings from 20 species, 4 threads.
 |-----------|-------------|
 | SBC | Raspberry Pi 5 (8GB) recommended — also works on Pi 4 (4GB+) and Pi 3 (1GB, INT8 models only) |
 | Storage | NVMe SSD (500GB+) |
-| Audio | Any USB audio interface (e.g., RODE AI-Micro, Focusrite Scarlett, Behringer UMC) |
+| Audio | Any USB audio interface (e.g., RODE AI-Micro, Focusrite Scarlett, Behringer UMC, UGreen 30724) + microphone |
 | Network | Ethernet or WiFi |
 
 ## Prerequisites
@@ -219,6 +219,8 @@ Benchmarked on 20 real bird recordings from 20 species, 4 threads.
 - Raspberry Pi 3/4/5 with Raspberry Pi OS 64-bit (Bookworm/Trixie) — Pi 5 recommended for dual-model
 - Internet connection (for initial setup and model download)
 - USB audio interface + microphone(s)
+  - Lavalier (clip-on) microphones with **TRRS** plug need a **TRRS→TRS adapter** for standard USB sound cards
+  - The installer auto-configures ALSA with a software gain boost for low-sensitivity USB mics
 
 All other dependencies are installed automatically by the installer.
 
