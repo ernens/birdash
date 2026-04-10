@@ -80,7 +80,10 @@ async function writeBirdnetConf(updates) {
     if (fs.existsSync(configToml)) {
       let toml = await fsp.readFile(configToml, 'utf8');
       if (updates.MODEL) {
+        const before = toml.match(/^model\s*=\s*"[^"]*"/m)?.[0];
         toml = toml.replace(/^model\s*=\s*"[^"]*"/m, `model = "${updates.MODEL}"`);
+        const after = toml.match(/^model\s*=\s*"[^"]*"/m)?.[0];
+        console.log(`[config] config.toml MODEL sync: ${before} → ${after}`);
       }
       if ('DUAL_MODEL_ENABLED' in updates) {
         const sec = updates.DUAL_MODEL_ENABLED === '1' || updates.DUAL_MODEL_ENABLED === 1

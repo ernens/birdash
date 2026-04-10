@@ -505,9 +505,17 @@ function handle(req, res, pathname, ctx) {
       try {
         const modelDir = path.join(BIRDNET_DIR, 'models');
         const files = await fsp.readdir(modelDir);
-        const models = files
-          .filter(f => f.endsWith('.tflite'))
-          .map(f => f.replace('.tflite', ''));
+        const models = [];
+        for (const f of files) {
+          if (!f.endsWith('.tflite')) continue;
+          // Skip symlinks (e.g. FP16 → FP32 compatibility link)
+          const fullPath = path.join(modelDir, f);
+          try {
+            const stat = await fsp.lstat(fullPath);
+            if (stat.isSymbolicLink()) continue;
+          } catch(e) {}
+          models.push(f.replace('.tflite', ''));
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ models }));
       } catch(e) {
