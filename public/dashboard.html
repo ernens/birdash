@@ -753,7 +753,7 @@ BIRDASH.ready.then(() => {
         try{const today=new Date().toISOString().slice(0,10);
         const[statsR,reviewR]=await Promise.all([
           fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*)as total,COUNT(DISTINCT Com_Name)as species FROM detections WHERE Date=? AND Confidence>=?',params:[today,BIRD_CONFIG.defaultConfidence]})}),
-          fetch(API+'/flagged-detections?dateFrom=1900-01-01&dateTo='+today+'&limit=1'),
+          fetch(API+'/flagged-detections?dateFrom='+BIRDASH_UTILS.daysAgo(6)+'&dateTo='+today+'&limit=2000'),
         ]);
         const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value;
         const nT=stats.rows?.[0]?.[0]||0,nS=stats.rows?.[0]?.[1]||0;
@@ -764,7 +764,8 @@ BIRDASH.ready.then(() => {
         if(anlys.lagSecs>300){hL=t('dash_health_delayed');hS='color:#ff9800';hD=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
         else if(anlys.lagSecs>60){hL=t('dash_health_catching');hS='color:#ff9800';hD=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
         else{hL=t('dash_health_ok');hS='color:#4caf50';hD=anlys.backlog>0?(anlys.backlog+' '+t('dash_backlog')):'';}
-        kpi.value={total:nT,species:nS,review:review.total||0,healthLabel:hL,healthStyle:hS,healthDetail:hD};
+        const reviewUnreviewed = (review.flagged||[]).filter(d=>d.validation==='unreviewed').length;
+        kpi.value={total:nT,species:nS,review:reviewUnreviewed,healthLabel:hL,healthStyle:hS,healthDetail:hD};
         }catch(e){}
       }
       function fmtLag(s){if(!s||s<=0)return'0s';if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'min';return Math.floor(s/3600)+'h';}

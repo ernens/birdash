@@ -2087,10 +2087,11 @@
         // Review queue (same date range + limit as review.html)
         fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${weekAgo}&dateTo=${today}&limit=2000`)
           .then(r => r.json()).then(d => {
-            if (d.total > 0) {
+            const unreviewed = (d.flagged || []).filter(f => f.validation === 'unreviewed').length;
+            if (unreviewed > 0) {
               items.push({
                 icon: '✅',
-                text: d.total + ' ' + t('bell_review_pending'),
+                text: unreviewed + ' ' + t('bell_review_pending'),
                 sub: t('bell_review_sub'),
                 href: 'review.html',
               });
@@ -2188,7 +2189,9 @@
       const reviewCount = ref(0);
       function refreshReviewCount() {
         fetch(`${BIRD_CONFIG.apiUrl}/flagged-detections?dateFrom=${U.daysAgo(6)}&dateTo=${U.localDateStr()}&limit=2000`)
-          .then(r => r.json()).then(d => { reviewCount.value = d.total || 0; }).catch(() => {});
+          .then(r => r.json()).then(d => {
+            reviewCount.value = (d.flagged || []).filter(f => f.validation === 'unreviewed').length;
+          }).catch(() => {});
       }
       refreshReviewCount();
       window.addEventListener('birdash:review-changed', refreshReviewCount);
