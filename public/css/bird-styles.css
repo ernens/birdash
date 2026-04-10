@@ -913,6 +913,11 @@ a:hover { opacity: .85; }
   gap:           .4rem;
   padding:       .5rem .75rem;
   color:         var(--text-muted);
+  border:        none;
+  background:    none;
+  width:         100%;
+  text-align:    left;
+  font-family:   inherit;
   font-size:     .82rem;
   font-weight:   500;
   border-radius: .5rem;

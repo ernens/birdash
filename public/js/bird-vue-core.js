@@ -1857,6 +1857,7 @@
         if (openSection.value === si) { openSection.value = -1; return; }
         openSection.value = si;
       }
+      function navGo(file) { window.location.href = file; }
       // Close dropdown when clicking outside
       if (typeof document !== 'undefined') {
         document.addEventListener('click', (e) => {
@@ -2210,7 +2211,7 @@
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, dismissUpdate, updateNotesHtml };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, dismissUpdate, updateNotesHtml };
     },
     directives: {
       'click-outside': {
@@ -2353,12 +2354,13 @@
           <svg class="nav-chevron" :class="{open: openSection===si}" width="8" height="5" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
         </button>
         <div v-show="openSection === si" class="nav-dropdown" @click.stop>
-          <a v-for="p in sec.items" :key="p.id" :href="p.file"
-             class="nav-link" :class="{active:p.active}" :aria-current="p.active?'page':null">
+          <button v-for="p in sec.items" :key="p.id"
+             class="nav-link" :class="{active:p.active}"
+             @click="navGo(p.file)">
             <span class="nav-icon" aria-hidden="true"><bird-icon :name="p.icon" :size="16" ></bird-icon></span>
             <span class="nav-label">{{p.label}}</span>
             <span v-if="p.id==='review' && reviewCount > 0" class="nav-badge">{{reviewCount}}</span>
-          </a>
+          </button>
         </div>
       </div>
     </div>
