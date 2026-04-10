@@ -846,10 +846,17 @@ function handle(req, res, pathname, ctx) {
 // ── Module-level adaptive gain collector ──────────────────────────────────
 const _AG_CFG_PATH = path.join(PROJECT_ROOT, 'config', 'adaptive_gain.json');
 const _AG_AUDIO_CFG_PATH = path.join(PROJECT_ROOT, 'config', 'audio_config.json');
+const _AG_AUDIO_CFG_EXAMPLE = path.join(PROJECT_ROOT, 'config', 'audio_config.example.json');
 let _agBgProc = null, _agBgInterval = null;
 function _agBgStart() {
   if (_agBgProc) return;
   try {
+    // Create config from template if missing
+    if (!fs.existsSync(_AG_AUDIO_CFG_PATH) && fs.existsSync(_AG_AUDIO_CFG_EXAMPLE)) {
+      fs.copyFileSync(_AG_AUDIO_CFG_EXAMPLE, _AG_AUDIO_CFG_PATH);
+      console.log('[adaptive-gain] Created audio_config.json from template');
+    }
+    if (!fs.existsSync(_AG_AUDIO_CFG_PATH)) { console.warn('[adaptive-gain] No audio_config.json — skipping'); return; }
     const audioCfg = JSON.parse(fs.readFileSync(_AG_AUDIO_CFG_PATH, 'utf8'));
     const device = audioCfg.device_id || 'default';
     const channels = audioCfg.input_channels || 2;
