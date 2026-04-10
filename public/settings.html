@@ -222,6 +222,25 @@ const app = createApp({
       history.replaceState(null, '', '#' + id);
     }
     const saving = ref(false);
+    const birdnetLicenseAccepted = ref(false);
+    const birdnetDownloading = ref(false);
+    async function downloadBirdnet() {
+      birdnetDownloading.value = true;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/download-birdnet', { method: 'POST', headers: BIRDASH.authHeaders() });
+        const data = await resp.json();
+        if (data.ok) {
+          window.dispatchEvent(new CustomEvent('birdash:success', { detail: data.message || 'BirdNET download started' }));
+          // Reload models list after a delay
+          setTimeout(() => reload(), 30000);
+        } else {
+          window.dispatchEvent(new CustomEvent('birdash:error', { detail: data.error || 'Download failed' }));
+        }
+      } catch(e) {
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: e.message }));
+      }
+      birdnetDownloading.value = false;
+    }
     const svcLoading = ref(true);
     const saveMsg = ref('');
     const saveErr = ref(false);
@@ -1543,6 +1562,7 @@ const app = createApp({
       appriseUrls, savingApprise, testingApprise, appriseMsg, appriseErr, saveApprise, testApprise,
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
+      birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
       appriseEnabled, toggleAllApprise,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       agConf, agState, loadAgState,
@@ -1648,6 +1668,7 @@ const app = createApp({
       appriseUrls, savingApprise, testingApprise, appriseMsg, appriseErr, saveApprise, testApprise,
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
+      birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
       appriseEnabled, toggleAllApprise,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       agConf, agState, loadAgState,

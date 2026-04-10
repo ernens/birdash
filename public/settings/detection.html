@@ -23,6 +23,25 @@
             <div class="model-desc">{{ modelDescription(m) }}</div>
           </div>
         </div>
+
+        <!-- Download BirdNET models (if not present) -->
+        <div v-if="!models.some(m => m.includes('BirdNET'))" style="margin-top:.8rem;padding:.8rem 1rem;border-radius:8px;background:color-mix(in srgb, var(--warning) 8%, var(--bg-card2));border:1px solid var(--warning);">
+          <div style="font-weight:600;font-size:.85rem;margin-bottom:.4rem;"><bird-icon name="download" :size="14"></bird-icon> BirdNET V2.4 — {{t('set_birdnet_missing') || 'Not installed'}}</div>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem;">
+            {{t('set_birdnet_license_notice') || 'BirdNET models are licensed under CC-NC-SA 4.0 by the K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology. By downloading, you agree to use them for non-commercial purposes only.'}}
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <label style="font-size:.78rem;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
+              <input type="checkbox" v-model="birdnetLicenseAccepted"> {{t('set_birdnet_accept') || 'I accept the CC-NC-SA 4.0 license'}}
+            </label>
+          </div>
+          <button class="btn btn-primary" style="margin-top:.5rem;font-size:.82rem;"
+                  :disabled="!birdnetLicenseAccepted || birdnetDownloading"
+                  @click="downloadBirdnet">
+            {{birdnetDownloading ? '⏳ Downloading...' : '⬇ Download BirdNET V2.4'}}
+          </button>
+        </div>
+
         <!-- Dual-model config -->
         <div style="margin-top:.8rem;padding:.8rem 1rem;border-radius:8px;background:var(--bg-card2);border:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem;">

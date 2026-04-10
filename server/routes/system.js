@@ -597,6 +597,52 @@ function handle(req, res, pathname, ctx) {
   }
 
 
+  // ── Route : POST /api/download-birdnet ──────────────────────────────────
+  // Downloads BirdNET models from birdnetlib pip package (user-initiated, CC-NC-SA)
+  if (req.method === 'POST' && pathname === '/api/download-birdnet') {
+    if (!requireAuth(req, res)) return true;
+    (async () => {
+      try {
+        const modelsDir = path.join(PROJECT_ROOT, 'engine', 'models');
+        // Check if already present
+        const fp32 = path.join(modelsDir, 'BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite');
+        const mdata = path.join(modelsDir, 'BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16.tflite');
+        if (fs.existsSync(fp32) && fs.statSync(fp32).size > 1000000) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, message: 'BirdNET models already installed' }));
+          return;
+        }
+
+        // Use birdnetlib pip package to get models
+        const venvDir = '/tmp/birdnet-download-' + Date.now();
+        const { execSync } = require('child_process');
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: 'Download started — this may take a few minutes' }));
+
+        // Run in background (don't block the response)
+        const script = [
+          `python3 -m venv ${venvDir}`,
+          `${venvDir}/bin/pip install --quiet birdnetlib`,
+          `cp ${venvDir}/lib/python*/site-packages/birdnetlib/models/analyzer/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite ${modelsDir}/`,
+          `cp ${venvDir}/lib/python*/site-packages/birdnetlib/models/analyzer/BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16.tflite ${modelsDir}/`,
+          `cp ${venvDir}/lib/python*/site-packages/birdnetlib/models/analyzer/BirdNET_GLOBAL_6K_V2.4_Labels.txt ${modelsDir}/BirdNET_GLOBAL_6K_V2.4_Model_FP16_Labels.txt`,
+          `rm -rf ${venvDir}`,
+        ].join(' && ');
+
+        execSync(`bash -c '${script}'`, { timeout: 300000 });
+        console.log('[BIRDASH] BirdNET models downloaded via birdnetlib');
+      } catch(e) {
+        console.error('[download-birdnet]', e.message);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      }
+    })();
+    return true;
+  }
+
   return false;
 }
 
