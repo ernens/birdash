@@ -1143,17 +1143,23 @@ const app = createApp({
       } catch(e) { svcDetail.value = { pid: null, memory: 0, uptime: 0, logs: ['Error: ' + e.message] }; }
     }
 
+    const svcError = ref('');
     async function svcAction(name, action) {
+      svcError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/${action}`, { method: 'POST', headers: authHeaders() });
-        // Reload services list and detail after action
+        const res = await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/${action}`, { method: 'POST', headers: authHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
         await loadServices();
         if (svcExpanded.value === name) {
           svcExpanded.value = null;
           await nextTick();
           toggleSvc(name);
         }
-      } catch(e) { console.error('svcAction:', e); }
+      } catch(e) {
+        svcError.value = `${name} ${action}: ${e.message}`;
+        console.error('svcAction:', e);
+      }
     }
 
     function confirmStop(name) {
@@ -1794,7 +1800,7 @@ const app = createApp({
       tabs, activeTab, tabLoaded, switchTab,
       // Health tab
       api, health, services, svcExpanded, svcDetail, confirmAction, analysis, audio, backup, network, hw, fresh,
-      loadHealth, loadServices, toggleSvc, svcAction, confirmStop, svcLabel, svcDotClass, terminalKey,
+      loadHealth, loadServices, toggleSvc, svcAction, svcError, confirmStop, svcLabel, svcDotClass, terminalKey,
       loadApi, loadFresh, fmtBytes,
       // Model tab
       mod, modPeriod, modPeriods, loadModelMonitor,

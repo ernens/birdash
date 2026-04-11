@@ -310,18 +310,20 @@ const app = createApp({
           headers: BIRDASH.authHeaders(),
           body: JSON.stringify({ date: det.date, time: det.time, comName: group.name }),
         });
-        const data = await resp.json();
-        if (data.ok) {
-          // Remove from UI
-          group.dets.splice(detIdx, 1);
-          if (group.dets.length === 0) {
-            const idx = allGroups.value.indexOf(group);
-            if (idx >= 0) allGroups.value.splice(idx, 1);
-          }
-        } else {
-          console.error('Delete failed:', data.error);
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.error || !data.ok) {
+          throw new Error(data.error || `HTTP ${resp.status}`);
         }
-      } catch (e) { console.error('Delete error:', e); }
+        // Remove from UI only after server confirmed.
+        group.dets.splice(detIdx, 1);
+        if (group.dets.length === 0) {
+          const idx = allGroups.value.indexOf(group);
+          if (idx >= 0) allGroups.value.splice(idx, 1);
+        }
+      } catch (e) {
+        console.error('Delete error:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'Delete failed: ' + e.message }));
+      }
     }
 
     // ── Keyboard shortcuts ──────────────────────────────────────────

@@ -571,8 +571,13 @@ const app = createApp({
           method: 'DELETE', headers: BIRDASH.authHeaders(),
           body: JSON.stringify({ date: d.Date, time: d.Time, comName: d.Com_Name }),
         });
-        if (resp.ok) await loadDetections();
-      } catch(e) { console.error('deleteDet:', e); }
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+        await loadDetections();
+      } catch(e) {
+        console.error('deleteDet:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'Delete failed: ' + e.message }));
+      }
     }
 
     onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });

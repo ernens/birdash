@@ -247,14 +247,28 @@ const app = createApp({
       loading.value = false;
     }
 
+    // Helper: POST that throws on any failure path. Mirrors _postJson in
+    // settings.html so review.html follows the same "real ack" rule:
+    // we only update the UI once the server has acknowledged success.
+    async function _bulkPost(detections, status) {
+      const resp = await fetch(`${API}/bulk-validate`, {
+        method: 'POST',
+        headers: BIRDASH.authHeaders(),
+        body: JSON.stringify({ detections, status }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.error) {
+        throw new Error(data.error || `HTTP ${resp.status} ${resp.statusText}`);
+      }
+      return data;
+    }
+
     async function validate(det, status) {
       if (validatingKey.value) return;
       validatingKey.value = detKey(det);
       const labels = { confirmed: t('review_confirmed_msg'), rejected: t('review_rejected_msg'), doubtful: t('review_doubtful_msg') };
       try {
-        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:BIRDASH.authHeaders(),
-          body: JSON.stringify({ detections:[{date:det.date,time:det.time,sci_name:det.sci_name}], status }) });
-        if (!resp.ok) throw new Error(resp.statusText);
+        await _bulkPost([{date:det.date,time:det.time,sci_name:det.sci_name}], status);
         det.validation = status; window.dispatchEvent(new Event('birdash:review-changed'));
         window.dispatchEvent(new CustomEvent('birdash:success', {detail: (labels[status] || status) + ' — ' + spName(det.com_name, det.sci_name)}));
       } catch(e) {
@@ -271,9 +285,7 @@ const app = createApp({
       const labels = { confirmed: t('review_confirm'), rejected: t('review_reject'), doubtful: '?' };
       if (!confirm(`${labels[status] || status} ${dets.length} ?`)) return;
       try {
-        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:BIRDASH.authHeaders(),
-          body: JSON.stringify({ detections: dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status }) });
-        if (!resp.ok) throw new Error(resp.statusText);
+        await _bulkPost(dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status);
         for (const d of dets) d.validation = status;
         selected.clear(); window.dispatchEvent(new Event('birdash:review-changed'));
         window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${labels[status]} — ${dets.length} ${t('review_detections')}`}));
@@ -287,9 +299,7 @@ const app = createApp({
       const matching = flagged.value.filter(d => d.reasons.includes(reason) && d.validation==='unreviewed');
       if (!matching.length || !confirm(`${t('review_reject')} ${matching.length} "${reason}" ?`)) return;
       try {
-        const resp = await fetch(`${API}/bulk-validate`, { method:'POST', headers:BIRDASH.authHeaders(),
-          body: JSON.stringify({ detections: matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status:'rejected' }) });
-        if (!resp.ok) throw new Error(resp.statusText);
+        await _bulkPost(matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), 'rejected');
         for (const d of matching) d.validation = 'rejected'; window.dispatchEvent(new Event('birdash:review-changed'));
         window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${t('review_reject')} — ${matching.length} "${reason}"`}));
       } catch(e) {
@@ -363,10 +373,13 @@ const app = createApp({
         try {
           const resp = await fetch(`${API}/detections`, { method:'DELETE', headers:BIRDASH.authHeaders(),
             body: JSON.stringify({ date:det.date, time:det.time, comName:det.com_name }) });
-          const data = await resp.json();
-          results.push({ name: det.com_name, file: det.file_name, ok: !!data.ok });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || data.error) {
+            throw new Error(data.error || `HTTP ${resp.status}`);
+          }
+          results.push({ name: det.com_name, file: det.file_name, ok: true });
         } catch(e) {
-          results.push({ name: det.com_name, file: det.file_name, ok: false });
+          results.push({ name: det.com_name, file: det.file_name, ok: false, error: e.message });
         }
       }
       delDeleting.value = false;

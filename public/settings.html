@@ -229,16 +229,12 @@ const app = createApp({
       birdnetDownloading.value = true;
       try {
         const resp = await fetch(BIRD_CONFIG.apiUrl + '/download-birdnet', { method: 'POST', headers: BIRDASH.authHeaders() });
-        const data = await resp.json();
-        if (data.ok) {
-          window.dispatchEvent(new CustomEvent('birdash:success', { detail: data.message || 'BirdNET download started' }));
-          // Reload models list after a delay
-          setTimeout(() => reload(), 30000);
-        } else {
-          window.dispatchEvent(new CustomEvent('birdash:error', { detail: data.error || 'Download failed' }));
-        }
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+        window.dispatchEvent(new CustomEvent('birdash:success', { detail: data.message || 'BirdNET download started' }));
+        setTimeout(() => reload(), 30000);
       } catch(e) {
-        window.dispatchEvent(new CustomEvent('birdash:error', { detail: e.message }));
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'BirdNET download: ' + e.message }));
       }
       birdnetDownloading.value = false;
     }
@@ -500,27 +496,31 @@ const app = createApp({
     async function pauseBackup() {
       try {
         const res = await fetch(API + '/backup-pause', { method: 'POST', headers: authHeaders() });
-        const data = await res.json();
-        if (data.ok) {
-          if (data.action === 'pause') bkpProgress.state = 'paused';
-          else bkpProgress.state = 'running';
-        }
-      } catch(e) { console.error('Pause failed:', e); }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+        if (data.action === 'pause') bkpProgress.state = 'paused';
+        else bkpProgress.state = 'running';
+      } catch(e) {
+        saveMsg.value = 'pause backup: ' + e.message;
+        saveErr.value = true;
+      }
     }
 
     async function stopBackup() {
       if (!confirm(t('set_backup_stop_confirm'))) return;
       try {
         const res = await fetch(API + '/backup-stop', { method: 'POST', headers: authHeaders() });
-        const data = await res.json();
-        if (data.ok) {
-          bkpProgress.state = 'stopped';
-          bkpProgress.detail = t('bkp_stopped_by_user');
-          stopBackupPoll();
-          runningBkp.value = false;
-          await loadBackupConfig();
-        }
-      } catch(e) { console.error('Stop failed:', e); }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+        bkpProgress.state = 'stopped';
+        bkpProgress.detail = t('bkp_stopped_by_user');
+        stopBackupPoll();
+        runningBkp.value = false;
+        await loadBackupConfig();
+      } catch(e) {
+        saveMsg.value = 'stop backup: ' + e.message;
+        saveErr.value = true;
+      }
     }
 
     async function saveBackupConfig() {
@@ -545,28 +545,29 @@ const app = createApp({
       runningBkp.value = true;
       Object.assign(bkpProgress, { state: 'running', percent: 0, step: 'init', detail: t('bkp_starting'), startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
       try {
-        // Save config first
-        await fetch(API + '/backup-config', {
+        // Save config first — refuse to start the backup if save fails.
+        const cfgRes = await fetch(API + '/backup-config', {
           method: 'POST', headers: authHeaders(),
           body: JSON.stringify({ ...bkp }),
         });
-        const res = await fetch(API + '/backup-run', { method: 'POST', headers: authHeaders() });
-        const data = await res.json();
-        if (data.ok) {
-          saveMsg.value = '';
-          saveErr.value = false;
-          // Start polling for live progress
-          startBackupPoll();
-          return;
-        } else {
-          saveMsg.value = data.error || 'Error'; saveErr.value = true;
-          Object.assign(bkpProgress, { state: 'idle', percent: 0 });
+        const cfgData = await cfgRes.json().catch(() => ({}));
+        if (!cfgRes.ok || cfgData.error) {
+          throw new Error('save backup config: ' + (cfgData.error || `HTTP ${cfgRes.status}`));
         }
+        const res = await fetch(API + '/backup-run', { method: 'POST', headers: authHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) {
+          throw new Error('backup-run: ' + (data.error || `HTTP ${res.status}`));
+        }
+        saveMsg.value = '';
+        saveErr.value = false;
+        startBackupPoll();
       } catch(e) {
-        saveMsg.value = e.message; saveErr.value = true;
+        saveMsg.value = e.message;
+        saveErr.value = true;
         Object.assign(bkpProgress, { state: 'idle', percent: 0 });
+        runningBkp.value = false;
       }
-      runningBkp.value = false;
     }
 
     function modelLabel(m) {
@@ -815,19 +816,21 @@ const app = createApp({
       try {
         const inc = includeList.value.split('\n').map(l => l.trim()).filter(Boolean);
         const exc = excludeList.value.split('\n').map(l => l.trim()).filter(Boolean);
-        await Promise.all([
-          fetch(API + '/species-lists', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({ list: 'include', species: inc }),
-          }),
-          fetch(API + '/species-lists', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({ list: 'exclude', species: exc }),
-          }),
+        const results = await Promise.allSettled([
+          _postJson(API + '/species-lists', { list: 'include', species: inc }),
+          _postJson(API + '/species-lists', { list: 'exclude', species: exc }),
         ]);
-      } catch(e) { console.error(e); }
+        const failures = results
+          .map((r, i) => r.status === 'rejected' ? `${i ? 'exclude' : 'include'}: ${r.reason.message}` : null)
+          .filter(Boolean);
+        if (failures.length) {
+          saveMsg.value = 'species lists: ' + failures.join('; ');
+          saveErr.value = true;
+        }
+      } catch(e) {
+        saveMsg.value = e.message;
+        saveErr.value = true;
+      }
       savingLists.value = false;
     }
 
@@ -1671,12 +1674,19 @@ const app = createApp({
       calRunning.value = false;
     }
     async function applyCalibration() {
-      await fetch(API + '/audio/calibration/apply', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gain_ch0: calResult.value.gain_ch0, gain_ch1: calResult.value.gain_ch1 }),
-      });
-      await loadAudioConfig();
-      calResult.value = null;
+      try {
+        const res = await fetch(API + '/audio/calibration/apply', {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ gain_ch0: calResult.value.gain_ch0, gain_ch1: calResult.value.gain_ch1 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+        await loadAudioConfig();
+        calResult.value = null;
+      } catch (e) {
+        saveMsg.value = 'apply calibration: ' + e.message;
+        saveErr.value = true;
+      }
     }
     function startMonitor() {
       audioMonitoring.value = true;

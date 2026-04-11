@@ -213,6 +213,8 @@
                          border-radius:var(--radius);outline:none;"
                   @focus="$event.target.style.borderColor='var(--accent)'"
                   @focusout="$event.target.style.borderColor='var(--border)'"></textarea>
+        <div v-if="noteSaving" style="font-size:.72rem;opacity:.6;margin-top:.25rem;">{{t('saving') || '…'}}</div>
+        <div v-if="noteError" style="font-size:.75rem;color:var(--warning);margin-top:.25rem;">⚠ {{noteError}}</div>
       </div>
 
       <!-- ── Graphiques ─────────────────────────────────────────── -->
@@ -541,15 +543,27 @@ const app = createApp({
       }
     }
 
+    // Note save state — surfaces real success/failure to the user
+    // instead of silently swallowing errors and pretending it worked.
+    const noteSaving = ref(false);
+    const noteError  = ref('');
     async function savePersonalNote() {
       const name = sp.value.name;
       if (!name) return;
       const val = personalNote.value.trim();
       if (!val && !_speciesNoteId) return;
+      noteSaving.value = true;
+      noteError.value = '';
       if (!val && _speciesNoteId) {
-        // Delete
-        try { await fetch(`${BIRD_CONFIG.apiUrl}/notes?id=${_speciesNoteId}`, { method: 'DELETE', headers: authHeaders() }); } catch(e) { console.error(e); }
-        _speciesNoteId = null;
+        try {
+          const res = await fetch(`${BIRD_CONFIG.apiUrl}/notes?id=${_speciesNoteId}`, { method: 'DELETE', headers: authHeaders() });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+          _speciesNoteId = null;
+        } catch(e) {
+          noteError.value = e.message;
+        }
+        noteSaving.value = false;
         return;
       }
       try {
@@ -558,15 +572,14 @@ const app = createApp({
           headers: authHeaders(),
           body: JSON.stringify({ id: _speciesNoteId, com_name: name, sci_name: sp.value.sci, note: val }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          _speciesNoteId = data.id;
-          localStorage.removeItem('birdash_note_' + sp.value.sci); // cleanup old
-        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+        _speciesNoteId = data.id;
+        localStorage.removeItem('birdash_note_' + sp.value.sci); // cleanup old
       } catch(e) {
-        // Fallback localStorage
-        localStorage.setItem('birdash_note_' + sp.value.sci, val);
+        noteError.value = e.message;
       }
+      noteSaving.value = false;
     }
 
     // Detection-level notes
@@ -594,26 +607,41 @@ const app = createApp({
       const existing = detNoteMap.value[key];
       if (!val && !existing) { editingDetNote.value = null; return; }
       if (!val && existing) { await deleteDetNote(d); return; }
+      noteSaving.value = true;
+      noteError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/notes`, {
+        const res = await fetch(`${BIRD_CONFIG.apiUrl}/notes`, {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify({ id: existing?.id, com_name: sp.value.name, sci_name: sp.value.sci, date: d.Date, time: d.Time, note: val }),
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
         await loadPersonalNote(sp.value.sci);
-      } catch(e) {}
-      editingDetNote.value = null;
+        editingDetNote.value = null;
+      } catch(e) {
+        noteError.value = e.message;
+        // Keep the editor open so the user can retry instead of losing input.
+      }
+      noteSaving.value = false;
     }
 
     async function deleteDetNote(d) {
       const key = d.Date + 'T' + d.Time;
       const existing = detNoteMap.value[key];
       if (!existing) return;
+      noteSaving.value = true;
+      noteError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/notes?id=${existing.id}`, { method: 'DELETE', headers: authHeaders() });
+        const res = await fetch(`${BIRD_CONFIG.apiUrl}/notes?id=${existing.id}`, { method: 'DELETE', headers: authHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
         await loadPersonalNote(sp.value.sci);
-      } catch(e) { console.error(e); }
-      editingDetNote.value = null;
+        editingDetNote.value = null;
+      } catch(e) {
+        noteError.value = e.message;
+      }
+      noteSaving.value = false;
     }
 
     // Chart data refs
@@ -1277,6 +1305,7 @@ const app = createApp({
       hasPrevSpecies, hasNextSpecies, prevSpecies, nextSpecies,
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
+      noteSaving, noteError,
       isFav, onToggleFav, banCurrentPhoto, setPreferredPhoto,
       photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,

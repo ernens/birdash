@@ -593,16 +593,16 @@ const app = createApp({
             status: newStatus,
           }),
         });
-        if (resp.ok) {
-          const updated = { ...validations.value };
-          if (newStatus === 'unreviewed') {
-            delete updated[key];
-          } else {
-            updated[key] = newStatus;
-          }
-          validations.value = updated;
-        }
-      } catch(e) { console.error('setValidation:', e); }
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+        const updated = { ...validations.value };
+        if (newStatus === 'unreviewed') delete updated[key];
+        else updated[key] = newStatus;
+        validations.value = updated;
+      } catch(e) {
+        console.error('setValidation:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'validation: ' + e.message }));
+      }
     }
 
     // ── Species-level quick validation ────────────────────────
@@ -626,13 +626,15 @@ const app = createApp({
             status: newStatus,
           }),
         });
-        if (resp.ok) {
-          spValidations.value = { ...spValidations.value, [s.sci]: newStatus === 'unreviewed' ? undefined : newStatus };
-          // Also refresh per-detection validations if this species is selected
-          if (selected.value?.sci === s.sci) loadValidations();
-          window.dispatchEvent(new CustomEvent('birdash:success', { detail: `${s.Com_Name}: ${newStatus}` }));
-        }
-      } catch(e) { console.error('quickValSpecies:', e); }
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+        spValidations.value = { ...spValidations.value, [s.sci]: newStatus === 'unreviewed' ? undefined : newStatus };
+        if (selected.value?.sci === s.sci) loadValidations();
+        window.dispatchEvent(new CustomEvent('birdash:success', { detail: `${s.Com_Name}: ${newStatus}` }));
+      } catch(e) {
+        console.error('quickValSpecies:', e);
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'validation: ' + e.message }));
+      }
     }
 
     // Load species-level validation summary for the selected date

@@ -52,6 +52,7 @@
             <button class="btn btn-primary" @click="addStation" style="padding:.4rem .8rem;">{{t('network_add')}}</button>
           </div>
         </div>
+        <div v-if="netError" style="padding:.5rem .8rem;color:var(--warning);font-size:.82rem;background:var(--bg-card2);border-radius:6px;margin-bottom:.6rem;">⚠ {{netError}}</div>
 
         <div v-if="!peers.length" style="font-size:.85rem;color:var(--text-muted);padding:1rem;text-align:center;">
           {{t('network_no_peers')}}
@@ -116,11 +117,22 @@ const app = createApp({
       } catch(e) { console.error('network:', e); }
     }
 
+    const netError = ref('');
+    async function _stationFetch(url, opts) {
+      const r = await fetch(url, opts);
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data.error) {
+        throw new Error(data.error || `HTTP ${r.status}`);
+      }
+      return data;
+    }
+
     async function addStation() {
       const s = newStation.value;
       if (!s.id || !s.name || !s.url) return;
+      netError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/stations`, {
+        await _stationFetch(`${BIRD_CONFIG.apiUrl}/stations`, {
           method: 'POST',
           headers: BIRDASH.authHeaders(),
           body: JSON.stringify(s),
@@ -128,33 +140,35 @@ const app = createApp({
         newStation.value = { id: '', name: '', url: '' };
         showAdd.value = false;
         loadOverview();
-      } catch(e) { console.error(e); }
+      } catch(e) { netError.value = 'add: ' + e.message; }
     }
 
     async function removeStation(p) {
       if (!confirm(`Remove ${p.name}?`)) return;
+      netError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}`, {
+        await _stationFetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}`, {
           method: 'DELETE', headers: BIRDASH.authHeaders(),
         });
         loadOverview();
-      } catch(e) { console.error(e); }
+      } catch(e) { netError.value = 'remove: ' + e.message; }
     }
 
     async function syncStation(p) {
       syncing.value = p.id;
+      netError.value = '';
       try {
-        await fetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}/sync`, {
+        await _stationFetch(`${BIRD_CONFIG.apiUrl}/stations/${p.id}/sync`, {
           method: 'POST', headers: BIRDASH.authHeaders(),
         });
         await loadOverview();
-      } catch(e) { console.error(e); }
+      } catch(e) { netError.value = 'sync: ' + e.message; }
       syncing.value = null;
     }
 
     onMounted(loadOverview);
 
-    return { t, local, peers, showAdd, syncing, newStation, addStation, removeStation, syncStation };
+    return { t, local, peers, showAdd, syncing, newStation, addStation, removeStation, syncStation, netError };
   }
 });
 BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
