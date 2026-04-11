@@ -265,6 +265,12 @@ function handle(req, res, pathname, ctx) {
           { label: 'POST /api/apply-update (init)', defaultValue: {} }
         );
 
+        // Invalidate the status cache so the next /api/update-status
+        // (which the UI calls right after the apply finishes) doesn't
+        // serve a stale "update available" snapshot.
+        _statusCache = null;
+        _statusCacheTs = 0;
+
         // Spawn update.sh detached so the birdash restart inside doesn't
         // take the response down with it. The script handles the rest.
         const script = path.join(PROJECT_ROOT, 'scripts', 'update.sh');

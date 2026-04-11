@@ -89,6 +89,13 @@ NEW_HEAD=$(git rev-parse "origin/$BRANCH")
 
 if [ "$OLD_HEAD" = "$NEW_HEAD" ]; then
     ok "Already up to date ($(git rev-parse --short HEAD))"
+    if [ -n "$STATUS_FILE" ]; then
+        SHORT=$(git rev-parse --short HEAD)
+        cat > "${STATUS_FILE}.$$" <<EOF
+{"state":"done","step":"up-to-date","detail":"Already on $SHORT","newCommit":"$SHORT","updatedAt":"$(date -Iseconds)"}
+EOF
+        mv "${STATUS_FILE}.$$" "$STATUS_FILE"
+    fi
     exit 0
 fi
 

@@ -2626,27 +2626,43 @@ a:hover { opacity: .85; }
 .update-btn-primary:hover { opacity: .9; transform: translateY(-1px); }
 .update-btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ── Update available banner — discreet, non-blocking ────────────────── */
+/* ── Update available banner — discreet but attention-grabbing ───────── */
 .update-banner {
   display: flex; align-items: center; gap: .6rem;
   padding: .55rem 1rem;
   margin: 0 0 1rem;
   background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-card2) 100%);
-  border: 1px solid var(--accent);
-  border-left: 3px solid var(--accent);
+  border: 1px solid #d24a4a;
+  border-left: 3px solid #d24a4a;
   border-radius: 6px;
   font-size: .85rem;
+  /* Soft red pulse to draw the eye without being noisy. ~3s cycle so
+     it's visible but doesn't flash distractingly. */
+  animation: update-banner-pulse 3s ease-in-out infinite;
+}
+@keyframes update-banner-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(210, 74, 74, 0);
+    border-color: #d24a4a;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(210, 74, 74, 0.18);
+    border-color: #ff6b6b;
+  }
 }
 .update-banner-icon {
-  font-size: 1.1em; color: var(--accent); font-weight: bold;
+  font-size: 1.1em; color: #d24a4a; font-weight: bold;
 }
 .update-banner-text { flex: 1; opacity: .9; }
 .update-banner-btn {
-  background: var(--accent); color: #fff; border: none;
+  background: #d24a4a; color: #fff; border: none;
   padding: .35rem .85rem; border-radius: 4px;
   font-size: .8rem; font-weight: 600; cursor: pointer;
 }
-.update-banner-btn:hover { opacity: .9; }
+.update-banner-btn:hover { background: #ff6b6b; }
+@media (prefers-reduced-motion: reduce) {
+  .update-banner { animation: none; }
+}
 
 /* ── Categorized changes inside the modal ───────────────────────────── */
 .update-changes-group { margin-bottom: 1rem; }

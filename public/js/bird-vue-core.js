@@ -2192,9 +2192,10 @@
       const updateProgress = ref(null);   // {state, step, detail, newCommit?}
       let _updatePollTimer = null;
 
-      async function fetchUpdateStatus() {
+      async function fetchUpdateStatus(force) {
         try {
-          const r = await fetch(`${BIRD_CONFIG.apiUrl}/update-status`);
+          const url = `${BIRD_CONFIG.apiUrl}/update-status` + (force ? '?refresh=1' : '');
+          const r = await fetch(url);
           const d = await r.json();
           if (d && !d.error) updateInfo.value = d;
         } catch {}
@@ -2252,11 +2253,11 @@
             updateProgress.value = d;
             if (d.state === 'done' || d.state === 'failed') {
               clearInterval(_updatePollTimer); _updatePollTimer = null;
-              updateApplying.value = (d.state !== 'done' && d.state !== 'failed') ? false : updateApplying.value;
               if (d.state === 'done') {
-                // Refresh status so banner disappears, but keep modal open
-                // showing the success state until the user clicks Reload.
-                await fetchUpdateStatus();
+                // Bypass the 5-min server cache so the modal doesn't
+                // keep showing the "update available" state we just
+                // installed. The fresh status will report hasUpdate=false.
+                await fetchUpdateStatus(true);
               }
             }
           } catch (e) {
@@ -2275,6 +2276,16 @@
 
       function reloadAfterUpdate() {
         location.reload();
+      }
+
+      // Allow the user to dismiss a stuck "in-flight" progress state
+      // (e.g. backend died mid-apply, or polling timed out). Resets the
+      // local apply tracking without touching server state.
+      function dismissUpdateProgress() {
+        if (_updatePollTimer) { clearInterval(_updatePollTimer); _updatePollTimer = null; }
+        updateApplying.value = false;
+        updateProgress.value = null;
+        updateModalOpen.value = false;
       }
 
       // Group commits by conventional-commit type for the modal display.
@@ -2310,7 +2321,7 @@
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress };
     },
     directives: {
       'click-outside': {
@@ -2523,9 +2534,9 @@
         </div>
       </div>
       <div class="update-modal-footer" v-if="!updateApplying && !(updateProgress && updateProgress.state === 'done')">
-        <button class="update-btn-secondary" @click="skipUpdate">{{t('update_skip')}}</button>
-        <button class="update-btn-secondary" @click="deferUpdate(1)">{{t('update_defer')}}</button>
-        <button class="update-btn-primary" @click="applyUpdate" style="margin-left:auto;">{{t('update_install')}}</button>
+        <button class="update-btn-secondary" @click="skipUpdate" :disabled="updateApplying">{{t('update_skip')}}</button>
+        <button class="update-btn-secondary" @click="deferUpdate(1)" :disabled="updateApplying">{{t('update_defer')}}</button>
+        <button class="update-btn-primary" @click="applyUpdate" :disabled="updateApplying" style="margin-left:auto;">{{t('update_install')}}</button>
       </div>
     </div>
   </div>
