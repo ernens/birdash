@@ -1374,10 +1374,46 @@ const app = createApp({
     const filterPreviewing = ref(false);
     const filterPreview = ref(null);
     const filterPreviewErr = ref('');
+    const filterPreviewProgress = ref(0);   // 0-100
+    const filterPreviewPhase = ref('');     // i18n key
     async function runFilterPreview() {
       filterPreviewing.value = true;
       filterPreview.value = null;
       filterPreviewErr.value = '';
+      filterPreviewProgress.value = 0;
+      filterPreviewPhase.value = 'fp_phase_recording';
+
+      // Phased progress estimate for a Pi 3 (~25-30s end-to-end).
+      // Each phase has a target %, start-time (seconds), and i18n key.
+      // Progress is advanced by a 150ms timer, capped at 90% until the
+      // real response arrives, then snapped to 100%.
+      const started = Date.now();
+      const phases = [
+        { at: 0,    pct: 0,   key: 'fp_phase_recording' },
+        { at: 3,    pct: 15,  key: 'fp_phase_loading' },
+        { at: 6,    pct: 30,  key: 'fp_phase_filtering' },
+        { at: 10,   pct: 50,  key: 'fp_phase_rendering' },
+        { at: 25,   pct: 88,  key: 'fp_phase_finalizing' },
+        { at: 40,   pct: 90,  key: 'fp_phase_finalizing' },
+      ];
+      const tick = setInterval(() => {
+        const elapsed = (Date.now() - started) / 1000;
+        // Find the current phase + next phase and linearly interpolate.
+        let current = phases[0], next = phases[1];
+        for (let i = 0; i < phases.length - 1; i++) {
+          if (elapsed >= phases[i].at && elapsed < phases[i + 1].at) {
+            current = phases[i]; next = phases[i + 1]; break;
+          }
+          if (elapsed >= phases[phases.length - 1].at) {
+            current = phases[phases.length - 1]; next = current;
+          }
+        }
+        const span = Math.max(0.001, next.at - current.at);
+        const frac = Math.min(1, Math.max(0, (elapsed - current.at) / span));
+        filterPreviewProgress.value = Math.min(90, Math.round(current.pct + (next.pct - current.pct) * frac));
+        filterPreviewPhase.value = current.key;
+      }, 150);
+
       try {
         const resp = await fetch(API + '/audio/filter-preview', {
           method: 'POST', headers: authHeaders(),
@@ -1396,6 +1432,10 @@ const app = createApp({
         if (data.error) throw new Error(data.error);
         filterPreview.value = data;
       } catch (e) { filterPreviewErr.value = e.message; }
+      clearInterval(tick);
+      filterPreviewProgress.value = 100;
+      // Let the 100% frame render briefly before hiding the bar
+      await new Promise(r => setTimeout(r, 250));
       filterPreviewing.value = false;
     }
     const calRunning = ref(false);
@@ -1592,6 +1632,7 @@ const app = createApp({
       audioConf, audioDevices, audioProfiles, audioSubTab, audioSubTabs,
       channelStrategies,
       filterPreviewing, filterPreview, filterPreviewErr, runFilterPreview,
+      filterPreviewProgress, filterPreviewPhase,
       calRunning, calResult, calExpired,
       audioMonitoring, monitorLevels, audioTesting, audioTestImg,
       loadAudioDevices, selectAudioDevice, activateAudioProfile,
@@ -1706,6 +1747,7 @@ const app = createApp({
       audioConf, audioDevices, audioProfiles, audioSubTab, audioSubTabs,
       channelStrategies,
       filterPreviewing, filterPreview, filterPreviewErr, runFilterPreview,
+      filterPreviewProgress, filterPreviewPhase,
       calRunning, calResult, calExpired,
       audioMonitoring, monitorLevels, audioTesting, audioTestImg,
       loadAudioDevices, selectAudioDevice, activateAudioProfile,

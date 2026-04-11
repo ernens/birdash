@@ -194,10 +194,19 @@
             </div>
           </div>
 
-          <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+          <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;">
             <button class="btn-outline" @click="runFilterPreview" :disabled="filterPreviewing">
               {{filterPreviewing ? t('fp_recording') : t('fp_preview')}}
             </button>
+          </div>
+          <div v-if="filterPreviewing" style="margin-top:.6rem;">
+            <div style="display:flex;justify-content:space-between;font-size:.78em;margin-bottom:.25rem;">
+              <span style="opacity:.8;">{{t(filterPreviewPhase) || ''}}</span>
+              <span style="opacity:.6;font-variant-numeric:tabular-nums;">{{filterPreviewProgress}}%</span>
+            </div>
+            <div style="height:6px;border-radius:3px;background:var(--bg-card2);overflow:hidden;">
+              <div :style="{width: filterPreviewProgress + '%', height:'100%', background:'var(--accent, #4a9eff)', transition:'width .2s linear'}"></div>
+            </div>
           </div>
 
           <div v-if="filterPreview" class="card" style="margin-top:.8rem;">
