@@ -302,21 +302,14 @@ function handle(req, res, pathname, ctx) {
       }
     }
 
-    // Only return species that exist in our DB (not all 7000)
-    // Invalidate cache after 1 hour
-    if (_detectedSpeciesCache && (Date.now() - _detectedSpeciesCacheTs) > 3600000) _detectedSpeciesCache = null;
-    const detected = _detectedSpeciesCache || (function() {
-      const rows = db.prepare('SELECT DISTINCT Sci_Name FROM detections').all();
-      _detectedSpeciesCache = rows.map(r => r.Sci_Name);
-      _detectedSpeciesCacheTs = Date.now();
-      return _detectedSpeciesCache;
-    })();
-
-    const result = {};
-    const labels = _speciesNamesCache[lang];
-    for (const sci of detected) {
-      if (labels[sci]) result[sci] = labels[sci];
-    }
+    // Always return the full label map (~500KB raw, ~100KB gzipped).
+    // Previously this was filtered to the species seen in the DB as an
+    // optimization, but on fresh installs the DB is empty or sparse,
+    // which meant species detected after the first /api/species-names
+    // request wouldn't get translated until the 1h cache expired.
+    // The browser HTTP cache (max-age=86400) makes the full response
+    // cheap for repeat loads.
+    const result = _speciesNamesCache[lang];
 
     res.writeHead(200, {
       'Content-Type': 'application/json',

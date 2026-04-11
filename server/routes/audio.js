@@ -733,7 +733,7 @@ function handle(req, res, pathname, ctx) {
               else reject(new Error(stderr || `python exit ${code}`));
             });
             proc.on('error', reject);
-            setTimeout(() => { proc.kill(); reject(new Error('python timeout')); }, 30000);
+            setTimeout(() => { proc.kill(); reject(new Error('python timeout')); }, 90000);
           });
 
           try { fs.unlinkSync(tmpWav); } catch {}

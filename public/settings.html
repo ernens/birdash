@@ -1637,8 +1637,13 @@ const app = createApp({
 
     async function initStationMap() {
       await _loadLeaflet();
-      await new Promise(r => setTimeout(r, 100)); // let DOM settle
-      const el = document.getElementById('station-map');
+      // The station tab is an async component — poll for its DOM to mount
+      let el = null;
+      for (let i = 0; i < 30; i++) {
+        el = document.getElementById('station-map');
+        if (el) break;
+        await new Promise(r => setTimeout(r, 150));
+      }
       if (!el || _stationMap) return;
       const lat = parseFloat(conf.LATITUDE) || 50.5;
       const lon = parseFloat(conf.LONGITUDE) || 4.5;
@@ -1657,6 +1662,9 @@ const app = createApp({
         conf.LATITUDE = e.latlng.lat.toFixed(4);
         conf.LONGITUDE = e.latlng.lng.toFixed(4);
       });
+      // Leaflet computes tile layout from the container's current size;
+      // invalidate once the layout has settled so tiles render correctly.
+      setTimeout(() => _stationMap && _stationMap.invalidateSize(), 200);
     }
 
     function updateMapFromInputs() {
