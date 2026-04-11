@@ -149,6 +149,26 @@ if [ "$needs_npm" = "1" ]; then
     npm install --omit=dev --silent || warn "npm install failed (non-fatal)"
 fi
 
+# ── 4b. Run migrations ────────────────────────────────────────────────────
+# Each script in scripts/migrations/ is idempotent: it probes the current
+# state and no-ops on installs that don't need it. They run AFTER the
+# pull (so the new migrations are visible) and BEFORE the service restart
+# (so the restart picks up any config changes a migration made).
+if [ -d "scripts/migrations" ]; then
+    info "Running migrations..."
+    migration_failed=0
+    for m in scripts/migrations/[0-9][0-9][0-9]-*.sh; do
+        [ -f "$m" ] || continue
+        if ! bash "$m"; then
+            warn "migration $(basename "$m") failed"
+            migration_failed=1
+        fi
+    done
+    if [ "$migration_failed" = "1" ]; then
+        warn "one or more migrations failed — inspect output above"
+    fi
+fi
+
 # ── 5. Restart services if needed ─────────────────────────────────────────
 if [ "$needs_birdash" = "1" ]; then
     info "Restarting birdash..."
