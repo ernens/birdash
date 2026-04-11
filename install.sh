@@ -215,6 +215,53 @@ else
 fi
 echo "  Optimal Perch model for $(echo $_PI_MODEL | grep -oP 'Pi \d+' || echo 'this hardware'): $_PERCH_MODEL"
 
+# ── GeoIP: auto-detect location + language from public IP ───────────────────
+# BirdNET filters species by geographic frequency (SF_THRESH), so shipping
+# with LAT=0 LON=0 means ~0 detections until the user sets coordinates.
+# ipapi.co is free (30k req/month, no key, HTTPS). Fails silently to 0,0.
+_GEO_LAT="0.0"
+_GEO_LON="0.0"
+_GEO_LANG="en"
+_GEO_CITY=""
+_GEO_COUNTRY=""
+_GEO_JSON=$(curl -s -m 5 https://ipapi.co/json 2>/dev/null || true)
+if [ -n "$_GEO_JSON" ]; then
+    _GEO_PARSED=$(printf '%s' "$_GEO_JSON" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    lat = d.get("latitude")
+    lon = d.get("longitude")
+    cc  = (d.get("country_code") or "").upper()
+    city    = d.get("city") or ""
+    country = d.get("country_name") or ""
+    if lat is None or lon is None:
+        sys.exit(1)
+    # Country → UI/database language
+    lang_map = {
+        "FR":"fr","BE":"fr","LU":"fr","MC":"fr",
+        "NL":"nl",
+        "DE":"de","AT":"de","CH":"de",
+    }
+    lang = lang_map.get(cc, "en")
+    print(f"{lat}|{lon}|{lang}|{city}|{country}")
+except Exception:
+    sys.exit(1)
+' 2>/dev/null || true)
+    if [ -n "$_GEO_PARSED" ]; then
+        _GEO_LAT=$(echo "$_GEO_PARSED" | cut -d'|' -f1)
+        _GEO_LON=$(echo "$_GEO_PARSED" | cut -d'|' -f2)
+        _GEO_LANG=$(echo "$_GEO_PARSED" | cut -d'|' -f3)
+        _GEO_CITY=$(echo "$_GEO_PARSED" | cut -d'|' -f4)
+        _GEO_COUNTRY=$(echo "$_GEO_PARSED" | cut -d'|' -f5)
+        ok "Location detected: ${_GEO_CITY:-?}, ${_GEO_COUNTRY:-?} (${_GEO_LAT}, ${_GEO_LON}) → lang=${_GEO_LANG}"
+    else
+        warn "GeoIP response could not be parsed — defaulting to 0,0 / en"
+    fi
+else
+    warn "GeoIP lookup failed (offline?) — defaulting to 0,0 / en"
+fi
+
 if [ ! -f /etc/birdnet/birdnet.conf ]; then
     sudo tee /etc/birdnet/birdnet.conf > /dev/null <<EOF
 # Birdash detection configuration
@@ -229,9 +276,9 @@ DATA_MODEL_VERSION=2
 RECORDING_LENGTH=45
 EXTRACTION_LENGTH=6
 AUDIOFMT=mp3
-DATABASE_LANG=en
-LATITUDE=0.0
-LONGITUDE=0.0
+DATABASE_LANG=$_GEO_LANG
+LATITUDE=$_GEO_LAT
+LONGITUDE=$_GEO_LON
 RECS_DIR=$SONGS_DIR
 PRIVACY_THRESHOLD=0
 FULL_DISK=purge
