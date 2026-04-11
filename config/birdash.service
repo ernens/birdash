@@ -9,6 +9,10 @@ WorkingDirectory=BIRDASH_HOME/birdash
 ExecStart=/usr/bin/node BIRDASH_HOME/birdash/server/server.js
 Restart=on-failure
 RestartSec=5
+# KillMode=process so children spawned by /api/apply-update (i.e.
+# scripts/update.sh) are not killed when systemd restarts birdash —
+# update.sh has to outlive the parent to write its 'done' status.
+KillMode=process
 Environment=BIRDASH_PORT=7474
 Environment=BIRDASH_DB=BIRDASH_HOME/birdash/data/birds.db
 # Environment=EBIRD_API_KEY=your_key_here
