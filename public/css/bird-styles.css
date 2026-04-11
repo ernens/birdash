@@ -2720,6 +2720,105 @@ a:hover { opacity: .85; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Share modal (species.html) ──────────────────────────────────── */
+.share-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: share-fade-in .15s ease-out;
+}
+@keyframes share-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.share-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(540px, 92vw);
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0,0,0,.5);
+}
+.share-modal-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+.share-modal-title { font-size: 1rem; font-weight: 600; }
+.share-modal-close {
+  background: transparent; border: none;
+  color: var(--text-muted); cursor: pointer;
+  font-size: 1.1rem; padding: .2rem .4rem;
+}
+.share-modal-close:hover { color: var(--text-main); }
+.share-modal-body {
+  padding: 1rem 1.1rem 1.1rem;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: .8rem;
+}
+.share-modal-photo {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.share-modal-text {
+  width: 100%; box-sizing: border-box;
+  padding: .6rem .75rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-family: var(--font-body, inherit);
+  font-size: .85rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.share-modal-text:focus { outline: none; border-color: var(--accent); }
+.share-modal-toast {
+  padding: .4rem .65rem;
+  background: var(--bg-card2);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: .8rem;
+  color: var(--text-main);
+  animation: share-toast-in .2s ease-out;
+}
+@keyframes share-toast-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.share-modal-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: .5rem;
+}
+.share-btn {
+  padding: .55rem .8rem;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: .82rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: all .12s;
+}
+.share-btn:hover {
+  background: var(--bg-card);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.share-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.share-btn-primary:hover {
+  background: var(--accent);
+  color: #fff;
+  opacity: .9;
+}
+
 /* ── Unified bell — severity sections ──────────────────────────────── */
 .bell-badge.sev-critical { background: #e53935; }
 .bell-badge.sev-warning  { background: #ff9800; }

@@ -445,6 +445,29 @@
       </div>
     </div>
 
+    <!-- ── Share modal ──────────────────────────────────────────── -->
+    <div v-if="shareModalOpen" class="share-modal-backdrop" @click.self="closeShareModal">
+      <div class="share-modal">
+        <div class="share-modal-hdr">
+          <div class="share-modal-title">{{t('share') || 'Partager'}}</div>
+          <button class="share-modal-close" @click="closeShareModal" aria-label="Close">✕</button>
+        </div>
+        <div class="share-modal-body">
+          <img v-if="_publicPhotoUrl()" :src="_publicPhotoUrl()" :alt="sp.name" class="share-modal-photo">
+          <textarea v-model="shareText" class="share-modal-text" rows="8" :aria-label="t('share') || 'Partager'"></textarea>
+          <div v-if="shareToast" class="share-modal-toast">{{shareToast}}</div>
+          <div class="share-modal-buttons">
+            <button class="share-btn share-btn-primary" @click="shareViaClipboard">📋 {{t('share_copy') || 'Copier'}}</button>
+            <button class="share-btn" @click="shareViaNative">📱 {{t('share_native') || 'Partager…'}}</button>
+            <button class="share-btn" @click="shareViaTwitter">𝕏 X</button>
+            <button class="share-btn" @click="shareViaMastodon">🐘 Mastodon</button>
+            <button class="share-btn" @click="shareViaWhatsApp">💬 WhatsApp</button>
+            <button class="share-btn" @click="shareViaEmail">✉ Email</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </birdash-shell>
 </div>
 
@@ -1246,29 +1269,174 @@ const app = createApp({
       bulkDeleting.value = false;
     }
 
-    async function shareSpecies() {
-      const name = spName(sp.value.name, sp.value.sci);
-      const url = window.location.href;
-      if (navigator.share) {
-        try { await navigator.share({ title: name, url }); return; } catch(_) {}
+    // ── Share modal ──────────────────────────────────────────────
+    // Builds a localized, pre-formatted message including this species'
+    // stats from sp.value, the project link (soft Birdash promo), and a
+    // photo URL when one is available. Offers a few share targets:
+    // copy (text + image when supported), Web Share API, X, Mastodon,
+    // WhatsApp, email.
+    const shareModalOpen = ref(false);
+    const shareText      = ref('');
+    const shareToast     = ref('');
+    const PROJECT_URL    = 'https://github.com/ernens/birdash';
+
+    function _publicPhotoUrl() {
+      // We only put a photo URL into the share message if it's actually
+      // reachable from outside the LAN. Wikipedia / Flickr URLs qualify;
+      // local /birds/photo? cache URLs don't.
+      const p = photos.value[photoIdx.value];
+      if (!p || !p.url) return null;
+      if (/^https?:\/\//i.test(p.url) && !/\/birds\/photo/.test(p.url)) {
+        return p.url;
       }
-      // Clipboard fallback (works on HTTP too)
+      return null;
+    }
+
+    function _buildShareMessage() {
+      const name = spName(sp.value.name, sp.value.sci);
+      const sci  = sp.value.sci || '';
+      const total = sp.value.total || 0;
+      const days  = sp.value.daysDetected || 0;
+      const first = sp.value.first ? new Date(sp.value.first + 'T12:00:00').toLocaleDateString(lang.value, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      // i18n: localized stats line. We use t() so the message follows
+      // the user's UI language; falls back to the FR template.
+      const tmpl = t('share_msg_template') || (
+        '🐦 {name}{sci}\n' +
+        '{total} observations sur {days} jours sur ma station Birdash, première détection le {first}.\n' +
+        '\n' +
+        'Découvrez Birdash, dashboard open-source de détection d\'oiseaux par IA :\n' +
+        '{url}'
+      );
+      let out = tmpl
+        .replace('{name}', name)
+        .replace('{sci}', sci ? ` (${sci})` : '')
+        .replace('{total}', total.toLocaleString(lang.value))
+        .replace('{days}', String(days))
+        .replace('{first}', first)
+        .replace('{url}', PROJECT_URL);
+      const photo = _publicPhotoUrl();
+      if (photo) out += '\n\n📷 ' + photo;
+      return out;
+    }
+
+    function shareSpecies() {
+      shareText.value = _buildShareMessage();
+      shareToast.value = '';
+      shareModalOpen.value = true;
+    }
+
+    function closeShareModal() { shareModalOpen.value = false; }
+
+    function _showShareToast(msg) {
+      shareToast.value = msg;
+      setTimeout(() => { if (shareToast.value === msg) shareToast.value = ''; }, 2000);
+    }
+
+    async function shareViaClipboard() {
+      const text = shareText.value;
+      const photoUrl = _publicPhotoUrl();
+      // Try to copy text + image as a single ClipboardItem so pasting
+      // into Twitter / WhatsApp / Discord attaches the photo directly.
+      // Falls back to text-only if the browser doesn't support
+      // ClipboardItem with multiple types.
       try {
+        if (photoUrl && window.ClipboardItem && navigator.clipboard?.write) {
+          try {
+            const blob = await fetch(photoUrl).then(r => r.blob());
+            // Some browsers only accept image/png in clipboard.write
+            const pngBlob = blob.type === 'image/png' ? blob : await _convertToPng(blob);
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                [pngBlob.type]: pngBlob,
+                'text/plain': new Blob([text], { type: 'text/plain' }),
+              }),
+            ]);
+            _showShareToast(t('share_copied_with_image') || '✓ Texte + image copiés');
+            return;
+          } catch (e) {
+            // fall through to text-only
+          }
+        }
         if (navigator.clipboard) {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(text);
         } else {
           const ta = document.createElement('textarea');
-          ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
           document.body.appendChild(ta); ta.select();
           document.execCommand('copy');
           document.body.removeChild(ta);
         }
-        // Visual feedback
-        const btn = event?.target?.closest('button');
-        if (btn) { const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = orig, 1500); }
-      } catch(e) {
-        prompt('Copier le lien :', url);
+        _showShareToast(t('share_copied') || '✓ Copié');
+      } catch (e) {
+        _showShareToast('✗ ' + e.message);
       }
+    }
+
+    async function _convertToPng(blob) {
+      // Decode → draw to canvas → re-encode as PNG. Used for
+      // ClipboardItem which only accepts a narrow MIME whitelist on
+      // Chromium and friends.
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas toBlob failed')), 'image/png');
+        };
+        img.onerror = () => reject(new Error('image load failed'));
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    async function shareViaNative() {
+      const text = shareText.value;
+      const name = spName(sp.value.name, sp.value.sci);
+      const photoUrl = _publicPhotoUrl();
+      // Web Share API Level 2 supports a `files` field, which gives the
+      // best UX on mobile (the system share sheet attaches the image
+      // directly so it lands as a real image post on every target).
+      try {
+        if (navigator.canShare && photoUrl) {
+          try {
+            const blob = await fetch(photoUrl).then(r => r.blob());
+            const file = new File([blob], `${name}.jpg`, { type: blob.type || 'image/jpeg' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ title: name, text, files: [file] });
+              return;
+            }
+          } catch {}
+        }
+        if (navigator.share) {
+          await navigator.share({ title: name, text });
+          return;
+        }
+        _showShareToast(t('share_native_unavailable') || 'Partage natif non disponible');
+      } catch (e) {
+        if (e.name !== 'AbortError') _showShareToast('✗ ' + e.message);
+      }
+    }
+
+    function shareViaTwitter() {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText.value)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    function shareViaMastodon() {
+      // Mastodon's share intent requires the user's instance — we use
+      // the official toot.kytta.dev redirect that lets the user pick.
+      const url = `https://toot.kytta.dev/?text=${encodeURIComponent(shareText.value)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    function shareViaWhatsApp() {
+      const url = `https://wa.me/?text=${encodeURIComponent(shareText.value)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    function shareViaEmail() {
+      const subject = `🐦 ${spName(sp.value.name, sp.value.sci)} — Birdash`;
+      const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText.value)}`;
+      window.location.href = url;
     }
 
     async function banCurrentPhoto() {
@@ -1304,6 +1472,9 @@ const app = createApp({
       mode, speciesList, pickerVal, onPickerChange,
       hasPrevSpecies, hasNextSpecies, prevSpecies, nextSpecies,
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
+      shareModalOpen, shareText, shareToast, closeShareModal,
+      shareViaClipboard, shareViaNative, shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaEmail,
+      _publicPhotoUrl,
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
       noteSaving, noteError,
       isFav, onToggleFav, banCurrentPhoto, setPreferredPhoto,
