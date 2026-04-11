@@ -129,7 +129,7 @@
   "share_copied": "✓ Kopiert",
   "share_copied_with_image": "✓ Text + Bild kopiert",
   "share_native_unavailable": "Natives Teilen nicht verfügbar",
-  "share_msg_template": "🐦 {name}{sci}\n{total} Beobachtungen an {days} Tagen auf meiner Birdash-Station, erste Erkennung am {first}.\n\nEntdecke Birdash, ein Open-Source KI-Dashboard zur Vogelerkennung:\n{url}",
+  "share_msg_template": "🐦 {name}\n🔬 {sci}\n\n🎙️ Aufgenommen von meiner Birdash-Station!\n📊 {total} Gesänge an {days} Tagen erfasst\n📅 Erste Erkennung: {first}\n\nBirdash hört Vögeln rund um die Uhr mit KI zu, auf einem Raspberry Pi 🤖🐦\n👉 {url}\n\n#Birdash #Vogelkunde #BirdNET",
   "analyze_deep": "Tiefenanalyse",
   "fav_add": "Zu Favoriten",
   "fav_remove": "Aus Favoriten entfernen",

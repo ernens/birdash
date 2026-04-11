@@ -453,15 +453,16 @@
           <button class="share-modal-close" @click="closeShareModal" aria-label="Close">✕</button>
         </div>
         <div class="share-modal-body">
-          <img v-if="publicPhotoUrl()" :src="publicPhotoUrl()" :alt="sp.name" class="share-modal-photo">
-          <textarea v-model="shareText" class="share-modal-text" rows="8" :aria-label="t('share') || 'Partager'"></textarea>
+          <img v-if="displayPhotoUrl()" :src="displayPhotoUrl()" :alt="sp.name" class="share-modal-photo">
+          <textarea v-model="shareText" class="share-modal-text" rows="9" :aria-label="t('share') || 'Partager'"></textarea>
           <div v-if="shareToast" class="share-modal-toast">{{shareToast}}</div>
           <div class="share-modal-buttons">
             <button class="share-btn share-btn-primary" @click="shareViaClipboard">📋 {{t('share_copy') || 'Copier'}}</button>
             <button class="share-btn" @click="shareViaNative">📱 {{t('share_native') || 'Partager…'}}</button>
+            <button class="share-btn" @click="shareViaSms">💬 SMS</button>
+            <button class="share-btn" @click="shareViaWhatsApp">💚 WhatsApp</button>
             <button class="share-btn" @click="shareViaTwitter">𝕏 X</button>
             <button class="share-btn" @click="shareViaMastodon">🐘 Mastodon</button>
-            <button class="share-btn" @click="shareViaWhatsApp">💬 WhatsApp</button>
             <button class="share-btn" @click="shareViaEmail">✉ Email</button>
           </div>
         </div>
@@ -1280,16 +1281,40 @@ const app = createApp({
     const shareToast     = ref('');
     const PROJECT_URL    = 'https://github.com/ernens/birdash';
 
+    // Photo URL for the modal preview <img> — works with any source
+    // (LAN-only or public) because the user viewing the page IS on the
+    // LAN. Used in the modal display only.
+    function displayPhotoUrl() {
+      const p = photos.value[photoIdx.value];
+      return p && p.url ? p.url : null;
+    }
+
+    // Returns a publicly-reachable photo URL if we have one. iNaturalist /
+    // Wikipedia URLs qualify; the local /birds/api/photo-idx cache
+    // doesn't (recipients on the open internet can't reach it). We use
+    // this only for the inline "📷 https://..." line in the share text;
+    // for clipboard / Web Share API the actual image bytes are fetched
+    // from whatever URL we have, so the sharing path doesn't depend on
+    // the URL being public.
     function publicPhotoUrl() {
-      // We only put a photo URL into the share message if it's actually
-      // reachable from outside the LAN. Wikipedia / Flickr URLs qualify;
-      // local /birds/photo? cache URLs don't.
       const p = photos.value[photoIdx.value];
       if (!p || !p.url) return null;
-      if (/^https?:\/\//i.test(p.url) && !/\/birds\/photo/.test(p.url)) {
+      if (/^https?:\/\//i.test(p.url) && !/\/birds\/(api\/)?photo/.test(p.url)) {
         return p.url;
       }
       return null;
+    }
+
+    // Fetch the current photo as a Blob, regardless of whether the URL
+    // is public. The browser is on the LAN so /birds/api/photo-idx?...
+    // resolves fine; the blob bytes can then be attached to a ClipboardItem
+    // or a Web Share API File and travel with the share without needing
+    // the recipient to have LAN access.
+    async function fetchPhotoBlob() {
+      const url = displayPhotoUrl();
+      if (!url) return null;
+      try { return await fetch(url).then(r => r.ok ? r.blob() : null); }
+      catch { return null; }
     }
 
     function _buildShareMessage() {
@@ -1309,11 +1334,13 @@ const app = createApp({
       );
       let out = tmpl
         .replace('{name}', name)
-        .replace('{sci}', sci ? ` (${sci})` : '')
+        .replace('{sci}', sci || '—')
         .replace('{total}', total.toLocaleString(lang.value))
         .replace('{days}', String(days))
-        .replace('{first}', first)
+        .replace('{first}', first || '—')
         .replace('{url}', PROJECT_URL);
+      // Inline photo URL only when public — recipients on the open
+      // internet can't load /birds/api/photo-idx?... LAN URLs.
       const photo = publicPhotoUrl();
       if (photo) out += '\n\n📷 ' + photo;
       return out;
@@ -1334,27 +1361,26 @@ const app = createApp({
 
     async function shareViaClipboard() {
       const text = shareText.value;
-      const photoUrl = publicPhotoUrl();
       // Try to copy text + image as a single ClipboardItem so pasting
       // into Twitter / WhatsApp / Discord attaches the photo directly.
-      // Falls back to text-only if the browser doesn't support
-      // ClipboardItem with multiple types.
+      // We fetch the image bytes from whatever URL we have (LAN or
+      // public), then re-encode to PNG (Chromium clipboard rejects
+      // most other MIMEs), then write both to the clipboard.
       try {
-        if (photoUrl && window.ClipboardItem && navigator.clipboard?.write) {
-          try {
-            const blob = await fetch(photoUrl).then(r => r.blob());
-            // Some browsers only accept image/png in clipboard.write
-            const pngBlob = blob.type === 'image/png' ? blob : await _convertToPng(blob);
-            await navigator.clipboard.write([
-              new ClipboardItem({
-                [pngBlob.type]: pngBlob,
-                'text/plain': new Blob([text], { type: 'text/plain' }),
-              }),
-            ]);
-            _showShareToast(t('share_copied_with_image') || '✓ Texte + image copiés');
-            return;
-          } catch (e) {
-            // fall through to text-only
+        if (window.ClipboardItem && navigator.clipboard?.write) {
+          const blob = await fetchPhotoBlob();
+          if (blob) {
+            try {
+              const pngBlob = blob.type === 'image/png' ? blob : await _convertToPng(blob);
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  [pngBlob.type]: pngBlob,
+                  'text/plain': new Blob([text], { type: 'text/plain' }),
+                }),
+              ]);
+              _showShareToast(t('share_copied_with_image') || '✓ Texte + image copiés');
+              return;
+            } catch (e) { /* fall through to text-only */ }
           }
         }
         if (navigator.clipboard) {
@@ -1394,20 +1420,23 @@ const app = createApp({
     async function shareViaNative() {
       const text = shareText.value;
       const name = spName(sp.value.name, sp.value.sci);
-      const photoUrl = publicPhotoUrl();
       // Web Share API Level 2 supports a `files` field, which gives the
       // best UX on mobile (the system share sheet attaches the image
-      // directly so it lands as a real image post on every target).
+      // directly so it lands as a real image post on every target,
+      // including SMS/MMS, WhatsApp, Messenger, etc.).
       try {
-        if (navigator.canShare && photoUrl) {
-          try {
-            const blob = await fetch(photoUrl).then(r => r.blob());
-            const file = new File([blob], `${name}.jpg`, { type: blob.type || 'image/jpeg' });
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({ title: name, text, files: [file] });
-              return;
-            }
-          } catch {}
+        if (navigator.canShare) {
+          const blob = await fetchPhotoBlob();
+          if (blob) {
+            try {
+              const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
+              const file = new File([blob], `${name}.${ext}`, { type: blob.type || 'image/jpeg' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ title: name, text, files: [file] });
+                return;
+              }
+            } catch { /* fall through to text-only */ }
+          }
         }
         if (navigator.share) {
           await navigator.share({ title: name, text });
@@ -1417,6 +1446,16 @@ const app = createApp({
       } catch (e) {
         if (e.name !== 'AbortError') _showShareToast('✗ ' + e.message);
       }
+    }
+
+    function shareViaSms() {
+      // sms:?body= is the standard URI scheme on iOS and Android. SMS
+      // itself is text-only; if the photo URL is public the recipient
+      // sees a tappable link in the message. For LAN-only photo URLs
+      // we omit the inline 📷 line — the recipient should use the
+      // "Partager…" native button instead which can MMS the image.
+      const url = `sms:?body=${encodeURIComponent(shareText.value)}`;
+      window.location.href = url;
     }
 
     function shareViaTwitter() {
@@ -1473,8 +1512,9 @@ const app = createApp({
       hasPrevSpecies, hasNextSpecies, prevSpecies, nextSpecies,
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
       shareModalOpen, shareText, shareToast, closeShareModal,
-      shareViaClipboard, shareViaNative, shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaEmail,
-      publicPhotoUrl,
+      shareViaClipboard, shareViaNative, shareViaSms,
+      shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaEmail,
+      displayPhotoUrl, publicPhotoUrl,
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
       noteSaving, noteError,
       isFav, onToggleFav, banCurrentPhoto, setPreferredPhoto,

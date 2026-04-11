@@ -304,7 +304,7 @@
   "share_copied": "✓ Copié",
   "share_copied_with_image": "✓ Texte + image copiés",
   "share_native_unavailable": "Partage natif non disponible",
-  "share_msg_template": "🐦 {name}{sci}\n{total} observations sur {days} jours sur ma station Birdash, première détection le {first}.\n\nDécouvrez Birdash, dashboard open-source de détection d'oiseaux par IA :\n{url}",
+  "share_msg_template": "🐦 {name}\n🔬 {sci}\n\n🎙️ Capté chez moi par mon dashboard Birdash !\n📊 {total} chants enregistrés sur {days} jours\n📅 Première écoute : {first}\n\nBirdash écoute les oiseaux 24/7 grâce à l'IA, depuis un Raspberry Pi 🤖🐦\n👉 {url}\n\n#Birdash #ornithologie #BirdNET",
   "analyze_deep": "Analyse approfondie",
   "fav_add": "Ajouter aux favoris",
   "fav_remove": "Retirer des favoris",

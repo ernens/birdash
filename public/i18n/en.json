@@ -129,7 +129,7 @@
   "share_copied": "✓ Copied",
   "share_copied_with_image": "✓ Text + image copied",
   "share_native_unavailable": "Native sharing not available",
-  "share_msg_template": "🐦 {name}{sci}\n{total} observations across {days} days on my Birdash station, first detected on {first}.\n\nDiscover Birdash, an open-source AI bird detection dashboard:\n{url}",
+  "share_msg_template": "🐦 {name}\n🔬 {sci}\n\n🎙️ Picked up by my Birdash station!\n📊 {total} songs recorded across {days} days\n📅 First heard: {first}\n\nBirdash listens to birds 24/7 with AI, on a Raspberry Pi 🤖🐦\n👉 {url}\n\n#Birdash #birding #BirdNET",
   "analyze_deep": "Deep analysis",
   "fav_add": "Add to favorites",
   "fav_remove": "Remove from favorites",

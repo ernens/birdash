@@ -129,7 +129,7 @@
   "share_copied": "✓ Gekopieerd",
   "share_copied_with_image": "✓ Tekst + afbeelding gekopieerd",
   "share_native_unavailable": "Native delen niet beschikbaar",
-  "share_msg_template": "🐦 {name}{sci}\n{total} waarnemingen over {days} dagen op mijn Birdash-station, eerst gedetecteerd op {first}.\n\nOntdek Birdash, een open-source AI-vogelherkennings-dashboard:\n{url}",
+  "share_msg_template": "🐦 {name}\n🔬 {sci}\n\n🎙️ Opgepikt door mijn Birdash-station!\n📊 {total} zangen opgenomen over {days} dagen\n📅 Eerst gehoord: {first}\n\nBirdash luistert 24/7 naar vogels met AI, op een Raspberry Pi 🤖🐦\n👉 {url}\n\n#Birdash #vogels #BirdNET",
   "analyze_deep": "Diepgaande analyse",
   "fav_add": "Toevoegen aan favorieten",
   "fav_remove": "Verwijderen uit favorieten",
