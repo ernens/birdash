@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "mode": "balanced",
-  "observer_only": true,
+  "observer_only": false,
   "min_db": -6,
   "max_db": 9,
   "step_up_db": 0.5,
