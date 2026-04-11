@@ -458,12 +458,12 @@
           <div v-if="shareToast" class="share-modal-toast">{{shareToast}}</div>
           <div class="share-modal-buttons">
             <button class="share-btn share-btn-primary" @click="shareViaClipboard">📋 {{t('share_copy') || 'Copier'}}</button>
-            <button class="share-btn" @click="shareViaNative">📱 {{t('share_native') || 'Partager…'}}</button>
-            <button class="share-btn" @click="shareViaSms">💬 SMS</button>
-            <button class="share-btn" @click="shareViaWhatsApp">💚 WhatsApp</button>
-            <button class="share-btn" @click="shareViaTwitter">𝕏 X</button>
+            <button class="share-btn" @click="shareViaNative">📲 {{t('share_native') || 'Partager…'}}</button>
+            <button class="share-btn" @click="shareViaSms">📱 SMS</button>
+            <button class="share-btn" @click="shareViaWhatsAppSmart">🟢 WhatsApp</button>
+            <button class="share-btn" @click="shareViaTwitter">🐦 X / Twitter</button>
             <button class="share-btn" @click="shareViaMastodon">🐘 Mastodon</button>
-            <button class="share-btn" @click="shareViaEmail">✉ Email</button>
+            <button class="share-btn" @click="shareViaEmail">📧 Email</button>
           </div>
         </div>
       </div>
@@ -1324,13 +1324,13 @@ const app = createApp({
       const days  = sp.value.daysDetected || 0;
       const first = sp.value.first ? new Date(sp.value.first + 'T12:00:00').toLocaleDateString(lang.value, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       // i18n: localized stats line. We use t() so the message follows
-      // the user's UI language; falls back to the FR template.
+      // the user's UI language; falls back to a richer FR template
+      // that matches the new i18n version (kept here only as a safety
+      // net — t() should always find the key).
       const tmpl = t('share_msg_template') || (
-        '🐦 {name}{sci}\n' +
-        '{total} observations sur {days} jours sur ma station Birdash, première détection le {first}.\n' +
-        '\n' +
-        'Découvrez Birdash, dashboard open-source de détection d\'oiseaux par IA :\n' +
-        '{url}'
+        '🐦 {name}\n   {sci}\n\n🎤 Capté chez moi par mon dashboard Birdash !\n' +
+        '📊 {total} chants enregistrés sur {days} jours\n📆 Première écoute : {first}\n\n' +
+        'Birdash écoute les oiseaux 24/7 grâce à l\'IA, depuis un Raspberry Pi.\n→ {url}'
       );
       let out = tmpl
         .replace('{name}', name)
@@ -1458,6 +1458,35 @@ const app = createApp({
       window.location.href = url;
     }
 
+    // WhatsApp first tries the Web Share API with the photo file (so
+    // on mobile the user can pick WhatsApp from the system share sheet
+    // and the image attaches as a real media message). Falls back to
+    // wa.me text-only on desktop where neither the Web Share API nor
+    // file attachments work.
+    async function shareViaWhatsAppSmart() {
+      try {
+        if (navigator.canShare) {
+          const blob = await fetchPhotoBlob();
+          if (blob) {
+            try {
+              const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
+              const file = new File([blob], `${spName(sp.value.name, sp.value.sci)}.${ext}`, { type: blob.type || 'image/jpeg' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ title: spName(sp.value.name, sp.value.sci), text: shareText.value, files: [file] });
+                return;
+              }
+            } catch { /* fall through */ }
+          }
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+      // Desktop fallback: open wa.me with text only.
+      const url = `https://wa.me/?text=${encodeURIComponent(shareText.value)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      _showShareToast(t('share_whatsapp_text_only') || 'WhatsApp web ne supporte que le texte. Pour la photo, utilisez 📋 Copier ou 📱 Partager.');
+    }
+
     function shareViaTwitter() {
       const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText.value)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -1513,7 +1542,7 @@ const app = createApp({
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
       shareModalOpen, shareText, shareToast, closeShareModal,
       shareViaClipboard, shareViaNative, shareViaSms,
-      shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaEmail,
+      shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaWhatsAppSmart, shareViaEmail,
       displayPhotoUrl, publicPhotoUrl,
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
       noteSaving, noteError,
