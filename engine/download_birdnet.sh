@@ -40,12 +40,14 @@ VENV_DIR="$(mktemp -d -t birdnet-dl-XXXXXX)"
 trap 'rm -rf "$VENV_DIR"' EXIT
 
 python3 -m venv "$VENV_DIR"
-"$VENV_DIR/bin/pip" install --quiet --disable-pip-version-check birdnetlib
+# --no-deps: we only need the bundled model files, not librosa/tensorflow/etc.
+"$VENV_DIR/bin/pip" install --quiet --disable-pip-version-check --no-deps birdnetlib
 
-SITE_PKG="$("$VENV_DIR/bin/python3" -c 'import birdnetlib, os; print(os.path.dirname(birdnetlib.__file__))')"
-ANALYZER_DIR="$SITE_PKG/models/analyzer"
+# Locate the bundled analyzer directory without importing the package
+# (avoids pulling in librosa, tflite_runtime, etc.)
+ANALYZER_DIR="$(find "$VENV_DIR" -type d -path '*/birdnetlib/models/analyzer' 2>/dev/null | head -1)"
 
-if [ ! -f "$ANALYZER_DIR/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite" ]; then
+if [ -z "$ANALYZER_DIR" ] || [ ! -f "$ANALYZER_DIR/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite" ]; then
     echo "✗ birdnetlib did not bundle the expected TFLite models" >&2
     exit 1
 fi
