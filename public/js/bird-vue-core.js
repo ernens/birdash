@@ -304,7 +304,7 @@
   "share_copied": "✓ Copié",
   "share_copied_with_image": "✓ Texte + image copiés",
   "share_native_unavailable": "Partage natif non disponible",
-  "share_whatsapp_text_only": "WhatsApp web ne supporte que le texte. Pour la photo, utilisez 📋 Copier ou 📲 Partager.",
+  "share_text_only_hint": "Texte seul (pas de photo). Pour joindre l'image : 📋 Copier puis coller, ou 📲 Partager sur mobile.",
   "share_msg_template": "🐦 {name}\n   {sci}\n\n🎤 Capté chez moi par mon dashboard Birdash !\n📊 {total} chants enregistrés sur {days} jours\n📆 Première écoute : {first}\n\nBirdash écoute les oiseaux 24/7 grâce à l'IA, depuis un Raspberry Pi.\n→ {url}\n\n#Birdash #ornithologie #BirdNET",
   "analyze_deep": "Analyse approfondie",
   "fav_add": "Ajouter aux favoris",

@@ -129,7 +129,7 @@
   "share_copied": "✓ Copied",
   "share_copied_with_image": "✓ Text + image copied",
   "share_native_unavailable": "Native sharing not available",
-  "share_whatsapp_text_only": "WhatsApp web only supports text. For the photo, use 📋 Copy or 📲 Share.",
+  "share_text_only_hint": "Text only (no photo). To attach the image: 📋 Copy then paste, or 📲 Share on mobile.",
   "share_msg_template": "🐦 {name}\n   {sci}\n\n🎤 Picked up by my Birdash station!\n📊 {total} songs recorded across {days} days\n📆 First heard: {first}\n\nBirdash listens to birds 24/7 with AI, on a Raspberry Pi.\n→ {url}\n\n#Birdash #birding #BirdNET",
   "analyze_deep": "Deep analysis",
   "fav_add": "Add to favorites",

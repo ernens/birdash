@@ -1448,43 +1448,65 @@ const app = createApp({
       }
     }
 
-    function shareViaSms() {
-      // sms:?body= is the standard URI scheme on iOS and Android. SMS
-      // itself is text-only; if the photo URL is public the recipient
-      // sees a tappable link in the message. For LAN-only photo URLs
-      // we omit the inline 📷 line — the recipient should use the
-      // "Partager…" native button instead which can MMS the image.
-      const url = `sms:?body=${encodeURIComponent(shareText.value)}`;
-      window.location.href = url;
+    // Shared "smart" path for the messaging buttons (SMS / WhatsApp /
+    // Email). On mobile / Safari, navigator.share with a File attaches
+    // the photo as real media; the user picks the target app from the
+    // system share sheet. On desktop (no Web Share API), each caller
+    // falls back to its own URL scheme — text only + a toast pointing
+    // at 📋 Copier / 📲 Partager for the photo.
+    async function _tryNativeFileShare() {
+      if (!navigator.canShare) return false;
+      const blob = await fetchPhotoBlob();
+      if (!blob) return false;
+      try {
+        const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
+        const file = new File(
+          [blob],
+          `${spName(sp.value.name, sp.value.sci)}.${ext}`,
+          { type: blob.type || 'image/jpeg' }
+        );
+        if (!navigator.canShare({ files: [file] })) return false;
+        await navigator.share({
+          title: spName(sp.value.name, sp.value.sci),
+          text: shareText.value,
+          files: [file],
+        });
+        return true;
+      } catch (e) {
+        if (e.name === 'AbortError') return true;  // user cancelled, don't fall back
+        return false;
+      }
     }
 
-    // WhatsApp first tries the Web Share API with the photo file (so
-    // on mobile the user can pick WhatsApp from the system share sheet
-    // and the image attaches as a real media message). Falls back to
-    // wa.me text-only on desktop where neither the Web Share API nor
-    // file attachments work.
+    async function shareViaSms() {
+      // Try the system share sheet first so the photo can attach as
+      // MMS via the Messages app. Falls back to plain sms:?body= when
+      // the Web Share API isn't available (most desktop browsers).
+      if (await _tryNativeFileShare()) return;
+      window.location.href = `sms:?body=${encodeURIComponent(shareText.value)}`;
+      _showShareToast(t('share_text_only_hint') || 'SMS texte seul. Pour la photo : 📋 Copier ou 📲 Partager.');
+    }
+
     async function shareViaWhatsAppSmart() {
-      try {
-        if (navigator.canShare) {
-          const blob = await fetchPhotoBlob();
-          if (blob) {
-            try {
-              const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
-              const file = new File([blob], `${spName(sp.value.name, sp.value.sci)}.${ext}`, { type: blob.type || 'image/jpeg' });
-              if (navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: spName(sp.value.name, sp.value.sci), text: shareText.value, files: [file] });
-                return;
-              }
-            } catch { /* fall through */ }
-          }
-        }
-      } catch (e) {
-        if (e.name === 'AbortError') return;
-      }
-      // Desktop fallback: open wa.me with text only.
+      // Try the system share sheet first so the photo attaches as a
+      // real WhatsApp media message. Falls back to wa.me text-only on
+      // desktop where the Web Share API isn't available.
+      if (await _tryNativeFileShare()) return;
       const url = `https://wa.me/?text=${encodeURIComponent(shareText.value)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
-      _showShareToast(t('share_whatsapp_text_only') || 'WhatsApp web ne supporte que le texte. Pour la photo, utilisez 📋 Copier ou 📱 Partager.');
+      _showShareToast(t('share_text_only_hint') || 'Texte seul. Pour la photo : 📋 Copier ou 📲 Partager.');
+    }
+
+    async function shareViaEmail() {
+      // Same pattern as SMS / WhatsApp: prefer the system share sheet
+      // so the email app receives the photo as a proper attachment.
+      // mailto: itself has no attachment field, so on desktop the user
+      // gets a text-only draft and a hint to use 📋 Copier instead.
+      if (await _tryNativeFileShare()) return;
+      const subject = `${spName(sp.value.name, sp.value.sci)} — Birdash`;
+      const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText.value)}`;
+      window.location.href = url;
+      _showShareToast(t('share_text_only_hint') || 'Texte seul. Pour la photo : 📋 Copier ou 📲 Partager.');
     }
 
     function shareViaTwitter() {
@@ -1496,15 +1518,6 @@ const app = createApp({
       // the official toot.kytta.dev redirect that lets the user pick.
       const url = `https://toot.kytta.dev/?text=${encodeURIComponent(shareText.value)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
-    }
-    function shareViaWhatsApp() {
-      const url = `https://wa.me/?text=${encodeURIComponent(shareText.value)}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-    function shareViaEmail() {
-      const subject = `🐦 ${spName(sp.value.name, sp.value.sci)} — Birdash`;
-      const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shareText.value)}`;
-      window.location.href = url;
     }
 
     async function banCurrentPhoto() {
@@ -1542,7 +1555,7 @@ const app = createApp({
       sp, feed, extLinks, speciesInfo, personalNote, savePersonalNote, shareSpecies,
       shareModalOpen, shareText, shareToast, closeShareModal,
       shareViaClipboard, shareViaNative, shareViaSms,
-      shareViaTwitter, shareViaMastodon, shareViaWhatsApp, shareViaWhatsAppSmart, shareViaEmail,
+      shareViaTwitter, shareViaMastodon, shareViaWhatsAppSmart, shareViaEmail,
       displayPhotoUrl, publicPhotoUrl,
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
       noteSaving, noteError,
