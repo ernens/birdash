@@ -39,7 +39,22 @@ async function parseBirdnetConf() {
   return conf;
 }
 
+// Serialize all writeBirdnetConf calls so two concurrent /api/settings
+// POSTs can't race on the temp file (`cp: cannot stat /tmp/birdnet.conf.tmp`)
+// or interleave fs.writeFile on engine/config.toml (which corrupted the
+// trailing local_db line on mickey.local).
+let _writeQueue = Promise.resolve();
+function _serialize(fn) {
+  const next = _writeQueue.then(fn, fn);
+  _writeQueue = next.catch(() => {});
+  return next;
+}
+
 async function writeBirdnetConf(updates) {
+  return _serialize(() => _writeBirdnetConfImpl(updates));
+}
+
+async function _writeBirdnetConfImpl(updates) {
   await fsp.copyFile(BIRDNET_CONF, BIRDNET_CONF + '.bak').catch(() => {});
   const raw = await fsp.readFile(BIRDNET_CONF, 'utf8');
   const lines = raw.split('\n');
@@ -66,15 +81,22 @@ async function writeBirdnetConf(updates) {
       written.add(key);
     }
   }
-  const tmpFile = '/tmp/birdnet.conf.tmp';
+  // Unique temp filename so racing callers can't unlink each other's file.
+  const tmpFile = `/tmp/birdnet.conf.${process.pid}.${Date.now()}.tmp`;
   await fsp.writeFile(tmpFile, result.join('\n'));
-  await execCmd('sudo', ['cp', tmpFile, BIRDNET_CONF]);
-  await fsp.unlink(tmpFile).catch(() => {});
+  try {
+    await execCmd('sudo', ['cp', tmpFile, BIRDNET_CONF]);
+  } finally {
+    await fsp.unlink(tmpFile).catch(() => {});
+  }
   // Invalidate cache so next read picks up new values
   _birdnetConfCache = null;
   _birdnetConfTs = 0;
 
-  // Also sync MODEL and SECONDARY_MODEL to engine/config.toml
+  // Also sync MODEL and SECONDARY_MODEL to engine/config.toml — atomic
+  // write via tmp + rename so a concurrent caller can't truncate the
+  // file mid-write (this corrupted the trailing local_db line on
+  // mickey.local when two POST /api/settings landed within 11s).
   const configToml = path.join(__dirname, '..', '..', 'engine', 'config.toml');
   try {
     if (fs.existsSync(configToml)) {
@@ -96,7 +118,9 @@ async function writeBirdnetConf(updates) {
       if (updates.CONFIDENCE) {
         toml = toml.replace(/^birdnet_confidence\s*=\s*[\d.]+/m, `birdnet_confidence = ${updates.CONFIDENCE}`);
       }
-      await fsp.writeFile(configToml, toml);
+      const tomlTmp = `${configToml}.${process.pid}.${Date.now()}.tmp`;
+      await fsp.writeFile(tomlTmp, toml);
+      await fsp.rename(tomlTmp, configToml);  // atomic on POSIX
     }
   } catch(e) { console.warn('[config] Failed to sync config.toml:', e.message); }
 }
