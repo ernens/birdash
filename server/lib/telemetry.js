@@ -157,18 +157,30 @@ async function register(stationName, lat, lon, detectionModel) {
 }
 
 // ── Daily report ────────────────────────────────────────────────────────────
-async function sendDailyReport(db) {
+async function sendDailyReport(db, parseBirdnetConf) {
   _loadConfig();
   if (!_config.enabled || !_config.stationId) return;
 
   try {
     const version = _getVersion();
+    const { hardware, os } = _getHardwareInfo();
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10);
     // Yesterday's complete data (today is still accumulating)
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const yStr = yesterday.toISOString().slice(0, 10);
+
+    // Re-read GPS from birdnet.conf (may have changed since registration)
+    let lat = null, lon = null, model = '';
+    if (parseBirdnetConf) {
+      try {
+        const conf = await parseBirdnetConf();
+        lat = parseFloat(conf.LATITUDE || conf.LAT || '0') || null;
+        lon = parseFloat(conf.LONGITUDE || conf.LON || '0') || null;
+        model = conf.MODEL || conf.BIRDNET_MODEL || '';
+      } catch {}
+    }
 
     // Get yesterday's stats
     const stats = db.prepare(`
@@ -201,11 +213,11 @@ async function sendDailyReport(db) {
       SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM detections
     `).get();
 
-    // Update station heartbeat
-    await _supabaseRequest('PATCH', 'stations',
-      { last_seen: new Date().toISOString(), version, total_detections: totals.det, total_species: totals.sp },
-      `id=eq.${_config.stationId}`
-    );
+    // Update station heartbeat (includes GPS refresh)
+    const heartbeat = { last_seen: new Date().toISOString(), version, hardware, os, model, total_detections: totals.det, total_species: totals.sp };
+    if (lat) heartbeat.lat = lat;
+    if (lon) heartbeat.lon = lon;
+    await _supabaseRequest('PATCH', 'stations', heartbeat, `id=eq.${_config.stationId}`);
 
     // Send daily report (upsert on station_id + date)
     if (stats.det > 0) {
@@ -246,14 +258,14 @@ function getStatus() {
 }
 
 // ── Start daily cron ────────────────────────────────────────────────────────
-function startDailyCron(db) {
+function startDailyCron(db, parseBirdnetConf) {
   _loadConfig();
   if (!_config.enabled) return;
 
   // Send once at startup (catches up if missed), then every 6 hours
-  setTimeout(() => sendDailyReport(db).catch(e => console.error('[telemetry]', e.message)), 10000);
+  setTimeout(() => sendDailyReport(db, parseBirdnetConf).catch(e => console.error('[telemetry]', e.message)), 10000);
   _dailyTimer = setInterval(() => {
-    sendDailyReport(db).catch(e => console.error('[telemetry]', e.message));
+    sendDailyReport(db, parseBirdnetConf).catch(e => console.error('[telemetry]', e.message));
   }, 6 * 60 * 60 * 1000);
   console.log('[telemetry] Daily cron started');
 }

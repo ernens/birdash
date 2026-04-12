@@ -165,7 +165,7 @@ setTimeout(() => {
   aggregates.startPeriodicRefresh(dbWrite);
 }, 2000);
 // Telemetry: opt-in daily reports to Supabase
-_telemetry.startDailyCron(db);
+_telemetry.startDailyCron(db, parseBirdnetConf);
 // Weekly report: check every hour if it's Sunday evening
 setInterval(() => {
   try { _weeklyReport.checkAndSend(db, birdashDb, 'BirdStation'); } catch(e) {}

@@ -30,7 +30,7 @@ function handle(req, res, pathname, ctx) {
           const result = await telemetry.register(stationName, lat, lon, model);
 
           // Start daily cron now that we're registered
-          telemetry.startDailyCron(db);
+          telemetry.startDailyCron(db, parseBirdnetConf);
 
           res.writeHead(200, JSON_CT);
           res.end(JSON.stringify({ ok: true, ...result }));
