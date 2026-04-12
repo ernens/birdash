@@ -827,7 +827,11 @@ const app = createApp({
 
     async function loadHourlyData(name) {
       try {
-        const rows = await birdQuery(...Q.hourlyBySpecies(name));
+        // Pre-aggregated hourly_stats with raw fallback for upgrade safety
+        const rows = await Q.withFallback(birdQuery,
+          Q.hourlyBySpecies(name),
+          Q.hourlyBySpeciesRaw(name)
+        );
         const vals = Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         hourlyData.value = vals;

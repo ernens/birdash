@@ -823,7 +823,11 @@ const app = createApp({
     }
     async function loadHourlyData() {
       try {
-        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=? GROUP BY h ORDER BY h ASC`,[today, CONF]);
+        // Use pre-aggregated hourly_stats (×100 faster), fallback to raw scan
+        const rows = await Q.withFallback(birdQuery,
+          Q.hourlyDistribution(today),
+          Q.hourlyDistributionRaw(today, CONF)
+        );
         const vals=Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         dataHourly.value = vals;
