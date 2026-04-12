@@ -11,6 +11,7 @@ const { localDateStr, localDateOffset } = require('../lib/local-date');
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const aggregates = require('../lib/aggregates');
 const { clearQueryCache } = require('./data');
+const resultCache = require('../lib/result-cache');
 
 // ── In-memory cache for expensive endpoints ──────────────────────────────
 const _cache = new Map();
@@ -72,7 +73,7 @@ function handle(req, res, pathname, ctx) {
 
           // Invalidate caches + refresh aggregates so the UI immediately
           // reflects the deletion without waiting for the 5-min timer.
-          clearQueryCache();
+          clearQueryCache(); resultCache.clearAll();
           _cache.clear();
           try { aggregates.refreshToday(dbWrite, date); } catch {}
 
@@ -155,7 +156,7 @@ function handle(req, res, pathname, ctx) {
             } catch(e) { /* ignore */ }
           }
 
-          clearQueryCache();
+          clearQueryCache(); resultCache.clearAll();
           _cache.clear();
           try { aggregates.rebuildAll(dbWrite); } catch {} // full rebuild after bulk delete
 

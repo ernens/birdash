@@ -8,8 +8,7 @@ const SunCalc = require('suncalc');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
-let _whatsNewCache = null;
-let _whatsNewCacheTs = 0;
+const resultCache = require('../lib/result-cache');
 const WHATS_NEW_TTL = 5 * 60 * 1000; // 5 min
 
 function handle(req, res, pathname, ctx) {
@@ -20,10 +19,11 @@ function handle(req, res, pathname, ctx) {
   if (req.method === 'GET' && pathname === '/api/whats-new') {
     (async () => {
       try {
-        // Cache check
-        if (_whatsNewCache && (Date.now() - _whatsNewCacheTs) < WHATS_NEW_TTL) {
+        // Cache check (centralized — cleared by mutation handlers)
+        const cached = resultCache.get('whats-new');
+        if (cached) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(_whatsNewCache));
+          res.end(JSON.stringify(cached));
           return;
         }
 
@@ -454,8 +454,7 @@ function handle(req, res, pathname, ctx) {
         };
 
         // Cache
-        _whatsNewCache = result;
-        _whatsNewCacheTs = Date.now();
+        resultCache.set('whats-new', result, WHATS_NEW_TTL);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));

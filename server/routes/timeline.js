@@ -10,11 +10,10 @@ const SunCalc = require('suncalc');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
-let _timelineCache = {};
-let _timelineCacheTs = {};
-
-const TIMELINE_TTL_TODAY = 2 * 60 * 1000;  // 2 min for today
+const TIMELINE_TTL_TODAY = 60 * 1000;       // 1 min for today (cleared on mutation anyway)
 const TIMELINE_TTL_PAST  = 60 * 60 * 1000; // 60 min for past dates
+
+const resultCache = require('../lib/result-cache');
 
 function handle(req, res, pathname, ctx) {
   const { db, birdashDb, parseBirdnetConf, SONGS_DIR, readJsonFile, JSON_CT, ebirdFreq } = ctx;
@@ -35,9 +34,10 @@ function handle(req, res, pathname, ctx) {
         // ── Cache check ──
         const cacheKey = `${dateStr}_${minConf}_${maxEvents}`;
         const ttl = isToday ? TIMELINE_TTL_TODAY : TIMELINE_TTL_PAST;
-        if (_timelineCache[cacheKey] && (Date.now() - (_timelineCacheTs[cacheKey] || 0)) < ttl) {
+        const tlCached = resultCache.get('tl:' + cacheKey);
+        if (tlCached) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(_timelineCache[cacheKey]));
+          res.end(JSON.stringify(tlCached));
           return;
         }
 
@@ -585,8 +585,7 @@ function handle(req, res, pathname, ctx) {
           },
         };
 
-        _timelineCache[cacheKey] = result;
-        _timelineCacheTs[cacheKey] = Date.now();
+        resultCache.set('tl:' + cacheKey, result, ttl);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));

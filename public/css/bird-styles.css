@@ -1268,6 +1268,21 @@ a:hover { opacity: .85; }
 @keyframes skeleton-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
 
 .skeleton-text   { height:.85rem; margin:.35rem 0; }
+
+/* ── Page loading progress bar ────────────────────────────────────── */
+.load-progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: .8rem;
+  overflow: hidden;
+}
+.load-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .3s ease-out;
+}
 .skeleton-title  { height:1.2rem; width:60%; margin:.5rem 0; }
 .skeleton-kpi    { height:3.5rem; border-radius:8px; }
 .skeleton-chart  { height:180px; border-radius:8px; }

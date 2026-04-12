@@ -54,6 +54,17 @@ const SPECIES_REBUILD_SQL = `
   GROUP BY Sci_Name
 `;
 
+const HOURLY_REBUILD_SQL = `
+  INSERT OR REPLACE INTO hourly_stats (date, hour, sci_name, com_name, count, count_07, max_conf)
+  SELECT Date, CAST(SUBSTR(Time,1,2) AS INTEGER) as hour, Sci_Name, Com_Name,
+         COUNT(*) as count,
+         SUM(CASE WHEN Confidence >= 0.7 THEN 1 ELSE 0 END) as count_07,
+         ROUND(MAX(Confidence), 4) as max_conf
+  FROM active_detections
+  WHERE Confidence >= 0.5
+  GROUP BY Date, hour, Sci_Name
+`;
+
 let _lastRefreshDate = '';
 let _refreshTimer = null;
 
@@ -95,6 +106,18 @@ function createTables(dbWrite) {
       avg_conf     REAL DEFAULT 0,
       day_count    INTEGER DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS hourly_stats (
+      date     TEXT NOT NULL,
+      hour     INTEGER NOT NULL,
+      sci_name TEXT NOT NULL,
+      com_name TEXT NOT NULL,
+      count    INTEGER DEFAULT 0,
+      count_07 INTEGER DEFAULT 0,
+      max_conf REAL DEFAULT 0,
+      PRIMARY KEY (date, hour, sci_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hs_date ON hourly_stats(date);
   `);
 }
 
@@ -107,9 +130,11 @@ function rebuildAll(dbWrite) {
     dbWrite.exec('DELETE FROM daily_stats');
     dbWrite.exec('DELETE FROM monthly_stats');
     dbWrite.exec('DELETE FROM species_stats');
+    dbWrite.exec('DELETE FROM hourly_stats');
     dbWrite.exec(DAILY_REBUILD_SQL);
     dbWrite.exec(MONTHLY_REBUILD_SQL);
     dbWrite.exec(SPECIES_REBUILD_SQL);
+    dbWrite.exec(HOURLY_REBUILD_SQL);
   });
   tx();
   const elapsed = Date.now() - t0;
@@ -174,6 +199,18 @@ function refreshToday(dbWrite, dateStr) {
     for (const { Sci_Name } of todaySpecies) {
       spUpdate.run(Sci_Name);
     }
+
+    // Refresh today's hourly_stats
+    dbWrite.prepare('DELETE FROM hourly_stats WHERE date = ?').run(dateStr);
+    dbWrite.prepare(`
+      INSERT INTO hourly_stats (date, hour, sci_name, com_name, count, count_07, max_conf)
+      SELECT Date, CAST(SUBSTR(Time,1,2) AS INTEGER) as hour, Sci_Name, Com_Name,
+             COUNT(*),
+             SUM(CASE WHEN Confidence >= 0.7 THEN 1 ELSE 0 END),
+             ROUND(MAX(Confidence),4)
+      FROM active_detections WHERE Date = ? AND Confidence >= 0.5
+      GROUP BY CAST(SUBSTR(Time,1,2) AS INTEGER), Sci_Name
+    `).run(dateStr);
   });
   tx();
   _lastRefreshDate = dateStr;
