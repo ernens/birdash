@@ -117,7 +117,7 @@ function handle(req, res, pathname, ctx) {
   // ── Route : GET /api/bug-report/status ─────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/bug-report/status') {
     res.writeHead(200, { 'Content-Type': JSON_CT });
-    res.end(JSON.stringify({ enabled: githubToken !== null }));
+    res.end(JSON.stringify({ enabled: true, github: githubToken !== null }));
     return true;
   }
 
