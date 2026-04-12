@@ -26,7 +26,6 @@ const _photoRoutes   = require('./routes/photos');
 const _externalRoutes = require('./routes/external');
 const _settingsRoutes = require('./routes/settings');
 const _comparisonRoutes = require('./routes/comparison');
-const _networkRoutes = require('./routes/network');
 const _updateRoutes  = require('./routes/updates');
 const _bugReportRoutes = require('./routes/bug-report');
 const _telemetryRoutes = require('./routes/telemetry');
@@ -165,8 +164,6 @@ setTimeout(() => {
   } catch(e) { console.error('[BIRDASH] Aggregate error:', e.message); }
   aggregates.startPeriodicRefresh(dbWrite);
 }, 2000);
-// Multi-station background sync (every 30 min)
-_networkRoutes.startBackgroundSync(db, parseBirdnetConf);
 // Telemetry: opt-in daily reports to Supabase
 _telemetry.startDailyCron(db);
 // Weekly report: check every hour if it's Sunday evening
@@ -245,7 +242,6 @@ const server = http.createServer((req, res) => {
   if (_externalRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_settingsRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_comparisonRoutes.handle(req, res, pathname, _routeCtx)) return;
-  if (_networkRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_updateRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_bugReportRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_telemetryRoutes.handle(req, res, pathname, _routeCtx)) return;

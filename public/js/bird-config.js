@@ -80,7 +80,6 @@ const BIRD_CONFIG = {
       { id: 'phenology',    icon: 'calendar-days', file: 'phenology.html'    },
     ]},
     { section: 'nav_sec_system', icon: 'settings', items: [
-      { id: 'network',      icon: 'globe', file: 'network.html'     },
       { id: 'settings',     icon: 'settings', file: 'settings.html'    },
       { id: 'system',       icon: 'monitor', file: 'system.html'      },
     ]},
