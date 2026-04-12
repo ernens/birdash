@@ -1845,7 +1845,7 @@
   padding: .35rem .6rem .15rem;
   border-bottom: 1px solid var(--border);
 }
-.player-sparkline > div:first-child {
+.spark-bars {
   display: flex; align-items: flex-end; gap: 1px; height: 30px;
 }
 .spark-bar-wrap { flex: 1; display: flex; align-items: flex-end; justify-content: center; }

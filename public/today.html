@@ -184,8 +184,10 @@
 
           <!-- Hourly sparkline — when was this species heard today? -->
           <div v-if="selectedHourly && selectedHourly.some(v=>v>0)" class="player-sparkline">
-            <div v-for="(v,h) in selectedHourly" :key="h" class="spark-bar-wrap" :title="h+'h: '+v+' det.'">
-              <div class="spark-bar" :style="{height: Math.max(2, v / Math.max(...selectedHourly) * 28) + 'px'}"></div>
+            <div class="spark-bars">
+              <div v-for="(v,h) in selectedHourly" :key="h" class="spark-bar-wrap" :title="h+'h: '+v+' det.'">
+                <div class="spark-bar" :style="{height: Math.max(2, v / Math.max(...selectedHourly) * 28) + 'px'}"></div>
+              </div>
             </div>
             <div class="spark-labels">
               <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
