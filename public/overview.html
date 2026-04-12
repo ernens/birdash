@@ -295,138 +295,13 @@
     </div>
 
 
-    <!-- ═══ Timeline du jour + Activité ═══ -->
+    <!-- ═══ Activité + Détections ═══ -->
     <div class="grid-2" style="align-items:start;">
 
-    <!-- Timeline du jour -->
-    <div class="timeline-panel" v-if="timelineData">
-      <div class="tp-header" @click="tlToggle">
-        <div class="tp-title">
-          <span>🕐</span>
-          <span>{{t('tl_title')}}</span>
-        </div>
-        <div class="tp-controls" @click.stop>
-          <button class="tp-nav-btn" :disabled="!timelineData.navigation?.prevDate" @click="tlNavigateDay(-1)">‹</button>
-          <span class="tp-date" @click="tlShowDatePicker = !tlShowDatePicker">{{tlFormatDate(tlSelectedDate)}}</span>
-          <button class="tp-nav-btn" :disabled="!timelineData.navigation?.nextDate" @click="tlNavigateDay(1)">›</button>
-          <span class="tp-zoom-btns">
-            <button class="tp-nav-btn" :disabled="tlZoom <= 0" @click="tlZoomOut()">−</button>
-            <button class="tp-nav-btn" :disabled="tlZoom >= 2" @click="tlZoomIn()">+</button>
-          </span>
-          <a class="tp-fullpage-link" :href="'timeline.html?date=' + tlSelectedDate">↗ {{t('tl_full_view')}}</a>
-        </div>
-        <button class="tp-toggle">{{timelineExpanded ? '▲' : '▼'}}</button>
-      </div>
-
-      <input type="date" class="tp-date-input" v-if="tlShowDatePicker"
-             v-model="tlSelectedDate" @change="tlOnDateChange" :max="tlTodayStr" />
-
-      <div class="tp-body" v-show="timelineExpanded">
-        <div class="tp-loading" v-if="timelineLoading">
-          <span class="tp-spinner">⟳</span> {{t('tl_loading')}}
-        </div>
-
-        <template v-if="timelineData && !timelineLoading">
-          <div class="tp-density-label">{{t('tl_density_label')}}</div>
-          <div class="tp-density-wrap" ref="tlDensityWrapRef">
-            <canvas ref="tlDensityRef" class="tp-density-canvas" height="22"></canvas>
-          </div>
-
-          <div class="tp-scroll" ref="tlScrollRef">
-            <div class="tp-inner" ref="tlInnerRef">
-              <canvas ref="tlSkyCanvasRef" class="tp-sky-canvas"></canvas>
-              <canvas ref="tlStarsCanvasRef" class="tp-stars-canvas"></canvas>
-              <div class="tp-ground"></div>
-            </div>
-          </div>
-
-          <div class="tl-legend">
-            <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#818cf8"></div>{{t('tl_tag_nocturnal')}}</div>
-            <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#f43f5e"></div>{{t('tl_tag_rare')}}</div>
-            <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fbbf24"></div>{{t('tl_tag_firstyear')}}</div>
-            <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#34d399"></div>{{t('tl_tag_firstday')}}</div>
-            <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa"></div>{{t('tl_tag_best')}}</div>
-          </div>
-
-        </template>
-      </div>
-    </div>
-
-    <!-- Popup timeline -->
-    <div class="tl-popup-overlay" v-if="tlPopupEvent" @click="tlClosePopup($event)" @keydown.escape="tlPopupEvent = null" role="dialog" aria-modal="true">
-      <div class="tl-popup">
-        <button class="tl-popup-close" @click="tlClosePopup()">✕</button>
-        <div class="tl-popup-header">
-          <div class="tl-popup-photo">
-            <img v-if="tlPopupEvent.photoUrl" :src="tlPopupEvent.photoUrl" :alt="spName(tlPopupEvent.commonName, tlPopupEvent.sciName)"
-                 @error="$event.target.style.display='none'" />
-            <span v-if="!tlPopupEvent.photoUrl">{{tlPopupEvent.photoFallback}}</span>
-          </div>
-          <div>
-            <div class="tl-popup-name">{{spName(tlPopupEvent.commonName, tlPopupEvent.sciName)}}</div>
-            <div class="tl-popup-sci">{{tlPopupEvent.sciName}}</div>
-            <div class="tl-popup-time">🕐 {{tlPopupEvent.time}}</div>
-          </div>
-        </div>
-        <div class="tl-popup-tags">
-          <span v-for="tag in tlPopupEvent.tags" :key="tag" class="tl-popup-tag">
-            {{t('tl_tag_'+tag)}}
-          </span>
-        </div>
-        <div class="tl-popup-conf">{{t('tl_confidence')}} : <span>{{Math.round(tlPopupEvent.confidence * 100)}}%</span></div>
-        <div class="tl-popup-actions">
-          <button class="tl-popup-btn" @click="quickPlay(tlPopupEvent.commonName)">▶ {{t('tl_listen')}}</button>
-          <button class="tl-popup-btn" @click="navigateTo('species.html',{species:tlPopupEvent.commonName})"><bird-icon name="microscope" :size="14" ></bird-icon> {{t('tl_see_species')}}</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cluster popup -->
-    <div class="tl-popup-overlay" v-if="tlClusterPopup" @click.self="tlClusterPopup = null" @keydown.escape="tlClusterPopup = null" role="dialog" aria-modal="true">
-      <div class="tl-popup" style="max-width:360px;">
-        <button class="tl-popup-close" @click="tlClusterPopup = null">✕</button>
-        <div style="font-weight:600;margin-bottom:.75rem;">🕐 {{tlClusterPopup.time}} — {{tlClusterPopup.count}} {{t('tl_detections')}}</div>
-        <div v-for="sp in tlClusterPopup.species" :key="sp.sciName"
-             class="tl-event-row" style="border-radius:8px;padding:.5rem .6rem;cursor:pointer;"
-             @click="tlClusterPopup = null; tlOpenPopup(sp)">
-          <div class="tl-er-photo">
-            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="spName(sp.commonName, sp.sciName)"
-                 @error="$event.target.style.display='none'" />
-            <span v-if="!sp.photoUrl">{{sp.photoFallback}}</span>
-          </div>
-          <div style="flex:1;">
-            <span class="tl-er-name">{{spName(sp.commonName, sp.sciName)}}</span>
-            <span class="tl-er-sci" v-if="sp.sciName">{{sp.sciName}}</span>
-          </div>
-          <div class="tl-er-conf" v-if="sp.confidence">{{Math.round(sp.confidence * 100)}}%</div>
-        </div>
-      </div>
-    </div>
-
-      <!-- Graphiques activité (stacked) -->
-      <div class="idx-right-stack">
-        <div class="card">
-          <div class="card-title" :title="t('activity_tooltip')">{{t('activity_today')}}</div>
-          <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title" :title="t('activity_tooltip')">{{t('activity_7d')}}</div>
-          <div class="chart-wrap"><canvas ref="canvas7d"></canvas></div>
-        </div>
-        <!-- Espèces rares aujourd'hui -->
-        <div class="card" v-if="rareSpeciesToday.length">
-          <div class="card-title">{{t('rare_today')}}</div>
-          <div v-for="r in rareSpeciesToday" :key="r.Com_Name" class="det-item">
-            <bird-img v-if="r.photoUrl" :src="r.photoUrl" class="det-thumb" :alt="r.Com_Name" ></bird-img>
-            <div v-else class="det-thumb-ph"><bird-icon name="gem" :size="16" ></bird-icon></div>
-            <div class="det-species">
-              <a class="species-link" @click="navigateTo('species.html',{species:r.Com_Name})">{{spName(r.Com_Name, r.Sci_Name)}}</a>
-              <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button>
-              <div class="det-sci">{{r.Sci_Name}} — {{r.totalDet}}× {{t('all_time').toLowerCase()}}</div>
-            </div>
-            <span class="rare-badge"><bird-icon name="gem" :size="14" ></bird-icon> {{r.n}}×</span>
-          </div>
-        </div>
+      <!-- Graphique activité aujourd'hui -->
+      <div class="card">
+        <div class="card-title" :title="t('activity_tooltip')">{{t('activity_today')}}</div>
+        <div class="chart-wrap"><canvas ref="canvasHourly"></canvas></div>
       </div>
 
     </div>
@@ -616,7 +491,7 @@ const app = createApp({
       // data arrives.
       const sections = [
         loadRareSpeciesToday, loadKpis, loadLastDet, loadFeed,
-        load7dData, loadTopData, loadHourlyData,
+        loadTopData, loadHourlyData,
         loadMorningSummary, loadWhatsNew, loadWeatherWidget,
       ];
       loadProgress.total = sections.length;
@@ -625,7 +500,6 @@ const app = createApp({
         fn().catch(e => console.error(e)).finally(() => { loadProgress.done++; })
       );
       await Promise.all(wrapped);
-      loadTimeline().catch(e => console.error('[timeline]', e));
     }
     const loadProgress = reactive({ done: 0, total: 1 });
 
