@@ -332,16 +332,18 @@ function handle(req, res, pathname, ctx) {
         }
 
         // C2: acoustic_quality
-        // Uses per-detection Cutoff to account for different scoring systems
-        // (BirdNET classic 0.7 cutoff vs Perch V2 softmax 0.15 cutoff)
-        // "strong" = confidence >= 2× cutoff (comfortably above threshold)
+        // Measures where detections sit in the available confidence range
+        // above each model's cutoff.  The old ×2/×1.5 multipliers broke for
+        // BirdNET classic (Cutoff 0.6): 0.6×2 = 1.2 is unreachable.
+        // New approach: position in the [Cutoff, 1.0] range.
+        //   "strong"     = top half   → Confidence >= Cutoff + (1-Cutoff)*0.5
+        //   "acceptable" = top 2/3    → Confidence >= Cutoff + (1-Cutoff)*0.33
         let cardAcousticQuality = { type: 'acoustic_quality', level: 'context', active: false, insufficientData: false, insufficientDataReason: null, data: null, link: null };
         try {
           const aqRow = db.prepare(`
             SELECT COUNT(*) as total_detections,
-                   SUM(CASE WHEN Confidence >= Cutoff * 2.0 THEN 1 ELSE 0 END) as strong,
-                   SUM(CASE WHEN Confidence >= Cutoff * 1.5 THEN 1 ELSE 0 END) as acceptable,
-                   ROUND(AVG(Confidence / CASE WHEN Cutoff > 0 THEN Cutoff ELSE 0.15 END), 2) as avg_ratio
+                   SUM(CASE WHEN Confidence >= COALESCE(NULLIF(Cutoff,0),0.15) + (1.0 - COALESCE(NULLIF(Cutoff,0),0.15)) * 0.5 THEN 1 ELSE 0 END) as strong,
+                   SUM(CASE WHEN Confidence >= COALESCE(NULLIF(Cutoff,0),0.15) + (1.0 - COALESCE(NULLIF(Cutoff,0),0.15)) * 0.33 THEN 1 ELSE 0 END) as acceptable
             FROM active_detections WHERE Date = DATE('now','localtime')
           `).get();
           const total = aqRow.total_detections || 0;
@@ -354,8 +356,8 @@ function handle(req, res, pathname, ctx) {
             const strongRate = strong / total;
             const acceptableRate = acceptable / total;
             let qualityLevel = 'good';
-            if (acceptableRate < 0.65) qualityLevel = 'poor';
-            else if (strongRate < 0.55) qualityLevel = 'moderate';
+            if (acceptableRate < 0.4) qualityLevel = 'poor';
+            else if (strongRate < 0.3) qualityLevel = 'moderate';
             cardAcousticQuality.active = true;
             cardAcousticQuality.data = {
               totalDetections: total,
@@ -363,7 +365,6 @@ function handle(req, res, pathname, ctx) {
               acceptable,
               acceptanceRate: parseFloat(acceptableRate.toFixed(3)),
               strongRate: parseFloat(strongRate.toFixed(3)),
-              avgRatio: aqRow.avg_ratio || 0,
               qualityLevel
             };
           }
