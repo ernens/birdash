@@ -26,3 +26,6 @@ config/stations.json
 config/station-snapshots.json
 config/weekly-reports.json
 photo-cache/_species-info-cache.json
+
+# Runtime state (changes on every Pi, must not block git pull)
+config/adaptive_gain.json
