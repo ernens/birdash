@@ -1828,3 +1828,51 @@
 }
 .qval-btn:hover { opacity: 1; border-color: currentColor; }
 .qval-btn.active { opacity: 1; border-color: currentColor; background: color-mix(in srgb, currentColor 15%, transparent); font-weight: 700; }
+
+/* ── Today player enhancements ────────────────────────────────────── */
+.player-quick-stats {
+  display: flex; justify-content: space-around;
+  padding: .45rem .5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card2);
+}
+.pqs-item { text-align: center; }
+.pqs-val { display: block; font-size: .9rem; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+.pqs-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+
+.player-sparkline {
+  display: flex; flex-direction: column;
+  padding: .35rem .6rem .15rem;
+  border-bottom: 1px solid var(--border);
+}
+.player-sparkline > div:first-child {
+  display: flex; align-items: flex-end; gap: 1px; height: 30px;
+}
+.spark-bar-wrap { flex: 1; display: flex; align-items: flex-end; justify-content: center; }
+.spark-bar {
+  width: 100%; max-width: 8px;
+  background: var(--accent); border-radius: 1px 1px 0 0;
+  opacity: .7; transition: height .2s;
+}
+.spark-labels {
+  display: flex; justify-content: space-between;
+  font-size: .55rem; color: var(--text-faint); margin-top: 2px;
+}
+
+.player-validate {
+  display: flex; gap: .35rem;
+  padding: .4rem .6rem;
+  border-bottom: 1px solid var(--border);
+}
+.pv-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: .3rem;
+  padding: .35rem .5rem;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg-card2); color: var(--text-muted);
+  font-size: .75rem; font-family: inherit; cursor: pointer;
+  transition: all .12s;
+}
+.pv-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pv-confirm:hover { border-color: #4caf50; color: #4caf50; background: rgba(76,175,80,.08); }
+.pv-reject:hover  { border-color: #e53935; color: #e53935; background: rgba(229,57,53,.08); }
+.pv-doubtful:hover { border-color: #ff9800; color: #ff9800; background: rgba(255,152,0,.08); }

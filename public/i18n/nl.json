@@ -1202,5 +1202,7 @@
   "rare_tooltip": "Soorten die recent niet zijn waargenomen in deze regio (bron: eBird, laatste 30 dagen, 25 km). Bij een nieuwe installatie (< 30 dagen) wordt geen soort als zeldzaam gemarkeerd.",
   "activity_tooltip": "Totaal aantal detecties (3-seconden analysevensters boven de betrouwbaarheidsdrempel). Meet akoestisch volume, niet diversiteit.",
   "top_species_tooltip": "Gerangschikt op totaal aantal detecties (akoestisch volume, niet betrouwbaarheid). Zeer vocale soorten staan bovenaan.",
-  "avg_confidence_multimodel": "Niet weergegeven in multi-model modus (BirdNET en Perch gebruiken onvergelijkbare betrouwbaarheidsschalen). Zie Modellen-tab voor details per model."
+  "avg_confidence_multimodel": "Niet weergegeven in multi-model modus (BirdNET en Perch gebruiken onvergelijkbare betrouwbaarheidsschalen). Zie Modellen-tab voor details per model.",
+  "first": "Eerste",
+  "last": "Laatste"
 }

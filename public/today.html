@@ -162,6 +162,49 @@
             </div>
           </div>
 
+          <!-- Mini KPIs for the selected species -->
+          <div class="player-quick-stats">
+            <div class="pqs-item">
+              <span class="pqs-val">{{selected.n || 0}}×</span>
+              <span class="pqs-label">{{t('today')}}</span>
+            </div>
+            <div class="pqs-item">
+              <span class="pqs-val">{{fmtTime(selected.first_time)}}</span>
+              <span class="pqs-label">{{t('first')}}</span>
+            </div>
+            <div class="pqs-item">
+              <span class="pqs-val">{{fmtTime(selected.last_time)}}</span>
+              <span class="pqs-label">{{t('last')}}</span>
+            </div>
+            <div class="pqs-item">
+              <span class="pqs-val">{{Math.round((selected.max_conf||0)*100)}}%</span>
+              <span class="pqs-label">max</span>
+            </div>
+          </div>
+
+          <!-- Hourly sparkline — when was this species heard today? -->
+          <div v-if="selectedHourly && selectedHourly.some(v=>v>0)" class="player-sparkline">
+            <div v-for="(v,h) in selectedHourly" :key="h" class="spark-bar-wrap" :title="h+'h: '+v+' det.'">
+              <div class="spark-bar" :style="{height: Math.max(2, v / Math.max(...selectedHourly) * 28) + 'px'}"></div>
+            </div>
+            <div class="spark-labels">
+              <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+            </div>
+          </div>
+
+          <!-- Quick validation buttons -->
+          <div class="player-validate">
+            <button class="pv-btn pv-confirm" @click="quickValidate('confirmed')" :title="t('review_confirm')">
+              <bird-icon name="check" :size="14"></bird-icon> {{t('review_confirm')}}
+            </button>
+            <button class="pv-btn pv-doubtful" @click="quickValidate('doubtful')" :title="t('review_doubtful')">
+              <bird-icon name="help-circle" :size="14"></bird-icon> ?
+            </button>
+            <button class="pv-btn pv-reject" @click="quickValidate('rejected')" :title="t('review_reject')">
+              <bird-icon name="x" :size="14"></bird-icon> {{t('review_reject')}}
+            </button>
+          </div>
+
           <!-- Spectrogramme — le canvas reste TOUJOURS dans le DOM (v-show) -->
           <div class="spectro-wrap" style="position:relative;min-height:200px;">
 
@@ -461,18 +504,59 @@ const app = createApp({
       loadingList.value = false;
     }
 
+    const selectedHourly = ref(Array(24).fill(0));
+
     async function selectSpecies(sp) {
       if (selected.value?.Com_Name === sp.Com_Name) return;
       stopAudio();
       selected.value      = sp;
       currentDetIdx.value = 0;
       spectro.value       = { state: 'idle' };
+      selectedHourly.value = Array(24).fill(0);
       try {
-        const rows = await birdQuery(...Q.detectionsForSpecies(today, sp.Com_Name, minConf.value));
+        const [rows, hourlyRows] = await Promise.all([
+          birdQuery(...Q.detectionsForSpecies(today, sp.Com_Name, minConf.value)),
+          // Sparkline: hourly distribution for this species today
+          birdQuery(
+            'SELECT hour as h, count_07 as n FROM hourly_stats WHERE date=? AND com_name=?',
+            [today, sp.Com_Name]
+          ).catch(() => []),
+        ]);
         selectedDets.value = rows;
+        const hArr = Array(24).fill(0);
+        for (const r of hourlyRows) { if (r.h >= 0 && r.h < 24) hArr[r.h] = r.n || 0; }
+        selectedHourly.value = hArr;
         if (!sp.imgUrl && sp.sci) sp.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sp.sci);
         await loadDetection(0);
       } catch(e) { console.error('selectSpecies:', e); }
+    }
+
+    async function quickValidate(status) {
+      const det = selectedDets.value[currentDetIdx.value];
+      if (!det || !selected.value) return;
+      try {
+        const resp = await fetch(BIRD_CONFIG.apiUrl + '/bulk-validate', {
+          method: 'POST',
+          headers: BIRDASH.authHeaders(),
+          body: JSON.stringify({
+            detections: [{ date: today, time: det.Time, sci_name: selected.value.sci }],
+            status,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || 'HTTP ' + resp.status);
+        // Visual feedback via toast
+        const labels = { confirmed: '✓', doubtful: '?', rejected: '✗' };
+        window.dispatchEvent(new CustomEvent('birdash:success', {
+          detail: `${labels[status]} ${spName(selected.value.Com_Name, selected.value.sci)} ${fmtTime(det.Time)}`
+        }));
+        // Auto-advance to next detection
+        if (currentDetIdx.value < selectedDets.value.length - 1) {
+          await loadDetection(currentDetIdx.value + 1);
+        }
+      } catch(e) {
+        window.dispatchEvent(new CustomEvent('birdash:error', { detail: e.message }));
+      }
     }
 
     async function loadDetection(idx) {
@@ -615,7 +699,7 @@ const app = createApp({
       today, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
-      selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx,
+      selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly, quickValidate,
       spectroCanvas, spectro, speciesFreqRange,
       isPlaying, audioProgress, audioCurrentTime, audioDuration,
       cleanMode, cleanStrength, processingClean,

@@ -1202,5 +1202,7 @@
   "rare_tooltip": "Species not recently observed in this region (source: eBird, last 30 days, 25 km). On a fresh install (< 30 days), no species is flagged as rare.",
   "activity_tooltip": "Total number of detections (3-second analysis windows scoring above the confidence threshold). Measures acoustic volume, not diversity.",
   "top_species_tooltip": "Ranked by total detection count (acoustic volume, not reliability). Highly vocal species or those detected in many analysis windows rank highest.",
-  "avg_confidence_multimodel": "Not shown in multi-model mode (BirdNET and Perch use incomparable confidence scales). See the Models tab for per-model details."
+  "avg_confidence_multimodel": "Not shown in multi-model mode (BirdNET and Perch use incomparable confidence scales). See the Models tab for per-model details.",
+  "first": "First",
+  "last": "Last"
 }
