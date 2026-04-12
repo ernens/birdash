@@ -1184,5 +1184,15 @@
   "sys_uptime": "Betriebszeit",
   "sys_no_data": "Keine Daten",
   "sys_channels": "Kanäle",
-  "update_banner_new_version": "Neue Version verfügbar:"
+  "update_banner_new_version": "Neue Version verfügbar:",
+  "update_step_starting": "Update wird gestartet…",
+  "update_step_fetching": "Updates werden geprüft…",
+  "update_step_downloading": "Wird heruntergeladen…",
+  "update_step_migrating": "Konfiguration wird migriert…",
+  "update_step_npm": "Abhängigkeiten installieren…",
+  "update_restarting": "Neustart…",
+  "update_done": "Update abgeschlossen",
+  "update_done_version": "Update abgeschlossen — v{v}",
+  "update_failed": "Update fehlgeschlagen",
+  "update_already_uptodate": "Bereits aktuell"
 }

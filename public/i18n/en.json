@@ -1184,5 +1184,15 @@
   "sys_uptime": "Uptime",
   "sys_no_data": "No data",
   "sys_channels": "Channels",
-  "update_banner_new_version": "New version available:"
+  "update_banner_new_version": "New version available:",
+  "update_step_starting": "Starting update…",
+  "update_step_fetching": "Checking for updates…",
+  "update_step_downloading": "Downloading…",
+  "update_step_migrating": "Migrating configuration…",
+  "update_step_npm": "Installing dependencies…",
+  "update_restarting": "Restarting…",
+  "update_done": "Update complete",
+  "update_done_version": "Update complete — v{v}",
+  "update_failed": "Update failed",
+  "update_already_uptodate": "Already up to date"
 }

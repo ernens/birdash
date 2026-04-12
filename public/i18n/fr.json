@@ -1184,5 +1184,15 @@
   "sys_uptime": "Uptime",
   "sys_no_data": "Pas de données",
   "sys_channels": "Canaux",
-  "update_banner_new_version": "Nouvelle version disponible :"
+  "update_banner_new_version": "Nouvelle version disponible :",
+  "update_step_starting": "Démarrage de la mise à jour…",
+  "update_step_fetching": "Vérification des mises à jour…",
+  "update_step_downloading": "Téléchargement…",
+  "update_step_migrating": "Migration de la configuration…",
+  "update_step_npm": "Installation des dépendances…",
+  "update_restarting": "Redémarrage en cours…",
+  "update_done": "Mise à jour terminée",
+  "update_done_version": "Mise à jour terminée — v{v}",
+  "update_failed": "La mise à jour a échoué",
+  "update_already_uptodate": "Déjà à jour"
 }

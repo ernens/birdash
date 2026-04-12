@@ -1184,5 +1184,15 @@
   "sys_uptime": "Uptime",
   "sys_no_data": "Geen gegevens",
   "sys_channels": "Kanalen",
-  "update_banner_new_version": "Nieuwe versie beschikbaar:"
+  "update_banner_new_version": "Nieuwe versie beschikbaar:",
+  "update_step_starting": "Update wordt gestart…",
+  "update_step_fetching": "Controleren op updates…",
+  "update_step_downloading": "Downloaden…",
+  "update_step_migrating": "Configuratie migreren…",
+  "update_step_npm": "Afhankelijkheden installeren…",
+  "update_restarting": "Herstarten…",
+  "update_done": "Update voltooid",
+  "update_done_version": "Update voltooid — v{v}",
+  "update_failed": "Update mislukt",
+  "update_already_uptodate": "Al bijgewerkt"
 }

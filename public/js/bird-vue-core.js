@@ -1133,6 +1133,37 @@
         location.reload();
       }
 
+      // Map the raw step/state from update-progress.json (written by
+      // update.sh in English) to user-facing i18n keys. The shell script
+      // doesn't have access to the i18n system, so we translate here.
+      function progressLabel(progress) {
+        if (!progress) return t('update_starting');
+        const { state, step, detail, newCommit } = progress;
+        if (state === 'done') {
+          return newCommit
+            ? t('update_done_version', { v: newCommit })
+            : t('update_done');
+        }
+        if (state === 'failed') return t('update_failed');
+        if (state === 'restarting') return t('update_restarting');
+        // Map known step keywords from update.sh info() calls.
+        const stepMap = {
+          'starting':              'update_step_starting',
+          'request':               'update_step_starting',
+          'Fetching origin/main':  'update_step_fetching',
+          'Updating':              'update_step_downloading',
+          'Running migrations':    'update_step_migrating',
+          'Installing Node dependencies': 'update_step_npm',
+          'Restarting birdash':    'update_restarting',
+          'Restarting birdengine': 'update_restarting',
+          'complete':              'update_done',
+          'up-to-date':            'update_already_uptodate',
+        };
+        // Try exact match first, then prefix match
+        const key = stepMap[step] || Object.entries(stepMap).find(([k]) => step && step.startsWith(k))?.[1];
+        return key ? t(key) : (step || t('update_starting'));
+      }
+
       // Allow the user to dismiss a stuck "in-flight" progress state
       // (e.g. backend died mid-apply, or polling timed out). Resets the
       // local apply tracking without touching server state.
@@ -1176,7 +1207,7 @@
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel };
     },
     directives: {
       'click-outside': {
@@ -1362,9 +1393,8 @@
             <span v-if="updateProgress && updateProgress.state === 'done'">✓</span>
             <span v-else-if="updateProgress && updateProgress.state === 'failed'">✗</span>
             <span v-else class="update-progress-spinner"></span>
-            {{updateProgress && updateProgress.step || t('update_starting')}}
+            {{progressLabel(updateProgress)}}
           </div>
-          <div v-if="updateProgress && updateProgress.detail" class="update-progress-detail">{{updateProgress.detail}}</div>
           <button v-if="updateProgress && updateProgress.state === 'done'"
                   class="update-btn-primary" @click="reloadAfterUpdate" style="margin-top:.8rem;">
             {{t('update_reload')}}
