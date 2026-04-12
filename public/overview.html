@@ -230,7 +230,7 @@
             <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(lastDet.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
             <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
             <span class="idx-duration">{{richDuration}}</span>
-            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="BIRDASH.openSpectroModal({fileName:lastDet.row.File_Name, speciesName:lastDet.row.Com_Name, sciName:lastDet.row.Sci_Name, confidence:lastDet.row.Confidence, date:lastDet.row.Date, time:lastDet.row.Time})" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
+            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="openSpectroModal(lastDet.row)" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
           </div>
           <div v-if="lastDet.row.File_Name" class="idx-spectro-wrap">
             <div class="idx-spectro-freqs">
