@@ -403,22 +403,26 @@ const app = createApp({
     }
 
     async function loadAll() {
-      // Progressive loading: each section resolves independently so the
-      // user sees cards fill in one by one instead of a 10s blank screen.
-      // loadRareSpeciesToday runs IN PARALLEL with the rest (no longer
-      // blocking KPIs). The rareToday KPI updates reactively when rare
-      // data arrives.
-      const sections = [
+      // Progressive loading: critical sections first (KPIs, charts),
+      // then heavier sections (whats-new, weather) after.
+      const critical = [
         loadRareSpeciesToday, loadKpis, loadLastDet,
         loadTopData, loadHourlyData,
-        loadWhatsNew, loadWeatherWidget,
       ];
+      const deferred = [loadWhatsNew, loadWeatherWidget];
+      const sections = [...critical, ...deferred];
       loadProgress.total = sections.length;
       loadProgress.done = 0;
-      const wrapped = sections.map(fn =>
+      // Launch critical sections first
+      const criticalP = critical.map(fn =>
         fn().catch(e => console.error(e)).finally(() => { loadProgress.done++; })
       );
-      await Promise.all(wrapped);
+      await Promise.all(criticalP);
+      // Then load deferred sections (whats-new, weather)
+      const deferredP = deferred.map(fn =>
+        fn().catch(e => console.error(e)).finally(() => { loadProgress.done++; })
+      );
+      await Promise.all(deferredP);
     }
     const loadProgress = reactive({ done: 0, total: 1 });
 

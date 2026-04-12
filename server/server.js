@@ -259,6 +259,7 @@ function gracefulShutdown() {
   if (_rateBucketCleanup) clearInterval(_rateBucketCleanup);
   _backupRoutes.shutdown();
   _audioRoutes.shutdown();
+  _whatsNewRoutes.shutdown();
   closeAllDbs();
   process.exit(0);
 }
