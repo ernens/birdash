@@ -55,7 +55,7 @@ function handle(req, res, pathname, ctx) {
 
           // Delete from DB
           const result = dbWrite.prepare(
-            'DELETE FROM active_detections WHERE Date=? AND Time=? AND Com_Name=?'
+            'DELETE FROM detections WHERE Date=? AND Time=? AND Com_Name=?'
           ).run(date, time, comName);
 
           // Delete associated files (mp3 + png)
@@ -125,7 +125,7 @@ function handle(req, res, pathname, ctx) {
 
           // Delete all from DB in a transaction
           const deleteAll = dbWrite.transaction(() => {
-            return dbWrite.prepare('DELETE FROM active_detections WHERE Com_Name=?').run(comName);
+            return dbWrite.prepare('DELETE FROM detections WHERE Com_Name=?').run(comName);
           });
           const result = deleteAll();
 

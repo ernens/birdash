@@ -506,6 +506,9 @@ sudo tee /etc/caddy/Caddyfile > /dev/null <<EOF
         uri strip_prefix /birds
         reverse_proxy localhost:7474 {
             flush_interval -1
+            transport http {
+                response_header_timeout 120s
+            }
         }
     }
     handle /birds/terminal/* {
