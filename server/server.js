@@ -29,6 +29,8 @@ const _comparisonRoutes = require('./routes/comparison');
 const _networkRoutes = require('./routes/network');
 const _updateRoutes  = require('./routes/updates');
 const _bugReportRoutes = require('./routes/bug-report');
+const _telemetryRoutes = require('./routes/telemetry');
+const _telemetry = require('./lib/telemetry');
 const _weeklyReport = require('./lib/weekly-report');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
@@ -165,6 +167,8 @@ setTimeout(() => {
 }, 2000);
 // Multi-station background sync (every 30 min)
 _networkRoutes.startBackgroundSync(db, parseBirdnetConf);
+// Telemetry: opt-in daily reports to Supabase
+_telemetry.startDailyCron(db);
 // Weekly report: check every hour if it's Sunday evening
 setInterval(() => {
   try { _weeklyReport.checkAndSend(db, birdashDb, 'BirdStation'); } catch(e) {}
@@ -244,6 +248,7 @@ const server = http.createServer((req, res) => {
   if (_networkRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_updateRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_bugReportRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_telemetryRoutes.handle(req, res, pathname, _routeCtx)) return;
 
   console.warn(`[BIRDASH] 404 — route inconnue : ${req.method} ${pathname}`);
   if (res.headersSent) return;
@@ -262,6 +267,7 @@ function gracefulShutdown() {
   _backupRoutes.shutdown();
   _audioRoutes.shutdown();
   _whatsNewRoutes.shutdown();
+  _telemetry.stopDailyCron();
   closeAllDbs();
   process.exit(0);
 }

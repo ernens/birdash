@@ -70,3 +70,38 @@
         </div>
 
       </div><!-- /settings-grid -->
+
+      <!-- ═══ BirdStation Network — Telemetry opt-in ═══ -->
+      <div class="card" style="margin-top:1rem;">
+        <div class="section-title"><bird-icon name="radio" :size="14"></bird-icon> {{t('set_network_title')}}</div>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.8rem;">{{t('set_network_desc')}}</p>
+        <div v-if="telemetryLoading" class="spinner" style="margin:1rem 0;"><div></div><div></div><div></div></div>
+        <div v-else>
+          <div v-if="telemetryStatus.enabled" style="display:flex;flex-direction:column;gap:.5rem;">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <bird-icon name="check-circle" :size="16" style="color:var(--accent);"></bird-icon>
+              <span style="font-size:.85rem;font-weight:600;">{{t('set_network_active')}}</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--text-muted);">
+              Station ID: <code style="font-size:.75rem;">{{telemetryStatus.stationId}}</code>
+            </div>
+            <div v-if="telemetryStatus.stationName" style="font-size:.78rem;color:var(--text-muted);">
+              {{t('set_network_name')}}: <strong>{{telemetryStatus.stationName}}</strong>
+            </div>
+            <button class="btn btn-secondary" style="align-self:flex-start;font-size:.78rem;margin-top:.3rem;" @click="disableTelemetry">
+              <bird-icon name="x" :size="13"></bird-icon> {{t('set_network_disable')}}
+            </button>
+          </div>
+          <div v-else style="display:flex;flex-direction:column;gap:.6rem;">
+            <div class="set-row">
+              <span class="set-label">{{t('set_network_name')}}</span>
+              <input v-model="telemetryName" class="set-input" :placeholder="t('set_network_name_ph')">
+            </div>
+            <button class="btn btn-primary" style="align-self:flex-start;" @click="enableTelemetry" :disabled="telemetryJoining">
+              <bird-icon name="radio" :size="14"></bird-icon>
+              <span v-if="telemetryJoining">{{t('set_network_joining')}}</span>
+              <span v-else>{{t('set_network_join')}}</span>
+            </button>
+          </div>
+        </div>
+      </div>

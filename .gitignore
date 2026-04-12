@@ -31,3 +31,4 @@ photo-cache/_species-info-cache.json
 config/adaptive_gain.json
 config/github-token.txt
 config/bug-reports.json
+config/telemetry.json

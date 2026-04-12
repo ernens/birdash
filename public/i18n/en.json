@@ -1223,5 +1223,13 @@
   "bug_report_auto_info": "System info (version, browser, page) will be included automatically.",
   "bug_report_cancel": "Cancel",
   "bug_report_submit": "Submit",
-  "bug_report_sending": "Sending..."
+  "bug_report_sending": "Sending...",
+  "set_network_title": "BirdStation Network",
+  "set_network_desc": "Join the community network! Your station will appear on the map and share daily detection statistics (species, counts). No personal data is transmitted.",
+  "set_network_active": "Station connected to the network",
+  "set_network_name": "Station name",
+  "set_network_name_ph": "e.g. Backyard Garden",
+  "set_network_join": "Join the network",
+  "set_network_joining": "Connecting...",
+  "set_network_disable": "Leave the network"
 }
