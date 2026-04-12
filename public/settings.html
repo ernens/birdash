@@ -172,7 +172,7 @@
   </birdash-shell>
 </div>
 <script>
-const { createApp, ref, reactive, onMounted, computed, defineAsyncComponent, provide, inject } = Vue;
+const { createApp, ref, reactive, onMounted, computed, watch, defineAsyncComponent, provide, inject } = Vue;
 const { useI18n, registerComponents, safeHtml, authHeaders } = BIRDASH;
 
 const app = createApp({
@@ -1596,6 +1596,20 @@ const app = createApp({
       return (models.value || []).filter(m =>
         !m.includes('MData') && m !== conf.MODEL
       );
+    });
+
+    // Auto-clear the secondary model if the user picks the same model
+    // as primary. Otherwise the dropdown hides the value (since it's
+    // filtered out) but conf.SECONDARY_MODEL silently persists the
+    // duplicate, producing a "Perch V2 INT8 + Perch V2 INT8" badge.
+    watch(() => conf.MODEL, (newPrimary) => {
+      if (conf.SECONDARY_MODEL === newPrimary) {
+        // Pick the first available secondary, or clear.
+        const opts = (models.value || []).filter(m =>
+          !m.includes('MData') && m !== newPrimary
+        );
+        conf.SECONDARY_MODEL = opts[0] || '';
+      }
     });
 
     const calExpired = computed(() => {

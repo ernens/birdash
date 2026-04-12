@@ -688,6 +688,7 @@
   // ── Model display names ────────────────────────────────────────────────
   const MODEL_LABELS = {
     'BirdNET_GLOBAL_6K_V2.4_Model_FP16':           'BirdNET V2.4',
+    'BirdNET_GLOBAL_6K_V2.4_Model_FP32':           'BirdNET V2.4',
     'BirdNET_GLOBAL_6K_V2.4_MData_Model_FP16':     'BirdNET V2.4 MData',
     'BirdNET_GLOBAL_6K_V2.4_MData_Model_V2_FP16':  'BirdNET V2.4 MData V2',
     'BirdNET_6K_GLOBAL_MODEL':                      'BirdNET V1',
