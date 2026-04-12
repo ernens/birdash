@@ -81,9 +81,34 @@ function _parseCommit(msg) {
   return { type: 'other', scope: null, breaking: false, subject: header, body };
 }
 
+// Parse `git describe --tags --match "v*"` into a human-readable version.
+//   v1.5.0-30-gde92732  →  "1.5.30"
+//   v1.5.0              →  "1.5.0"    (exactly on a tag)
+// Falls back to "0.0.<commitCount>" if no tag exists at all.
+function _parseVersion(describeOutput) {
+  if (!describeOutput) return null;
+  const m = describeOutput.trim().match(/^v?(\d+\.\d+)\.\d+(?:-(\d+)-g[0-9a-f]+)?$/);
+  if (m) {
+    const [, base, ahead] = m;
+    return `${base}.${ahead || '0'}`;
+  }
+  return null;
+}
+
+function _currentVersion() {
+  try {
+    const desc = _git('describe --tags --match "v*" --long');
+    return _parseVersion(desc) || '0.0.0';
+  } catch {
+    // No tags at all — fall back to total commit count
+    try { return '0.0.' + _git('rev-list --count HEAD'); } catch { return '0.0.0'; }
+  }
+}
+
 async function _computeStatus() {
   const currentCommit = _git('rev-parse HEAD');
   const currentShort = currentCommit.slice(0, 7);
+  const currentVersion = _currentVersion();
 
   // Latest remote commit on the tracked branch — single round-trip, no fetch.
   let latestCommit, latestShort;
@@ -92,13 +117,13 @@ async function _computeStatus() {
     latestCommit = lsRemote.split(/\s+/)[0];
     latestShort = latestCommit.slice(0, 7);
   } catch (e) {
-    return { error: 'git ls-remote failed: ' + e.message, currentCommit, currentShort };
+    return { error: 'git ls-remote failed: ' + e.message, currentCommit, currentShort, currentVersion };
   }
 
   if (currentCommit === latestCommit) {
     return {
-      currentCommit, currentShort,
-      latestCommit, latestShort,
+      currentCommit, currentShort, currentVersion,
+      latestCommit, latestShort, latestVersion: currentVersion,
       hasUpdate: false,
       commitsBehind: 0,
       changes: [],
@@ -123,9 +148,21 @@ async function _computeStatus() {
     console.warn('[updates] GitHub compare failed:', e.message);
   }
 
+  // Compute the latest version by adding the commit count to the
+  // current version's patch number. E.g. current = 1.5.30, 3 commits
+  // ahead → latest = 1.5.33.
+  let latestVersion = currentVersion;
+  if (commits.length > 0) {
+    const parts = currentVersion.split('.');
+    if (parts.length === 3) {
+      parts[2] = String(parseInt(parts[2] || '0', 10) + commits.length);
+      latestVersion = parts.join('.');
+    }
+  }
+
   return {
-    currentCommit, currentShort,
-    latestCommit, latestShort,
+    currentCommit, currentShort, currentVersion,
+    latestCommit, latestShort, latestVersion,
     hasUpdate: true,
     commitsBehind: commits.length,
     changes: commits,

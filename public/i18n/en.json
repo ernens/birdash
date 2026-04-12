@@ -1183,5 +1183,6 @@
   "set_click_save_to_persist": "click Save to confirm",
   "sys_uptime": "Uptime",
   "sys_no_data": "No data",
-  "sys_channels": "Channels"
+  "sys_channels": "Channels",
+  "update_banner_new_version": "New version available:"
 }

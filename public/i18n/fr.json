@@ -1183,5 +1183,6 @@
   "set_click_save_to_persist": "cliquez Enregistrer pour confirmer",
   "sys_uptime": "Uptime",
   "sys_no_data": "Pas de données",
-  "sys_channels": "Canaux"
+  "sys_channels": "Canaux",
+  "update_banner_new_version": "Nouvelle version disponible :"
 }

@@ -732,6 +732,19 @@
       const themeOpen = ref(false);
       const currentLang = computed(() => langs.find(l => l.code === lang.value) || langs[0]);
       const currentTheme = computed(() => themes.find(th => th.id === theme.value) || themes[0]);
+      // App version shown in the header sub-brand. Fetched once from
+      // /api/update-status (which calls git describe). Updated when the
+      // user applies an update via the dashboard.
+      const appVersion = ref('');
+      fetch(`${BIRD_CONFIG.apiUrl}/update-status`).then(r => r.json()).then(d => {
+        if (d && d.currentVersion) appVersion.value = d.currentVersion;
+      }).catch(() => {});
+      window.addEventListener('birdash:settings-changed', () => {
+        fetch(`${BIRD_CONFIG.apiUrl}/update-status?refresh=1`).then(r => r.json()).then(d => {
+          if (d && d.currentVersion) appVersion.value = d.currentVersion;
+        }).catch(() => {});
+      });
+
       const modelName = ref('');
       function refreshModelBadge() {
         fetch(`${BIRD_CONFIG.apiUrl}/settings`).then(r => r.json()).then(conf => {
@@ -937,7 +950,7 @@
           items.push({
             icon: '⬆',
             text: t('bell_update_available'),
-            sub: (updateInfo.value.commitsBehind || 0) + ' commit' + (updateInfo.value.commitsBehind > 1 ? 's' : ''),
+            sub: 'v' + (updateInfo.value.latestVersion || updateInfo.value.latestShort),
             click: 'openUpdateModal',
           });
         }
@@ -1163,7 +1176,7 @@
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion };
     },
     directives: {
       'click-outside': {
@@ -1182,7 +1195,7 @@
       <img src="img/robin-logo.svg" class="brand-logo" :alt="brandName">
       <div class="brand-text">
         <span class="brand-name">{{brandName}}</span>
-        <span class="brand-sub">{{siteName}}</span>
+        <span class="brand-sub">{{siteName}} <span v-if="appVersion" class="brand-version">v{{appVersion}}</span></span>
       </div>
     </div>
     <div class="header-right">
@@ -1322,7 +1335,7 @@
     <div v-if="showUpdateBanner" class="update-banner">
       <span class="update-banner-icon">⬆</span>
       <span class="update-banner-text">
-        {{updateInfo.commitsBehind}} {{updateInfo.commitsBehind > 1 ? t('update_banner_plural') : t('update_banner_singular')}}
+        {{t('update_banner_new_version')}} v{{updateInfo.latestVersion || updateInfo.latestShort}}
       </span>
       <button class="update-banner-btn" @click="openUpdateModal">{{t('update_banner_view')}}</button>
     </div>
@@ -1337,8 +1350,7 @@
         <div>
           <div class="update-modal-title">{{t('update_title')}}</div>
           <div class="update-modal-version">
-            <code>{{updateInfo.currentShort}}</code> → <code><strong>{{updateInfo.latestShort}}</strong></code>
-            <span style="opacity:.6;margin-left:.5em;">({{updateInfo.commitsBehind}} commits)</span>
+            v{{updateInfo.currentVersion || updateInfo.currentShort}} → <strong>v{{updateInfo.latestVersion || updateInfo.latestShort}}</strong>
           </div>
         </div>
         <button class="update-modal-close" @click="closeUpdateModal" aria-label="Close">✕</button>

@@ -674,6 +674,13 @@ a:hover { opacity: .85; }
   font-weight:400;
   line-height:1;
 }
+.brand-version {
+  font-size: .68rem;
+  opacity: .55;
+  font-weight: 400;
+  letter-spacing: .02em;
+  margin-left: .25em;
+}
 
 .brand-model {
   font-size:      .7rem;
