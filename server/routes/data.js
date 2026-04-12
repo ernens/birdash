@@ -10,7 +10,62 @@ const _queryCache = new Map();
 const QUERY_CACHE_TTL = 2 * 60 * 1000;
 
 function handle(req, res, pathname, ctx) {
-  const { requireAuth, db, dbWrite, readJsonFile, writeJsonFileAtomic, JSON_CT, validateQuery, photoCacheKey, PHOTO_CACHE_DIR } = ctx;
+  const { requireAuth, db, dbWrite, readJsonFile, writeJsonFileAtomic, JSON_CT, validateQuery, photoCacheKey, PHOTO_CACHE_DIR, ebirdFreq } = ctx;
+
+  // ── Route : GET /api/rare-today ──────────────────────────────────────────
+  // Returns species detected today that are genuinely rare in the region
+  // (via eBird) or locally (after 30+ days of data). Replaces the naive
+  // overview.html client-side "HAVING total<=5" that flagged Blackbirds
+  // as rare on every fresh install.
+  if (req.method === 'GET' && pathname === '/api/rare-today') {
+    (async () => {
+      try {
+        const dateStr = new URL(req.url, 'http://x').searchParams.get('date')
+          || new Date().toISOString().split('T')[0];
+        const totalDays = db.prepare(
+          "SELECT COUNT(DISTINCT Date) as n FROM active_detections WHERE Date < ?"
+        ).get(dateStr)?.n || 0;
+        const todaySpecies = db.prepare(`
+          SELECT Com_Name, Sci_Name, COUNT(*) as n
+          FROM active_detections
+          WHERE Date = ? AND Confidence >= 0.7
+          GROUP BY Com_Name
+        `).all(dateStr);
+        // Historical counts (past year) for the local fallback path
+        const histMap = {};
+        const histRows = db.prepare(`
+          SELECT Com_Name, COUNT(*) as cnt
+          FROM active_detections
+          WHERE Date < ? AND Date >= DATE(?, '-365 days')
+          GROUP BY Com_Name
+        `).all(dateStr, dateStr);
+        for (const h of histRows) histMap[h.Com_Name] = h.cnt;
+
+        const rares = [];
+        for (const sp of todaySpecies) {
+          const hist = histMap[sp.Com_Name] || 0;
+          const check = ebirdFreq
+            ? ebirdFreq.checkRarity(sp.Sci_Name, hist, totalDays)
+            : { isRare: false, source: 'unavailable' };
+          if (check.isRare) {
+            rares.push({
+              Com_Name: sp.Com_Name,
+              Sci_Name: sp.Sci_Name,
+              n: sp.n,
+              totalDet: hist + sp.n,
+              source: check.source,
+            });
+          }
+        }
+        res.writeHead(200, JSON_CT);
+        res.end(JSON.stringify(rares));
+      } catch (e) {
+        res.writeHead(500, JSON_CT);
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
 
   // ── Route : GET /api/photo-pref?sci=X ──────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/photo-pref') {

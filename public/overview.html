@@ -547,12 +547,12 @@ const app = createApp({
         const yesterday = daysAgo(1);
         // Species seen today but not yesterday
         const newRows = await birdQuery(
-          `SELECT DISTINCT Com_Name FROM detections WHERE Date=?
-           AND Com_Name NOT IN (SELECT DISTINCT Com_Name FROM detections WHERE Date=?)`,
+          `SELECT DISTINCT Com_Name FROM active_detections WHERE Date=?
+           AND Com_Name NOT IN (SELECT DISTINCT Com_Name FROM active_detections WHERE Date=?)`,
           [today, yesterday]);
         // Best confidence detection today
         const [best] = await birdQuery(
-          `SELECT Com_Name, Sci_Name, Confidence, Time FROM detections
+          `SELECT Com_Name, Sci_Name, Confidence, Time FROM active_detections
            WHERE Date=? ORDER BY Confidence DESC LIMIT 1`, [today]);
         // Counts
         const [tc] = await birdQuery(...Q.countForDate(today));
@@ -604,16 +604,18 @@ const app = createApp({
     }
 
     async function loadAll() {
+      // Load rare species FIRST so the KPIs card can read its count.
+      await loadRareSpeciesToday();
       await Promise.all([loadKpis(), loadLastDet(), loadFeed(),
                          load7dData(), loadTopData(), loadHourlyData(),
-                         loadRareSpeciesToday(), loadMorningSummary(), loadWhatsNew(),
+                         loadMorningSummary(), loadWhatsNew(),
                          loadWeatherWidget()]);
       loadTimeline().catch(e => console.error('[timeline]', e));
     }
 
     async function loadKpis() {
       try {
-        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf FROM detections WHERE Date=?`,[today]);
+        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf FROM active_detections WHERE Date=?`,[today]);
         const [tot] = await birdQuery(...Q.totalDetections());
         // Détections dernière heure
         const now = new Date();
@@ -622,14 +624,15 @@ const app = createApp({
         const oneHourAgo = new Date(now - 3600000);
         const hh0 = String(oneHourAgo.getHours()).padStart(2,'0');
         const mm0 = String(oneHourAgo.getMinutes()).padStart(2,'0');
-        const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=? AND Time>=? AND Time<=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`]);
-        // Espèces rares aujourd'hui (≤5 détections all-time)
-        const rares = await birdQuery(...Q.rareTodayCount(today));
+        const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`]);
+        // rareToday is derived from rareSpeciesToday which is loaded
+        // from the server via /api/rare-today (eBird-based). We read its
+        // length here after ensuring it's loaded.
         kpis.value = {
           det: td?td.det.toLocaleString():'0', sp: td?td.sp:'0',
           conf: td&&td.conf?td.conf+'%':'—', total: tot?tot.n.toLocaleString():'0',
           lastHour: lh?lh.n.toLocaleString():'0',
-          rareToday: rares&&rares[0]?String(rares[0].n):'0'
+          rareToday: String(rareSpeciesToday.value.length)
         };
       } catch(e) { console.error(e); }
     }
@@ -650,7 +653,7 @@ const app = createApp({
       try {
         const rows = await birdQuery(
           `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model
-           FROM detections ORDER BY Date DESC,Time DESC LIMIT 15`
+           FROM active_detections ORDER BY Date DESC,Time DESC LIMIT 15`
         );
 
         // Charger le compteur total par espèce pour détecter les raretés (≤5)
@@ -658,7 +661,7 @@ const app = createApp({
         let rarityMap = {};
         if (speciesInFeed.length) {
           const counts = await birdQuery(
-            `SELECT Com_Name, COUNT(*) as n FROM detections
+            `SELECT Com_Name, COUNT(*) as n FROM active_detections
              WHERE Com_Name IN (${speciesInFeed.map(()=>'?').join(',')})
              GROUP BY Com_Name`,
             speciesInFeed
@@ -666,11 +669,14 @@ const app = createApp({
           counts.forEach(c => { rarityMap[c.Com_Name] = c.n; });
         }
 
-        // Photos + marquage rareté
+        // Photos + marquage rareté (basé sur la liste rareSpeciesToday
+        // qui utilise eBird, pas le comptage local ≤5 qui est faux
+        // sur les installations récentes)
+        const rareSet = new Set(rareSpeciesToday.value.map(r => r.Com_Name));
         rows.forEach(r => {
           r.photoUrl  = r.Sci_Name ? photoUrl(r.Sci_Name) : null;
           r.totalDet  = rarityMap[r.Com_Name] || 0;
-          r.isRare    = r.totalDet > 0 && r.totalDet <= 5;
+          r.isRare    = rareSet.has(r.Com_Name);
         });
 
         feed.value = { loading:false, rows };
@@ -773,19 +779,20 @@ const app = createApp({
 
     async function reapplyClean() { if (cleanMode.value) await applyClean(); }
 
+    // Rare species are determined server-side via eBird regional frequency
+    // (when API key + GPS are available) or via local historical count
+    // (only after 30+ days of data). On fresh installs with <30 days,
+    // nothing is flagged — prevents the "every species is rare" problem.
     async function loadRareSpeciesToday() {
       try {
-        const rows = await birdQuery(
-          `SELECT d.Com_Name, d.Sci_Name, COUNT(*) as n, t.total as totalDet
-           FROM detections d
-           INNER JOIN (SELECT Com_Name, COUNT(*) as total FROM detections GROUP BY Com_Name HAVING total<=5) t
-             ON d.Com_Name=t.Com_Name
-           WHERE d.Date=? GROUP BY d.Com_Name ORDER BY t.total ASC, n DESC`,[today]);
+        const resp = await fetch(`${BIRD_CONFIG.apiUrl}/rare-today?date=${today}`);
+        const rows = await resp.json();
+        if (!Array.isArray(rows)) { rareSpeciesToday.value = []; return; }
         rows.forEach(r => {
           r.photoUrl = r.Sci_Name ? photoUrl(r.Sci_Name) : null;
         });
         rareSpeciesToday.value = rows;
-      } catch(e) { console.error(e); }
+      } catch(e) { console.error(e); rareSpeciesToday.value = []; }
     }
 
     async function load7dData() {
@@ -802,7 +809,7 @@ const app = createApp({
     }
     async function loadHourlyData() {
       try {
-        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM detections WHERE Date=? GROUP BY h ORDER BY h ASC`,[today]);
+        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Date=? GROUP BY h ORDER BY h ASC`,[today]);
         const vals=Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         dataHourly.value = vals;
