@@ -1846,11 +1846,11 @@
   border-bottom: 1px solid var(--border);
 }
 .spark-bars {
-  display: flex; align-items: flex-end; gap: 1px; height: 30px;
+  display: flex; align-items: flex-end; gap: 2px; height: 60px;
 }
 .spark-bar-wrap { flex: 1; display: flex; align-items: flex-end; justify-content: center; }
 .spark-bar {
-  width: 100%; max-width: 8px;
+  width: 100%; max-width: 16px;
   background: var(--accent); border-radius: 1px 1px 0 0;
   opacity: .7; transition: height .2s;
 }
