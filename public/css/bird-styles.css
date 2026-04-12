@@ -1580,6 +1580,13 @@ a:hover { opacity: .85; }
 }
 .api-error-banner button:hover { opacity: 1; }
 
+/* ── Bug report button ────────────────────────────────────────────────────── */
+.hdr-bug-btn {
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  padding: 4px 6px; border-radius: var(--radius);
+}
+.hdr-bug-btn:hover { color: var(--text-main); background: var(--border); }
+
 /* ── Notification bell ────────────────────────────────────────────────────── */
 .hdr-bell { position: relative; }
 .bell-btn {
