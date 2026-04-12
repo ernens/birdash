@@ -136,11 +136,32 @@ setTimeout(async () => {
     await ebirdFreq.loadFrequency(lat, lon, EBIRD_API_KEY);
   } catch(e) { console.warn('[BIRDASH] eBird frequency init:', e.message); }
 }, 4000);
-// Pre-aggregated stats: rebuild on startup, refresh every 5 min
+// Pre-aggregated stats: smart rebuild on startup.
+// Full rebuild takes ~14s on 1M+ rows and BLOCKS the event loop (better-sqlite3
+// is synchronous), causing 502s for every request during that window. So we
+// only do a full rebuild when the aggregates are empty or stale (migration,
+// first boot). Otherwise we just refresh today's data (~200ms) and start the
+// 5-min periodic timer. The sentinel file .rebuild-aggregates forces a full
+// rebuild (created by migration 004).
 setTimeout(() => {
-  try { aggregates.rebuildAll(dbWrite); } catch(e) { console.error('[BIRDASH] Aggregate rebuild error:', e.message); }
+  try {
+    const fs = require('fs');
+    const sentinelPath = require('path').join(__dirname, '..', 'config', '.rebuild-aggregates');
+    const hasSentinel = fs.existsSync(sentinelPath);
+    const aggCount = dbWrite.prepare('SELECT COUNT(*) as n FROM daily_stats').get().n;
+
+    if (aggCount === 0 || hasSentinel) {
+      console.log(`[BIRDASH] Full aggregate rebuild needed (rows=${aggCount}, sentinel=${hasSentinel})`);
+      aggregates.rebuildAll(dbWrite);
+      try { fs.unlinkSync(sentinelPath); } catch {}
+    } else {
+      // Just refresh today — fast (~200ms), no event-loop block
+      aggregates.refreshToday(dbWrite);
+      console.log('[BIRDASH] Aggregates: refreshToday only (full rebuild skipped, ' + aggCount + ' rows already present)');
+    }
+  } catch(e) { console.error('[BIRDASH] Aggregate error:', e.message); }
   aggregates.startPeriodicRefresh(dbWrite);
-}, 5000);
+}, 2000);
 // Multi-station background sync (every 30 min)
 _networkRoutes.startBackgroundSync(db, parseBirdnetConf);
 // Weekly report: check every hour if it's Sunday evening
