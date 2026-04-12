@@ -1231,5 +1231,6 @@
   "set_network_name_ph": "e.g. Backyard Garden",
   "set_network_join": "Join the network",
   "set_network_joining": "Connecting...",
-  "set_network_disable": "Leave the network"
+  "set_network_disable": "Leave the network",
+  "set_network_map": "View map"
 }

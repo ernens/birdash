@@ -1231,5 +1231,6 @@
   "set_network_name_ph": "ex: Jardin de Heinsch",
   "set_network_join": "Rejoindre le réseau",
   "set_network_joining": "Connexion...",
-  "set_network_disable": "Quitter le réseau"
+  "set_network_disable": "Quitter le réseau",
+  "set_network_map": "Voir la carte"
 }

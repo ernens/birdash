@@ -73,7 +73,13 @@
 
       <!-- ═══ BirdStation Network — Telemetry opt-in ═══ -->
       <div class="card" style="margin-top:1rem;">
-        <div class="section-title"><bird-icon name="radio" :size="14"></bird-icon> {{t('set_network_title')}}</div>
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+          <span><bird-icon name="radio" :size="14"></bird-icon> {{t('set_network_title')}}</span>
+          <a href="https://ernens.github.io/birdash-network/" target="_blank" rel="noopener"
+             style="font-size:.75rem;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:.3rem;">
+            <bird-icon name="map-pin" :size="13"></bird-icon> {{t('set_network_map')}}
+          </a>
+        </div>
         <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.8rem;">{{t('set_network_desc')}}</p>
         <div v-if="telemetryLoading" class="spinner" style="margin:1rem 0;"><div></div><div></div><div></div></div>
         <div v-else>

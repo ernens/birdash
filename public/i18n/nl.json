@@ -1231,5 +1231,6 @@
   "set_network_name_ph": "bijv. Tuin Heinsch",
   "set_network_join": "Deelnemen aan het netwerk",
   "set_network_joining": "Verbinden...",
-  "set_network_disable": "Netwerk verlaten"
+  "set_network_disable": "Netwerk verlaten",
+  "set_network_map": "Kaart bekijken"
 }

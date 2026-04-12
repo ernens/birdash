@@ -1231,5 +1231,6 @@
   "set_network_name_ph": "z.B. Garten Heinsch",
   "set_network_join": "Netzwerk beitreten",
   "set_network_joining": "Verbinde...",
-  "set_network_disable": "Netzwerk verlassen"
+  "set_network_disable": "Netzwerk verlassen",
+  "set_network_map": "Karte anzeigen"
 }
