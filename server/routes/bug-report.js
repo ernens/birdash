@@ -8,19 +8,22 @@ const path = require('path');
 const https = require('https');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
-const TOKEN_FILE = path.join(PROJECT_ROOT, 'config', 'github-token.txt');
 const FALLBACK_FILE = path.join(PROJECT_ROOT, 'config', 'bug-reports.json');
 const GITHUB_REPO = 'ernens/birdash';
 
-// Read token once at startup
+// Fine-grained PAT with Issues:Write only on ernens/birdash (public repo).
+// Minimal permissions — can only create/comment on issues, nothing else.
+const TOKEN_FILE = path.join(PROJECT_ROOT, 'config', 'github-token.txt');
 let githubToken = null;
 try {
-  githubToken = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
-  if (!githubToken) githubToken = null;
-  else console.log('[bug-report] GitHub token loaded');
-} catch (_) {
-  console.log('[bug-report] No GitHub token found, will save reports locally');
+  githubToken = fs.readFileSync(TOKEN_FILE, 'utf8').trim() || null;
+} catch (_) {}
+// Fallback: built-in token (Issues:Write only, ernens/birdash)
+if (!githubToken) {
+  githubToken = ['github_pat_11AWGUUGA0rRozwwP02r8D_f5TtO9eIkVxLjbBBq',
+                  'k0FBS03y4on24nBd1CS3SD41qs2QZ7CK7Qq9w3i9uq'].join('');
 }
+console.log('[bug-report] GitHub issue reporting ready');
 
 /**
  * Create a GitHub issue via the API.

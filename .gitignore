@@ -29,3 +29,5 @@ photo-cache/_species-info-cache.json
 
 # Runtime state (changes on every Pi, must not block git pull)
 config/adaptive_gain.json
+config/github-token.txt
+config/bug-reports.json
