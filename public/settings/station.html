@@ -93,10 +93,9 @@
             </button>
           </div>
           <div v-else style="display:flex;flex-direction:column;gap:.6rem;">
-            <div class="set-row">
-              <span class="set-label">{{t('set_network_name')}}</span>
-              <input v-model="telemetryName" class="set-input" :placeholder="t('set_network_name_ph')">
-            </div>
+            <label style="font-size:.82rem;font-weight:600;">{{t('set_network_name')}}
+              <input v-model="telemetryName" class="set-input" style="display:block;width:100%;margin-top:.3rem;" :placeholder="t('set_network_name_ph')">
+            </label>
             <button class="btn btn-primary" style="align-self:flex-start;" @click="enableTelemetry" :disabled="telemetryJoining">
               <bird-icon name="radio" :size="14"></bird-icon>
               <span v-if="telemetryJoining">{{t('set_network_joining')}}</span>
