@@ -54,7 +54,7 @@
           </div>
         </div>
       </div>
-      <div class="kpi-card">
+      <div v-if="!isMultiModel" class="kpi-card">
         <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
         <div class="kpi-label">{{t('avg_confidence')}}</div>
       </div>
@@ -613,21 +613,20 @@ const app = createApp({
       loadTimeline().catch(e => console.error('[timeline]', e));
     }
 
+    const isMultiModel = ref(false);
+
     async function loadKpis() {
       try {
-        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf FROM active_detections WHERE Date=?`,[today]);
+        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf, COUNT(DISTINCT Model) as mc FROM active_detections WHERE Date=? AND Confidence>=?`,[today, CONF]);
         const [tot] = await birdQuery(...Q.totalDetections());
-        // Détections dernière heure
+        isMultiModel.value = (td?.mc || 1) > 1;
         const now = new Date();
         const hh = String(now.getHours()).padStart(2,'0');
         const mm = String(now.getMinutes()).padStart(2,'0');
         const oneHourAgo = new Date(now - 3600000);
         const hh0 = String(oneHourAgo.getHours()).padStart(2,'0');
         const mm0 = String(oneHourAgo.getMinutes()).padStart(2,'0');
-        const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`]);
-        // rareToday is derived from rareSpeciesToday which is loaded
-        // from the server via /api/rare-today (eBird-based). We read its
-        // length here after ensuring it's loaded.
+        const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=? AND Confidence>=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`, CONF]);
         kpis.value = {
           det: td?td.det.toLocaleString():'0', sp: td?td.sp:'0',
           conf: td&&td.conf?td.conf+'%':'—', total: tot?tot.n.toLocaleString():'0',
@@ -809,7 +808,7 @@ const app = createApp({
     }
     async function loadHourlyData() {
       try {
-        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Date=? GROUP BY h ORDER BY h ASC`,[today]);
+        const rows = await birdQuery(`SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=? GROUP BY h ORDER BY h ASC`,[today, CONF]);
         const vals=Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         dataHourly.value = vals;
@@ -1001,7 +1000,7 @@ const app = createApp({
 
     return {
       lang, t, spName, daysAgo, weatherToday,
-      today, kpis, lastDet, feed, rareSpeciesToday, rarePanelOpen, toggleRarePanel, morning,
+      today, kpis, lastDet, feed, rareSpeciesToday, rarePanelOpen, toggleRarePanel, morning, isMultiModel,
       whatsNew, wnIcon, wnMoonIcon,
       timelineExpanded, timelineLoading, timelineData, tlSelectedDate, tlShowDatePicker, tlTodayStr,
       tlScrollRef, tlInnerRef, tlSkyCanvasRef, tlStarsCanvasRef, tlDensityRef, tlDensityWrapRef,

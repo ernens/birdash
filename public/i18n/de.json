@@ -1201,5 +1201,6 @@
   "weather_no_significant_corr": "Keine signifikante Korrelation erkannt (|r| < 0,2)",
   "rare_tooltip": "Arten, die in dieser Region kürzlich nicht beobachtet wurden (Quelle: eBird, letzte 30 Tage, 25 km). Bei einer neuen Installation (< 30 Tage) wird keine Art als selten markiert.",
   "activity_tooltip": "Gesamtzahl der Erkennungen (3-Sekunden-Analysefenster über dem Konfidenzschwellenwert). Misst das akustische Volumen, nicht die Vielfalt.",
-  "top_species_tooltip": "Sortiert nach Gesamtzahl der Erkennungen (akustisches Volumen, nicht Zuverlässigkeit). Sehr lautstarke Arten stehen oben."
+  "top_species_tooltip": "Sortiert nach Gesamtzahl der Erkennungen (akustisches Volumen, nicht Zuverlässigkeit). Sehr lautstarke Arten stehen oben.",
+  "avg_confidence_multimodel": "Im Multi-Modell-Modus nicht angezeigt (BirdNET und Perch verwenden inkompatible Konfidenzskalen). Siehe Modelle-Tab für Details pro Modell."
 }

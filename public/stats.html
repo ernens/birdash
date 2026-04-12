@@ -86,7 +86,8 @@
             <template v-else>
               <div class="kpi-card"><div class="kpi-value">{{kpis.total}}</div><div class="kpi-label">{{t('all_time')}} ({{t('detections')}})</div></div>
               <div class="kpi-card"><div class="kpi-value amber">{{kpis.sp}}</div><div class="kpi-label">{{t('sys_species_distinct')}}</div></div>
-              <div class="kpi-card" :title="t('avg_confidence_tooltip')"><div class="kpi-value blue">{{kpis.avgConf}}%</div><div class="kpi-label">{{t('avg_confidence')}}</div></div>
+              <div v-if="!isMultiModel" class="kpi-card"><div class="kpi-value blue">{{kpis.avgConf}}%</div><div class="kpi-label">{{t('avg_confidence')}}</div></div>
+              <div v-else class="kpi-card" :title="t('avg_confidence_multimodel')"><div class="kpi-value blue" style="opacity:.4;">—</div><div class="kpi-label" style="opacity:.6;">{{t('avg_confidence')}}</div></div>
               <div class="kpi-card"><div class="kpi-value">{{kpis.perDay}}</div><div class="kpi-label">{{t('detections')}} {{t('per_day_avg')}}</div></div>
               <div class="kpi-card"><div class="kpi-value">{{kpis.days}}</div><div class="kpi-label">{{t('sys_days_recorded')}}</div></div>
               <div class="kpi-card"><div class="kpi-value amber">{{kpis.maxConf}}%</div><div class="kpi-label">{{t('max_confidence')}}</div></div>
@@ -351,13 +352,16 @@ const app = createApp({
 
     async function loadAll() { await Promise.all([loadKpis(),loadTimeData(),loadTopCount(),loadTopConf(),loadConfData(),loadRecords()]); }
 
+    const isMultiModel = ref(false);
+
     async function loadKpis() {
       kpis.value.loading = true;
       try {
         buildWhere();
-        const [g] = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last FROM detections WHERE ${_w}`,_wp);
-        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date)`,_wp);
+        const [g] = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last, COUNT(DISTINCT Model) as model_count FROM active_detections WHERE ${_w}`,_wp);
+        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM active_detections WHERE ${_w} GROUP BY Date)`,_wp);
         const days = Math.round((new Date(g.last)-new Date(g.first))/86400000)+1;
+        isMultiModel.value = (g.model_count || 1) > 1;
         kpis.value = {loading:false, total:g.total.toLocaleString(), sp:g.sp, avgConf:g.avg_conf, maxConf:g.max_conf, perDay:Math.round(pd.avg||0).toLocaleString(), days:days.toLocaleString()};
       } catch(e) { kpis.value = {loading:false}; }
     }
@@ -456,7 +460,7 @@ const app = createApp({
     return {
       lang, t, spName, tab, switchTab,
       // Stats
-      fp, fc, kpis, topCount, topConf, records,
+      fp, fc, kpis, topCount, topConf, records, isMultiModel,
       canvasMonthly, canvasConf, timeResLabel,
       fmtDate, navigateTo, chartColor, loadAll, resetDefaults, exportCsv,
       quickPlay(comName) { quickPlaySpecies(comName); },
