@@ -77,23 +77,23 @@ function handle(req, res, pathname, ctx) {
         const nocturnalSpecies = (rules.rules?.nocturnal_day?.species) || [];
         const outOfSeasonMap = (rules.rules?.out_of_season?.species_months) || {};
 
-        // ── Basic stats ──
+        // ── Basic stats (confidence-filtered to match dashboard/overview) ──
         const statsRow = db.prepare(`
           SELECT COUNT(*) as totalDetections,
                  COUNT(DISTINCT Com_Name) as totalSpecies
-          FROM active_detections WHERE Date = ?
-        `).get(dateStr);
+          FROM active_detections WHERE Date = ? AND Confidence >= ?
+        `).get(dateStr, minConf);
 
-        // ── Density (48 half-hour slots) ──
+        // ── Density (48 half-hour slots, confidence-filtered) ──
         const densityRows = db.prepare(`
           SELECT
             CAST(CAST(SUBSTR(Time,1,2) AS INT) * 2
               + CASE WHEN CAST(SUBSTR(Time,4,2) AS INT) >= 30 THEN 1 ELSE 0 END
             AS INT) as slot,
             COUNT(*) as count
-          FROM active_detections WHERE Date = ?
+          FROM active_detections WHERE Date = ? AND Confidence >= ?
           GROUP BY slot ORDER BY slot
-        `).all(dateStr);
+        `).all(dateStr, minConf);
 
         // ── Events selection ──
         const events = [];

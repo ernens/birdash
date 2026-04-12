@@ -124,10 +124,17 @@ function rebuildAll(dbWrite) {
  * Incremental refresh for today (and current month / affected species).
  * Fast — only recomputes today's data.
  */
+function _localDateStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 function refreshToday(dbWrite, dateStr) {
   if (!dateStr) {
-    const now = new Date();
-    dateStr = now.toISOString().split('T')[0];
+    // Use LOCAL date, not UTC — toISOString() returns UTC which is
+    // 1-2h behind CEST, causing the refresh to target the wrong day
+    // between midnight and 01:59 local time.
+    dateStr = _localDateStr();
   }
   const ym = dateStr.substring(0, 7);
 
@@ -187,9 +194,9 @@ function startPeriodicRefresh(dbWrite, intervalMs = 5 * 60 * 1000) {
     try { refreshToday(dbWrite); }
     catch (e) { console.error('[BIRDASH] Aggregate refresh error:', e.message); }
   }, intervalMs);
-  // Also do a midnight full rebuild check
+  // Also do a midnight full rebuild check (using local date)
   setInterval(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = _localDateStr();
     if (_lastRefreshDate && _lastRefreshDate !== today) {
       console.log('[BIRDASH] New day detected, full aggregate rebuild');
       try { rebuildAll(dbWrite); } catch (e) { console.error('[BIRDASH] Rebuild error:', e.message); }

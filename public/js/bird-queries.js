@@ -371,7 +371,7 @@
     /** Weekly detection count for a given year — phenology presence/abundance modes */
     phenologyWeekly(comName, year, c) {
       return [
-        "SELECT CAST(strftime('%W', Date) AS INTEGER) as week, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND strftime('%Y', Date)=? AND Confidence>=? GROUP BY week ORDER BY week",
+        "SELECT MIN(CAST(strftime('%W', Date) AS INTEGER), 52) as week, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND strftime('%Y', Date)=? AND Confidence>=? GROUP BY week ORDER BY week",
         [comName, String(year), c || C()]
       ];
     },
@@ -379,7 +379,7 @@
     /** Average hour of detection per week — phenology hourly mode + dawn chorus inference */
     phenologyHourlyByWeek(comName, year, c) {
       return [
-        "SELECT CAST(strftime('%W', Date) AS INTEGER) as week, ROUND(AVG(CAST(SUBSTR(Time,1,2) AS REAL)),1) as avg_hour, SUM(CASE WHEN CAST(SUBSTR(Time,1,2) AS INTEGER) BETWEEN 4 AND 8 THEN 1 ELSE 0 END) as dawn_n, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND strftime('%Y', Date)=? AND Confidence>=? GROUP BY week ORDER BY week",
+        "SELECT MIN(CAST(strftime('%W', Date) AS INTEGER), 52) as week, ROUND(AVG(CAST(SUBSTR(Time,1,2) AS REAL)),1) as avg_hour, SUM(CASE WHEN CAST(SUBSTR(Time,1,2) AS INTEGER) BETWEEN 4 AND 8 THEN 1 ELSE 0 END) as dawn_n, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND strftime('%Y', Date)=? AND Confidence>=? GROUP BY week ORDER BY week",
         [comName, String(year), c || C()]
       ];
     },

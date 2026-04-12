@@ -8,6 +8,8 @@ const fsp = fs.promises;
 const safeConfig = require('../lib/safe-config');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
+const aggregates = require('../lib/aggregates');
+const { clearQueryCache } = require('./data');
 
 // ── In-memory cache for expensive endpoints ──────────────────────────────
 const _cache = new Map();
@@ -66,6 +68,12 @@ function handle(req, res, pathname, ctx) {
               }
             }
           }
+
+          // Invalidate caches + refresh aggregates so the UI immediately
+          // reflects the deletion without waiting for the 5-min timer.
+          clearQueryCache();
+          _cache.clear();
+          try { aggregates.refreshToday(dbWrite, date); } catch {}
 
           console.log(`[delete] Removed ${result.changes} detection(s): ${comName} ${date} ${time}`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -145,6 +153,10 @@ function handle(req, res, pathname, ctx) {
               if (remaining.length === 0) await fsp.rmdir(dir);
             } catch(e) { /* ignore */ }
           }
+
+          clearQueryCache();
+          _cache.clear();
+          try { aggregates.rebuildAll(dbWrite); } catch {} // full rebuild after bulk delete
 
           console.log(`[delete-species] Removed ${result.changes} detections for "${comName}", ${filesDeleted} files deleted`);
           res.writeHead(200, { 'Content-Type': 'application/json' });

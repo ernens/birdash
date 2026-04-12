@@ -9,6 +9,9 @@ const fs = require('fs');
 const _queryCache = new Map();
 const QUERY_CACHE_TTL = 2 * 60 * 1000;
 
+// Exported so detections.js can invalidate the cache after DELETE / edit
+function clearQueryCache() { _queryCache.clear(); }
+
 function handle(req, res, pathname, ctx) {
   const { requireAuth, db, dbWrite, readJsonFile, writeJsonFileAtomic, JSON_CT, validateQuery, photoCacheKey, PHOTO_CACHE_DIR, ebirdFreq } = ctx;
 
@@ -337,4 +340,4 @@ function handle(req, res, pathname, ctx) {
   return false;
 }
 
-module.exports = { handle };
+module.exports = { handle, clearQueryCache };
