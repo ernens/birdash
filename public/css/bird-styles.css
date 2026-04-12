@@ -2601,6 +2601,7 @@ a:hover { opacity: .85; }
   padding: 1rem 1.25rem;
   overflow-y: auto;
   flex: 1;
+  max-height: 50vh;
   font-size: .85rem;
   line-height: 1.5;
 }
