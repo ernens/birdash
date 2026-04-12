@@ -33,12 +33,15 @@ function handle(req, res, pathname, ctx) {
         const lat = parseFloat(conf.LATITUDE || conf.LAT || '0');
         const lon = parseFloat(conf.LONGITUDE || conf.LON || '0');
         const hasGPS = lat !== 0 || lon !== 0;
+        // Confidence threshold from birdnet.conf (default 0.7) —
+        // used by all card queries so they agree with the dashboard.
+        const minConf = parseFloat(conf.CONFIDENCE || conf.BIRDNET_CONFIDENCE || '0.7');
 
         // ── DB stats ──
         const dbStats = db.prepare(`
           SELECT COUNT(DISTINCT Date) as total_days,
                  MIN(Date) as first_date, MAX(Date) as last_date
-          FROM detections WHERE Date < DATE('now','localtime')
+          FROM active_detections WHERE Date < DATE('now','localtime')
         `).get();
         const totalDays = dbStats.total_days || 0;
 
@@ -63,12 +66,12 @@ function handle(req, res, pathname, ctx) {
             const placeholders = oosSpecies.map(() => '?').join(',');
             const oosRows = db.prepare(`
               SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
-              FROM detections
+              FROM active_detections
               WHERE Date = DATE('now','localtime')
                 AND Sci_Name IN (${placeholders})
-                AND Confidence >= 0.7
+                AND Confidence >= ?
               ORDER BY Confidence DESC LIMIT 5
-            `).all(...oosSpecies);
+            `).all(...oosSpecies, minConf);
             if (oosRows.length > 0) {
               cardOutOfSeason.active = true;
               cardOutOfSeason.data = {
@@ -94,14 +97,14 @@ function handle(req, res, pathname, ctx) {
             const spikeRows = db.prepare(`
               WITH today AS (
                 SELECT Com_Name, COUNT(*) as count_today
-                FROM detections WHERE Date = DATE('now','localtime')
+                FROM active_detections WHERE Date = DATE('now','localtime')
                 GROUP BY Com_Name
               ),
               baseline AS (
                 SELECT Com_Name, ROUND(AVG(daily_count), 1) as avg_7d
                 FROM (
                   SELECT Com_Name, Date, COUNT(*) as daily_count
-                  FROM detections
+                  FROM active_detections
                   WHERE Date BETWEEN DATE('now','localtime','-7 days') AND DATE('now','localtime','-1 day')
                   GROUP BY Com_Name, Date
                 ) GROUP BY Com_Name
@@ -136,13 +139,13 @@ function handle(req, res, pathname, ctx) {
             const returnRows = db.prepare(`
               WITH last AS (
                 SELECT Com_Name, MAX(Date) as last_date
-                FROM detections
+                FROM active_detections
                 WHERE Date < DATE('now','localtime') AND Date >= DATE('now','localtime', '-365 days')
                 GROUP BY Com_Name
               ),
               today AS (
                 SELECT DISTINCT Com_Name, Sci_Name
-                FROM detections
+                FROM active_detections
                 WHERE Date = DATE('now','localtime')
               )
               SELECT t.Com_Name, t.Sci_Name, l.last_date as last_seen_before,
@@ -180,12 +183,12 @@ function handle(req, res, pathname, ctx) {
             WITH today AS (
               SELECT Com_Name, Sci_Name, Confidence,
                      MIN(Time) as first_time, File_Name
-              FROM detections
-              WHERE Date = DATE('now','localtime') AND Confidence >= 0.75
+              FROM active_detections
+              WHERE Date = DATE('now','localtime') AND Confidence >= ?
               GROUP BY Com_Name
             ),
             prior AS (
-              SELECT DISTINCT Com_Name FROM detections
+              SELECT DISTINCT Com_Name FROM active_detections
               WHERE Date >= ? AND Date < DATE('now','localtime')
             )
             SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.first_time, t.File_Name
@@ -193,7 +196,7 @@ function handle(req, res, pathname, ctx) {
             LEFT JOIN prior p ON t.Com_Name = p.Com_Name
             WHERE p.Com_Name IS NULL
             ORDER BY t.first_time ASC LIMIT 5
-          `).all(wnYearStart);
+          `).all(wnYearStart, minConf);
           if (foyRows.length > 0) {
             cardFirstOfYear.active = true;
             cardFirstOfYear.data = {
@@ -218,7 +221,7 @@ function handle(req, res, pathname, ctx) {
             const streakRows = db.prepare(`
               WITH daily_presence AS (
                 SELECT Com_Name, Date as day
-                FROM detections
+                FROM active_detections
                 WHERE Date <= DATE('now','localtime')
                 GROUP BY Com_Name, Date
               ),
@@ -257,13 +260,13 @@ function handle(req, res, pathname, ctx) {
             const peakRows = db.prepare(`
               WITH current_week AS (
                 SELECT Com_Name, COUNT(*) as count_this_week
-                FROM detections WHERE Date >= DATE('now','localtime','-7 days')
+                FROM active_detections WHERE Date >= DATE('now','localtime','-7 days')
                 GROUP BY Com_Name
               ),
               historical_week AS (
                 SELECT Com_Name, STRFTIME('%W', Date) as week_num,
                        STRFTIME('%Y', Date) as year, COUNT(*) as count_that_week
-                FROM detections
+                FROM active_detections
                 WHERE STRFTIME('%W', Date) = STRFTIME('%W', 'now','localtime')
                   AND Date < DATE('now','localtime','-7 days')
                 GROUP BY Com_Name, week_num, year
@@ -312,7 +315,7 @@ function handle(req, res, pathname, ctx) {
             const chorusRow = db.prepare(`
               SELECT COUNT(DISTINCT Com_Name) as species_count,
                      COUNT(*) as detection_count
-              FROM detections
+              FROM active_detections
               WHERE Date = DATE('now','localtime')
                 AND Time BETWEEN ? AND ?
             `).get(sunriseTime, dawnEndTime);
@@ -339,7 +342,7 @@ function handle(req, res, pathname, ctx) {
                    SUM(CASE WHEN Confidence >= Cutoff * 2.0 THEN 1 ELSE 0 END) as strong,
                    SUM(CASE WHEN Confidence >= Cutoff * 1.5 THEN 1 ELSE 0 END) as acceptable,
                    ROUND(AVG(Confidence / CASE WHEN Cutoff > 0 THEN Cutoff ELSE 0.15 END), 2) as avg_ratio
-            FROM detections WHERE Date = DATE('now','localtime')
+            FROM active_detections WHERE Date = DATE('now','localtime')
           `).get();
           const total = aqRow.total_detections || 0;
           if (total < 10) {
@@ -376,13 +379,13 @@ function handle(req, res, pathname, ctx) {
             const richRow = db.prepare(`
               WITH today_richness AS (
                 SELECT COUNT(DISTINCT Com_Name) as today_count
-                FROM detections WHERE Date = DATE('now','localtime')
+                FROM active_detections WHERE Date = DATE('now','localtime')
               ),
               historical_avg AS (
                 SELECT ROUND(AVG(species_count), 1) as avg_count
                 FROM (
                   SELECT Date, COUNT(DISTINCT Com_Name) as species_count
-                  FROM detections
+                  FROM active_detections
                   WHERE STRFTIME('%w', Date) = STRFTIME('%w', 'now','localtime')
                     AND Date BETWEEN DATE('now','localtime','-28 days') AND DATE('now','localtime','-1 day')
                   GROUP BY Date

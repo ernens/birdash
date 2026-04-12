@@ -107,6 +107,45 @@ console.log(`[BIRDASH] birds.db ouvert : ${DB_PATH}`);
 
 // ── Birdash validation database ──────────────────────────────────────────────
 const BIRDASH_DB_PATH = path.join(process.env.HOME, 'birdash', 'birdash.db');
+
+// ATTACH birdash.db to both connections so SQL queries can exclude
+// rejected detections via the `active_detections` view. Only 24 rows
+// in the validations table currently, so the NOT EXISTS is fast.
+// Try to ATTACH birdash.db and create a VIEW that excludes rejected
+// detections. On test environments or fresh installs where birdash.db
+// doesn't exist yet, gracefully fall back to a pass-through VIEW
+// (= all detections, no exclusion) so the app still works.
+try {
+  if (fs.existsSync(BIRDASH_DB_PATH)) {
+    db.exec(`ATTACH '${BIRDASH_DB_PATH}' AS vdb`);
+    dbWrite.exec(`ATTACH '${BIRDASH_DB_PATH}' AS vdb`);
+    db.exec(`CREATE TEMP VIEW IF NOT EXISTS active_detections AS
+      SELECT d.* FROM detections d
+      WHERE NOT EXISTS (
+        SELECT 1 FROM vdb.validations v
+        WHERE v.date = d.Date AND v.time = d.Time
+          AND v.sci_name = d.Sci_Name AND v.status = 'rejected'
+      )`);
+    dbWrite.exec(`CREATE TEMP VIEW IF NOT EXISTS active_detections AS
+      SELECT d.* FROM detections d
+      WHERE NOT EXISTS (
+        SELECT 1 FROM vdb.validations v
+        WHERE v.date = d.Date AND v.time = d.Time
+          AND v.sci_name = d.Sci_Name AND v.status = 'rejected'
+      )`);
+    console.log('[BIRDASH] active_detections view created (excludes rejected)');
+  } else {
+    throw new Error('birdash.db not found — using pass-through view');
+  }
+} catch(e) {
+  // Fallback: active_detections = all detections (no exclusion).
+  // This ensures FROM active_detections works even without birdash.db.
+  try {
+    db.exec('CREATE TEMP VIEW IF NOT EXISTS active_detections AS SELECT * FROM detections');
+    dbWrite.exec('CREATE TEMP VIEW IF NOT EXISTS active_detections AS SELECT * FROM detections');
+  } catch {}
+  console.warn('[BIRDASH] active_detections fallback (no rejection filter):', e.message);
+}
 let birdashDb;
 try {
   birdashDb = new Database(BIRDASH_DB_PATH);

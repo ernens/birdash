@@ -88,7 +88,7 @@ function handle(req, res, pathname, ctx) {
       const detCounts = db.prepare(
         `SELECT Com_Name, COUNT(*) as n, MAX(Date) as last_date, MAX(Time) as last_time,
                 AVG(Confidence) as avg_conf, MIN(Date) as first_date
-         FROM detections WHERE Com_Name IN (${placeholders}) GROUP BY Com_Name`
+         FROM active_detections WHERE Com_Name IN (${placeholders}) GROUP BY Com_Name`
       ).all(...names);
       const countMap = {};
       for (const r of detCounts) countMap[r.Com_Name] = r;
@@ -96,7 +96,7 @@ function handle(req, res, pathname, ctx) {
       // Today count
       const todayStr = new Date().toISOString().slice(0, 10);
       const todayCounts = db.prepare(
-        `SELECT Com_Name, COUNT(*) as n FROM detections
+        `SELECT Com_Name, COUNT(*) as n FROM active_detections
          WHERE Com_Name IN (${placeholders}) AND Date=? GROUP BY Com_Name`
       ).all(...names, todayStr);
       const todayMap = {};

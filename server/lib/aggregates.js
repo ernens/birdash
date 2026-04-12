@@ -18,7 +18,7 @@ const DAILY_REBUILD_SQL = `
          ROUND(MAX(Confidence), 4) as max_conf,
          MIN(Time) as first_time,
          MAX(Time) as last_time
-  FROM detections
+  FROM active_detections
   WHERE Confidence >= 0.5
   GROUP BY Date, Sci_Name
 `;
@@ -30,7 +30,7 @@ const MONTHLY_REBUILD_SQL = `
          COUNT(*) as count,
          ROUND(AVG(Confidence), 4) as avg_conf,
          COUNT(DISTINCT Date) as day_count
-  FROM detections
+  FROM active_detections
   WHERE Confidence >= 0.5
   GROUP BY SUBSTR(Date,1,7), Sci_Name
 `;
@@ -44,7 +44,7 @@ const SPECIES_REBUILD_SQL = `
          MAX(Date) as last_date,
          ROUND(AVG(Confidence), 4) as avg_conf,
          COUNT(DISTINCT Date) as day_count
-  FROM detections
+  FROM active_detections
   WHERE Confidence >= 0.5
   GROUP BY Sci_Name
 `;
@@ -134,7 +134,7 @@ function refreshToday(dbWrite, dateStr) {
       SELECT Date, Sci_Name, Com_Name,
              COUNT(*), ROUND(AVG(Confidence),4), ROUND(MAX(Confidence),4),
              MIN(Time), MAX(Time)
-      FROM detections WHERE Date = ? AND Confidence >= 0.5
+      FROM active_detections WHERE Date = ? AND Confidence >= 0.5
       GROUP BY Sci_Name
     `).run(dateStr);
 
@@ -144,19 +144,19 @@ function refreshToday(dbWrite, dateStr) {
       INSERT INTO monthly_stats (year_month, sci_name, com_name, count, avg_conf, day_count)
       SELECT SUBSTR(Date,1,7), Sci_Name, MAX(Com_Name),
              COUNT(*), ROUND(AVG(Confidence),4), COUNT(DISTINCT Date)
-      FROM detections WHERE SUBSTR(Date,1,7) = ? AND Confidence >= 0.5
+      FROM active_detections WHERE SUBSTR(Date,1,7) = ? AND Confidence >= 0.5
       GROUP BY Sci_Name
     `).run(ym);
 
     // Refresh species_stats for species seen today
     const todaySpecies = dbWrite.prepare(
-      'SELECT DISTINCT Sci_Name FROM detections WHERE Date = ? AND Confidence >= 0.5'
+      'SELECT DISTINCT Sci_Name FROM active_detections WHERE Date = ? AND Confidence >= 0.5'
     ).all(dateStr);
     const spUpdate = dbWrite.prepare(`
       INSERT OR REPLACE INTO species_stats (sci_name, com_name, total_count, first_date, last_date, avg_conf, day_count)
       SELECT Sci_Name, MAX(Com_Name), COUNT(*), MIN(Date), MAX(Date),
              ROUND(AVG(Confidence),4), COUNT(DISTINCT Date)
-      FROM detections WHERE Sci_Name = ? AND Confidence >= 0.5
+      FROM active_detections WHERE Sci_Name = ? AND Confidence >= 0.5
       GROUP BY Sci_Name
     `);
     for (const { Sci_Name } of todaySpecies) {

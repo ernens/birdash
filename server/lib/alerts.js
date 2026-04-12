@@ -293,7 +293,7 @@ async function checkSystemAlerts() {
     if (th.alert_no_det) {
       try {
         if (db) {
-          const row = db.prepare('SELECT MAX(Date || " " || Time) as last FROM detections').get();
+          const row = db.prepare('SELECT MAX(Date || " " || Time) as last FROM active_detections').get();
           if (row && row.last) {
             const lastDet = new Date(row.last);
             const hoursSince = (Date.now() - lastDet.getTime()) / 3600000;
@@ -329,12 +329,12 @@ async function checkBirdAlerts() {
           SELECT t.Com_Name, t.cnt AS today_count, COALESCE(h.avg_count, 0) AS avg_count
           FROM (
             SELECT Com_Name, COUNT(*) AS cnt
-            FROM detections WHERE Date = ?
+            FROM active_detections WHERE Date = ?
             GROUP BY Com_Name
           ) t
           LEFT JOIN (
             SELECT Com_Name, CAST(COUNT(*) AS REAL) / 30.0 AS avg_count
-            FROM detections WHERE Date >= ? AND Date < ?
+            FROM active_detections WHERE Date >= ? AND Date < ?
             GROUP BY Com_Name
           ) h ON t.Com_Name = h.Com_Name
           WHERE t.cnt > 3 * MAX(h.avg_count, 1)
@@ -353,11 +353,11 @@ async function checkBirdAlerts() {
           SELECT top5.Com_Name, top5.avg_count
           FROM (
             SELECT Com_Name, CAST(COUNT(*) AS REAL) / 30.0 AS avg_count
-            FROM detections WHERE Date >= ? AND Date < ?
+            FROM active_detections WHERE Date >= ? AND Date < ?
             GROUP BY Com_Name ORDER BY COUNT(*) DESC LIMIT 5
           ) top5
           LEFT JOIN (
-            SELECT DISTINCT Com_Name FROM detections WHERE Date = ?
+            SELECT DISTINCT Com_Name FROM active_detections WHERE Date = ?
           ) today ON top5.Com_Name = today.Com_Name
           WHERE today.Com_Name IS NULL
         `).all(thirtyDaysAgo, today, today);
@@ -373,10 +373,10 @@ async function checkBirdAlerts() {
       try {
         const rows = db.prepare(`
           SELECT d.Com_Name, h.total, d.max_conf
-          FROM (SELECT Com_Name, MAX(Confidence) as max_conf FROM detections WHERE Date = ? GROUP BY Com_Name) d
+          FROM (SELECT Com_Name, MAX(Confidence) as max_conf FROM active_detections WHERE Date = ? GROUP BY Com_Name) d
           JOIN (
             SELECT Com_Name, COUNT(*) AS total
-            FROM detections GROUP BY Com_Name HAVING COUNT(*) <= 3
+            FROM active_detections GROUP BY Com_Name HAVING COUNT(*) <= 3
           ) h ON d.Com_Name = h.Com_Name
         `).all(today);
         for (const r of rows) {

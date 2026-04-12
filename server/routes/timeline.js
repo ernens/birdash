@@ -81,7 +81,7 @@ function handle(req, res, pathname, ctx) {
         const statsRow = db.prepare(`
           SELECT COUNT(*) as totalDetections,
                  COUNT(DISTINCT Com_Name) as totalSpecies
-          FROM detections WHERE Date = ?
+          FROM active_detections WHERE Date = ?
         `).get(dateStr);
 
         // ── Density (48 half-hour slots) ──
@@ -91,7 +91,7 @@ function handle(req, res, pathname, ctx) {
               + CASE WHEN CAST(SUBSTR(Time,4,2) AS INT) >= 30 THEN 1 ELSE 0 END
             AS INT) as slot,
             COUNT(*) as count
-          FROM detections WHERE Date = ?
+          FROM active_detections WHERE Date = ?
           GROUP BY slot ORDER BY slot
         `).all(dateStr);
 
@@ -107,14 +107,16 @@ function handle(req, res, pathname, ctx) {
           const noctRows = db.prepare(`
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
-            FROM detections
+            FROM active_detections
             WHERE Date = ?
               AND (CAST(SUBSTR(Time,1,2) AS INT) < 6 OR CAST(SUBSTR(Time,1,2) AS INT) >= 21)
               AND Confidence >= ?
               AND Sci_Name IN (${placeholders})
             GROUP BY Com_Name
             ORDER BY MIN(Time) ASC
-          `).all(dateStr, Math.max(minConf, 0.5), ...nocturnalSpecies);
+          `).all(dateStr, minConf, ...nocturnalSpecies);
+          // Nocturnal species use the user's minConf directly (previously
+          // floored at 0.5 which was inconsistent with other event types).
           for (const r of noctRows) {
             const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
             events.push({
@@ -143,7 +145,7 @@ function handle(req, res, pathname, ctx) {
           const oosRows = db.prepare(`
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
-            FROM detections
+            FROM active_detections
             WHERE Date = ? AND Sci_Name IN (${ph}) AND Confidence >= ?
             GROUP BY Com_Name ORDER BY Confidence DESC
           `).all(dateStr, ...oosSciNames, minConf);
@@ -169,14 +171,14 @@ function handle(req, res, pathname, ctx) {
         const rareRows = db.prepare(`
           WITH hist AS (
             SELECT Com_Name, COUNT(*) as cnt
-            FROM detections
+            FROM active_detections
             WHERE Date < ? AND Date >= DATE(?, '-365 days')
             GROUP BY Com_Name
           ),
           today AS (
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
-            FROM detections
+            FROM active_detections
             WHERE Date = ? AND Confidence >= ?
             GROUP BY Com_Name
           )
@@ -211,12 +213,12 @@ function handle(req, res, pathname, ctx) {
           WITH today AS (
             SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                    MIN(Time) as Time, File_Name
-            FROM detections
+            FROM active_detections
             WHERE Date = ? AND Confidence >= ?
             GROUP BY Com_Name
           ),
           prior AS (
-            SELECT DISTINCT Com_Name FROM detections
+            SELECT DISTINCT Com_Name FROM active_detections
             WHERE Date >= ? AND Date < ?
           )
           SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name
@@ -246,7 +248,7 @@ function handle(req, res, pathname, ctx) {
         // 5. First diurnal detection of the day
         const firstDiurnal = db.prepare(`
           SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
-          FROM detections
+          FROM active_detections
           WHERE Date = ? AND Time >= ? AND Confidence >= ?
           ORDER BY Time ASC LIMIT 1
         `).get(dateStr, sunriseTime, minConf);
@@ -269,7 +271,7 @@ function handle(req, res, pathname, ctx) {
         // 6. Best detection of the day
         const bestDet = db.prepare(`
           SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
-          FROM detections
+          FROM active_detections
           WHERE Date = ? ORDER BY Confidence DESC LIMIT 1
         `).get(dateStr);
         if (bestDet && !events.some(e => e.sciName === bestDet.Sci_Name && e.time === bestDet.Time.substr(0, 5))) {
@@ -293,15 +295,15 @@ function handle(req, res, pathname, ctx) {
           const returnRows = db.prepare(`
             WITH last AS (
               SELECT Com_Name, MAX(Date) as last_date
-              FROM detections
+              FROM active_detections
               WHERE Date < ? AND Date >= DATE(?, '-90 days')
               GROUP BY Com_Name
             ),
             today AS (
               SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                      MIN(Time) as Time, File_Name
-              FROM detections
-              WHERE Date = ? AND Confidence >= 0.7
+              FROM active_detections
+              WHERE Date = ? AND Confidence >= ?
               GROUP BY Com_Name
             )
             SELECT t.Com_Name, t.Sci_Name, t.Confidence, t.Time, t.File_Name,
@@ -311,7 +313,7 @@ function handle(req, res, pathname, ctx) {
             WHERE l.last_date <= DATE(?, '-10 days')
             ORDER BY t.Confidence DESC
             LIMIT 5
-          `).all(dateStr, dateStr, dateStr, dateStr);
+          `).all(dateStr, dateStr, dateStr, minConf, dateStr);
           for (const r of returnRows) {
             if (events.some(e => e.sciName === r.Sci_Name)) continue;
             const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
@@ -337,15 +339,15 @@ function handle(req, res, pathname, ctx) {
             WITH today AS (
               SELECT Com_Name, Sci_Name, COUNT(*) as today_count,
                      MIN(Time) as Time, MAX(Confidence) as Confidence, File_Name
-              FROM detections
-              WHERE Date = ? AND Confidence >= 0.7
+              FROM active_detections
+              WHERE Date = ? AND Confidence >= ?
               GROUP BY Com_Name
             ),
             baseline AS (
               SELECT Com_Name,
                      CAST(COUNT(*) AS FLOAT) / COUNT(DISTINCT Date) as avg_count
-              FROM detections
-              WHERE Date < ? AND Date >= DATE(?, '-30 days')
+              FROM active_detections
+              WHERE Date < ? AND Date >= DATE(?, '-30 days') AND Confidence >= ?
               GROUP BY Com_Name
             )
             SELECT t.Com_Name, t.Sci_Name, t.today_count, b.avg_count,
@@ -356,7 +358,7 @@ function handle(req, res, pathname, ctx) {
             WHERE b.avg_count >= 2 AND t.today_count >= b.avg_count * 2
             ORDER BY ratio DESC
             LIMIT 3
-          `).all(dateStr, dateStr, dateStr);
+          `).all(dateStr, minConf, dateStr, dateStr, minConf);
           for (const r of spikeRows) {
             if (events.some(e => e.sciName === r.Sci_Name)) continue;
             const h = parseInt(r.Time.substr(0, 2)), m = parseInt(r.Time.substr(3, 2));
@@ -382,7 +384,7 @@ function handle(req, res, pathname, ctx) {
             const chorusRows = db.prepare(`
               SELECT Com_Name, Sci_Name, MAX(Confidence) as Confidence,
                      MIN(Time) as Time, File_Name
-              FROM detections
+              FROM active_detections
               WHERE Date = ? AND Time >= ? AND Time <= ? AND Confidence >= ?
               GROUP BY Com_Name
               ORDER BY MIN(Time) ASC
@@ -414,7 +416,7 @@ function handle(req, res, pathname, ctx) {
             const topRows = db.prepare(`
               SELECT Com_Name, Sci_Name, COUNT(*) as n, MIN(Time) as Time,
                      MAX(Confidence) as Confidence, File_Name
-              FROM detections
+              FROM active_detections
               WHERE Date = ? AND Confidence >= ?
               GROUP BY Com_Name
               ORDER BY COUNT(*) DESC
@@ -518,8 +520,8 @@ function handle(req, res, pathname, ctx) {
         const notableCount = allEvents.filter(e => !e.isAstro && e.type !== 'cluster' && e.priority <= 2).length;
 
         // ── Navigation ──
-        const prevRow = db.prepare(`SELECT MAX(Date) as prev_date FROM detections WHERE Date < ?`).get(dateStr);
-        const nextRow = db.prepare(`SELECT MIN(Date) as next_date FROM detections WHERE Date > ?`).get(dateStr);
+        const prevRow = db.prepare(`SELECT MAX(Date) as prev_date FROM active_detections WHERE Date < ?`).get(dateStr);
+        const nextRow = db.prepare(`SELECT MIN(Date) as next_date FROM active_detections WHERE Date > ?`).get(dateStr);
 
         // ── Moon phase name ──
         let moonPhaseName = '';

@@ -40,7 +40,7 @@ function handle(req, res, pathname, ctx) {
 
           // Get file names before deleting
           const rows = dbWrite.prepare(
-            'SELECT File_Name FROM detections WHERE Date=? AND Time=? AND Com_Name=?'
+            'SELECT File_Name FROM active_detections WHERE Date=? AND Time=? AND Com_Name=?'
           ).all(date, time, comName);
 
           if (rows.length === 0) {
@@ -51,7 +51,7 @@ function handle(req, res, pathname, ctx) {
 
           // Delete from DB
           const result = dbWrite.prepare(
-            'DELETE FROM detections WHERE Date=? AND Time=? AND Com_Name=?'
+            'DELETE FROM active_detections WHERE Date=? AND Time=? AND Com_Name=?'
           ).run(date, time, comName);
 
           // Delete associated files (mp3 + png)
@@ -104,7 +104,7 @@ function handle(req, res, pathname, ctx) {
 
           // Get all file names first
           const rows = dbWrite.prepare(
-            'SELECT File_Name FROM detections WHERE Com_Name=?'
+            'SELECT File_Name FROM active_detections WHERE Com_Name=?'
           ).all(comName);
 
           if (rows.length === 0) {
@@ -115,7 +115,7 @@ function handle(req, res, pathname, ctx) {
 
           // Delete all from DB in a transaction
           const deleteAll = dbWrite.transaction(() => {
-            return dbWrite.prepare('DELETE FROM detections WHERE Com_Name=?').run(comName);
+            return dbWrite.prepare('DELETE FROM active_detections WHERE Com_Name=?').run(comName);
           });
           const result = deleteAll();
 
@@ -189,7 +189,7 @@ function handle(req, res, pathname, ctx) {
         }
 
         // Get all detected species
-        const detected = db.prepare('SELECT DISTINCT Sci_Name, Com_Name FROM detections ORDER BY Sci_Name').all();
+        const detected = db.prepare('SELECT DISTINCT Sci_Name, Com_Name FROM active_detections ORDER BY Sci_Name').all();
         // Lookup taxonomy for each
         const lookup = taxonomyDb.prepare('SELECT * FROM species_taxonomy WHERE sci_name = ?');
         const result = detected.map(d => {
@@ -255,7 +255,7 @@ function handle(req, res, pathname, ctx) {
 
         // Get detection counts per species
         const rows = db.prepare(
-          `SELECT Sci_Name, Com_Name, COUNT(*) as count FROM detections d WHERE 1=1 ${whereClause} GROUP BY Sci_Name ORDER BY count DESC`
+          `SELECT Sci_Name, Com_Name, COUNT(*) as count FROM active_detections d WHERE 1=1 ${whereClause} GROUP BY Sci_Name ORDER BY count DESC`
         ).all(...args);
 
         const lookup = taxonomyDb.prepare('SELECT * FROM species_taxonomy WHERE sci_name = ?');
@@ -410,7 +410,7 @@ function handle(req, res, pathname, ctx) {
   // Route : GET /api/health
   if (req.method === 'GET' && pathname === '/api/health') {
     try {
-      const row = db.prepare("SELECT COUNT(*) as total FROM detections").get();
+      const row = db.prepare("SELECT COUNT(*) as total FROM active_detections").get();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', total_detections: row.total }));
     } catch (err) {
@@ -443,7 +443,7 @@ function handle(req, res, pathname, ctx) {
 
         // Models active in period (confidence-filtered to avoid counting noise)
         const models = db.prepare(`
-          SELECT DISTINCT Model FROM detections WHERE Date >= ? AND Confidence >= ?
+          SELECT DISTINCT Model FROM active_detections WHERE Date >= ? AND Confidence >= ?
         `).all(minDate, minConf).map(r => r.Model);
 
         // Per-model stats — confidence filter prevents low-quality detections from inflating counts
@@ -452,7 +452,7 @@ function handle(req, res, pathname, ctx) {
           const row = db.prepare(`
             SELECT COUNT(*) as total, COUNT(DISTINCT Sci_Name) as species,
                    round(AVG(Confidence),3) as avg_conf
-            FROM detections WHERE Date >= ? AND Model = ? AND Confidence >= ?
+            FROM active_detections WHERE Date >= ? AND Model = ? AND Confidence >= ?
           `).get(minDate, m, minConf);
           stats[m] = row;
         }
@@ -465,10 +465,10 @@ function handle(req, res, pathname, ctx) {
           const placeholders = others.map(() => '?').join(',');
           const rows = db.prepare(`
             SELECT d.Sci_Name, d.Com_Name, COUNT(*) as n, round(AVG(d.Confidence),3) as avg_conf
-            FROM detections d
+            FROM active_detections d
             WHERE d.Date >= ? AND d.Model = ? AND d.Confidence >= ?
             AND d.Sci_Name NOT IN (
-              SELECT DISTINCT Sci_Name FROM detections
+              SELECT DISTINCT Sci_Name FROM active_detections
               WHERE Date >= ? AND Model IN (${placeholders}) AND Confidence >= ?
             )
             GROUP BY d.Sci_Name ORDER BY n DESC
@@ -486,11 +486,11 @@ function handle(req, res, pathname, ctx) {
               b.n as n2, b.avg_conf as conf2
             FROM (
               SELECT Sci_Name, Com_Name, COUNT(*) as n, round(AVG(Confidence),3) as avg_conf
-              FROM detections WHERE Date >= ? AND Model = ? AND Confidence >= ? GROUP BY Sci_Name
+              FROM active_detections WHERE Date >= ? AND Model = ? AND Confidence >= ? GROUP BY Sci_Name
             ) a
             INNER JOIN (
               SELECT Sci_Name, COUNT(*) as n, round(AVG(Confidence),3) as avg_conf
-              FROM detections WHERE Date >= ? AND Model = ? AND Confidence >= ? Group BY Sci_Name
+              FROM active_detections WHERE Date >= ? AND Model = ? AND Confidence >= ? Group BY Sci_Name
             ) b ON a.Sci_Name = b.Sci_Name
             ORDER BY (a.n + b.n) DESC
             LIMIT 30
@@ -500,7 +500,7 @@ function handle(req, res, pathname, ctx) {
         // Daily detection counts per model — confidence filter for consistency
         const daily = db.prepare(`
           SELECT Date, Model, COUNT(*) as n
-          FROM detections WHERE Date >= ? AND Confidence >= ?
+          FROM active_detections WHERE Date >= ? AND Confidence >= ?
           GROUP BY Date, Model ORDER BY Date
         `).all(minDate, minConf);
 
@@ -576,7 +576,7 @@ function handle(req, res, pathname, ctx) {
         // Get all detections for the date range
         const rows = db.prepare(`
           SELECT Date, Time, Sci_Name, Com_Name, Confidence, File_Name, Model
-          FROM detections WHERE Date >= ? AND Date <= ? ORDER BY Date DESC, Time DESC LIMIT ?
+          FROM active_detections WHERE Date >= ? AND Date <= ? ORDER BY Date DESC, Time DESC LIMIT ?
         `).all(dateFrom, dateTo, limit);
 
         // Count per species per day (for isolated detection rule)
