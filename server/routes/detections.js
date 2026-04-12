@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
 const safeConfig = require('../lib/safe-config');
+const { localDateStr, localDateOffset } = require('../lib/local-date');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const aggregates = require('../lib/aggregates');
@@ -441,7 +442,7 @@ function handle(req, res, pathname, ctx) {
       try {
         const qs = new URLSearchParams(req.url.split('?')[1] || '');
         const days = Math.min(parseInt(qs.get('days') || '7'), 90);
-        const minDate = qs.get('dateFrom') || new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+        const minDate = qs.get('dateFrom') || localDateOffset(-days);
         // Confidence filter — consistent with all other endpoints (default 0.7)
         const minConf = parseFloat(qs.get('minConf') || '0.7');
 
@@ -581,7 +582,7 @@ function handle(req, res, pathname, ctx) {
         }
 
         const qs = new URLSearchParams(req.url.split('?')[1] || '');
-        const dateFrom = qs.get('dateFrom') || qs.get('date') || new Date().toISOString().split('T')[0];
+        const dateFrom = qs.get('dateFrom') || qs.get('date') || localDateStr();
         const dateTo = qs.get('dateTo') || dateFrom;
         const limit = Math.min(parseInt(qs.get('limit') || '500'), 2000);
 
@@ -780,10 +781,8 @@ function handle(req, res, pathname, ctx) {
 
         // If ?generate=true, compute a fresh report
         if (qs.get('generate') === 'true') {
-          const end = qs.get('end') || new Date().toISOString().split('T')[0];
-          const startD = new Date(end + 'T12:00:00');
-          startD.setDate(startD.getDate() - 6);
-          const start = startD.toISOString().split('T')[0];
+          const end = qs.get('end') || localDateStr();
+          const start = localDateOffset(-6);
           const report = weeklyReport.generateReport(db, start, end);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(report));
@@ -814,9 +813,8 @@ function handle(req, res, pathname, ctx) {
     (async () => {
       try {
         const weeklyReport = require('../lib/weekly-report');
-        const end = new Date().toISOString().split('T')[0];
-        const startD = new Date(); startD.setDate(startD.getDate() - 6);
-        const start = startD.toISOString().split('T')[0];
+        const end = localDateStr();
+        const start = localDateOffset(-6);
         const report = weeklyReport.generateReport(db, start, end);
         const text = weeklyReport.formatText(report, 'BirdStation');
         const sent = await weeklyReport.sendReport(
