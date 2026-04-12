@@ -1212,5 +1212,16 @@
   "update_cat_docs": "Documentatie",
   "update_cat_test": "Tests",
   "update_cat_chore": "Onderhoud",
-  "update_cat_other": "Overig"
+  "update_cat_other": "Overig",
+  "bug_report_title": "Bug melden",
+  "bug_report_submitted": "Bugrapport verzonden!",
+  "bug_report_view_github": "Bekijk op GitHub",
+  "bug_report_label_title": "Titel",
+  "bug_report_label_desc": "Beschrijving",
+  "bug_report_ph_title": "Korte samenvatting van het probleem",
+  "bug_report_ph_desc": "Stappen om te reproduceren, verwacht vs. werkelijk gedrag...",
+  "bug_report_auto_info": "Systeeminfo (versie, browser, pagina) wordt automatisch toegevoegd.",
+  "bug_report_cancel": "Annuleren",
+  "bug_report_submit": "Verzenden",
+  "bug_report_sending": "Verzenden..."
 }

@@ -1212,5 +1212,16 @@
   "update_cat_docs": "Dokumentation",
   "update_cat_test": "Tests",
   "update_cat_chore": "Wartung",
-  "update_cat_other": "Sonstiges"
+  "update_cat_other": "Sonstiges",
+  "bug_report_title": "Fehler melden",
+  "bug_report_submitted": "Fehlerbericht gesendet!",
+  "bug_report_view_github": "Auf GitHub ansehen",
+  "bug_report_label_title": "Titel",
+  "bug_report_label_desc": "Beschreibung",
+  "bug_report_ph_title": "Kurze Zusammenfassung des Problems",
+  "bug_report_ph_desc": "Schritte zur Reproduktion, erwartetes vs. tatsächliches Verhalten...",
+  "bug_report_auto_info": "Systeminfo (Version, Browser, Seite) wird automatisch beigefügt.",
+  "bug_report_cancel": "Abbrechen",
+  "bug_report_submit": "Senden",
+  "bug_report_sending": "Sende..."
 }

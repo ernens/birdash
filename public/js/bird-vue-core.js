@@ -1302,7 +1302,7 @@
         </div>
       </div>
       <!-- Bug report button -->
-      <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" title="Report a bug">
+      <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')">
         <bird-icon name="bug" :size="16"></bird-icon>
       </button>
       <!-- Notification bell (unified, 3 severities) -->
@@ -1476,36 +1476,36 @@
   <div v-if="bugReportOpen" class="update-modal-backdrop" @click.self="closeBugReport">
     <div class="update-modal" style="max-width:480px;">
       <div class="update-modal-hdr">
-        <div class="update-modal-title">Report a Bug</div>
+        <div class="update-modal-title"><bird-icon name="bug" :size="16" style="color:var(--danger);"></bird-icon> {{t('bug_report_title')}}</div>
         <button class="update-modal-close" @click="closeBugReport" aria-label="Close"><bird-icon name="x" :size="16"></bird-icon></button>
       </div>
       <div class="update-modal-body">
         <div v-if="bugReportForm.sent" style="text-align:center;padding:1rem 0;">
           <bird-icon name="check-circle" :size="32" style="color:var(--accent);"></bird-icon>
-          <p style="margin:.8rem 0 .4rem;font-weight:600;">Bug report submitted!</p>
+          <p style="margin:.8rem 0 .4rem;font-weight:600;">{{t('bug_report_submitted')}}</p>
           <p v-if="bugReportForm.issueUrl" style="font-size:.85rem;">
-            <a :href="bugReportForm.issueUrl" target="_blank" rel="noopener" style="color:var(--accent);">View issue on GitHub</a>
+            <a :href="bugReportForm.issueUrl" target="_blank" rel="noopener" style="color:var(--accent);">{{t('bug_report_view_github')}}</a>
           </p>
-          <button class="update-btn-secondary" @click="closeBugReport" style="margin-top:1rem;">Close</button>
+          <button class="update-btn-secondary" @click="closeBugReport" style="margin-top:1rem;">OK</button>
         </div>
         <form v-else @submit.prevent="submitBugReport" style="display:flex;flex-direction:column;gap:.8rem;">
           <div v-if="bugReportForm.error" style="padding:.5rem .8rem;border-radius:6px;background:var(--danger,#e53935);color:#fff;font-size:.82rem;">
             {{bugReportForm.error}}
           </div>
-          <label style="font-size:.82rem;font-weight:600;">Title
-            <input v-model="bugReportForm.title" type="text" required placeholder="Brief summary of the issue"
+          <label style="font-size:.82rem;font-weight:600;">{{t('bug_report_label_title')}}
+            <input v-model="bugReportForm.title" type="text" required :placeholder="t('bug_report_ph_title')"
                    style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;">
           </label>
-          <label style="font-size:.82rem;font-weight:600;">Description
-            <textarea v-model="bugReportForm.description" rows="5" required placeholder="Steps to reproduce, expected vs actual behavior..."
+          <label style="font-size:.82rem;font-weight:600;">{{t('bug_report_label_desc')}}
+            <textarea v-model="bugReportForm.description" rows="5" required :placeholder="t('bug_report_ph_desc')"
                       style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;resize:vertical;"></textarea>
           </label>
-          <p style="font-size:.75rem;opacity:.6;">System info (version, browser, page) will be included automatically.</p>
+          <p style="font-size:.75rem;opacity:.6;">{{t('bug_report_auto_info')}}</p>
           <div style="display:flex;justify-content:flex-end;gap:.5rem;">
-            <button type="button" class="update-btn-secondary" @click="closeBugReport" :disabled="bugReportForm.sending">Cancel</button>
+            <button type="button" class="update-btn-secondary" @click="closeBugReport" :disabled="bugReportForm.sending">{{t('bug_report_cancel')}}</button>
             <button type="submit" class="update-btn-primary" :disabled="bugReportForm.sending || !bugReportForm.title.trim()">
-              <span v-if="bugReportForm.sending">Sending...</span>
-              <span v-else>Submit</span>
+              <span v-if="bugReportForm.sending">{{t('bug_report_sending')}}</span>
+              <span v-else>{{t('bug_report_submit')}}</span>
             </button>
           </div>
         </form>

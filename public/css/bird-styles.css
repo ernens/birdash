@@ -1582,10 +1582,10 @@ a:hover { opacity: .85; }
 
 /* ── Bug report button ────────────────────────────────────────────────────── */
 .hdr-bug-btn {
-  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  background: none; border: none; cursor: pointer; color: var(--danger, #e53935);
   padding: 4px 6px; border-radius: var(--radius);
 }
-.hdr-bug-btn:hover { color: var(--text-main); background: var(--border); }
+.hdr-bug-btn:hover { color: #fff; background: var(--danger, #e53935); }
 
 /* ── Notification bell ────────────────────────────────────────────────────── */
 .hdr-bell { position: relative; }
