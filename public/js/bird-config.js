@@ -97,16 +97,3 @@ const BIRD_CONFIG = {
   ],
 };
 
-// Reconstruction du chemin audio à partir du File_Name
-// Format disque : By_Date/{date}/{species}/{filename}
-// Exemple : "Pie_bavarde-94-2023-09-18-birdnet-17:42:21.mp3"
-//        → "/birds/audio/By_Date/2023-09-18/Pie_bavarde/Pie_bavarde-94-..."
-function getAudioUrl(fileName) {
-  if (!fileName) return null;
-  // Extrait l'espèce (tout avant le -score-) et la date
-  const m = fileName.match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
-  if (!m) return null;
-  const species = m[1];  // 'Pie_bavarde', 'Martin-pêcheur_dEurope'
-  const date    = m[2];  // '2023-09-18'
-  return `${BIRD_CONFIG.audioUrl}/By_Date/${encodeURIComponent(date)}/${encodeURIComponent(species)}/${encodeURIComponent(fileName)}`;
-}

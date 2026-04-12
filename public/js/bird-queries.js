@@ -124,22 +124,6 @@
       ];
     },
 
-    /** Species ranked by count for a date — today, calendar, recent */
-    speciesByDateRanked(date, c) {
-      return [
-        'SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n, ROUND(MAX(Confidence)*100,1) as max_conf, ROUND(AVG(Confidence)*100,1) as avg_conf FROM active_detections WHERE Date=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC',
-        [date, (c != null ? c : C())]
-      ];
-    },
-
-    /** Species for a date range — stats, analyses, biodiversity */
-    speciesByDateRange(dateFrom, dateTo, c) {
-      return [
-        'SELECT Com_Name, MIN(Sci_Name) as Sci_Name, COUNT(*) as n FROM active_detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC',
-        [dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
     /** Top species for a date range with limit — overview */
     topSpecies(dateFrom, limit, c) {
       return [
@@ -167,19 +151,6 @@
         'SELECT Date, Time, Confidence, File_Name, Model FROM active_detections WHERE Com_Name=? AND Confidence>=? ORDER BY Date DESC, Time DESC LIMIT ?',
         [comName, (c != null ? c : C()), limit]
       ];
-    },
-
-    /** Filtered detections with dynamic WHERE — detections page */
-    filteredDetections(where, params, limit = 10000) {
-      return [
-        `SELECT Date, Time, Com_Name, Sci_Name, ROUND(Confidence*100,1) as Confidence, File_Name, Model FROM active_detections WHERE ${where} ORDER BY Date DESC, Time DESC LIMIT ?`,
-        [...params, limit]
-      ];
-    },
-
-    /** Filtered detection count — detections page */
-    filteredCount(where, params) {
-      return [`SELECT COUNT(*) as n FROM active_detections WHERE ${where}`, params];
     },
 
     // ═══════════════════════════════════════════════════════════
@@ -218,14 +189,6 @@
       ];
     },
 
-    /** Monthly distribution for a species — species page */
-    monthlyBySpecies(comName, c) {
-      return [
-        "SELECT CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY m ORDER BY m ASC",
-        [comName, (c != null ? c : C())]
-      ];
-    },
-
     /** Daily count for a species in a date range — species page */
     dailyBySpecies(comName, dateFrom, c) {
       return [
@@ -250,14 +213,6 @@
       return ['SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=?', [date, (c != null ? c : C())]];
     },
 
-    /** Daily detections+species for date range — overview chart */
-    dailyStats(dateFrom, dateTo, c) {
-      return [
-        'SELECT Date, COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC',
-        [dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
     // rareTodayCount — REMOVED. overview.html now uses /api/rare-today
     // (eBird-based) instead of this naive HAVING COUNT(*)<=5 heuristic.
     // Keeping the dead code around would invite accidental reuse.
@@ -265,54 +220,6 @@
     // ═══════════════════════════════════════════════════════════
     //  STATS
     // ═══════════════════════════════════════════════════════════
-
-    /** Global stats with date filter — stats page */
-    globalStats(where, c) {
-      return [
-        `SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last FROM active_detections WHERE ${where}`,
-        [(c != null ? c : C())]
-      ];
-    },
-
-    /** Average detections per day — stats */
-    avgPerDay(where, c) {
-      return [
-        `SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM active_detections WHERE ${where} GROUP BY Date)`,
-        [(c != null ? c : C())]
-      ];
-    },
-
-    /** Monthly trend — stats */
-    monthlyTrend(where, c) {
-      return [
-        `SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE ${where} GROUP BY ym ORDER BY ym ASC`,
-        [(c != null ? c : C())]
-      ];
-    },
-
-    /** Yearly trend — stats */
-    yearlyTrend(where, c) {
-      return [
-        `SELECT SUBSTR(Date,1,4) as year, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE ${where} GROUP BY year ORDER BY year ASC`,
-        [(c != null ? c : C())]
-      ];
-    },
-
-    /** Top N species by count — stats */
-    topSpeciesByCount(where, limit, c) {
-      return [
-        `SELECT Com_Name, Sci_Name, COUNT(*) as n FROM active_detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC LIMIT ?`,
-        [(c != null ? c : C()), limit]
-      ];
-    },
-
-    /** Top species by confidence — stats */
-    topSpeciesByConfidence(where, limit, c) {
-      return [
-        `SELECT Com_Name, Sci_Name, ROUND(AVG(Confidence)*100,1) as avg_conf FROM active_detections WHERE ${where} GROUP BY Com_Name, Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT ?`,
-        [(c != null ? c : C()), limit]
-      ];
-    },
 
     /** Confidence distribution histogram — stats */
     confidenceHistogram() {
@@ -322,50 +229,14 @@
       ];
     },
 
-    /** Record day (most detections) — stats */
-    recordDay(where, c) {
-      return [`SELECT Date, COUNT(*) as n FROM active_detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`, [(c != null ? c : C())]];
-    },
-
-    /** Record day by species count — stats */
-    recordDaySpecies(where, c) {
-      return [`SELECT Date, COUNT(DISTINCT Com_Name) as n FROM active_detections WHERE ${where} GROUP BY Date ORDER BY n DESC LIMIT 1`, [(c != null ? c : C())]];
-    },
-
     /** Record highest confidence ever — stats */
     recordConfidence() {
       return ['SELECT Date, Com_Name, Sci_Name, ROUND(Confidence*100,1) as conf FROM detections ORDER BY Confidence DESC LIMIT 1', []];
     },
 
-    /** Full species catalog — stats */
-    speciesCatalog(where, c) {
-      return [
-        `SELECT Com_Name, Sci_Name, COUNT(*) as n, ROUND(AVG(Confidence)*100,1) as avg_conf, MIN(Date) as first_date, MAX(Date) as last_date, COUNT(DISTINCT Date) as days FROM active_detections WHERE ${where} GROUP BY Com_Name, Sci_Name ORDER BY n DESC`,
-        [(c != null ? c : C())]
-      ];
-    },
-
     // ═══════════════════════════════════════════════════════════
     //  SPECIES PAGE
     // ═══════════════════════════════════════════════════════════
-
-    /** Species stats summary — species page header */
-    speciesStats(comName, c) {
-      // Confidence filter ensures consistency with dashboard totals (Bug fix)
-      return [
-        'SELECT COUNT(*) as total, COUNT(DISTINCT Date) as days, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first_date, MAX(Date) as last_date FROM active_detections WHERE Com_Name=? AND Confidence>=?',
-        [comName, (c != null ? c : C())]
-      ];
-    },
-
-    /** Species year-over-year monthly data — species page */
-    speciesYearMonth(comName, c) {
-      // Confidence filter keeps year breakdown consistent with filtered totals
-      return [
-        "SELECT SUBSTR(Date,1,4) as year, CAST(SUBSTR(Date,6,2) AS INTEGER) as month, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY year, month ORDER BY year ASC, month ASC",
-        [comName, (c != null ? c : C())]
-      ];
-    },
 
     /** Check if species exists — species page */
     speciesExists(comName, c) {
@@ -441,33 +312,9 @@
       ];
     },
 
-    /** Multi-year weekly counts for the same species — phenology multi-year overlay */
-    phenologyMultiYear(comName, c) {
-      return [
-        "SELECT CAST(strftime('%Y', Date) AS INTEGER) as year, CAST(strftime('%W', Date) AS INTEGER) as week, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY year, week ORDER BY year, week",
-        [comName, (c != null ? c : C())]
-      ];
-    },
-
     // ═══════════════════════════════════════════════════════════
     //  BIODIVERSITY
     // ═══════════════════════════════════════════════════════════
-
-    /** Species by date range for biodiversity — biodiversity */
-    biodiversitySpecies(dateFrom, dateTo, c) {
-      return [
-        'SELECT Com_Name, COUNT(*) as n FROM active_detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name',
-        [dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Phenology: first/last seen per year — biodiversity */
-    phenologyByYear(c) {
-      return [
-        "SELECT Sci_Name, Com_Name, strftime('%Y', Date) as year, MIN(Date) as first_seen, MAX(Date) as last_seen, COUNT(*) as cnt FROM active_detections WHERE Confidence>=? GROUP BY Sci_Name, year ORDER BY first_seen",
-        [(c != null ? c : C())]
-      ];
-    },
 
     /** Top species (all time, for taxonomy) — biodiversity */
     topSpeciesAllTime(limit, c) {
@@ -475,79 +322,6 @@
         'SELECT Com_Name, MAX(Sci_Name) as Sci_Name FROM active_detections WHERE Confidence>=? GROUP BY Com_Name ORDER BY COUNT(*) DESC LIMIT ?',
         [(c != null ? c : C()), limit]
       ];
-    },
-
-    // ═══════════════════════════════════════════════════════════
-    //  ANALYSES
-    // ═══════════════════════════════════════════════════════════
-
-    /** Species by date range with custom expression — analyses */
-    analysesSpecies(expr, dateFrom, dateTo, c) {
-      return [
-        `SELECT Com_Name, MIN(Sci_Name) as Sci_Name, ${expr} FROM active_detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC`,
-        [dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Multi-species aggregate stats — analyses */
-    analysesMultiStats(placeholders, sciNames, dateFrom, dateTo, c) {
-      return [
-        `SELECT COUNT(*) as total, ROUND(AVG(Confidence)*100,1) as avg_conf, COUNT(DISTINCT Com_Name) as sp_count, COUNT(DISTINCT Date) as days FROM active_detections WHERE Sci_Name IN (${placeholders}) AND Date>=? AND Date<=? AND Confidence>=?`,
-        [...sciNames, dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Daily counts for species IN list — analyses */
-    dailyForSpecies(placeholders, sciNames, dateFrom, dateTo, c) {
-      return [
-        `SELECT Date, COUNT(*) as n FROM active_detections WHERE Sci_Name IN (${placeholders}) AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC`,
-        [...sciNames, dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Monthly counts for species IN list — analyses */
-    monthlyForSpecies(placeholders, sciNames, dateFrom, dateTo, c) {
-      return [
-        `SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM active_detections WHERE Sci_Name IN (${placeholders}) AND Date>=? AND Date<=? AND Confidence>=? GROUP BY ym ORDER BY ym ASC`,
-        [...sciNames, dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Daily counts for single species — analyses */
-    dailyForOneSpecies(comName, dateFrom, dateTo, c) {
-      return [
-        'SELECT Date, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC',
-        [comName, dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    /** Monthly counts for single species — analyses */
-    monthlyForOneSpecies(comName, dateFrom, dateTo, c) {
-      return [
-        'SELECT SUBSTR(Date,1,7) as ym, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Date>=? AND Date<=? AND Confidence>=? GROUP BY ym ORDER BY ym ASC',
-        [comName, dateFrom, dateTo, (c != null ? c : C())]
-      ];
-    },
-
-    // ═══════════════════════════════════════════════════════════
-    //  GALLERY
-    // ═══════════════════════════════════════════════════════════
-
-    /** Best recordings with ROW_NUMBER — gallery */
-    bestRecordings(where, params) {
-      return [
-        `SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY Com_Name ORDER BY Confidence DESC) AS rn FROM active_detections WHERE ${where}) WHERE rn=1 ORDER BY Confidence DESC`,
-        params
-      ];
-    },
-
-    // ═══════════════════════════════════════════════════════════
-    //  RARITIES
-    // ═══════════════════════════════════════════════════════════
-
-    /** Total distinct species — rarities */
-    totalSpeciesCount(where, c) {
-      return [`SELECT COUNT(DISTINCT Com_Name) as n FROM active_detections WHERE Confidence>=?${where ? ' AND ' + where : ''}`, [(c != null ? c : C())]];
     },
 
     // ═══════════════════════════════════════════════════════════
@@ -570,15 +344,6 @@
       if (opts.extra) { for (const e of opts.extra) clauses.push(e); }
       return { where: clauses.join(' AND '), params };
     },
-
-    /** Shorthand: SELECT ... FROM active_detections WHERE {buildWhere} [suffix]. */
-    query(select, opts = {}, suffix = '') {
-      const { where, params } = Q.buildWhere(opts);
-      return [select + ' ' + where + (suffix ? ' ' + suffix : ''), params];
-    },
-
-    /** Current confidence threshold. */
-    confidence() { return C(); },
 
     /**
      * Try a fast query first (pre-aggregated), fallback to raw if it

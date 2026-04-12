@@ -158,7 +158,6 @@ const app = createApp({
     const allGroups    = ref([]);
     const newSpOnly    = ref(false);
     const newSpeciesSet = ref(new Set());
-    const playingUrl   = ref(null);
     let _audio         = null;
 
     // ── Filtres (composables partagés) ────────────────────────────
@@ -259,23 +258,8 @@ const app = createApp({
       });
     }
 
-    // ── Audio playback ───────────────────────────────────────────────
-    function togglePlay(det) {
-      if (playingUrl.value === det.audioUrl) {
-        stopPlay();
-        return;
-      }
-      stopPlay();
-      if (!det.audioUrl) return;
-      _audio = new Audio(det.audioUrl);
-      _audio.play().catch(() => {});
-      playingUrl.value = det.audioUrl;
-      _audio.onended = () => { playingUrl.value = null; };
-    }
-
     function stopPlay() {
       if (_audio) { _audio.pause(); _audio.currentTime = 0; _audio = null; }
-      playingUrl.value = null;
     }
 
     // ── Confidence badge color ───────────────────────────────────────
@@ -332,7 +316,7 @@ const app = createApp({
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
       if (e.code === 'Space') {
         e.preventDefault();
-        if (playingUrl.value) stopPlay();
+        stopPlay();
       }
     }
 
@@ -343,9 +327,9 @@ const app = createApp({
       t, lang, theme, spName, favorites, toggleFavorite, isFavorite,
       fp, fc,
       loading, searchQuery, newSpOnly, newSpeciesSet,
-      allGroups, filteredGroups, playingUrl,
+      allGroups, filteredGroups,
       loadGallery, deleteDet,
-      togglePlay, confStyle, openModal,
+      confStyle, openModal,
     };
   }
 });

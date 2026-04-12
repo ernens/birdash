@@ -313,7 +313,7 @@ const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo,
         buildAudioUrl, photoUrl, shortModel, quickPlaySpecies,
-        fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav } = BIRDASH;
+        fetchAndDecodeAudio, drawSpectrogramFromPcm } = BIRDASH;
       const Q = BIRDASH_QUERIES;
 
 const app = createApp({
@@ -343,7 +343,6 @@ const app = createApp({
     onMounted(() => document.addEventListener('click', () => { rarePanelOpen.value = false; }));
     const lastDet = ref({ loading:true, row:null, photoUrl:null });
     const rareSpeciesToday = ref([]);
-    const morning = ref({ newSpecies: [], bestDet: null, todayCount: 0, yesterdayCount: 0, loaded: false });
     const whatsNew = ref({
       loaded: false, alerts: [], phenology: [],
       context: {
@@ -360,41 +359,13 @@ const app = createApp({
     const richPlaying  = ref(false);
     const richProgress = ref(0);
     const richDuration = ref('');
-    let _richAudio = null, _richRaf = null, _richBlobUrl = null;
+    let _richAudio = null, _richRaf = null;
 
-    // ── Spectrogramme + Clean ──────────────────────────────────────
+    // ── Spectrogramme ──────────────────────────────────────────────
     const spectroState   = ref('idle');  // idle | loading | ready
-    const cleanMode      = ref(false);
-    const cleanStrength  = ref(0.75);
-    const cleanProcessing= ref(false);
     let _rawPcm = null, _rawSr = 22050;
 
     // ── Data loading ───────────────────────────────────────────────
-    async function loadMorningSummary() {
-      try {
-        const yesterday = daysAgo(1);
-        // Species seen today but not yesterday
-        const newRows = await birdQuery(
-          `SELECT DISTINCT Com_Name FROM active_detections WHERE Date=?
-           AND Com_Name NOT IN (SELECT DISTINCT Com_Name FROM active_detections WHERE Date=?)`,
-          [today, yesterday]);
-        // Best confidence detection today
-        const [best] = await birdQuery(
-          `SELECT Com_Name, Sci_Name, Confidence, Time FROM active_detections
-           WHERE Date=? ORDER BY Confidence DESC LIMIT 1`, [today]);
-        // Counts
-        const [tc] = await birdQuery(...Q.countForDate(today));
-        const [yc] = await birdQuery(...Q.countForDate(yesterday));
-        morning.value = {
-          newSpecies: (newRows || []).map(r => r.Com_Name),
-          bestDet: best || null,
-          todayCount: tc ? tc.n : 0,
-          yesterdayCount: yc ? yc.n : 0,
-          loaded: true,
-        };
-      } catch(e) { console.error('morning:', e); }
-    }
-
     async function loadWhatsNew() {
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/whats-new`);
@@ -440,7 +411,7 @@ const app = createApp({
       const sections = [
         loadRareSpeciesToday, loadKpis, loadLastDet,
         loadTopData, loadHourlyData,
-        loadMorningSummary, loadWhatsNew, loadWeatherWidget,
+        loadWhatsNew, loadWeatherWidget,
       ];
       loadProgress.total = sections.length;
       loadProgress.done = 0;
@@ -520,8 +491,7 @@ const app = createApp({
         richPlaying.value = false; richProgress.value = 0;
         return;
       }
-      const url = (cleanMode.value && _richBlobUrl) ? _richBlobUrl : origUrl;
-      _playUrl(url);
+      _playUrl(origUrl);
     }
 
     function seekRich(e) {
@@ -550,36 +520,6 @@ const app = createApp({
         spectroState.value = 'idle';
       }
     }
-
-    // ── Clean ──────────────────────────────────────────────────────
-    async function toggleClean() {
-      if (!_rawPcm) return;
-      const newMode = !cleanMode.value;
-      cleanMode.value = newMode;
-      if (newMode) {
-        await applyClean();
-      } else {
-        if (_richAudio) { _richAudio.pause(); _richAudio = null; richPlaying.value = false; }
-        if (_richBlobUrl) { URL.revokeObjectURL(_richBlobUrl); _richBlobUrl = null; }
-        if (spectroCanvas.value) drawSpectrogramFromPcm(_rawPcm, _rawSr, spectroCanvas.value);
-      }
-    }
-
-    async function applyClean() {
-      if (!_rawPcm) return;
-      cleanProcessing.value = true;
-      if (_richAudio) { _richAudio.pause(); _richAudio = null; richPlaying.value = false; }
-      await new Promise(r => setTimeout(r, 30));
-      try {
-        const cleaned = cleanAudioPipeline(_rawPcm, _rawSr, cleanStrength.value);
-        if (spectroCanvas.value) drawSpectrogramFromPcm(cleaned, _rawSr, spectroCanvas.value);
-        if (_richBlobUrl) URL.revokeObjectURL(_richBlobUrl);
-        _richBlobUrl = URL.createObjectURL(encodeWav(cleaned, _rawSr));
-      } catch(e) { console.error('[clean idx]', e); cleanMode.value = false; }
-      cleanProcessing.value = false;
-    }
-
-    async function reapplyClean() { if (cleanMode.value) await applyClean(); }
 
     // Rare species are determined server-side via eBird regional frequency
     // (when API key + GPS are available) or via local historical count
@@ -641,7 +581,6 @@ const app = createApp({
     onMounted(() => loadAll());
     onUnmounted(() => {
       if (_richAudio) { _richAudio.pause(); _richAudio = null; }
-      if (_richBlobUrl) URL.revokeObjectURL(_richBlobUrl);
     });
 
     function openSpectroModal(row) {
@@ -687,12 +626,11 @@ const app = createApp({
 
     return {
       lang, t, spName, daysAgo, weatherToday,
-      today, kpis, lastDet, rareSpeciesToday, rarePanelOpen, toggleRarePanel, morning, isMultiModel, loadProgress,
+      today, kpis, lastDet, rareSpeciesToday, rarePanelOpen, toggleRarePanel, isMultiModel, loadProgress,
       whatsNew, wnIcon, wnMoonIcon,
       playingFile, toggleAudio,
       richPlaying, richProgress, richDuration, toggleRichPlay, seekRich,
       spectroCanvas, spectroState, loadSpectro,
-      cleanMode, cleanStrength, cleanProcessing, toggleClean, reapplyClean,
       fmtDate, fmtTime, fmtConf, freshnessLabel, navigateTo, shortModel,
       canvasTop, canvasHourly,
       openSpectroModal,

@@ -5,7 +5,6 @@
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
-const safeConfig = require('../lib/safe-config');
 const { localDateStr, localDateOffset } = require('../lib/local-date');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
@@ -239,66 +238,6 @@ function handle(req, res, pathname, ctx) {
     })();
     return true;
   }
-
-  // ── Route : GET /api/detections-by-taxonomy ─────────────────────────────────
-  // Returns detection counts grouped by order and family
-  if (req.method === 'GET' && pathname === '/api/detections-by-taxonomy') {
-    (async () => {
-      try {
-        if (!taxonomyDb) {
-          res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Taxonomy database not available' }));
-          return;
-        }
-        const params = new URL(req.url, 'http://x').searchParams;
-        const dateFrom = params.get('from') || '';
-        const dateTo = params.get('to') || '';
-        const lang = params.get('lang') || '';
-
-        // Build a family_sci → localized family_com map if lang is provided
-        const famTr = {};
-        if (lang && lang !== 'en') {
-          const trRows = taxonomyDb.prepare('SELECT family_sci, family_com FROM family_translations WHERE locale = ?').all(lang);
-          for (const r of trRows) famTr[r.family_sci] = r.family_com;
-        }
-
-        let whereClause = '';
-        const args = [];
-        if (dateFrom) { whereClause += ' AND d.Date >= ?'; args.push(dateFrom); }
-        if (dateTo)   { whereClause += ' AND d.Date <= ?'; args.push(dateTo); }
-
-        // Get detection counts per species
-        const rows = db.prepare(
-          `SELECT Sci_Name, Com_Name, COUNT(*) as count FROM active_detections d WHERE 1=1 ${whereClause} GROUP BY Sci_Name ORDER BY count DESC`
-        ).all(...args);
-
-        const lookup = taxonomyDb.prepare('SELECT * FROM species_taxonomy WHERE sci_name = ?');
-
-        // Build grouped results
-        const byOrder = {};
-        for (const r of rows) {
-          const tax = lookup.get(r.Sci_Name);
-          const order = tax ? tax.order_name : 'Unknown';
-          const family = tax ? tax.family_sci : 'Unknown';
-          const familyCom = tax ? (famTr[tax.family_sci] || tax.family_com) : 'Unknown';
-          if (!byOrder[order]) byOrder[order] = { count: 0, species: 0, families: {} };
-          byOrder[order].count += r.count;
-          byOrder[order].species++;
-          if (!byOrder[order].families[family]) byOrder[order].families[family] = { name: familyCom, count: 0, species: 0 };
-          byOrder[order].families[family].count += r.count;
-          byOrder[order].families[family].species++;
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ byOrder, total: rows.reduce((s, r) => s + r.count, 0) }));
-      } catch(e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
-    })();
-    return true;
-  }
-
 
 
   // ── Route : GET /api/validations ──────────────────────────────────────────
@@ -544,38 +483,6 @@ function handle(req, res, pathname, ctx) {
 
   const DETECTION_RULES_PATH = path.join(PROJECT_ROOT, 'config', 'detection_rules.json');
 
-  // ── Route : GET /api/detection-rules ────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/detection-rules') {
-    const rules = readJsonFile(DETECTION_RULES_PATH) || {};
-    res.writeHead(200, JSON_CT);
-    res.end(JSON.stringify(rules));
-    return true;
-  }
-
-  // ── Route : POST /api/detection-rules ───────────────────────────────────
-  if (req.method === 'POST' && pathname === '/api/detection-rules') {
-    if (!requireAuth(req, res)) return true;
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', async () => {
-      try {
-        const rules = JSON.parse(body);
-        await safeConfig.updateConfig(
-          DETECTION_RULES_PATH,
-          () => rules,                     // full replacement
-          null,
-          { label: 'POST /api/detection-rules', defaultValue: {} }
-        );
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
-      } catch (e) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
-    });
-    return true;
-  }
-
   // ── Route : GET /api/flagged-detections ─────────────────────────────────
   // Returns detections that match flagging rules
   if (req.method === 'GET' && pathname === '/api/flagged-detections') {
@@ -733,131 +640,7 @@ function handle(req, res, pathname, ctx) {
 
   // (Adaptive gain: state, agPushSample, agUpdate defined at module level)
 
-  // ── Route : GET /api/stats/daily ──────────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/stats/daily') {
-    const qs = new URL(req.url, 'http://x').searchParams;
-    const from = qs.get('from') || '2000-01-01';
-    const to   = qs.get('to')   || '2099-12-31';
-    const minConf = parseFloat(qs.get('minConf') || '0');
-    try {
-      const rows = db.prepare(
-        'SELECT date, sci_name, com_name, count, avg_conf, max_conf, first_time, last_time FROM daily_stats WHERE date BETWEEN ? AND ?' + (minConf > 0 ? ' AND avg_conf >= ?' : '') + ' ORDER BY date, com_name'
-      ).all(...(minConf > 0 ? [from, to, minConf] : [from, to]));
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(rows));
-    } catch(e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
-    }
-    return true;
-  }
 
-  // ── Route : GET /api/stats/species ────────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/stats/species') {
-    try {
-      const rows = db.prepare(
-        'SELECT sci_name, com_name, total_count, first_date, last_date, avg_conf, day_count FROM species_stats ORDER BY total_count DESC'
-      ).all();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(rows));
-    } catch(e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
-    }
-    return true;
-  }
-
-  // ── Route : GET /api/stats/monthly ────────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/stats/monthly') {
-    const qs = new URL(req.url, 'http://x').searchParams;
-    const from = qs.get('from') || '2000-01';
-    const to   = qs.get('to')   || '2099-12';
-    try {
-      const rows = db.prepare(
-        'SELECT year_month, sci_name, com_name, count, avg_conf, day_count FROM monthly_stats WHERE year_month BETWEEN ? AND ? ORDER BY year_month, count DESC'
-      ).all(from, to);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(rows));
-    } catch(e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
-    }
-    return true;
-  }
-
-  // ── Route : GET /api/reports/weekly ──────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/reports/weekly') {
-    (async () => {
-      try {
-        const qs = new URL(req.url, 'http://x').searchParams;
-        const weeklyReport = require('../lib/weekly-report');
-
-        // If ?generate=true, compute a fresh report
-        if (qs.get('generate') === 'true') {
-          const end = qs.get('end') || localDateStr();
-          const start = localDateOffset(-6);
-          const report = weeklyReport.generateReport(db, start, end);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(report));
-          return;
-        }
-
-        // Otherwise return saved reports
-        const reportPath = require('path').join(process.env.HOME, 'birdash', 'config', 'weekly-reports.json');
-        try {
-          const raw = await require('fs').promises.readFile(reportPath, 'utf8');
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(raw);
-        } catch(e) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end('[]');
-        }
-      } catch(e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
-    })();
-    return true;
-  }
-
-  // ── Route : POST /api/reports/weekly/send ──────────────────────────────────
-  if (req.method === 'POST' && pathname === '/api/reports/weekly/send') {
-    if (!requireAuth(req, res)) return true;
-    (async () => {
-      try {
-        const weeklyReport = require('../lib/weekly-report');
-        const end = localDateStr();
-        const start = localDateOffset(-6);
-        const report = weeklyReport.generateReport(db, start, end);
-        const text = weeklyReport.formatText(report, 'BirdStation');
-        const sent = await weeklyReport.sendReport(
-          `BirdStation Weekly — ${report.overall.species} species`,
-          text
-        );
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, sent, report }));
-      } catch(e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
-    })();
-    return true;
-  }
-
-  // ── Route : POST /api/admin/rebuild-stats ─────────────────────────────────
-  if (req.method === 'POST' && pathname === '/api/admin/rebuild-stats') {
-    if (!requireAuth(req, res)) return true;
-    try {
-      const { rebuildAll } = require('../lib/aggregates');
-      const result = rebuildAll(ctx.dbWrite || dbWrite);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, ...result }));
-    } catch(e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
-    }
-    return true;
-  }
 
   return false;
 }

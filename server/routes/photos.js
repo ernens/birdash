@@ -255,21 +255,6 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
-  // ── Route : GET /api/photo-cache-stats ──────────────────────────────────────
-  if (req.method === 'GET' && pathname === '/api/photo-cache-stats') {
-    (async () => {
-      try {
-        const files = (await fsp.readdir(PHOTO_CACHE_DIR)).filter(f => f.endsWith('.jpg'));
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ cached: files.length, dir: PHOTO_CACHE_DIR }));
-      } catch(e) {
-        console.error('[photo-cache-stats]', e.message);
-        res.writeHead(500); res.end(JSON.stringify({ error: 'cache_error' }));
-      }
-    })();
-    return true;
-  }
-
   // ── Route : GET /api/species-names?lang=de ──────────────────────────────
   // Returns { "Sci_Name": "Translated Com_Name" } from BirdNET label files
   if (req.method === 'GET' && pathname === '/api/species-names') {
