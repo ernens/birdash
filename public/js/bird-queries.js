@@ -192,26 +192,29 @@
     },
 
     /** Hourly distribution for a species — species page */
-    hourlyBySpecies(comName) {
+    hourlyBySpecies(comName, c) {
+      // Confidence filter keeps the histogram consistent with the species
+      // header total (which filters). Without it, the bars sum to more
+      // than the displayed total.
       return [
-        "SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Com_Name=? GROUP BY h ORDER BY h ASC",
-        [comName]
+        "SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY h ORDER BY h ASC",
+        [comName, c || C()]
       ];
     },
 
     /** Monthly distribution for a species — species page */
-    monthlyBySpecies(comName) {
+    monthlyBySpecies(comName, c) {
       return [
-        "SELECT CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM active_detections WHERE Com_Name=? GROUP BY m ORDER BY m ASC",
-        [comName]
+        "SELECT CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY m ORDER BY m ASC",
+        [comName, c || C()]
       ];
     },
 
     /** Daily count for a species in a date range — species page */
-    dailyBySpecies(comName, dateFrom) {
+    dailyBySpecies(comName, dateFrom, c) {
       return [
-        "SELECT Date, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Date>=? GROUP BY Date ORDER BY Date ASC",
-        [comName, dateFrom]
+        "SELECT Date, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Date>=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC",
+        [comName, dateFrom, c || C()]
       ];
     },
 
@@ -219,31 +222,27 @@
     //  OVERVIEW
     // ═══════════════════════════════════════════════════════════
 
-    /** Total detection count (all time) — overview */
-    totalDetections() {
-      return ['SELECT COUNT(*) as n FROM active_detections', []];
+    /** Total detection count (all time, confidence-filtered) — overview */
+    totalDetections(c) {
+      return ['SELECT COUNT(*) as n FROM active_detections WHERE Confidence>=?', [c || C()]];
     },
 
-    /** Detection count for a single date (unfiltered) — overview */
-    countForDate(date) {
-      return ['SELECT COUNT(*) as n FROM active_detections WHERE Date=?', [date]];
+    /** Detection count for a single date — overview */
+    countForDate(date, c) {
+      return ['SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=?', [date, c || C()]];
     },
 
     /** Daily detections+species for date range — overview chart */
-    dailyStats(dateFrom, dateTo) {
+    dailyStats(dateFrom, dateTo, c) {
       return [
-        'SELECT Date, COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE Date>=? AND Date<=? GROUP BY Date ORDER BY Date ASC',
-        [dateFrom, dateTo]
+        'SELECT Date, COUNT(*) as n, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Date ORDER BY Date ASC',
+        [dateFrom, dateTo, c || C()]
       ];
     },
 
-    /** Rare species count for today — overview */
-    rareTodayCount(date) {
-      return [
-        'WITH today_sp AS (SELECT DISTINCT Com_Name FROM active_detections WHERE Date=?), rare_sp AS (SELECT Com_Name FROM active_detections GROUP BY Com_Name HAVING COUNT(*)<=5) SELECT COUNT(*) as n FROM today_sp INNER JOIN rare_sp USING(Com_Name)',
-        [date]
-      ];
-    },
+    // rareTodayCount — REMOVED. overview.html now uses /api/rare-today
+    // (eBird-based) instead of this naive HAVING COUNT(*)<=5 heuristic.
+    // Keeping the dead code around would invite accidental reuse.
 
     // ═══════════════════════════════════════════════════════════
     //  STATS

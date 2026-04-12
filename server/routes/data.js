@@ -23,8 +23,12 @@ function handle(req, res, pathname, ctx) {
   if (req.method === 'GET' && pathname === '/api/rare-today') {
     (async () => {
       try {
+        // Use local date (not UTC) — at 00:30 CEST, toISOString() returns
+        // yesterday's date, which would check the wrong day's rare species.
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const dateStr = new URL(req.url, 'http://x').searchParams.get('date')
-          || new Date().toISOString().split('T')[0];
+          || localToday;
         const totalDays = db.prepare(
           "SELECT COUNT(DISTINCT Date) as n FROM active_detections WHERE Date < ?"
         ).get(dateStr)?.n || 0;
@@ -151,8 +155,9 @@ function handle(req, res, pathname, ctx) {
       const countMap = {};
       for (const r of detCounts) countMap[r.Com_Name] = r;
 
-      // Today count
-      const todayStr = new Date().toISOString().slice(0, 10);
+      // Today count — local date, not UTC (see timezone drift audit)
+      const _n = new Date();
+      const todayStr = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}`;
       const todayCounts = db.prepare(
         `SELECT Com_Name, COUNT(*) as n FROM active_detections
          WHERE Com_Name IN (${placeholders}) AND Date=? GROUP BY Com_Name`
