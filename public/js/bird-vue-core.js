@@ -1204,10 +1204,54 @@
       refreshReviewCount();
       window.addEventListener('birdash:review-changed', refreshReviewCount);
 
+      // Bug report
+      const bugReportOpen = ref(false);
+      const bugReportForm = reactive({ title: '', description: '', sending: false, sent: false, error: '', issueUrl: '' });
+      const bugReportEnabled = ref(false);
+      fetch(`${BIRD_CONFIG.apiUrl}/bug-report/status`).then(r => r.json()).then(d => { bugReportEnabled.value = d.enabled; }).catch(() => {});
+      function openBugReport() {
+        bugReportForm.title = '';
+        bugReportForm.description = '';
+        bugReportForm.sending = false;
+        bugReportForm.sent = false;
+        bugReportForm.error = '';
+        bugReportForm.issueUrl = '';
+        bugReportOpen.value = true;
+      }
+      function closeBugReport() { bugReportOpen.value = false; }
+      async function submitBugReport() {
+        bugReportForm.sending = true;
+        bugReportForm.error = '';
+        try {
+          const systemInfo = {
+            version: appVersion.value,
+            browser: navigator.userAgent,
+            page: currentPage,
+            url: location.href,
+            screen: screen.width + 'x' + screen.height,
+            lang: lang.value,
+            theme: theme.value
+          };
+          const res = await fetch(`${BIRD_CONFIG.apiUrl}/bug-report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: bugReportForm.title, description: bugReportForm.description, systemInfo })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to submit bug report');
+          bugReportForm.sent = true;
+          bugReportForm.issueUrl = data.issueUrl || '';
+        } catch (e) {
+          bugReportForm.error = e.message || 'Failed to submit bug report';
+        } finally {
+          bugReportForm.sending = false;
+        }
+      }
+
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, updateApplying, updateProgress, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport };
     },
     directives: {
       'click-outside': {
@@ -1257,6 +1301,10 @@
           </button>
         </div>
       </div>
+      <!-- Bug report button -->
+      <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" title="Report a bug">
+        <bird-icon name="bug" :size="16"></bird-icon>
+      </button>
       <!-- Notification bell (unified, 3 severities) -->
       <div class="hdr-bell" v-click-outside="()=>bellOpen=false">
         <button class="bell-btn" @click="toggleBell" :aria-label="t('notifications')">
@@ -1421,6 +1469,46 @@
         <button class="update-btn-secondary" @click="skipUpdate" :disabled="updateApplying">{{t('update_skip')}}</button>
         <button class="update-btn-secondary" @click="deferUpdate(1)" :disabled="updateApplying">{{t('update_defer')}}</button>
         <button class="update-btn-primary" @click="applyUpdate" :disabled="updateApplying" style="margin-left:auto;">{{t('update_install')}}</button>
+      </div>
+    </div>
+  </div>
+  <!-- Bug report modal -->
+  <div v-if="bugReportOpen" class="update-modal-backdrop" @click.self="closeBugReport">
+    <div class="update-modal" style="max-width:480px;">
+      <div class="update-modal-hdr">
+        <div class="update-modal-title">Report a Bug</div>
+        <button class="update-modal-close" @click="closeBugReport" aria-label="Close"><bird-icon name="x" :size="16"></bird-icon></button>
+      </div>
+      <div class="update-modal-body">
+        <div v-if="bugReportForm.sent" style="text-align:center;padding:1rem 0;">
+          <bird-icon name="check-circle" :size="32" style="color:var(--accent);"></bird-icon>
+          <p style="margin:.8rem 0 .4rem;font-weight:600;">Bug report submitted!</p>
+          <p v-if="bugReportForm.issueUrl" style="font-size:.85rem;">
+            <a :href="bugReportForm.issueUrl" target="_blank" rel="noopener" style="color:var(--accent);">View issue on GitHub</a>
+          </p>
+          <button class="update-btn-secondary" @click="closeBugReport" style="margin-top:1rem;">Close</button>
+        </div>
+        <form v-else @submit.prevent="submitBugReport" style="display:flex;flex-direction:column;gap:.8rem;">
+          <div v-if="bugReportForm.error" style="padding:.5rem .8rem;border-radius:6px;background:var(--danger,#e53935);color:#fff;font-size:.82rem;">
+            {{bugReportForm.error}}
+          </div>
+          <label style="font-size:.82rem;font-weight:600;">Title
+            <input v-model="bugReportForm.title" type="text" required placeholder="Brief summary of the issue"
+                   style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;">
+          </label>
+          <label style="font-size:.82rem;font-weight:600;">Description
+            <textarea v-model="bugReportForm.description" rows="5" required placeholder="Steps to reproduce, expected vs actual behavior..."
+                      style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;resize:vertical;"></textarea>
+          </label>
+          <p style="font-size:.75rem;opacity:.6;">System info (version, browser, page) will be included automatically.</p>
+          <div style="display:flex;justify-content:flex-end;gap:.5rem;">
+            <button type="button" class="update-btn-secondary" @click="closeBugReport" :disabled="bugReportForm.sending">Cancel</button>
+            <button type="submit" class="update-btn-primary" :disabled="bugReportForm.sending || !bugReportForm.title.trim()">
+              <span v-if="bugReportForm.sending">Sending...</span>
+              <span v-else>Submit</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
