@@ -106,24 +106,20 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 ## Installation
 
 ```bash
-cd ~
-git clone https://github.com/ernens/birdash.git
-cd birdash
-chmod +x install.sh
-./install.sh
+curl -sSL https://raw.githubusercontent.com/ernens/birdash/main/bootstrap.sh | bash
 ```
 
-Das Installationsskript erledigt alles automatisch. Bearbeiten Sie danach:
-1. `/etc/birdnet/birdnet.conf` — Koordinaten, Sprache
-2. `engine/config.toml` — Station, BirdWeather, ntfy
-3. `public/js/birdash-local.js` — Standort, eBird API Key
-
-Dienste starten:
-```bash
-sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
-```
+Das Installationsskript erledigt alles automatisch: Systempakete, Caddy, ttyd, Datenbanken, Perch V2 + BirdNET V2.4 Modelle, automatische GPS-Erkennung, ALSA dsnoop Konfiguration, systemd-Dienste.
 
 Dashboard: `http://ihr-pi.local/birds/`
+
+## Aktualisierung
+
+Ein rotes Banner erscheint automatisch bei verfügbaren Updates. Klicken Sie **Anzeigen** → **Jetzt installieren**. Oder via SSH:
+
+```bash
+ssh user@ihr-pi.local 'bash ~/birdash/scripts/update.sh'
+```
 
 ## Tests
 

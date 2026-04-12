@@ -188,33 +188,33 @@ Benchmark sur 20 enregistrements reels de 20 especes, 4 threads.
 
 ## Installation
 
+### Installation en une commande (recommandé)
+
 ```bash
-cd ~
-git clone https://github.com/ernens/birdash.git
-cd birdash
-chmod +x install.sh
-./install.sh
+curl -sSL https://raw.githubusercontent.com/ernens/birdash/main/bootstrap.sh | bash
 ```
 
-L'installateur gere tout automatiquement : paquets systeme, Caddy, ttyd, bases de donnees, modeles, services et cron. Editez ensuite :
-
-1. `/etc/birdnet/birdnet.conf` — coordonnees, langue
-2. `engine/config.toml` — station, BirdWeather, ntfy
-3. `public/js/birdash-local.js` — localisation, cle eBird
-
-Demarrez les services :
-```bash
-sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
-```
+L'installateur gère tout automatiquement : paquets système, Caddy, ttyd, bases de données, modèles Perch V2 + BirdNET V2.4, détection GPS automatique (via ipapi.co), configuration ALSA avec dsnoop, services systemd et cron. Le dashboard est accessible dès la fin de l'installation.
 
 Dashboard : `http://votre-pi.local/birds/`
 
-> Le modele BirdNET V2.4 doit etre copie manuellement (licence CC-NC-SA).
+Pour sauter le téléchargement de BirdNET (licence CC-BY-NC-SA 4.0) :
+```bash
+curl -sSL https://raw.githubusercontent.com/ernens/birdash/main/bootstrap.sh | BIRDASH_SKIP_BIRDNET=1 bash
+```
+
+## Mise à jour
+
+Un bandeau rouge apparaît automatiquement quand une mise à jour est disponible. Cliquez **Voir** puis **Installer maintenant**. Ou via SSH :
+
+```bash
+ssh user@votre-pi.local 'bash ~/birdash/scripts/update.sh'
+```
 
 ## Tests
 
 ```bash
-npm test                    # 134 tests Node.js
+npm test                    # 160 tests Node.js
 cd engine && ../engine/venv/bin/python -m unittest test_engine -v  # 13 tests Python
 ```
 

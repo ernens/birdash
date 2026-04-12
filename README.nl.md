@@ -106,24 +106,20 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 ## Installatie
 
 ```bash
-cd ~
-git clone https://github.com/ernens/birdash.git
-cd birdash
-chmod +x install.sh
-./install.sh
+curl -sSL https://raw.githubusercontent.com/ernens/birdash/main/bootstrap.sh | bash
 ```
 
-Het installatiescript regelt alles automatisch. Bewerk daarna:
-1. `/etc/birdnet/birdnet.conf` — coordinaten, taal
-2. `engine/config.toml` — station, BirdWeather, ntfy
-3. `public/js/birdash-local.js` — locatie, eBird API key
-
-Start de services:
-```bash
-sudo systemctl enable --now birdengine-recording birdengine birdash caddy ttyd
-```
+Het installatiescript regelt alles automatisch: systeempakketten, Caddy, ttyd, databases, Perch V2 + BirdNET V2.4 modellen, automatische GPS-detectie, ALSA dsnoop configuratie, systemd-services.
 
 Dashboard: `http://jouw-pi.local/birds/`
+
+## Updaten
+
+Een rode banner verschijnt automatisch als er updates beschikbaar zijn. Klik **Bekijken** → **Nu installeren**. Of via SSH:
+
+```bash
+ssh user@jouw-pi.local 'bash ~/birdash/scripts/update.sh'
+```
 
 ## Tests
 

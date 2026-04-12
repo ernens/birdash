@@ -268,35 +268,37 @@ Your dashboard will be available at `http://yourpi.local/birds/`
 
 ## Updating
 
-Birdash checks for new releases on GitHub once per day. When a new version is available, an update badge appears in the header.
+### In-app update (recommended)
 
-### Manual update
+When a new version is available, a red banner appears at the top of every page with the version number (e.g. `v1.5.30 → v1.5.48`). Click **View** to see categorized release notes, then:
 
-```bash
-cd ~/birdash
-git pull
-npm install
-sudo systemctl restart birdash
-```
+- **Install now** — applies the update, restarts services, shows progress
+- **Later (24h)** — snoozes the banner for 24 hours
+- **Skip these updates** — hides until a newer version is published
 
-If the engine or models changed:
+The update runs `scripts/update.sh` which handles `git pull`, migrations, `npm install` if needed, and selective service restarts. Your data and configuration are preserved.
 
-```bash
-sudo systemctl restart birdengine birdengine-recording
-```
-
-### How update detection works
-
-- Backend route `/api/version-check` polls `api.github.com/repos/ernens/birdash/releases/latest` once per 24 hours
-- Result is cached server-side, no GitHub call on each page load
-- Frontend reads the cached result and shows a badge in the header if a newer version is available
-- Click the badge to see release notes; "Dismiss" hides the badge until the next release
-
-### Backup before updating
+### Remote update via SSH
 
 ```bash
-~/birdash/scripts/backup.sh
+ssh user@yourpi.local 'bash ~/birdash/scripts/update.sh'
 ```
+
+### Fan-out to multiple stations
+
+```bash
+for h in mickey donald papier; do
+  ssh "$h.local" 'bash ~/birdash/scripts/update.sh'
+done
+```
+
+### How it works
+
+- `/api/update-status` compares `git rev-parse HEAD` against `git ls-remote origin main` (1-minute cache)
+- Version number is auto-computed from `git describe` (e.g. `v1.5.0` tag + 48 commits = `v1.5.48`)
+- Snooze state stored server-side in `config/update-state.json` (persistent across browsers)
+- Migrations in `scripts/migrations/` run automatically after each pull (idempotent)
+- `BIRDASH_SKIP_BIRDNET=1` skips BirdNET download during install if desired
 
 ## What the Installer Does
 
@@ -307,21 +309,20 @@ sudo systemctl restart birdengine birdengine-recording
 | 3 | Python venv + ML dependencies (ai-edge-litert, numpy, soundfile, resampy, scipy, noisereduce) |
 | 4 | Directory structure (audio, models, BirdSongs) |
 | 5 | Database bootstrap (birds.db + birdash.db with full schema) |
-| 6 | Configuration files (birdnet.conf with Pi-aware dual-model defaults, engine config, Caddy) |
-| 7 | Model download — Perch V2 from HuggingFace (INT8 on Pi 3, + FP16/FP32 on Pi 4/5) |
-| 8 | Systemd services (engine, recording, dashboard, terminal) |
-| 9 | Caddy reverse proxy |
-| 10 | Cron jobs (audio cleanup) |
+| 6 | GeoIP auto-detection (latitude, longitude, language from [ipapi.co](https://ipapi.co)) |
+| 7 | Configuration files (birdnet.conf with Pi-aware defaults, engine config, ALSA dsnoop for shared mic access) |
+| 8 | Model download — Perch V2 from HuggingFace (INT8 on Pi 3, FP16 on Pi 4, FP32 on Pi 5) |
+| 9 | Systemd services with `KillMode=process` (engine, recording, dashboard, terminal) |
+| 10 | Caddy reverse proxy |
+| 11 | BirdNET V2.4 download via birdnetlib (CC-BY-NC-SA 4.0) + l18n species labels (38 languages) |
+| 12 | Enable dual-model (BirdNET primary + Perch secondary), start all services |
 
-> **Note:** BirdNET V2.4 (CC-NC-SA license) can be installed directly from the dashboard:
-> **Settings → Detection → Download BirdNET V2.4**. The download button fetches models
-> from the official [birdnetlib](https://pypi.org/project/birdnetlib/) package. You must
-> accept the CC-NC-SA 4.0 license (non-commercial use only).
+> **Note:** BirdNET V2.4 download can be skipped with `BIRDASH_SKIP_BIRDNET=1` and installed later from the dashboard: **Settings → Detection → Download BirdNET V2.4**.
 
 ## Tests
 
 ```bash
-# Node.js backend tests (134 tests)
+# Node.js backend tests (160 tests including cross-page coherence)
 npm test
 
 # Python engine tests (13 tests)

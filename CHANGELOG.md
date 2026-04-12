@@ -2,6 +2,67 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.5.50] — 2026-04-12
+
+### One-line install
+- `curl -sSL .../bootstrap.sh | bash` — fully automated, zero-touch installation
+- GeoIP auto-detection of latitude, longitude, and language (via ipapi.co)
+- BirdNET V2.4 auto-downloaded during install (CC-BY-NC-SA 4.0 license shown)
+- Perch V2 model variant auto-selected per Pi hardware (INT8/FP16/FP32)
+- ALSA dsnoop for shared microphone access (recording + dashboard preview simultaneously)
+
+### In-app updates
+- Red banner with version number when updates are available (e.g. v1.5.30 → v1.5.48)
+- One-click **Install now** with live progress and categorized release notes
+- **Later (24h)** / **Skip** snooze options (server-side, persistent across browsers)
+- `scripts/update.sh` with auto-migrations, selective service restarts, conflict resolution
+
+### Species sharing
+- Share modal with photo + pre-formatted message (🐦 + stats + Birdash promo)
+- 7 targets: clipboard (text + image), native share API (with photo on mobile), SMS, WhatsApp, X, Mastodon, Email
+- Localized share text in FR/EN/DE/NL with hashtags
+
+### Data integrity (4-round QA audit)
+- **safe-config.js** — centralized per-file mutex + atomic write for all 13 config files
+- **active_detections VIEW** — rejected detections excluded from all statistics via SQLite ATTACH + TEMP VIEW
+- **Confidence filter** applied uniformly to all 70+ queries (was missing in 7 species/overview queries)
+- **Aggregates count_07** column — per-detection filtered count replaces the flawed avg_conf proxy (closed 28% gap)
+- **UTC→local date fix** — `server/lib/local-date.js` canonical helper replaces 8 toISOString() bugs
+- **Cache invalidation** after every mutation (delete, validate, favorite toggle)
+- **160 automated tests** including 5 cross-page coherence invariants
+
+### Rarity (eBird-based)
+- Species rarity from eBird regional observations (30 days, 25 km radius)
+- Conservative fallback: local heuristic only after 30+ days of data
+- Fresh installs show 0 rare species (not every species flagged as rare)
+
+### Metric honesty
+- Weather correlation: weak r values (|r| < 0.2) hidden, permanent "association ≠ causation" caveat, minimum n≥10
+- Confidence: tooltip warning that BirdNET (sigmoid) and Perch (softmax) scores are not directly comparable
+- Tooltips on "Rare" (eBird contextual), "Activity" (detection count, not diversity), "Top species" (by volume)
+
+### i18n consolidation
+- Single source of truth: inline FR dict moved to `fr.json` (loaded at runtime like en/de/nl)
+- `scripts/check-i18n.js` — drift prevention tool (coverage gaps + orphaned t() calls)
+- 1155 keys × 4 languages, all aligned
+- Legacy `bird-i18n.js` deleted
+
+### Phenology picker
+- Custom dropdown with search filter, detection count per species, sorted by frequency
+- Species below confidence threshold excluded from picker
+
+### Moon phase
+- Standard 8-emoji Unicode set (🌑→🌘) on timeline canvas + header badge
+
+### Model names
+- Migration 003: normalized `Perch_v2` → `perch_v2_original`, `Perch_v2_int8` → `perch_v2_dynint8`
+- `BirdNET_GLOBAL_6K_V2.4_Model_FP32` added to MODEL_LABELS
+- Auto-swap secondary model when it collides with the changed primary
+
+### Settings reliability
+- Model badge refreshes on save (no page reload needed)
+- `config/adaptive_gain.json` untracked (runtime state, was blocking git pull)
+
 ## [1.2.0] — 2026-04-07
 
 ### New Pages
