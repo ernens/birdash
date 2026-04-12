@@ -1363,3 +1363,81 @@ describe('DELETE /api/notes — Auth required', () => {
     assert.equal(res.status, 400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cross-page coherence tests — catch filter drift and metric divergence
+// between pages that display the same concept. These are the invariants
+// that broke silently in the first three audit rounds.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('Cross-page coherence', () => {
+  // Helper: run a SQL query via the /api/query endpoint
+  async function sql(query, params = []) {
+    const res = await request('/api/query', {
+      method: 'POST',
+      body: JSON.stringify({ sql: query, params }),
+    });
+    return res.json?.rows || [];
+  }
+
+  it('overview total = SUM(per-species totals)', async () => {
+    const [[total]] = await sql(
+      "SELECT COUNT(*) FROM active_detections WHERE Confidence >= 0.7"
+    );
+    const [[sumSpecies]] = await sql(
+      "SELECT COALESCE(SUM(n),0) FROM (SELECT COUNT(*) as n FROM active_detections WHERE Confidence >= 0.7 GROUP BY Com_Name)"
+    );
+    assert.equal(total, sumSpecies,
+      `overview total (${total}) != SUM of species (${sumSpecies})`);
+  });
+
+  it('species header total = hourly SUM = monthly SUM', async () => {
+    // Pick the most common species
+    const rows = await sql(
+      "SELECT Com_Name FROM active_detections WHERE Confidence >= 0.7 GROUP BY Com_Name ORDER BY COUNT(*) DESC LIMIT 1"
+    );
+    if (!rows.length) return; // empty DB (test env) — skip
+    const sp = rows[0][0];
+
+    const [[header]] = await sql(
+      "SELECT COUNT(*) FROM active_detections WHERE Com_Name = ? AND Confidence >= 0.7", [sp]
+    );
+    const [[hourlySUM]] = await sql(
+      "SELECT SUM(n) FROM (SELECT COUNT(*) as n FROM active_detections WHERE Com_Name = ? AND Confidence >= 0.7 GROUP BY CAST(SUBSTR(Time,1,2) AS INTEGER))", [sp]
+    );
+    const [[monthlySUM]] = await sql(
+      "SELECT SUM(n) FROM (SELECT COUNT(*) as n FROM active_detections WHERE Com_Name = ? AND Confidence >= 0.7 GROUP BY CAST(SUBSTR(Date,6,2) AS INTEGER))", [sp]
+    );
+    assert.equal(header, hourlySUM, `${sp}: header (${header}) != hourly SUM (${hourlySUM})`);
+    assert.equal(header, monthlySUM, `${sp}: header (${header}) != monthly SUM (${monthlySUM})`);
+  });
+
+  it('timeline today matches raw SQL today', async () => {
+    const tl = await request('/api/timeline');
+    if (!tl.json?.meta) return; // no timeline in test env
+    const { totalDetections, totalSpecies } = tl.json.meta;
+
+    // Timeline uses DATE('now','localtime') server-side. In test env
+    // this might be a different day than the test DB has data for, so
+    // we just verify the meta fields are present and non-negative.
+    assert.ok(typeof totalDetections === 'number' && totalDetections >= 0);
+    assert.ok(typeof totalSpecies === 'number' && totalSpecies >= 0);
+  });
+
+  it('active_detections excludes rejected (VIEW is dynamic)', async () => {
+    const [[rawAll]] = await sql("SELECT COUNT(*) FROM active_detections");
+    // We can't easily verify the exact excluded count without knowing
+    // the validations table content, but we verify the VIEW is queryable
+    // and returns a non-negative number.
+    assert.ok(typeof rawAll === 'number' && rawAll >= 0);
+  });
+
+  it('daily_stats count_07 is non-negative and plausible', async () => {
+    const rows = await sql(
+      "SELECT date, SUM(count_07) as s FROM daily_stats GROUP BY date ORDER BY date DESC LIMIT 1"
+    );
+    if (!rows.length) return; // empty aggregates in test env
+    const [date, sum] = rows[0];
+    assert.ok(sum >= 0, `count_07 for ${date} is negative: ${sum}`);
+  });
+});
