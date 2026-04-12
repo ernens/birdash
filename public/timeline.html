@@ -512,19 +512,20 @@ const app = createApp({
           ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, s.y, s.r*3.5, 0, Math.PI*2); ctx.fill();
         }
       });
-      // Moon
+      // Moon — render the standard Unicode emoji on the canvas.
+      // Much cleaner than the old arc+shadow approach and consistent
+      // with the emoji shown in the header badge.
       if (data.value?.meta?.moonPhase != null && 22.5 >= _viewStart && 22.5 <= _viewEnd) {
-        const mx = hourToX(22.5), my = SKY_H*.2, mr = 11;
+        const mx = hourToX(22.5), my = SKY_H * .25;
+        const icon = data.value.meta.moonIcon || moonEmoji(data.value.meta.moonPhaseName);
         ctx.save();
-        ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,252,225,.92)';
-        ctx.shadowColor = 'rgba(255,250,180,.55)'; ctx.shadowBlur = 22; ctx.fill();
-        ctx.shadowBlur = 0;
-        const phase = data.value.meta.moonPhase;
-        const off = (phase < .5 ? phase*2 - 1 : 1 - (phase-.5)*2) * mr;
-        ctx.beginPath(); ctx.arc(mx + off*.6, my, mr*.86, 0, Math.PI*2);
-        const [nt] = getSkyColors(22.5, stops);
-        ctx.fillStyle = nt; ctx.fill();
+        ctx.font = '20px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Subtle glow behind the emoji for visibility on dark sky
+        ctx.shadowColor = 'rgba(255,250,180,.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillText(icon, mx, my);
         ctx.restore();
       }
     }
