@@ -1454,6 +1454,8 @@ const app = createApp({
       { id: 'monitoring', icon: '📊', labelKey: 'audio_sub_monitor' },
     ];
     const channelStrategies = computed(() => [
+      { id: 'left', label: t('audio_ch_left'), desc: t('audio_ch_left_desc') },
+      { id: 'right', label: t('audio_ch_right'), desc: t('audio_ch_right_desc') },
       { id: 'sum', label: t('audio_sum'), desc: t('audio_sum_desc') },
       { id: 'max', label: t('audio_max'), desc: t('audio_max_desc') },
       { id: 'vote', label: t('audio_vote'), desc: t('audio_vote_desc') },

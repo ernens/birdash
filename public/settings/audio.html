@@ -85,17 +85,26 @@
 
           <!-- Stratégie de canaux -->
           <div class="card" v-if="audioConf.input_channels >= 2">
-            <div class="section-title">{{t('audio_strategy')}}</div>
-            <div style="display:flex;flex-direction:column;gap:.5rem;">
+            <div class="section-title">
+              <bird-icon name="git-merge" :size="14"></bird-icon> {{t('audio_strategy')}}
+            </div>
+            <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">
+              {{t('audio_strategy_desc')}}
+            </p>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
               <label v-for="s in channelStrategies" :key="s.id"
-                     style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;">
+                     style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;padding:.5rem .6rem;border-radius:6px;border:1px solid var(--border);transition:border-color .2s;"
+                     :style="{ borderColor: audioConf.channel_strategy === s.id ? 'var(--accent)' : 'var(--border)', background: audioConf.channel_strategy === s.id ? 'rgba(52,211,153,.05)' : 'transparent' }">
                 <input type="radio" v-model="audioConf.channel_strategy" :value="s.id" style="margin-top:3px;">
-                <div>
-                  <strong>{{ s.label }}</strong>
-                  <div style="font-size:.82em;opacity:.7;">{{ s.desc }}</div>
+                <div style="flex:1;">
+                  <strong style="font-size:.85rem;">{{ s.label }}</strong>
+                  <div style="font-size:.78em;color:var(--text-muted);margin-top:.15rem;">{{ s.desc }}</div>
                 </div>
               </label>
             </div>
+            <p style="font-size:.72rem;color:var(--text-muted);margin:.6rem 0 0;font-style:italic;">
+              {{t('audio_strategy_tip')}}
+            </p>
           </div>
 
           <!-- ═══ Pipeline de filtres ═══ -->
