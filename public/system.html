@@ -1813,9 +1813,22 @@ const app = createApp({
       try {
         const res = await fetch(BIRD_CONFIG.apiUrl + '/system/logs-export');
         const text = await res.text();
-        await navigator.clipboard.writeText(text);
-        logsCopied.value = true;
-        setTimeout(() => { logsCopied.value = false; }, 3000);
+        // Try modern clipboard API first, fallback to execCommand for HTTP
+        let ok = false;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+        }
+        if (!ok) {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+          document.body.appendChild(ta);
+          ta.select();
+          ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        logsCopied.value = ok;
+        if (ok) setTimeout(() => { logsCopied.value = false; }, 3000);
       } catch(e) { console.error(e); }
       copyingLogs.value = false;
     }
