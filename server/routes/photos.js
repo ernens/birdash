@@ -258,49 +258,71 @@ function handle(req, res, pathname, ctx) {
   // ── Route : GET /api/species-names?lang=de ──────────────────────────────
   // Returns { "Sci_Name": "Translated Com_Name" } from BirdNET label files
   if (req.method === 'GET' && pathname === '/api/species-names') {
-    const lang = new URL(req.url, 'http://localhost').searchParams.get('lang') || 'fr';
-    if (!/^[a-z]{2}(_[A-Z]{2})?$/.test(lang)) {
-      res.writeHead(400); res.end(JSON.stringify({ error: 'invalid lang' })); return true;
-    }
-
-    // Cache in memory (labels don't change at runtime)
-    // Limit cache to 6 languages to prevent unbounded growth
-    if (Object.keys(_speciesNamesCache).length > 6) {
-      const oldest = Object.keys(_speciesNamesCache)[0];
-      delete _speciesNamesCache[oldest];
-    }
-    if (!_speciesNamesCache[lang]) {
-      const candidates = [
-        path.join(process.env.HOME, 'birdash', 'engine', 'models', 'l18n', `labels_${lang}.json`),
-        path.join(process.env.HOME, 'birdengine', 'models', 'l18n', `labels_${lang}.json`),
-      ];
-      const labelFile = candidates.find(f => fs.existsSync(f));
+    (async () => {
       try {
-        if (!labelFile) throw new Error('not found');
-        const raw = fs.readFileSync(labelFile, 'utf8');
-        _speciesNamesCache[lang] = JSON.parse(raw);
-        console.log(`[species-names] Loaded ${Object.keys(_speciesNamesCache[lang]).length} names for ${lang}`);
+        const lang = new URL(req.url, 'http://localhost').searchParams.get('lang') || 'fr';
+        if (!/^[a-z]{2}(_[A-Z]{2})?$/.test(lang)) {
+          res.writeHead(400); res.end(JSON.stringify({ error: 'invalid lang' })); return;
+        }
+
+        // Cache in memory (labels don't change at runtime)
+        if (Object.keys(_speciesNamesCache).length > 6) {
+          const oldest = Object.keys(_speciesNamesCache)[0];
+          delete _speciesNamesCache[oldest];
+        }
+        if (!_speciesNamesCache[lang]) {
+          const l18nDir = path.join(process.env.HOME, 'birdash', 'engine', 'models', 'l18n');
+          const candidates = [
+            path.join(l18nDir, `labels_${lang}.json`),
+            path.join(process.env.HOME, 'birdengine', 'models', 'l18n', `labels_${lang}.json`),
+          ];
+          const labelFile = candidates.find(f => fs.existsSync(f));
+          if (labelFile) {
+            try {
+              _speciesNamesCache[lang] = JSON.parse(fs.readFileSync(labelFile, 'utf8'));
+              console.log(`[species-names] Loaded ${Object.keys(_speciesNamesCache[lang]).length} names for ${lang} (local)`);
+            } catch(e) { /* fall through to auto-download */ }
+          }
+          // Auto-download from BirdNET-Analyzer GitHub if local file missing
+          if (!_speciesNamesCache[lang]) {
+            const https = require('https');
+            const ghLang = lang.replace('-', '_');
+            const url = `https://raw.githubusercontent.com/birdnet-team/BirdNET-Analyzer/main/birdnet_analyzer/labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels_${ghLang}.txt`;
+            const txt = await new Promise((resolve, reject) => {
+              https.get(url, { headers: { 'User-Agent': 'birdash' } }, r => {
+                if (r.statusCode !== 200) { reject(new Error(`HTTP ${r.statusCode}`)); return; }
+                let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(d));
+              }).on('error', reject);
+            });
+            const map = {};
+            for (const line of txt.trim().split('\n')) {
+              const idx = line.indexOf('_');
+              if (idx > 0) map[line.substring(0, idx)] = line.substring(idx + 1);
+            }
+            _speciesNamesCache[lang] = map;
+            console.log(`[species-names] Auto-downloaded ${Object.keys(map).length} names for ${lang} from GitHub`);
+            // Save locally for next time
+            try {
+              if (!fs.existsSync(l18nDir)) fs.mkdirSync(l18nDir, { recursive: true });
+              fs.writeFileSync(path.join(l18nDir, `labels_${lang}.json`), JSON.stringify(map), 'utf8');
+              console.log(`[species-names] Saved labels_${lang}.json locally`);
+            } catch(e) { console.warn(`[species-names] Could not save locally:`, e.message); }
+          }
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=86400',
+        });
+        res.end(JSON.stringify(_speciesNamesCache[lang]));
       } catch(e) {
-        res.writeHead(404);
-        res.end(JSON.stringify({ error: `labels_${lang}.json not found` }));
-        return;
+        console.error(`[species-names]`, e.message);
+        if (!res.headersSent) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Labels not found and auto-download failed: ${e.message}` }));
+        }
       }
-    }
-
-    // Always return the full label map (~500KB raw, ~100KB gzipped).
-    // Previously this was filtered to the species seen in the DB as an
-    // optimization, but on fresh installs the DB is empty or sparse,
-    // which meant species detected after the first /api/species-names
-    // request wouldn't get translated until the 1h cache expired.
-    // The browser HTTP cache (max-age=86400) makes the full response
-    // cheap for repeat loads.
-    const result = _speciesNamesCache[lang];
-
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=86400',
-    });
-    res.end(JSON.stringify(result));
+    })();
     return true;
   }
 
