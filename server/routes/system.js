@@ -646,6 +646,30 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/system/logs-export ────────────────────────────────────
+  // Returns recent logs from all birdash services for copy-to-clipboard
+  if (req.method === 'GET' && pathname === '/api/system/logs-export') {
+    (async () => {
+      try {
+        const services = ['birdash', 'birdengine', 'birdengine-recording'];
+        const blocks = [];
+        for (const svc of services) {
+          try {
+            const logs = await execCmd('journalctl', ['-u', svc, '-n', '50', '--no-pager', '-o', 'short-iso', '--since', '1 hour ago']);
+            if (logs.trim()) blocks.push(`══ ${svc} ══\n${logs.trim()}`);
+          } catch {}
+        }
+        const header = `BirdStation logs — ${new Date().toISOString()}\nVersion: ${require('child_process').execSync('git describe --tags --always 2>/dev/null || echo unknown', { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', timeout: 3000 }).trim()}\n`;
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(header + '\n' + blocks.join('\n\n'));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
   return false;
 }
 
