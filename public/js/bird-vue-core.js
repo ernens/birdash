@@ -897,16 +897,19 @@
       const bellWarning = ref([]);
       const bellBirds = ref([]);
 
-      // Track seen state per severity in localStorage
-      const bellSeen = ref({
-        critical: parseInt(localStorage.getItem('birdash_bell_seen_critical') || '0', 10),
-        warning:  parseInt(localStorage.getItem('birdash_bell_seen_warning')  || '0', 10),
-        birds:    parseInt(localStorage.getItem('birdash_bell_seen_birds')    || '0', 10),
+      // Track seen state via content hash — detects when items change even
+      // if the count stays the same (e.g. "19 to review" → "25 to review")
+      const bellSeenHash = ref({
+        critical: localStorage.getItem('birdash_bell_hash_critical') || '',
+        warning:  localStorage.getItem('birdash_bell_hash_warning')  || '',
+        birds:    localStorage.getItem('birdash_bell_hash_birds')    || '',
       });
-
-      const bellUnseenCritical = computed(() => Math.max(0, bellCritical.value.length - bellSeen.value.critical));
-      const bellUnseenWarning  = computed(() => Math.max(0, bellWarning.value.length  - bellSeen.value.warning));
-      const bellUnseenBirds    = computed(() => Math.max(0, bellBirds.value.length    - bellSeen.value.birds));
+      function _bellHash(items) {
+        return items.map(i => (i.text || '') + (i.sub || '')).join('|');
+      }
+      const bellUnseenCritical = computed(() => bellCritical.value.length > 0 && _bellHash(bellCritical.value) !== bellSeenHash.value.critical ? bellCritical.value.length : 0);
+      const bellUnseenWarning  = computed(() => bellWarning.value.length  > 0 && _bellHash(bellWarning.value)  !== bellSeenHash.value.warning  ? bellWarning.value.length  : 0);
+      const bellUnseenBirds    = computed(() => bellBirds.value.length    > 0 && _bellHash(bellBirds.value)    !== bellSeenHash.value.birds    ? bellBirds.value.length    : 0);
       const bellUnseen = computed(() => bellUnseenCritical.value + bellUnseenWarning.value + bellUnseenBirds.value);
 
       // Highest severity present (for badge color)
@@ -1014,15 +1017,15 @@
       function toggleBell() {
         bellOpen.value = !bellOpen.value;
         if (bellOpen.value) {
-          // Mark all as seen
-          bellSeen.value = {
-            critical: bellCritical.value.length,
-            warning:  bellWarning.value.length,
-            birds:    bellBirds.value.length,
+          // Mark all as seen by storing content hash
+          bellSeenHash.value = {
+            critical: _bellHash(bellCritical.value),
+            warning:  _bellHash(bellWarning.value),
+            birds:    _bellHash(bellBirds.value),
           };
-          localStorage.setItem('birdash_bell_seen_critical', String(bellSeen.value.critical));
-          localStorage.setItem('birdash_bell_seen_warning',  String(bellSeen.value.warning));
-          localStorage.setItem('birdash_bell_seen_birds',    String(bellSeen.value.birds));
+          localStorage.setItem('birdash_bell_hash_critical', bellSeenHash.value.critical);
+          localStorage.setItem('birdash_bell_hash_warning',  bellSeenHash.value.warning);
+          localStorage.setItem('birdash_bell_hash_birds',    bellSeenHash.value.birds);
         }
       }
       function bellItemClick(item) {
