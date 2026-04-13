@@ -354,8 +354,8 @@ const app = createApp({
       kpis.value.loading = true;
       try {
         buildWhere();
-        const [g] = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last, COUNT(DISTINCT Model) as model_count FROM active_detections WHERE ${_w}`,_wp);
-        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM active_detections WHERE ${_w} GROUP BY Date)`,_wp);
+        const [g] = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last, COUNT(DISTINCT Model) as model_count FROM detections WHERE ${_w}`,_wp);
+        const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date)`,_wp);
         const days = Math.round((new Date(g.last)-new Date(g.first))/86400000)+1;
         isMultiModel.value = (g.model_count || 1) > 1;
         kpis.value = {loading:false, total:g.total.toLocaleString(), sp:g.sp, avgConf:g.avg_conf, maxConf:g.max_conf, perDay:Math.round(pd.avg||0).toLocaleString(), days:days.toLocaleString()};

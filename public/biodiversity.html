@@ -242,7 +242,7 @@ const app = createApp({
       phenology.value = { loading: true, ready: false };
       try {
         const rows = await birdQuery(
-          `SELECT Sci_Name, Com_Name, strftime('%Y', Date) as year, MIN(Date) as first_seen, MAX(Date) as last_seen, COUNT(*) as cnt FROM detections WHERE Confidence >= ? GROUP BY Sci_Name, year ORDER BY first_seen`,
+          `SELECT Sci_Name, Com_Name, strftime('%Y', Date) as year, MIN(Date) as first_seen, MAX(Date) as last_seen, COUNT(*) as cnt FROM detections WHERE Confidence >= ? AND Date >= DATE('now','localtime','-5 years') GROUP BY Sci_Name, year ORDER BY first_seen`,
           [fc.confidence.value]);
         if (!rows.length) { phenology.value = { loading: false, ready: false }; return; }
         // Find top 15 most detected species overall
