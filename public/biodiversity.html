@@ -88,31 +88,6 @@
           </div>
         </div>
 
-        <!-- Top espèces ce mois -->
-        <div class="card">
-          <div class="card-title">{{t('top_species')}} — {{t('this_month')}}</div>
-          <div v-if="monthly.loading" class="spinner"><div></div><div></div><div></div></div>
-          <div v-else-if="!monthly.rows.length" class="error-msg">{{t('no_data')}}</div>
-          <div v-else style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem;">
-            <div v-for="(r,i) in monthly.rows" :key="r.Com_Name"
-                 style="display:flex;align-items:center;gap:.6rem;cursor:pointer;"
-                 @click="navigateTo('species.html',{species:r.Com_Name})">
-              <div style="font-size:.72rem;color:var(--text-faint);min-width:16px;text-align:right;">{{i+1}}</div>
-              <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-card2);">
-                <bird-img v-if="r.photoUrl" :src="r.photoUrl" :alt="r.Com_Name" style="width:100%;height:100%;object-fit:cover;"></bird-img>
-                <span v-else style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:.75rem;"><bird-icon name="bird" :size="16" ></bird-icon></span>
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:.82rem;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(r.Com_Name, r.Sci_Name)}} <button class="qplay-btn" :title="t('quick_play')" @click.stop="quickPlay(r.Com_Name)">&#x1F50A;</button></div>
-                <div style="height:4px;background:var(--bg-card2);border-radius:2px;margin-top:2px;">
-                  <div :style="{height:'100%',width:Math.round(r.n/monthly.rows[0].n*100)+'%',background:chartColor(i),borderRadius:'2px',transition:'width .4s'}"></div>
-                </div>
-              </div>
-              <div style="font-size:.78rem;color:var(--text-muted);min-width:40px;text-align:right;">{{r.n.toLocaleString()}}</div>
-            </div>
-          </div>
-        </div>
-
         <!-- Répartition taxonomique — pie chart ECharts -->
         <div class="card">
           <div class="card-title">{{t('bio_taxonomy_orders')}}</div>
@@ -151,7 +126,7 @@
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
-        birdQuery, escHtml, safeHtml, chartDefaults, daysAgo, localDateStr, navigateTo, photoUrl, quickPlaySpecies } = BIRDASH;
+        birdQuery, escHtml, safeHtml, chartDefaults, daysAgo, localDateStr, navigateTo } = BIRDASH;
       const Q = BIRDASH_QUERIES;
 
 const app = createApp({
@@ -183,10 +158,7 @@ const app = createApp({
     }
 
     const richnessData = ref(null);
-    const monthly  = ref({ loading:true, rows:[] });
     const matrix   = ref({ loading:true, error:null, html:'' });
-
-    const chartColor = i => BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length];
 
     // Shannon diversity index
     const shannonH = ref(null);
@@ -214,10 +186,8 @@ const app = createApp({
       } catch(e) { console.error('[shannon]', e); }
     }
 
-    function quickPlay(comName) { quickPlaySpecies(comName); }
-
     async function loadAll() {
-      await Promise.all([loadRichnessData(), loadMonthly(), loadMatrix(), loadShannon()]);
+      await Promise.all([loadRichnessData(), loadMatrix(), loadShannon()]);
     }
 
     async function loadRichnessData() {
@@ -253,23 +223,6 @@ const app = createApp({
         }
         richnessData.value = { rows, labelFn: ats.labelFn, resolution: ats.resolution };
       } catch(e) { console.error(e); }
-    }
-
-    function loadPhotosFor(targetRef, rows) {
-      rows.forEach(r => { r.photoUrl = photoUrl(r.Sci_Name); });
-      targetRef.value = { ...targetRef.value, rows: [...rows] };
-    }
-
-    async function loadMonthly() {
-      monthly.value.loading = true;
-      try {
-        const ym = localDateStr().substring(0,7);
-        const rows = await birdQuery(
-          `SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n FROM detections WHERE SUBSTR(Date,1,7)=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC LIMIT 15`,
-          [ym, fc.confidence.value]);
-        monthly.value = { loading:false, rows };
-        loadPhotosFor(monthly, rows);
-      } catch(e) { monthly.value = { loading:false, rows:[] }; }
     }
 
     async function loadMatrix() {
@@ -329,7 +282,7 @@ const app = createApp({
     });
 
     // Heatmap et matrice : retraduits si lang change
-    watch(lang, () => { loadMonthly(); loadMatrix(); loadTaxonomy(); });
+    watch(lang, () => { loadMatrix(); loadTaxonomy(); });
 
     // ── Taxonomy donut chart ────────────────────────────────────────────
     async function loadTaxonomy() {
@@ -442,10 +395,10 @@ const app = createApp({
     return {
       lang, t, safeHtml,
       shannonH, shannonJ, shannonS,
-      monthly, matrix,
+      matrix,
       canvasRichness, elTaxOrders, taxFamilies,
       fp, fc, resetDefaults, loadAll,
-      chartColor, navigateTo, spName, exportCsv, quickPlay,
+      navigateTo, spName, exportCsv,
     };
   }
 });
