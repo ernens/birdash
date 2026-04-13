@@ -5,7 +5,7 @@
 [![Vue 3](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js)](https://vuejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-model architecture with BirdNET V2.4 + Perch V2. Customizable station name and branding.
+Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-model architecture with BirdNET V2.4 + Perch V2. Community network with live station map. Customizable station name and branding.
 
 > [Francais](README.fr.md) | [Nederlands](README.nl.md) | [Deutsch](README.de.md) | [Contributing](CONTRIBUTING.md)
 
@@ -108,7 +108,8 @@ Raspberry Pi 5 + SSD
 │   ├── Live spectrogram (PCM + MP3 stream)
 │   ├── Audio config module
 │   ├── Detection review + auto-flagging
-│   └── Model comparison
+│   ├── Telemetry (opt-in Supabase)
+│   └── In-app bug reporting (GitHub Issues)
 │
 ├── Caddy (reverse proxy :80)
 ├── ttyd (web terminal)
@@ -126,7 +127,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
-### Dashboard (20 pages)
+### Dashboard (19 pages)
 
 **Home**
 - <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> **Overview** (landing page) — 6 KPIs, bird of the day, weather context, hourly activity, "What's New" alerts, latest detections
@@ -159,7 +160,7 @@ Raspberry Pi 5 + SSD
 
 **Navigation**
 - 6 intent-based sections: Home, Live, History, Species, Indicators, Station
-- Mobile bottom nav (4 quick links + hamburger drawer with all 20 pages)
+- Mobile bottom nav (4 quick links + hamburger drawer with all 19 pages)
 - Global species+date search, notification bell, review badge counter
 - Keyboard shortcuts on 5 pages, swipe gestures on species photos
 - Skeleton loading states for data-heavy pages
@@ -179,6 +180,11 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> 6 environment profiles (garden, forest, roadside, urban, night, test)
 - <img src="docs/icons/scale.svg" width="16" align="top" alt=""> Inter-channel calibration wizard for dual EM272 microphones
 - <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> Real-time VU meters via SSE
+
+### Community Network
+- <img src="docs/icons/radio.svg" width="16" align="top" alt=""> **BirdStation Network** — opt-in community of stations sharing daily detection summaries via Supabase
+- <img src="docs/icons/map-pin.svg" width="16" align="top" alt=""> **[Live station map](https://ernens.github.io/birdash-network/)** — all registered stations on an interactive dark-themed map
+- <img src="docs/icons/bug.svg" width="16" align="top" alt=""> **In-app bug reporting** — submit issues directly to GitHub from the dashboard header
 
 ### Settings & System
 - <img src="docs/icons/wrench.svg" width="16" align="top" alt=""> Full settings UI — models (one-click BirdNET download with license acceptance), analysis parameters, notifications, audio, backup
@@ -334,11 +340,13 @@ cd engine && ../engine/venv/bin/python -m unittest test_engine -v
 ```
 birdash/
 ├── server/
-│   ├── server.js                  # HTTP server, middleware, route delegations (208 lines)
+│   ├── server.js                  # HTTP server, middleware, route delegations (271 lines)
 │   ├── lib/
 │   │   ├── alerts.js              # Alert monitoring system
 │   │   ├── config.js              # BirdNET config, settings validators, exec helper
-│   │   └── db.js                  # Database bootstrap, tables, taxonomy
+│   │   ├── db.js                  # Database bootstrap, tables, taxonomy
+│   │   ├── telemetry.js           # Telemetry helpers (Supabase)
+│   │   └── whats-new-worker.js    # Worker thread for heavy computation
 │   └── routes/
 │       ├── audio.js               # Audio devices, adaptive gain, streaming
 │       ├── backup.js              # Backup config, scheduling, export
@@ -348,9 +356,11 @@ birdash/
 │       ├── photos.js              # Photo resolution/caching, species names
 │       ├── settings.js            # Settings, apprise, alerts, logs SSE
 │       ├── system.js              # Services, health, hardware, models
+│       ├── bug-report.js           # In-app bug reporting (GitHub Issues)
+│       ├── telemetry.js            # Opt-in telemetry (Supabase)
 │       ├── timeline.js            # Timeline with SunCalc astronomy
 │       └── whats-new.js           # Daily overview cards
-├── public/                        # Static frontend (Vue 3 CDN)
+├── public/                        # Static frontend (Vue 3 (vendored))
 │   ├── index.html                 # Redirect to overview.html
 │   ├── overview.html               # Landing page — KPIs, bird of the day, weather
 │   ├── dashboard.html              # Bird Flow — live pipeline visualization
@@ -377,11 +387,13 @@ birdash/
 │   ├── models.html                # Redirect to stats.html?tab=models
 │   ├── js/
 │   │   ├── bird-config.js         # Navigation, API config
-│   │   ├── bird-queries.js        # Shared SQL query library (56 queries)
+│   │   ├── bird-queries.js        # Shared SQL query library (38 queries)
 │   │   ├── bird-icons.js          # Lucide icon set (98 SVG icons)
 │   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API
 │   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
-│   │   └── bird-timeline.js       # Timeline rendering (sky, stars, markers)
+│   │   ├── bird-timeline.js       # Timeline rendering (sky, stars, markers)
+│   │   ├── vue.global.prod.min.js # Vue 3 (vendored CDN)
+│   │   └── chart.umd.min.js      # Chart.js (vendored CDN)
 │   ├── i18n/                      # Translation files (fr/en/de/nl.json)
 │   ├── css/                       # Styles + 11 themes (see docs/THEMES.md)
 │   ├── settings/                  # Lazy-loaded settings tab fragments
@@ -425,11 +437,17 @@ birdash/
 
 - Rate limiting: 300 req/min per IP
 - Strict SQL validation (read-only, parameterized)
-- Centralized SQL query library (`bird-queries.js`) — 56 parameterized queries with automatic confidence filtering
+- Centralized SQL query library (`bird-queries.js`) — 38 parameterized queries with automatic confidence filtering
 - Lucide icon system (`bird-icons.js` + `<bird-icon>` component) — 98 modern SVG icons replacing emojis across the UI
 - Security headers (CSP, X-Frame-Options, Referrer-Policy)
 - CORS restricted to localhost
-- SRI on CDN scripts
+- Worker threads for heavy computation (event-loop non-blocking)
+
+## Community
+
+- **[Live Station Map](https://ernens.github.io/birdash-network/)** — see all registered BirdStation installations worldwide
+- **[Report a bug](https://github.com/ernens/birdash/issues)** — or use the in-app bug report button (red bug icon in header)
+- **[Discussions](https://github.com/ernens/birdash/discussions)** — questions, ideas, show your setup
 
 ## License
 
