@@ -925,7 +925,7 @@
           const allCards = [...(d.alerts || []), ...(d.phenology || [])];
           for (const card of allCards) {
             if (!card.active || !card.data?.species) continue;
-            const icon = icons[card.type] || '🔔';
+            const icon = icons[card.type] || 'bell';
             const label = t('wn_card_' + card.type) || card.type;
             for (const sp of card.data.species) {
               const name = sp.commonName || sp.comName || '';
@@ -958,7 +958,7 @@
         fetch(`${BIRD_CONFIG.apiUrl}/analysis-status`).then(r => r.json()).then(d => {
           if (d.backlog > 20 && d.lagSecs > 300) {
             items.push({
-              icon: '🚫',
+              icon: 'alert-circle',
               text: t('bell_pipeline_blocked'),
               sub: d.backlog + ' fichiers · ' + Math.floor(d.lagSecs/60) + ' min',
               href: 'system.html',
@@ -979,7 +979,7 @@
             const unreviewed = (d.flagged || []).filter(f => f.validation === 'unreviewed').length;
             if (unreviewed > 0) {
               items.push({
-                icon: '✅',
+                icon: 'check-circle',
                 text: unreviewed + ' ' + t('bell_review_pending'),
                 sub: t('bell_review_sub'),
                 href: 'review.html',
@@ -992,7 +992,7 @@
           .then(d => {
             if ((d.backlog > 5 && d.backlog <= 20) || (d.lagSecs > 60 && d.lagSecs <= 300)) {
               items.push({
-                icon: '🐢',
+                icon: 'clock',
                 text: t('bell_pipeline_slow'),
                 sub: d.backlog + ' fichiers · ' + (d.lagSecs < 60 ? d.lagSecs + 's' : Math.floor(d.lagSecs/60) + 'min'),
                 href: 'system.html',
@@ -1319,7 +1319,7 @@
           <div v-if="bellCritical.length > 0" class="bell-section bell-sec-critical">
             <div class="bell-section-hdr"><span class="bell-sec-dot"></span>{{t('bell_critical')}}</div>
             <div v-for="(item, i) in bellCritical" :key="'c'+i" class="bell-item bell-item-critical" @click="bellItemClick(item)">
-              <span class="bell-icon">{{item.icon}}</span>
+              <span class="bell-icon"><bird-icon :name="item.icon" :size="14"></bird-icon></span>
               <div class="bell-text">
                 <div class="bell-name">{{item.text}}</div>
                 <div class="bell-sub">{{item.sub}}</div>
@@ -1330,7 +1330,7 @@
           <div v-if="bellWarning.length > 0" class="bell-section bell-sec-warning">
             <div class="bell-section-hdr"><span class="bell-sec-dot"></span>{{t('bell_warning')}}</div>
             <div v-for="(item, i) in bellWarning" :key="'w'+i" class="bell-item bell-item-warning" @click="bellItemClick(item)">
-              <span class="bell-icon">{{item.icon}}</span>
+              <span class="bell-icon"><bird-icon :name="item.icon" :size="14"></bird-icon></span>
               <div class="bell-text">
                 <div class="bell-name">{{item.text}}</div>
                 <div class="bell-sub">{{item.sub}}</div>
@@ -1341,7 +1341,7 @@
           <div v-if="bellBirds.length > 0" class="bell-section bell-sec-birds">
             <div class="bell-section-hdr"><span class="bell-sec-dot"></span>{{t('bell_birds')}}</div>
             <a v-for="(item, i) in bellBirds" :key="'b'+i" :href="item.href" class="bell-item bell-item-birds">
-              <span class="bell-icon">{{item.icon}}</span>
+              <span class="bell-icon"><bird-icon :name="item.icon" :size="14"></bird-icon></span>
               <div class="bell-text">
                 <div class="bell-name">{{item.text}}</div>
                 <div class="bell-sub">{{item.sub}}</div>
