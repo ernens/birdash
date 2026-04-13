@@ -619,6 +619,20 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { opacity: .85; }
 
+/* ── Form elements — theme-aware ─────────────────────────────────────────── */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+select, input[type="text"], input[type="number"], textarea {
+  color-scheme: dark;
+}
+[data-theme="paper"] select,   [data-theme="paper"] input[type="text"],   [data-theme="paper"] input[type="number"],   [data-theme="paper"] textarea,
+[data-theme="sepia"] select,   [data-theme="sepia"] input[type="text"],   [data-theme="sepia"] input[type="number"],   [data-theme="sepia"] textarea,
+[data-theme="solar-light"] select, [data-theme="solar-light"] input[type="text"], [data-theme="solar-light"] input[type="number"], [data-theme="solar-light"] textarea {
+  color-scheme: light;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    LAYOUT
    ══════════════════════════════════════════════════════════════════════════════ */
