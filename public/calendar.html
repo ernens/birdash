@@ -194,15 +194,12 @@ const app = createApp({
 
     // Monthly KPIs
     const monthKpis = computed(() => {
-      const data = Object.entries(dailyData.value).filter(([d]) => {
-        return d.startsWith(`${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}`);
-      });
+      const prefix = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}`;
+      const data = Object.entries(dailyData.value).filter(([d]) => d.startsWith(prefix) && d !== '_totalSpecies');
       const totalDet = data.reduce((s, [, v]) => s + (v.det || 0), 0);
-      const totalSp = new Set();
-      data.forEach(([, v]) => { if (v.species) v.species.forEach(sp => totalSp.add(sp)); });
       const activeDays = data.filter(([, v]) => v.det > 0).length;
       return {
-        species: totalSp.size || '—',
+        species: dailyData.value._totalSpecies || '—',
         detections: totalDet ? totalDet.toLocaleString() : '—',
         avgPerDay: activeDays > 0 ? Math.round(totalDet / activeDays).toLocaleString() : '—',
         activeDays: activeDays || '—',
@@ -225,29 +222,36 @@ const app = createApp({
       const from = `${y}-${String(m + 1).padStart(2, '0')}-01`;
       const to = `${y}-${String(m + 1).padStart(2, '0')}-${new Date(y, m + 1, 0).getDate()}`;
       try {
-        // Use daily_stats for fast aggregated data
+        // Aggregate daily_stats (per-species table) into per-day totals
         const rows = await birdQuery(
-          `SELECT date, count_07 as det, species_07 as sp FROM daily_stats WHERE date >= ? AND date <= ? ORDER BY date`,
+          `SELECT date, SUM(count_07) as det, COUNT(DISTINCT com_name) as sp
+           FROM daily_stats WHERE date >= ? AND date <= ?
+           GROUP BY date ORDER BY date`,
           [from, to]
         );
         const map = {};
         let mx = 1;
+        // Collect all distinct species across the month for the KPI
+        const allSpecies = new Set();
         for (const r of rows) {
           map[r.date] = { det: r.det, sp: r.sp };
           if (r.det > mx) mx = r.det;
         }
 
-        // Get species list per day for monthly KPI species count
+        // Get species names per day for monthly total species KPI
         const spRows = await birdQuery(
-          `SELECT Date as date, Com_Name FROM detections WHERE Date >= ? AND Date <= ? AND Confidence >= ? GROUP BY Date, Com_Name`,
-          [from, to, BIRD_CONFIG.defaultConfidence]
+          `SELECT date, com_name FROM daily_stats WHERE date >= ? AND date <= ? AND count_07 > 0`,
+          [from, to]
         );
         for (const r of spRows) {
+          allSpecies.add(r.com_name);
           if (!map[r.date]) map[r.date] = { det: 0, sp: 0, species: [] };
           if (!map[r.date].species) map[r.date].species = [];
-          map[r.date].species.push(r.Com_Name);
+          map[r.date].species.push(r.com_name);
         }
 
+        // Store total unique species for monthly KPI
+        map._totalSpecies = allSpecies.size;
         dailyData.value = map;
         maxDet = mx;
       } catch (e) { console.error('[calendar]', e); }
