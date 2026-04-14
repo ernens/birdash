@@ -1290,5 +1290,9 @@
   "set_network_join": "Netzwerk beitreten",
   "set_network_joining": "Verbinde...",
   "set_network_disable": "Netzwerk verlassen",
-  "set_network_map": "Karte anzeigen"
+  "set_network_map": "Karte anzeigen",
+  "display_fullscreen": "Vollbild",
+  "display_just_now": "Gerade eben",
+  "display_species_today": "Heute erkannte Arten",
+  "display_auto_refresh": "Auto-Aktualisierung 30s"
 }

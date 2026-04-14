@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>BirdStation — Display</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg-page); color: var(--text-main); font-family: var(--font-body); overflow: hidden; height: 100vh; }
+    .display { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 1.5rem 2rem; gap: 1rem; }
+
+    /* Header */
+    .d-header { display: flex; justify-content: space-between; align-items: center; }
+    .d-brand { display: flex; align-items: center; gap: .8rem; }
+    .d-brand img { height: 40px; }
+    .d-brand-name { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; }
+    .d-brand-sub { font-size: .85rem; color: var(--text-muted); }
+    .d-clock { text-align: right; }
+    .d-time { font-size: 2.5rem; font-weight: 700; font-family: var(--font-display); letter-spacing: .02em; }
+    .d-date { font-size: .9rem; color: var(--text-muted); }
+
+    /* Main area */
+    .d-main { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; min-height: 0; }
+
+    /* Last detection card */
+    .d-last { display: flex; flex-direction: column; background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-card); overflow: hidden; }
+    .d-last-photo { flex: 1; min-height: 0; border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; background: var(--bg-card2); }
+    .d-last-photo img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--radius); }
+    .d-last-name { font-family: var(--font-display); font-size: 2rem; font-weight: 700; line-height: 1.2; }
+    .d-last-sci { font-size: .95rem; color: var(--text-muted); font-style: italic; }
+    .d-last-meta { display: flex; gap: 1rem; align-items: center; margin-top: .5rem; font-size: .9rem; color: var(--text-muted); }
+    .d-last-conf { font-weight: 700; font-size: 1.1rem; }
+    .d-last-conf.high { color: var(--accent); }
+    .d-last-conf.mid { color: #eab308; }
+    .d-last-conf.low { color: var(--danger); }
+    .d-last-fresh { font-size: .78rem; padding: .2rem .6rem; border-radius: 4px; background: var(--accent); color: #000; font-weight: 600; }
+
+    /* Right panel — KPIs + species list */
+    .d-right { display: flex; flex-direction: column; gap: 1rem; min-height: 0; }
+    .d-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+    .d-kpi { background: var(--bg-card); border-radius: var(--radius); padding: 1rem; text-align: center; box-shadow: var(--shadow-card); }
+    .d-kpi-value { font-size: 2.2rem; font-weight: 700; font-family: var(--font-display); }
+    .d-kpi-label { font-size: .78rem; color: var(--text-muted); margin-top: .2rem; }
+
+    /* Recent species list */
+    .d-species { flex: 1; background: var(--bg-card); border-radius: var(--radius); padding: 1rem 1.2rem; box-shadow: var(--shadow-card); overflow-y: auto; min-height: 0; }
+    .d-species-title { font-size: .85rem; color: var(--text-muted); margin-bottom: .6rem; font-weight: 600; }
+    .d-sp-row { display: flex; align-items: center; gap: .8rem; padding: .5rem 0; border-bottom: 1px solid var(--border); }
+    .d-sp-row:last-child { border-bottom: none; }
+    .d-sp-photo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--bg-card2); flex-shrink: 0; }
+    .d-sp-name { flex: 1; font-size: .95rem; font-weight: 600; }
+    .d-sp-count { font-size: .85rem; color: var(--accent); font-weight: 700; }
+    .d-sp-time { font-size: .75rem; color: var(--text-faint); }
+
+    /* Footer */
+    .d-footer { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; color: var(--text-faint); }
+    .d-weather { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--text-muted); }
+    .d-weather-temp { font-size: 1.3rem; font-weight: 700; color: var(--text-main); }
+
+    /* New detection flash */
+    @keyframes flash { 0% { opacity: 1; } 50% { opacity: .5; } 100% { opacity: 1; } }
+    .d-flash { animation: flash .6s ease-in-out; }
+
+    /* Fullscreen button */
+    .d-fullscreen { position: fixed; top: .8rem; right: .8rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: .4rem .6rem; cursor: pointer; color: var(--text-muted); opacity: .5; transition: opacity .2s; z-index: 10; }
+    .d-fullscreen:hover { opacity: 1; }
+
+    @media (max-width: 768px) {
+      .d-main { grid-template-columns: 1fr; }
+      .d-time { font-size: 1.8rem; }
+      .d-last-name { font-size: 1.4rem; }
+      .d-kpi-value { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <button class="d-fullscreen" @click="toggleFullscreen" :title="t('display_fullscreen')">
+    <bird-icon name="maximize-2" :size="18"></bird-icon>
+  </button>
+
+  <div class="display">
+    <!-- Header: Brand + Clock -->
+    <div class="d-header">
+      <div class="d-brand">
+        <img src="img/robin-logo.svg" alt="BirdStation">
+        <div>
+          <div class="d-brand-name">{{brandName}}</div>
+          <div class="d-brand-sub">{{siteName}}</div>
+        </div>
+      </div>
+      <div class="d-clock">
+        <div class="d-time">{{clock}}</div>
+        <div class="d-date">{{dateStr}}</div>
+      </div>
+    </div>
+
+    <!-- Main: Last detection + KPIs -->
+    <div class="d-main">
+      <!-- Last detection — big card -->
+      <div class="d-last" :class="{'d-flash': flash}">
+        <div class="d-last-photo">
+          <img v-if="lastDet.photoUrl" :src="lastDet.photoUrl" :alt="lastDet.comName">
+          <bird-icon v-else name="bird" :size="80" style="opacity:.2;"></bird-icon>
+        </div>
+        <div class="d-last-name">{{spName(lastDet.comName, lastDet.sciName)}}</div>
+        <div class="d-last-sci">{{lastDet.sciName}}</div>
+        <div class="d-last-meta">
+          <span class="d-last-conf" :class="lastDet.conf >= 80 ? 'high' : lastDet.conf >= 60 ? 'mid' : 'low'">{{lastDet.conf}}%</span>
+          <span>{{lastDet.time}}</span>
+          <span v-if="lastDet.model" style="opacity:.6;">{{lastDet.model}}</span>
+          <span v-if="lastDet.fresh" class="d-last-fresh">{{t('display_just_now')}}</span>
+        </div>
+      </div>
+
+      <!-- Right: KPIs + Species list -->
+      <div class="d-right">
+        <div class="d-kpis">
+          <div class="d-kpi">
+            <div class="d-kpi-value" style="color:var(--accent);">{{kpis.species}}</div>
+            <div class="d-kpi-label">{{t('species')}}</div>
+          </div>
+          <div class="d-kpi">
+            <div class="d-kpi-value">{{kpis.detections}}</div>
+            <div class="d-kpi-label">{{t('detections')}}</div>
+          </div>
+          <div class="d-kpi">
+            <div class="d-kpi-value" style="color:var(--accent);">{{kpis.lastHour}}</div>
+            <div class="d-kpi-label">{{t('last_hour')}}</div>
+          </div>
+        </div>
+
+        <!-- Recent species today -->
+        <div class="d-species">
+          <div class="d-species-title">{{t('display_species_today')}}</div>
+          <div v-for="sp in recentSpecies" :key="sp.comName" class="d-sp-row">
+            <img class="d-sp-photo" :src="sp.photoUrl" :alt="sp.comName" onerror="this.style.display='none'">
+            <div class="d-sp-name">{{spName(sp.comName, sp.sciName)}}</div>
+            <div class="d-sp-count">{{sp.count}}</div>
+            <div class="d-sp-time">{{sp.lastTime}}</div>
+          </div>
+          <div v-if="!recentSpecies.length" style="text-align:center;padding:2rem;opacity:.3;">
+            <bird-icon name="bird" :size="48"></bird-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer: Weather + Version -->
+    <div class="d-footer">
+      <div class="d-weather" v-if="weather">
+        <bird-icon name="thermometer" :size="16"></bird-icon>
+        <span class="d-weather-temp">{{weather.temp}}°C</span>
+        <span>{{weather.precip}}mm</span>
+        <span>{{weather.wind}}km/h</span>
+      </div>
+      <div v-else></div>
+      <div>{{t('display_auto_refresh')}} · v{{appVersion}}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted, onUnmounted } = Vue;
+const { useI18n, useSpeciesNames, birdQuery, localDateStr, photoUrl } = BIRDASH;
+const Q = BIRDASH_QUERIES;
+
+const app = createApp({
+  setup() {
+    const { lang, t } = useI18n();
+    const { spName } = useSpeciesNames();
+    const API = BIRD_CONFIG.apiUrl;
+    const CONF = BIRD_CONFIG.defaultConfidence;
+    const today = localDateStr();
+
+    const brandName = ref(BIRD_CONFIG.siteBrand || 'BirdStation');
+    const siteName = ref(BIRD_CONFIG.siteName || '');
+    const appVersion = ref('');
+    try { appVersion.value = document.querySelector('.brand-version')?.textContent || ''; } catch {}
+
+    // Clock
+    const clock = ref('');
+    const dateStr = ref('');
+    function updateClock() {
+      const now = new Date();
+      clock.value = now.toLocaleTimeString(lang.value, { hour: '2-digit', minute: '2-digit' });
+      dateStr.value = now.toLocaleDateString(lang.value, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    updateClock();
+    const clockTimer = setInterval(updateClock, 10000);
+
+    // KPIs
+    const kpis = reactive({ species: '—', detections: '—', lastHour: '—' });
+    async function loadKpis() {
+      try {
+        const [td] = await birdQuery(
+          `SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp FROM active_detections WHERE Date=? AND Confidence>=?`,
+          [today, CONF]
+        );
+        kpis.species = td ? td.sp : 0;
+        kpis.detections = td ? td.det.toLocaleString() : '0';
+        const now = new Date();
+        const hh0 = String(new Date(now - 3600000).getHours()).padStart(2, '0');
+        const mm0 = String(new Date(now - 3600000).getMinutes()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const [lh] = await birdQuery(
+          `SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=? AND Confidence>=?`,
+          [today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`, CONF]
+        );
+        kpis.lastHour = lh ? lh.n : 0;
+      } catch (e) { console.error(e); }
+    }
+
+    // Last detection
+    const lastDet = reactive({ comName: '', sciName: '', conf: 0, time: '', model: '', photoUrl: null, fresh: false });
+    const flash = ref(false);
+    async function loadLastDet() {
+      try {
+        const [row] = await birdQuery(...Q.latestDetectionRaw());
+        if (!row) return;
+        const isNew = row.Com_Name !== lastDet.comName || row.Time !== lastDet.time;
+        lastDet.comName = row.Com_Name;
+        lastDet.sciName = row.Sci_Name;
+        lastDet.conf = Math.round(row.Confidence * 100);
+        lastDet.time = row.Time ? row.Time.substring(0, 5) : '';
+        lastDet.model = row.Model || '';
+        lastDet.photoUrl = row.Sci_Name ? photoUrl(row.Sci_Name) : null;
+        // Check freshness (< 2 min)
+        const now = new Date();
+        const detTime = row.Time ? row.Time.split(':') : [];
+        if (detTime.length >= 2) {
+          const mins = (now.getHours() * 60 + now.getMinutes()) - (parseInt(detTime[0]) * 60 + parseInt(detTime[1]));
+          lastDet.fresh = mins >= 0 && mins <= 2;
+        }
+        if (isNew) { flash.value = true; setTimeout(() => { flash.value = false; }, 700); }
+      } catch (e) { console.error(e); }
+    }
+
+    // Recent species today
+    const recentSpecies = ref([]);
+    async function loadRecentSpecies() {
+      try {
+        const rows = await birdQuery(
+          `SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n, MAX(Time) as last_time
+           FROM active_detections WHERE Date=? AND Confidence>=?
+           GROUP BY Com_Name ORDER BY last_time DESC LIMIT 12`,
+          [today, CONF]
+        );
+        recentSpecies.value = rows.map(r => ({
+          comName: r.Com_Name,
+          sciName: r.Sci_Name,
+          count: r.n,
+          lastTime: r.last_time ? r.last_time.substring(0, 5) : '',
+          photoUrl: r.Sci_Name ? photoUrl(r.Sci_Name) : '',
+        }));
+      } catch (e) { console.error(e); }
+    }
+
+    // Weather
+    const weather = ref(null);
+    async function loadWeather() {
+      try {
+        const r = await fetch(`${API}/weather?days=1`);
+        if (!r.ok) return;
+        const d = await r.json();
+        const daily = d.daily || {};
+        const tMax = (daily.temperature_2m_max || [])[0];
+        const tMin = (daily.temperature_2m_min || [])[0];
+        if (tMax != null && tMin != null) {
+          weather.value = {
+            temp: Math.round((tMax + tMin) / 2),
+            precip: Math.round((daily.precipitation_sum || [])[0] || 0),
+            wind: Math.round((daily.windspeed_10m_max || [])[0] || 0),
+          };
+        }
+      } catch {}
+    }
+
+    // Version
+    fetch(`${API}/update-status`).then(r => r.json()).then(d => {
+      appVersion.value = d.currentVersion || d.currentShort || '';
+    }).catch(() => {});
+
+    // Auto-refresh every 30s
+    function refreshAll() { loadKpis(); loadLastDet(); loadRecentSpecies(); }
+    onMounted(() => {
+      refreshAll();
+      loadWeather();
+    });
+    const refreshTimer = setInterval(refreshAll, 30000);
+    const weatherTimer = setInterval(loadWeather, 10 * 60 * 1000);
+
+    onUnmounted(() => {
+      clearInterval(clockTimer);
+      clearInterval(refreshTimer);
+      clearInterval(weatherTimer);
+    });
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    return {
+      t, spName, lang, brandName, siteName, appVersion,
+      clock, dateStr, kpis, lastDet, flash, recentSpecies, weather,
+      toggleFullscreen,
+    };
+  }
+});
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
+</script>
+</body>
+</html>

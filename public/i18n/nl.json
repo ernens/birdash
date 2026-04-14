@@ -1290,5 +1290,9 @@
   "set_network_join": "Deelnemen aan het netwerk",
   "set_network_joining": "Verbinden...",
   "set_network_disable": "Netwerk verlaten",
-  "set_network_map": "Kaart bekijken"
+  "set_network_map": "Kaart bekijken",
+  "display_fullscreen": "Volledig scherm",
+  "display_just_now": "Zojuist",
+  "display_species_today": "Vandaag gedetecteerde soorten",
+  "display_auto_refresh": "Auto-vernieuwen 30s"
 }

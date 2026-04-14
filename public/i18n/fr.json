@@ -1290,5 +1290,9 @@
   "set_network_join": "Rejoindre le réseau",
   "set_network_joining": "Connexion...",
   "set_network_disable": "Quitter le réseau",
-  "set_network_map": "Voir la carte"
+  "set_network_map": "Voir la carte",
+  "display_fullscreen": "Plein écran",
+  "display_just_now": "À l'instant",
+  "display_species_today": "Espèces détectées aujourd'hui",
+  "display_auto_refresh": "Rafraîchissement auto 30s"
 }
