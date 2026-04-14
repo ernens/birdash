@@ -67,7 +67,6 @@ const BIRD_CONFIG = {
     { section: 'nav_sec_species', icon: 'bird', items: [
       { id: 'species',      icon: 'search', file: 'species.html'      },
       { id: 'rarities',     icon: 'gem', file: 'rarities.html'     },
-      { id: 'gallery',      icon: 'trophy', file: 'gallery.html'      },
       { id: 'recordings',   icon: 'music', file: 'recordings.html'   },
       { id: 'favorites',    icon: 'star', file: 'favorites.html'    },
     ]},

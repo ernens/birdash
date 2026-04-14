@@ -22,17 +22,50 @@
 </head>
 <body>
 <div id="app">
-  <birdash-shell page="gallery" :title="t('nav_gallery')">
+  <birdash-shell page="recordings" :title="t('nav_recordings')">
 
-    <!-- ── Tab switcher ────────────────────────────────────────────── -->
+    <!-- ── Tab switcher (in-page, no page reload) ──────────────────── -->
     <div class="gallery-tabs">
-      <a href="gallery.html" class="gallery-tab" @mouseenter="$el.querySelector&&!document.querySelector('link[href*=gallery]')&&document.head.appendChild(Object.assign(document.createElement('link'),{rel:'prefetch',href:'gallery.html'}))"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('gallery_tab_best')}}</a>
-      <a href="recordings.html" class="gallery-tab active"><bird-icon name="headphones" :size="14" ></bird-icon> {{t('gallery_tab_library')}}</a>
+      <button class="gallery-tab" :class="{active: viewTab==='library'}" @click="viewTab='library'">
+        <bird-icon name="headphones" :size="14"></bird-icon> {{t('gallery_tab_library')}}
+      </button>
+      <button class="gallery-tab" :class="{active: viewTab==='best'}" @click="viewTab='best'">
+        <bird-icon name="trophy" :size="14"></bird-icon> {{t('gallery_tab_best')}}
+      </button>
     </div>
 
-    <!-- ── Titre + tri global ────────────────────────────────────── -->
+    <!-- ══ BEST VIEW (grouped by species, top 3 per species) ═══════ -->
+    <div v-if="viewTab==='best'">
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="trophy" :size="14"></bird-icon> {{t('gallery_tab_best')}}</h2>
+        <span style="font-size:.78rem;color:var(--text-faint);">{{bestBySpecies.length}} {{t('species').toLowerCase()}}</span>
+      </div>
+      <div v-if="loading" style="text-align:center;padding:3rem;"><div class="spinner"><div></div><div></div><div></div></div></div>
+      <div v-else-if="!bestBySpecies.length" class="hint-empty"><bird-icon name="music" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
+      <div v-else style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
+        <div v-for="group in bestBySpecies" :key="group.name" class="card" style="padding:.8rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+            <bird-img :src="group.imgUrl" :alt="group.name" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;"></bird-img>
+            <div style="flex:1;min-width:0;">
+              <a :href="'species.html?species='+encodeURIComponent(group.name)" style="font-size:.88rem;font-weight:600;text-decoration:none;color:var(--text-main);">{{spName(group.name, group.sci)}}</a>
+              <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{group.sci}}</div>
+            </div>
+            <span style="font-size:.72rem;color:var(--accent);font-weight:600;">{{group.dets.length}} det.</span>
+          </div>
+          <div v-for="rec in group.dets" :key="rec.uid" style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-top:1px solid var(--border);">
+            <button class="play-btn" style="width:28px;height:28px;font-size:.6rem;" @click="togglePlay(rec)">{{playingUid===rec.uid?'⏹':'▶'}}</button>
+            <span :class="'conf-badge '+(rec.conf>=80?'conf-high':rec.conf>=60?'conf-mid':'conf-low')" style="font-size:.72rem;">{{rec.conf.toFixed(1)}}%</span>
+            <span style="font-size:.72rem;color:var(--text-muted);flex:1;">{{rec.Date}} {{rec.Time.substring(0,5)}}</span>
+            <button class="dl-btn" @click="openSpectroModal({fileName:rec.File_Name,speciesName:rec.Com_Name,sciName:rec.Sci_Name,confidence:rec.Confidence,date:rec.Date,time:rec.Time})" title="Spectrogramme"><bird-icon name="maximize-2" :size="13"></bird-icon></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ LIBRARY VIEW (all recordings, sortable, filterable) ═══ -->
+    <div v-if="viewTab==='library'">
     <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="trophy" :size="14" ></bird-icon> {{t('best_recordings')}}</h2>
+      <h2 style="margin:0;font-size:1.1rem;"><bird-icon name="headphones" :size="14"></bird-icon> {{t('gallery_tab_library')}}</h2>
       <div class="filter-sort" style="margin-left:auto;">
         <label>{{t('sort_by')}}</label>
         <select class="bird-select" v-model="sortBy" style="padding:.3rem .6rem;font-size:.78rem;">
@@ -274,6 +307,7 @@
       </div>
 
     </div><!-- /rec-layout -->
+    </div><!-- /library view -->
   </birdash-shell>
 </div>
 
@@ -789,8 +823,22 @@ const app = createApp({
       });
     }
 
+    const viewTab = ref('library');
+
+    // "Best" view: group by species, top 3 detections by confidence
+    const bestBySpecies = computed(() => {
+      const groups = {};
+      for (const r of filteredRecs.value) {
+        if (!groups[r.Com_Name]) groups[r.Com_Name] = { name: r.Com_Name, sci: r.Sci_Name, imgUrl: r.imgUrl, dets: [] };
+        groups[r.Com_Name].dets.push(r);
+      }
+      return Object.values(groups)
+        .map(g => ({ ...g, dets: g.dets.sort((a, b) => b.Confidence - a.Confidence).slice(0, 3) }))
+        .sort((a, b) => b.dets[0].Confidence - a.dets[0].Confidence);
+    });
+
     return {
-      lang, t, spName,
+      lang, t, spName, viewTab, bestBySpecies,
       // Filter composables (exposed as objects for template)
       fp, fc, fs,
       allRecs, availableSpecies,
