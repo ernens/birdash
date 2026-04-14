@@ -26,8 +26,7 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
         │                 │  │    ├─ BirdNET V2.4  (~2s/file)      │   │
         │                 │  │    ├─ Perch V2 FP16 (~2s/file)      │   │
         │                 │  │    ├─ MP3 extraction + spectrograms │   │
-        │                 │  │    ├─ BirdWeather upload             │   │
-        │                 │  │    └─ ntfy.sh notifications          │   │
+        │                 │  │    └─ BirdWeather upload             │   │
         │                 │  └──────────────┬───────────────────────┘   │
         │                 │                 │ INSERT INTO detections    │
         │                 │                 ▼                           │
@@ -42,7 +41,8 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
         │                 │  ┌──────────────────────────────────────┐   │
         │  PCM/MP3 stream │  │       Birdash (Node.js :7474)       │   │
         │  ◄──────────────│──│  HTTP API, SSE, worker threads      │   │
-        │                 │  │  15 route modules, 11 lib modules   │   │
+        │                 │  │  Notification watcher → Apprise     │   │
+        │                 │  │  15 route modules, 12 lib modules   │   │
         │                 │  └──────────────┬───────────────────────┘   │
         │                 │                 │                           │
         │                 │  ┌──────────────┴───────────────────────┐   │
@@ -193,7 +193,32 @@ Audio is split into 3-second overlapping chunks (`split_signal`) before inferenc
 - Spectrogram PNG generation
 - SQLite INSERT of detections
 - BirdWeather upload (if configured)
-- ntfy.sh notifications for rare/new/favorite species
+
+> **Note:** Notifications are no longer in the engine. They are handled by the Node.js notification watcher (see below).
+
+---
+
+### Push Notifications (notification-watcher.js)
+
+File: `server/lib/notification-watcher.js`
+
+Polls the detections DB every 30 seconds and sends push notifications via **Apprise** (100+ services: ntfy, Telegram, Discord, Slack, email, etc.) with species photo attached.
+
+**5 configurable rules** (same toggles in Settings → Notifications):
+
+| Rule | Trigger | Priority |
+|------|---------|----------|
+| Rare species | Total count ≤ threshold | High |
+| First of season | Absent ≥ N days | High |
+| New species ever | First all-time detection | Urgent |
+| First of the day | Each new species today | Low |
+| Favorite species | Favorite detected (first of day) | Normal |
+
+- 5-minute cooldown per species
+- Species count + last-seen cache loaded from DB at startup
+- Favorites loaded from birdash.db
+- Species photo downloaded from `/api/photo` and attached via `--attach`
+- Reads config from birdnet.conf (same toggles as UI)
 
 ---
 
@@ -254,6 +279,7 @@ Directory: `server/lib/`
 | `db.js` | Database bootstrap: opens `birds.db` (read + write connections), `birdash.db`, `taxonomy.db`. Creates tables, indexes, views. Exports all DB handles. |
 | `ebird-frequency.js` | eBird regional frequency data for rarity determination. Replaces naive "3 local observations" heuristic. |
 | `local-date.js` | Locale-aware date string helper (`localDateStr()`). Used by aggregates for timezone-correct "today". |
+| `notification-watcher.js` | Polls detections DB every 30s, applies 5 notification rules, sends via Apprise with species photo. Replaces engine-side ntfy.sh. |
 | `result-cache.js` | In-memory TTL cache for expensive GET endpoints. `get(key)`, `set(key, data, ttl)`, `clearAll()` on any mutation. |
 | `safe-config.js` | Mutex-protected read-modify-write for config files. Per-file Promise-chain locking, deep clone before mutation, validation, atomic write (tmp + rename). ETag support for optimistic concurrency (409 Conflict). |
 | `telemetry.js` | Supabase telemetry: station registration (UUID, GPS, hardware), daily reports (top species, rare species), 6-hour heartbeat cycle. |

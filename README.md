@@ -104,13 +104,12 @@ Raspberry Pi 5 + SSD
 │   ├── BirdNET V2.4    (~2s/file, primary)
 │   ├── Perch V2 FP16   (~2s/file, secondary)
 │   ├── MP3 extraction + spectrograms
-│   ├── BirdWeather upload
-│   └── Smart notifications (ntfy.sh)
+│   └── BirdWeather upload
 │
 ├── Birdash (Node.js)
 │   ├── Dashboard API (port 7474)
 │   ├── Live spectrogram (PCM + MP3 stream)
-│   ├── Audio config module
+│   ├── Push notifications via Apprise (100+ services)
 │   ├── Detection review + auto-flagging
 │   ├── Telemetry (opt-in Supabase)
 │   └── In-app bug reporting (GitHub Issues)
@@ -128,7 +127,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Adaptive noise normalization** — automatic software gain based on ambient noise, with clip guard, activity hold, and observer mode
 - <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Audio filters** — configurable highpass + lowpass (bandpass), spectral noise reduction (stationary gating), RMS normalization
 - <img src="docs/icons/radio.svg" width="16" align="top" alt=""> **BirdWeather** — automatic upload of soundscapes + detections
-- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart notifications** — ntfy.sh alerts for rare species, first-of-season, new species, favorites (not every sparrow)
+- <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart push notifications** — via Apprise (ntfy, Telegram, Discord, Slack, email, 100+ services) with species photo attached. 5 configurable rules: rare species, first-of-season, new species, first-of-day, favorites
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
 ### Dashboard (19 pages)
@@ -348,10 +347,11 @@ birdash/
 ├── server/
 │   ├── server.js                  # HTTP server, middleware, route delegations (271 lines)
 │   ├── lib/
-│   │   ├── alerts.js              # Alert monitoring system
+│   │   ├── alerts.js              # System alert monitoring (temp, disk, RAM)
 │   │   ├── config.js              # BirdNET config, settings validators, exec helper
 │   │   ├── db.js                  # Database bootstrap, tables, taxonomy
-│   │   ├── telemetry.js           # Telemetry helpers (Supabase)
+│   │   ├── notification-watcher.js # Push notifications (polls DB, sends via Apprise)
+│   │   ├── telemetry.js           # Community telemetry (Supabase)
 │   │   └── whats-new-worker.js    # Worker thread for heavy computation
 │   └── routes/
 │       ├── audio.js               # Audio devices, adaptive gain, streaming

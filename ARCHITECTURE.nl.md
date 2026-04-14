@@ -19,11 +19,12 @@ Raspberry Pi 5 + SSD
 │   ├── BirdNET V2.4 (primair, ~2s/bestand)
 │   ├── Perch V2 FP16 (secundair, ~2s/bestand)
 │   ├── MP3-extractie + spectrogrammen
-│   └── Slimme meldingen (ntfy.sh)
+│   └── BirdWeather-upload
 │
 ├── Birdash (Node.js)
 │   ├── Dashboard-API (poort 7474)
 │   ├── Live spectrogram (PCM + MP3-stream)
+│   ├── Pushmeldingen via Apprise (100+ diensten)
 │   ├── Worker-thread voor What's New (niet-blokkerend)
 │   ├── Community-telemetrie (Supabase, opt-in)
 │   └── Bugrapportage (GitHub Issues)
