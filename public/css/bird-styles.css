@@ -619,6 +619,14 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { opacity: .85; }
 
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.hint-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .75rem; padding: 3rem 1rem; color: var(--text-faint); text-align: center;
+  font-size: .85rem;
+}
+.hint-empty .bird-icon-wrap { opacity: .35; }
+
 /* ── Form elements — theme-aware ─────────────────────────────────────────── */
 input[type="checkbox"],
 input[type="radio"] {
@@ -631,6 +639,20 @@ select, input[type="text"], input[type="number"], textarea {
 [data-theme="sepia"] select,   [data-theme="sepia"] input[type="text"],   [data-theme="sepia"] input[type="number"],   [data-theme="sepia"] textarea,
 [data-theme="solar-light"] select, [data-theme="solar-light"] input[type="text"], [data-theme="solar-light"] input[type="number"], [data-theme="solar-light"] textarea {
   color-scheme: light;
+}
+
+/* ── Modal overlay base ──────────────────────────────────────────────────── */
+/* Single source of truth for all modal/popup/dialog overlays.              */
+/* Specific modals add only what differs (z-index, blur, max-width).        */
+.spectro-modal-overlay,
+.update-modal-backdrop,
+.share-modal-backdrop,
+.tl-popup-overlay,
+.sp-modal-overlay {
+  position: fixed; inset: 0;
+  background: var(--overlay-scrim);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -1803,10 +1825,7 @@ select, input[type="text"], input[type="number"], textarea {
    SPECTROGRAM MODAL
    ══════════════════════════════════════════════════════════════════════════════ */
 .spectro-modal-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  background: var(--overlay-scrim); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
+  z-index: 9999; backdrop-filter: blur(4px);
 }
 .spectro-modal {
   background: var(--bg-card); border-radius: var(--radius);
@@ -2377,8 +2396,7 @@ select, input[type="text"], input[type="number"], textarea {
 
 /* Popup overlay */
 .tl-popup-overlay {
-  position:fixed; inset:0; background:var(--overlay-scrim); z-index:100;
-  display:flex; align-items:center; justify-content:center;
+  z-index: 100;
 }
 .tl-popup {
   background:var(--bg-card); border:1px solid var(--border);
@@ -2474,10 +2492,7 @@ select, input[type="text"], input[type="number"], textarea {
 
 /* ── Update available button + modal ──────────────────────────────────── */
 .update-modal-backdrop {
-  position: fixed; inset: 0; z-index: 1000;
-  background: var(--overlay-scrim); backdrop-filter: blur(3px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
+  z-index: 1000; backdrop-filter: blur(3px);
   animation: fadeIn .2s ease-out;
 }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -2663,9 +2678,6 @@ select, input[type="text"], input[type="number"], textarea {
 
 /* ── Share modal (species.html) ──────────────────────────────────── */
 .share-modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: center;
   z-index: 1000;
   animation: share-fade-in .15s ease-out;
 }

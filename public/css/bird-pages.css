@@ -230,13 +230,6 @@
       gap: .6rem; margin-bottom: 1rem;
     }
 
-    /* ── Hint vide ──────────────────────────────────────────────────── */
-    .hint-empty {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: .75rem; padding: 3rem 1rem; color: var(--text-faint); text-align: center;
-    }
-    .hint-empty .hint-icon { font-size: 3rem; opacity: .4; }
-
 /* ── recent.html ─────────────────────────────────────────────────────── */
 
     /* ── Panneau nouvelles espèces ─────────────────────────────────── */
@@ -388,13 +381,6 @@
       grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: .6rem; margin-bottom: 1rem;
     }
-
-    /* ── Hint vide ──────────────────────────────────────────────────── */
-    .hint-empty {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: .75rem; padding: 3rem 1rem; color: var(--text-faint); text-align: center;
-    }
-    .hint-empty .hint-icon { font-size: 3rem; opacity: .4; }
 
     /* ── Navigation de date ─────────────────────────────────────────── */
     .date-nav {
@@ -1195,9 +1181,7 @@
     .sp-danger-btn:hover { opacity:.9; }
     .sp-danger-btn:disabled { opacity:.4; cursor:not-allowed; }
     .sp-modal-overlay {
-      position:fixed; inset:0; z-index:1000;
-      background:var(--overlay-scrim); display:flex;
-      align-items:center; justify-content:center; padding:1rem;
+      z-index: 1000;
     }
     .sp-modal {
       background:var(--bg-card); border:1px solid var(--border);
