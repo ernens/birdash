@@ -518,218 +518,10 @@ def write_detection(conn, det):
     return True
 
 
-# ---------------------------------------------------------------------------
-# Notifications
-# ---------------------------------------------------------------------------
 
-class Notifier:
-    """Smart push notifications via ntfy.sh — reads rules from birdnet.conf."""
-
-    # Notification message translations
-    NOTIF_I18N = {
-        "fr": {
-            "rare": lambda n: f"Espèce rare ({n} détection{'s' if n > 1 else ''} au total)",
-            "season": lambda d: f"Première de saison (absente depuis {d} jours)",
-            "new": "Nouvelle espèce — jamais détectée",
-            "daily": "Première du jour",
-            "favorite": "Favori détecté — première du jour",
-            "conf": "Confiance",
-        },
-        "en": {
-            "rare": lambda n: f"Rare species ({n} detection{'s' if n > 1 else ''} total)",
-            "season": lambda d: f"First of season (absent for {d} days)",
-            "new": "New species — never detected before",
-            "daily": "First of the day",
-            "favorite": "Favorite detected — first of the day",
-            "conf": "Confidence",
-        },
-        "de": {
-            "rare": lambda n: f"Seltene Art ({n} Erkennung{'en' if n > 1 else ''} insgesamt)",
-            "season": lambda d: f"Erste der Saison (seit {d} Tagen abwesend)",
-            "new": "Neue Art — noch nie erkannt",
-            "daily": "Erste des Tages",
-            "favorite": "Favorit erkannt — erste des Tages",
-            "conf": "Konfidenz",
-        },
-        "nl": {
-            "rare": lambda n: f"Zeldzame soort ({n} detectie{'s' if n > 1 else ''} totaal)",
-            "season": lambda d: f"Eerste van het seizoen ({d} dagen afwezig)",
-            "new": "Nieuwe soort — nooit eerder gedetecteerd",
-            "daily": "Eerste van de dag",
-            "favorite": "Favoriet gedetecteerd — eerste van de dag",
-            "conf": "Betrouwbaarheid",
-        },
-    }
-
-    def __init__(self, config, db_path=None):
-        notif = config.get("notifications", {})
-        self.ntfy_url = notif.get("ntfy_url", "")
-        self.cooldown = notif.get("cooldown_seconds", 300)
-        self.lang = config.get("station", {}).get("language", "fr")[:2]
-        self.db_path = db_path
-        self._species_today = set()
-        self._last_notif = {}
-        self._today = None
-        self._species_counts = {}  # sci_name -> total count (cached)
-        self._species_last_seen = {}  # sci_name -> last date (cached)
-        self._cache_loaded = False
-
-    def _load_species_cache(self):
-        """Load species counts and last-seen dates from DB."""
-        if self._cache_loaded or not self.db_path:
-            return
-        try:
-            import sqlite3
-            conn = sqlite3.connect(self.db_path)
-            # Total counts per species
-            for row in conn.execute("SELECT Sci_Name, COUNT(*) FROM detections GROUP BY Sci_Name"):
-                self._species_counts[row[0]] = row[1]
-            # Last seen date per species
-            for row in conn.execute("SELECT Sci_Name, MAX(Date) FROM detections GROUP BY Sci_Name"):
-                self._species_last_seen[row[0]] = row[1]
-            conn.close()
-            self._cache_loaded = True
-            log.info("Notifier: loaded %d species from DB", len(self._species_counts))
-        except Exception as e:
-            log.warning("Notifier cache load failed: %s", e)
-
-    def _load_favorites(self):
-        """Load favorite species from birdash.db."""
-        try:
-            import sqlite3
-            birdash_db = os.path.join(os.path.dirname(self.db_path or ""), "..", "birdash.db")
-            if not os.path.exists(birdash_db):
-                birdash_db = os.path.expanduser("~/birdash/birdash.db")
-            if os.path.exists(birdash_db):
-                conn = sqlite3.connect(birdash_db)
-                rows = conn.execute("SELECT com_name FROM favorites").fetchall()
-                conn.close()
-                return {r[0] for r in rows}
-        except Exception as e:
-            log.warning("Notifier: failed to load favorites: %s", e)
-        return set()
-
-    def _read_notif_conf(self):
-        """Read notification settings from birdnet.conf (cached 60s)."""
-        now = time.time()
-        if hasattr(self, '_notif_conf_cache') and now - self._notif_conf_ts < 60:
-            return self._notif_conf_cache
-        conf = {}
-        try:
-            with open("/etc/birdnet/birdnet.conf") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        k, v = line.split("=", 1)
-                        conf[k] = v.strip('"')
-        except Exception:
-            pass
-        self._notif_conf_cache = conf
-        self._notif_conf_ts = now
-        return conf
-
-    def check_and_notify(self, det):
-        """Check notification rules and send if matched."""
-        if not self.ntfy_url:
-            return
-
-        bconf = self._read_notif_conf()
-
-        # Global toggle
-        if bconf.get("NOTIFY_ENABLED", "1") != "1":
-            return
-
-        self._load_species_cache()
-
-        today = det["date"]
-        if self._today != today:
-            self._species_today.clear()
-            self._last_notif.clear()
-            self._today = today
-
-        sci_name = det["sci_name"]
-        com_name = det["com_name"]
-        is_new_today = sci_name not in self._species_today
-        self._species_today.add(sci_name)
-
-        # Update cache
-        self._species_counts[sci_name] = self._species_counts.get(sci_name, 0) + 1
-
-        # Determine which rules match
-        reason = None
-        priority = "default"
-
-        total_count = self._species_counts.get(sci_name, 1)
-        rare_threshold = int(bconf.get("NOTIFY_RARE_THRESHOLD", "10"))
-        season_days = int(bconf.get("NOTIFY_SEASON_DAYS", "30"))
-        last_seen = self._species_last_seen.get(sci_name)
-
-        msgs = self.NOTIF_I18N.get(self.lang, self.NOTIF_I18N["en"])
-
-        # Rule 1: Rare species (highest priority)
-        if bconf.get("NOTIFY_RARE_SPECIES", "0") == "1" and total_count <= rare_threshold:
-            reason = msgs["rare"](total_count)
-            priority = "high"
-
-        # Rule 2: First of season (not seen in X days)
-        elif bconf.get("NOTIFY_FIRST_SEASON", "0") == "1" and is_new_today and last_seen:
-            try:
-                last_dt = datetime.datetime.strptime(last_seen, "%Y-%m-%d")
-                today_dt = datetime.datetime.strptime(today, "%Y-%m-%d")
-                days_absent = (today_dt - last_dt).days
-                if days_absent >= season_days:
-                    reason = msgs["season"](days_absent)
-                    priority = "high"
-            except Exception:
-                pass
-
-        # Rule 3: New species ever
-        elif bconf.get("APPRISE_NOTIFY_NEW_SPECIES", "0") == "1" and total_count == 1:
-            reason = msgs["new"]
-            priority = "urgent"
-
-        # Rule 4: First of the day (noisy)
-        elif bconf.get("APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY", "0") == "1" and is_new_today:
-            reason = msgs["daily"]
-            priority = "low"
-
-        # Rule 5: Favorite species (first detection of the day)
-        if not reason and bconf.get("NOTIFY_FAVORITES", "0") == "1" and is_new_today:
-            favs = self._load_favorites()
-            if com_name in favs:
-                reason = msgs.get("favorite", msgs["daily"])
-                priority = "default"
-
-        if not reason:
-            return
-
-        # Cooldown
-        now = time.time()
-        last = self._last_notif.get(sci_name, 0)
-        if now - last < self.cooldown:
-            return
-        self._last_notif[sci_name] = now
-
-        # Update last seen
-        self._species_last_seen[sci_name] = today
-
-        confidence = det["confidence"]
-        model = det["model"]
-        title = f"{com_name} — {reason}"
-        body = f"{com_name} ({sci_name})\n{msgs['conf']}: {confidence*100:.0f}% — {model}"
-
-        try:
-            import urllib.request
-            req = urllib.request.Request(
-                self.ntfy_url,
-                data=body.encode("utf-8"),
-                headers={"Title": title, "Priority": priority},
-                method="POST"
-            )
-            urllib.request.urlopen(req, timeout=10)
-            log.info("Notification [%s]: %s — %s", priority, com_name, reason)
-        except Exception as e:
-            log.warning("Notification failed: %s", e)
+# Notifications are now handled by the birdash Node.js notification-watcher
+# (server/lib/notification-watcher.js) which polls the DB and sends via Apprise.
+# The engine no longer sends notifications directly.
 
 
 # ---------------------------------------------------------------------------
@@ -1006,9 +798,6 @@ class BirdEngine:
         self.db = init_db(db_path)
         log.info("Database: %s", db_path)
 
-        # Notifications
-        self.notifier = Notifier(self.config, db_path=self.config["output"]["local_db"])
-
         # Stats
         self.files_processed = 0
         self.detections_total = 0
@@ -1126,7 +915,7 @@ class BirdEngine:
                          len(dets), elapsed)
                 # Post-processing for secondary model
                 if dets:
-                    def _sec_post(detections, fpath, cfg, notifier):
+                    def _sec_post(detections, fpath, cfg):
                         try:
                             for d in detections:
                                 extract_clip(fpath, d, cfg)
@@ -1135,7 +924,7 @@ class BirdEngine:
                             log.warning("[%s] Post-processing error: %s",
                                         self.secondary_model.name, e)
                     t = threading.Thread(target=_sec_post,
-                                         args=(dets, file_path, self.config, self.notifier),
+                                         args=(dets, file_path, self.config),
                                          daemon=True)
                     t.start()
             except Exception as e:
@@ -1218,18 +1007,16 @@ class BirdEngine:
 
             # Post-processing in background thread (uses dest path, after file move)
             if detections:
-                def _post_process(dets, fpath, cfg, notifier):
+                def _post_process(dets, fpath, cfg):
                     try:
                         for d in dets:
                             extract_clip(fpath, d, cfg)
-                        for d in dets:
-                            notifier.check_and_notify(d)
                         upload_to_birdweather(fpath, dets, cfg)
                     except Exception as e:
                         log.warning("Post-processing error: %s", e)
 
                 t = threading.Thread(target=_post_process,
-                                     args=(detections, dest, self.config, self.notifier),
+                                     args=(detections, dest, self.config),
                                      daemon=True)
                 t.start()
                 self._post_threads = [pt for pt in self._post_threads if pt.is_alive()]
