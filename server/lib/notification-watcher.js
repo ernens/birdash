@@ -96,8 +96,34 @@ function _loadFavorites() {
   }
 }
 
+// ── Download species photo to temp file ───────────────────────────────────
+const https = require('https');
+const http = require('http');
+
+function _downloadPhoto(sciName) {
+  return new Promise((resolve) => {
+    const tmpPath = `/tmp/birdash_notif_${Date.now()}.jpg`;
+    const url = `http://127.0.0.1:7474/api/photo?sci=${encodeURIComponent(sciName)}`;
+    const req = http.get(url, { timeout: 5000 }, (res) => {
+      if (res.statusCode !== 200) { resolve(null); return; }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const buf = Buffer.concat(chunks);
+          if (buf.length < 1000) { resolve(null); return; } // too small = error page
+          fs.writeFileSync(tmpPath, buf);
+          resolve(tmpPath);
+        } catch { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+  });
+}
+
 // ── Apprise sender ────────────────────────────────────────────────────────
-function _sendApprise(title, body) {
+function _sendApprise(title, body, photoPath) {
   return new Promise((resolve) => {
     // Check apprise.txt exists and has content
     try {
@@ -111,12 +137,17 @@ function _sendApprise(title, body) {
     ];
     const appriseBin = apprisePaths.find(p => fs.existsSync(p)) || 'apprise';
 
-    execFile(appriseBin, ['-t', title, '-b', body, '--config=' + APPRISE_CONFIG],
-      { timeout: 15000 }, (err) => {
-        if (err) console.error('[notif-watcher] Apprise error:', err.message);
-        else console.log(`[notif-watcher] Sent: ${title}`);
-        resolve();
-      });
+    const args = ['-t', title, '-b', body];
+    if (photoPath && fs.existsSync(photoPath)) args.push('--attach=' + photoPath);
+    args.push('--config=' + APPRISE_CONFIG);
+
+    execFile(appriseBin, args, { timeout: 20000 }, (err) => {
+      if (err) console.error('[notif-watcher] Apprise error:', err.message);
+      else console.log(`[notif-watcher] Sent: ${title}`);
+      // Clean up temp photo
+      if (photoPath) try { fs.unlinkSync(photoPath); } catch {}
+      resolve();
+    });
   });
 }
 
@@ -229,8 +260,10 @@ async function _poll() {
     const title = `${com} — ${reason}`;
     const body = `${com} (${sci})\n${msgs.conf}: ${Math.round(det.Confidence * 100)}% — ${det.Model || ''}`;
 
-    // Send async (don't block poll loop)
-    _sendApprise(title, body).catch(() => {});
+    // Download species photo + send async (don't block poll loop)
+    _downloadPhoto(sci).then(photoPath => {
+      _sendApprise(title, body, photoPath).catch(() => {});
+    });
   }
 }
 
