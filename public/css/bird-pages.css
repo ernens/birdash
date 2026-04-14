@@ -432,14 +432,6 @@
       -webkit-appearance:none; width:14px; height:14px;
       border-radius:50%; background:var(--accent); cursor:pointer;
     }
-    /* ── Download btn ─────────────────────────────────────────────────── */
-    .dl-btn {
-      font-size:.8rem; padding:.22rem .5rem; border-radius:5px;
-      border:1px solid var(--border); background:transparent;
-      color:var(--text-muted); text-decoration:none;
-      display:inline-flex; align-items:center; transition:all .1s; flex-shrink:0;
-    }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
     /* ── Graphique horaire ────────────────────────────────────────────── */
     .hourly-chart-wrap { height: 80px; }
 
@@ -475,8 +467,6 @@
     .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; }
     .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; }
     .det-count-badge { font-size:.65rem; font-family:monospace; font-weight:700; background:var(--bg-card2); color:var(--text-muted); padding:.1rem .35rem; border-radius:10px; margin-left:.4rem; }
-    .dl-btn { font-size:.75rem; padding:.2rem .45rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
 
     /* ── Multi-select espèces ─────────────────────────────────────── */
     .ms-wrap { position:relative; }
@@ -822,9 +812,6 @@
     /* Miniatures */
     .det-thumb { width:36px; height:36px; border-radius:5px; object-fit:cover; background:var(--bg-deep); display:block; flex-shrink:0; }
     .det-thumb-ph { width:36px; height:36px; border-radius:5px; background:var(--bg-card2); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
-    /* Download */
-    .dl-btn { font-size:.75rem; padding:.22rem .5rem; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; transition:all .1s; }
-    .dl-btn:hover { border-color:var(--accent); color:var(--accent); }
     /* Threshold select */
     .fp-select { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.35rem .5rem; font-size:.8rem; }
 
