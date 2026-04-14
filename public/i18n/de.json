@@ -235,6 +235,7 @@
   "filter_confidence": "Min. Konfidenz",
   "all_species": "Alle Arten",
   "apply_filter": "Anwenden",
+  "refresh": "Aktualisieren",
   "reset_filter": "Zurücksetzen",
   "default_btn": "Standard",
   "prev_page": "← Zurück",

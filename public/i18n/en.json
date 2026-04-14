@@ -235,6 +235,7 @@
   "filter_confidence": "Min. confidence",
   "all_species": "All species",
   "apply_filter": "Apply",
+  "refresh": "Refresh",
   "reset_filter": "Reset",
   "default_btn": "Default",
   "prev_page": "← Previous",
