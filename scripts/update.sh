@@ -141,12 +141,15 @@ needs_npm=0
 needs_birdash=0
 needs_birdengine=0
 
+needs_pip=0
+
 while IFS= read -r f; do
     case "$f" in
-        package.json|package-lock.json) needs_npm=1; needs_birdash=1 ;;
-        server/*|server.js)             needs_birdash=1 ;;
+        package.json|package-lock.json)     needs_npm=1; needs_birdash=1 ;;
+        server/*|server.js)                 needs_birdash=1 ;;
         engine/*.py|engine/*.toml|engine/*.sh) needs_birdengine=1 ;;
-        public/*|*.html|*.css|*.js)     ;;  # static, browser reload picks up
+        engine/requirements.txt)            needs_pip=1; needs_birdengine=1 ;;
+        public/*|*.html|*.css|*.js)         ;;  # static, browser reload picks up
     esac
 done <<< "$CHANGED"
 
@@ -154,6 +157,25 @@ done <<< "$CHANGED"
 if [ "$needs_npm" = "1" ]; then
     info "Installing Node dependencies..."
     npm install --omit=dev --silent || warn "npm install failed (non-fatal)"
+fi
+
+# ── 4a. Python dependencies if requirements.txt changed ───────────────────
+if [ "$needs_pip" = "1" ]; then
+    info "Syncing Python dependencies..."
+    if [ -f "$BIRDASH_DIR/engine/venv/bin/pip" ]; then
+        VENV="$BIRDASH_DIR/engine/venv"
+    elif [ -f "$HOME/birdengine/venv/bin/pip" ]; then
+        VENV="$HOME/birdengine/venv"
+    else
+        VENV=""
+    fi
+    if [ -n "$VENV" ] && [ -f "$BIRDASH_DIR/engine/requirements.txt" ]; then
+        "$VENV/bin/pip" install -r "$BIRDASH_DIR/engine/requirements.txt" -q 2>/dev/null \
+            && ok "Python dependencies synced" \
+            || warn "pip install failed (non-fatal)"
+    else
+        warn "Python venv or requirements.txt not found — skipping pip sync"
+    fi
 fi
 
 # ── 4b. Run migrations ────────────────────────────────────────────────────

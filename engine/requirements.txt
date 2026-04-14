@@ -1,0 +1,9 @@
+ai-edge-litert
+numpy
+soundfile
+resampy
+toml
+watchdog
+scipy
+noisereduce
+apprise
