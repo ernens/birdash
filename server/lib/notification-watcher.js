@@ -131,11 +131,8 @@ function _sendApprise(title, body, photoPath) {
       if (!content.trim()) { resolve(); return; }
     } catch { resolve(); return; }
 
-    const apprisePaths = [
-      path.join(PROJECT_ROOT, 'engine', 'venv', 'bin', 'apprise'),
-      path.join(process.env.HOME || '', 'birdengine', 'venv', 'bin', 'apprise'),
-    ];
-    const appriseBin = apprisePaths.find(p => fs.existsSync(p)) || 'apprise';
+    const { APPRISE_BIN } = require('./config');
+    const appriseBin = APPRISE_BIN;
 
     const args = ['-t', title, '-b', body];
     if (photoPath && fs.existsSync(photoPath)) args.push('--attach=' + photoPath);

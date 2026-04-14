@@ -200,7 +200,17 @@ const SETTINGS_VALIDATORS = {
   DATA_MODEL_VERSION: v => v == 1 || v == 2,
 };
 
+// ── Apprise binary discovery (cached at startup) ─────────────────────────
+const _appriseCandidates = [
+  path.join(process.env.HOME || '', 'birdash', 'engine', 'venv', 'bin', 'apprise'),
+  path.join(process.env.HOME || '', 'birdengine', 'venv', 'bin', 'apprise'),
+  '/usr/local/bin/apprise',
+  '/usr/bin/apprise',
+];
+const APPRISE_BIN = _appriseCandidates.find(p => fs.existsSync(p)) || 'apprise';
+if (APPRISE_BIN !== 'apprise') console.log(`[config] Apprise binary: ${APPRISE_BIN}`);
+
 module.exports = {
-  BIRDNET_CONF, BIRDNET_DIR, ALLOWED_SERVICES, SETTINGS_VALIDATORS,
+  BIRDNET_CONF, BIRDNET_DIR, ALLOWED_SERVICES, SETTINGS_VALIDATORS, APPRISE_BIN,
   parseBirdnetConf, writeBirdnetConf, execCmd,
 };

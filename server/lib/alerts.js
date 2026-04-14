@@ -192,11 +192,8 @@ function getAlertThresholds() {
   if (_alertLastSent[type] && (now - _alertLastSent[type]) < cooldown) return;
 
   const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
-  const _apprisePaths = [
-    path.join(process.env.HOME, 'birdengine', 'venv', 'bin', 'apprise'),
-    path.join(process.env.HOME, 'birdash', 'engine', 'venv', 'bin', 'apprise'),
-  ];
-  const appriseBin = _apprisePaths.find(p => fs.existsSync(p)) || _apprisePaths[0];
+  const { APPRISE_BIN } = require('./config');
+  const appriseBin = APPRISE_BIN;
 
   // Check apprise.txt exists and has content
   try {

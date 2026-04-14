@@ -145,11 +145,7 @@ function handle(req, res, pathname, ctx) {
     (async () => {
       try {
         const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
-        const _ap = [
-          path.join(process.env.HOME, 'birdengine', 'venv', 'bin', 'apprise'),
-          path.join(process.env.HOME, 'birdash', 'engine', 'venv', 'bin', 'apprise'),
-        ];
-        const appriseBin = _ap.find(p => fs.existsSync(p)) || _ap[0];
+        const { APPRISE_BIN: appriseBin } = require('../lib/config');
         const { execFile } = require('child_process');
         const testI18n = {
           fr: { title: 'BIRDASH — Test', body: 'Ceci est une notification de test. Si vous voyez ce message, les notifications fonctionnent !' },

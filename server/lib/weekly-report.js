@@ -146,11 +146,8 @@ function formatText(report, stationName = 'BirdStation') {
  */
 async function sendReport(title, body) {
   const appriseFile = path.join(process.env.HOME, 'birdash', 'config', 'apprise.txt');
-  const _apprisePaths = [
-    path.join(process.env.HOME, 'birdengine', 'venv', 'bin', 'apprise'),
-    path.join(process.env.HOME, 'birdash', 'engine', 'venv', 'bin', 'apprise'),
-  ];
-  const appriseBin = _apprisePaths.find(p => fs.existsSync(p)) || _apprisePaths[0];
+  const { APPRISE_BIN } = require('./config');
+  const appriseBin = APPRISE_BIN;
 
   try {
     const content = await fsp.readFile(appriseFile, 'utf8');
