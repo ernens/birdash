@@ -162,6 +162,7 @@ async function _getNotifConfig() {
       newDaily:       conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY === '1',
       favorites:      conf.NOTIFY_FAVORITES === '1',
       lang:           (conf.DATABASE_LANG || 'fr').substring(0, 2),
+      stationName:    conf.SITE_NAME || conf.SITE_BRAND || require('os').hostname(),
     };
   } catch {
     return { enabled: false };
@@ -254,7 +255,7 @@ async function _poll() {
     // Update last seen
     _speciesLastSeen[sci] = today;
 
-    const title = `${com} — ${reason}`;
+    const title = `[${conf.stationName}] ${com} — ${reason}`;
     const body = `${com} (${sci})\n${msgs.conf}: ${Math.round(det.Confidence * 100)}% — ${det.Model || ''}`;
 
     // Download species photo + send async (don't block poll loop)
