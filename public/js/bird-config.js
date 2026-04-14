@@ -54,6 +54,7 @@ const BIRD_CONFIG = {
     ]},
     { section: 'nav_sec_realtime', icon: 'circle-dot', items: [
       { id: 'dashboard',   icon: 'zap', file: 'dashboard.html'   },
+      { id: 'liveboard',   icon: 'monitor', file: 'liveboard.html'  },
       { id: 'spectrogram',  icon: 'radio', file: 'spectrogram.html'  },
       { id: 'log',          icon: 'scroll-text', file: 'log.html'          },
     ]},
