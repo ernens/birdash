@@ -34,6 +34,10 @@ const _notifWatcher = require('./lib/notification-watcher');
 const _weeklyReport = require('./lib/weekly-report');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
+
+// ── Response helpers (reduce boilerplate in route handlers) ──────────────
+function jsonOk(res, data) { res.writeHead(200, JSON_CT); res.end(JSON.stringify(data)); }
+function jsonErr(res, code, msg) { res.writeHead(code, JSON_CT); res.end(JSON.stringify({ error: msg })); }
 const PORT    = process.env.BIRDASH_PORT || 7474;
 
 // ── Security ─────────────────────────────────────────────────────────────────
@@ -176,7 +180,7 @@ setInterval(() => {
 
 // ── Route context ────────────────────────────────────────────────────────────
 const _routeCtx = {
-  requireAuth, execCmd, readJsonFile, writeJsonFileAtomic, JSON_CT,
+  requireAuth, execCmd, readJsonFile, writeJsonFileAtomic, JSON_CT, jsonOk, jsonErr,
   safeConfig, ebirdFreq,
   db, dbWrite, birdashDb, taxonomyDb, parseBirdnetConf, SONGS_DIR,
   ALLOWED_SERVICES, BIRDNET_DIR, validateQuery,
