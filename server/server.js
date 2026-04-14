@@ -30,6 +30,7 @@ const _updateRoutes  = require('./routes/updates');
 const _bugReportRoutes = require('./routes/bug-report');
 const _telemetryRoutes = require('./routes/telemetry');
 const _telemetry = require('./lib/telemetry');
+const _notifWatcher = require('./lib/notification-watcher');
 const _weeklyReport = require('./lib/weekly-report');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
@@ -166,6 +167,8 @@ setTimeout(() => {
 }, 2000);
 // Telemetry: opt-in daily reports to Supabase
 _telemetry.startDailyCron(db, parseBirdnetConf);
+// Notification watcher: polls detections, sends via Apprise
+_notifWatcher.start(db, birdashDb, parseBirdnetConf);
 // Weekly report: check every hour if it's Sunday evening
 setInterval(() => {
   try { _weeklyReport.checkAndSend(db, birdashDb, 'BirdStation'); } catch(e) {}
@@ -264,6 +267,7 @@ function gracefulShutdown() {
   _audioRoutes.shutdown();
   _whatsNewRoutes.shutdown();
   _telemetry.stopDailyCron();
+  _notifWatcher.stop();
   closeAllDbs();
   process.exit(0);
 }
