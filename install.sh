@@ -128,6 +128,10 @@ if [ ! -d "$BIRDASH_DIR/engine/venv" ]; then
 fi
 "$BIRDASH_DIR/engine/venv/bin/pip" install --upgrade pip -q 2>/dev/null
 "$BIRDASH_DIR/engine/venv/bin/pip" install -r "$BIRDASH_DIR/engine/requirements.txt" -q 2>/dev/null
+# Ensure apprise is also available system-wide (reliable PATH discovery)
+if ! command -v apprise &>/dev/null; then
+    sudo pip3 install apprise -q 2>/dev/null || true
+fi
 ok "Python dependencies installed ($(python3 --version))"
 
 # ══════════════════════════════════════════════════════════════════════════

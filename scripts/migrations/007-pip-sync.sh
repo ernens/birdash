@@ -32,4 +32,10 @@ fi
 
 echo "[migrate $NAME] Syncing Python dependencies from requirements.txt..."
 "$VENV/bin/pip" install -r "$REQ" -q 2>/dev/null
+
+# Also ensure apprise is available system-wide (fallback for all venv layouts)
+if ! command -v apprise &>/dev/null && ! [ -f "$VENV/bin/apprise" ]; then
+    echo "[migrate $NAME] Installing apprise system-wide..."
+    sudo pip3 install apprise -q 2>/dev/null || pip3 install --user apprise -q 2>/dev/null || true
+fi
 echo "[migrate $NAME] done"
