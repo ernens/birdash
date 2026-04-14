@@ -88,7 +88,7 @@
       <!-- ── Grille enregistrements ─────────────────────────────── -->
       <div>
         <div class="rec-grid">
-          <div v-if="loading" class="rec-empty">⏳ {{t('loading')}}</div>
+          <div v-if="loading" style="text-align:center;padding:2rem;grid-column:1/-1;"><div class="spinner"><div></div><div></div><div></div></div></div>
           <div v-else-if="!pagedRecs.length" class="rec-empty">
             {{t('no_recordings')}}
           </div>

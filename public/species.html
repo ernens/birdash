@@ -270,7 +270,7 @@
             </button>
           </div>
         </div>
-        <div v-if="!feed.length" class="error-msg">{{t('no_data')}}</div>
+        <div v-if="!feed.length" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
         <div v-else>
           <div v-for="d in feed" :key="d.Date+d.Time" class="det-item" :class="{'det-item-del':deleteMode}">
             <button v-if="d.File_Name && !deleteMode" class="play-btn"

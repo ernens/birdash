@@ -231,7 +231,7 @@ const app = createApp({
         const topRows = await birdQuery(...Q.topSpeciesAllTime(20, fc.confidence.value));
         const topSp = topRows.map(r=>r.Com_Name);
         const sciMap = {}; topRows.forEach(r=>{sciMap[r.Com_Name]=r.Sci_Name;});
-        if (!topSp.length) { matrix.value={loading:false,error:null,html:`<p class="error-msg">${t('no_data')}</p>`}; return; }
+        if (!topSp.length) { matrix.value={loading:false,error:null,html:`<div class="hint-empty"><div>${t('no_data')}</div></div>`}; return; }
         const rows = await birdQuery(
           `SELECT Com_Name, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM detections WHERE Com_Name IN (${topSp.map(()=>'?').join(',')}) AND Confidence>=? GROUP BY Com_Name,m`,
           [...topSp, fc.confidence.value]);

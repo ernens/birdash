@@ -68,9 +68,7 @@
     </div>
 
     <!-- ── Loading ────────────────────────────────────────────────── -->
-    <div v-if="loading" style="text-align:center;padding:3rem;color:var(--text-muted);">
-      {{t('loading')}}
-    </div>
+    <div v-if="loading" style="text-align:center;padding:3rem;"><div class="spinner"><div></div><div></div><div></div></div></div>
 
     <!-- ── Empty state ────────────────────────────────────────────── -->
     <div v-else-if="filteredGroups.length===0" style="text-align:center;padding:3rem;color:var(--text-muted);">

@@ -90,7 +90,7 @@
       <!-- Top species by conditions -->
       <div class="card">
         <div class="card-title">{{t('weather_top_species')}}</div>
-        <div v-if="topByWeather.length === 0 && !loading" class="error-msg">{{t('no_data')}}</div>
+        <div v-if="topByWeather.length === 0 && !loading" class="hint-empty"><bird-icon name="cloud-sun" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
         <div v-for="sp in topByWeather" :key="sp.name" class="det-item" style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.name})">
           <bird-img :src="photoUrl(sp.sci)" :alt="sp.name" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;"></bird-img>
           <div style="flex:1;min-width:0;">

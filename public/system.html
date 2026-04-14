@@ -765,7 +765,7 @@
           <span style="font-size:.72rem;color:var(--text-faint);">&#8804;5 {{t('audio_max_det')}}</span>
         </div>
         <div v-if="rareLocal.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!rareLocal.rows.length" class="error-msg">{{t('no_rarities_detected')}}</div>
+        <div v-else-if="!rareLocal.rows.length" class="hint-empty"><bird-icon name="gem" :size="24"></bird-icon><div>{{t('no_rarities_detected')}}</div></div>
         <div v-else>
           <div v-for="r in rareLocal.rows" :key="r.Com_Name" class="det-item"
                style="cursor:pointer;gap:.5rem;border-left:2px solid var(--danger);padding-left:.5rem;"
@@ -916,7 +916,7 @@
           <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:.5rem;">
             {{t('top_detected')}}
           </div>
-          <div v-if="!bw.species.length" class="error-msg" style="font-size:.8rem;">{{t('no_data')}}</div>
+          <div v-if="!bw.species.length" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
           <div v-else>
             <div v-for="(sp, i) in bw.species.slice(0,10)" :key="sp.id || i"
                  style="display:flex;align-items:center;gap:.55rem;margin-bottom:.35rem;">
