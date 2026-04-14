@@ -24,12 +24,25 @@
 <div id="app">
   <birdash-shell page="today" :title="t('nav_today')">
 
-    <!-- ── Titre + date ─────────────────────────────────────────── -->
+    <!-- ── Titre + date + navigation ──────────────────────────────── -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
       <div>
-        <h2 style="margin:0;font-family:var(--font-display);font-size:1.3rem;color:var(--text-main);">
-          {{t('today')}} · {{fmtDateLong(today)}}
-        </h2>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <button v-if="!isToday" class="btn btn-secondary" style="padding:.3rem .6rem;font-size:.78rem;"
+                  @click="navDay(-1)"><bird-icon name="chevron-left" :size="14"></bird-icon></button>
+          <h2 style="margin:0;font-family:var(--font-display);font-size:1.3rem;color:var(--text-main);">
+            {{isToday ? t('today') : ''}} · {{fmtDateLong(today)}}
+          </h2>
+          <button v-if="!isToday" class="btn btn-secondary" style="padding:.3rem .6rem;font-size:.78rem;"
+                  :disabled="today >= localDateStr()"
+                  @click="navDay(1)"><bird-icon name="chevron-right" :size="14"></bird-icon></button>
+          <a v-if="!isToday" href="today.html" class="btn btn-secondary" style="padding:.3rem .6rem;font-size:.72rem;">
+            {{t('today_label')}}
+          </a>
+          <a v-if="!isToday" href="calendar.html" class="btn btn-secondary" style="padding:.3rem .6rem;font-size:.72rem;">
+            <bird-icon name="calendar" :size="13"></bird-icon>
+          </a>
+        </div>
         <div style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.4rem;">
           {{t('filter_confidence')}} :
           <input type="range" :min="0" :max="99" :value="Math.round(minConf*100)"
@@ -394,7 +407,10 @@ const app = createApp({
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('today');
 
-    const today   = localDateStr();
+    const _urlDate = new URLSearchParams(window.location.search).get('date');
+    const today = _urlDate && /^\d{4}-\d{2}-\d{2}$/.test(_urlDate) ? _urlDate : localDateStr();
+    const isToday = today === localDateStr();
+    const viewingDate = ref(today);
     const minConf = ref(BIRD_CONFIG.defaultConfidence);
     const searchQ = ref('');
     const newSpOnly = ref(false);
@@ -688,9 +704,15 @@ const app = createApp({
       });
     }
 
+    function navDay(dir) {
+      const d = new Date(today + 'T12:00:00');
+      d.setDate(d.getDate() + dir);
+      window.location.href = 'today.html?date=' + d.toISOString().slice(0, 10);
+    }
+
     return {
       lang, t, spName, favorites, toggleFavorite, isFavorite,
-      today, minConf, searchQ, newSpOnly, newSpeciesSet,
+      today, isToday, localDateStr, navDay, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly,
