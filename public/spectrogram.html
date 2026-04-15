@@ -60,7 +60,7 @@
 
         <div class="toolbar-sep"></div>
 
-        <!-- Espèce en cours -->
+        <!-- Espèce en cours / attente -->
         <div v-if="nowPlaying" class="toolbar-group" style="gap:.35rem;">
           <div class="live-dot active" style="width:6px;height:6px;"></div>
           <span :style="{color:nowPlaying.color, fontWeight:600, fontSize:'.78rem'}">
@@ -69,6 +69,12 @@
           <span style="font-size:.7rem;font-family:monospace;color:var(--text-faint);">
             {{nowPlaying.conf}} · {{nowPlaying.time}}
           </span>
+          <span v-if="clipProgress" style="font-size:.65rem;color:var(--text-faint);font-family:monospace;">
+            ({{clipProgress}})
+          </span>
+        </div>
+        <div v-else-if="status==='live' && waitingForClips && liveMode==='clips'" class="toolbar-group" style="gap:.35rem;">
+          <span style="font-size:.75rem;color:var(--text-muted);">{{t('spectro_waiting_clips')}}</span>
         </div>
 
         <div class="toolbar-sep"></div>
@@ -319,6 +325,8 @@ const app = createApp({
     const recentDets  = ref([]);
     const feedDets    = ref([]);
     const lastPollAge = ref('');
+    const clipProgress = ref('');  // "3/12" — current clip / total pending
+    const waitingForClips = ref(false);
     const detLabels   = ref([]);   // { id, name, conf, color, insertedAtCol }
 
     // Web Audio (non réactif)
@@ -647,10 +655,12 @@ const app = createApp({
         }
 
         if (pending.length === 0) {
-          // Rien de nouveau — attendre en rebondissant
+          waitingForClips.value = true;
+          clipProgress.value = '';
           await sleep(5000);
           continue;
         }
+        waitingForClips.value = false;
 
         // ── Pipeline prefetch : fetch + decode + clean de N+1
         //    pendant que N joue → zéro silence même avec clean actif
@@ -717,6 +727,7 @@ const app = createApp({
           _source.playbackRate.value = playbackSpeed.value;
           _source.connect(_analyser);
 
+          clipProgress.value = (i + 1) + '/' + pending.length;
           nowPlaying.value = {
             name:  spName(det.Com_Name, det.Sci_Name),
             conf:  fmtConf(det.Confidence),
@@ -951,7 +962,7 @@ const app = createApp({
       lang, t,
       status, liveMode, errorMsg, gain, maxHz, volume, clockStr, nowPlaying,
       mainCanvas, canvasWrap, colorbarCanvas,
-      recentDets, feedDets, lastPollAge,
+      recentDets, feedDets, lastPollAge, clipProgress, waitingForClips,
       detLabels, visibleDetLabels, freqLabels, timeLabels,
       cleanMode, cleanStrength, processingClean,
       gainDb, highpassHz, lowpassHz, playbackSpeed,
