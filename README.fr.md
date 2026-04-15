@@ -37,7 +37,6 @@ Dashboard et moteur de detection d'oiseaux pour Raspberry Pi 5. Architecture dua
 <p align="center">
   <img src="screenshots/species.png"    width="240" alt="Espèce">
   <img src="screenshots/recordings.png" width="240" alt="Enregistrements">
-  <img src="screenshots/gallery.png"    width="240" alt="Galerie">
   <img src="screenshots/rarities.png"   width="240" alt="Raretés">
 </p>
 </details>

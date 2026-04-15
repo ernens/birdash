@@ -35,7 +35,6 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 <p align="center">
   <img src="screenshots/species.png"    width="240" alt="Soort">
   <img src="screenshots/recordings.png" width="240" alt="Opnames">
-  <img src="screenshots/gallery.png"    width="240" alt="Galerij">
   <img src="screenshots/rarities.png"   width="240" alt="Zeldzaamheden">
 </p>
 </details>

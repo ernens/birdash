@@ -35,7 +35,6 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 <p align="center">
   <img src="screenshots/species.png"    width="240" alt="Art">
   <img src="screenshots/recordings.png" width="240" alt="Aufnahmen">
-  <img src="screenshots/gallery.png"    width="240" alt="Galerie">
   <img src="screenshots/rarities.png"   width="240" alt="Seltenheiten">
 </p>
 </details>
