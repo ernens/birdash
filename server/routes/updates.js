@@ -123,6 +123,21 @@ async function _computeStatus() {
     };
   }
 
+  // Fetch real version from remote package.json (single source of truth).
+  // Uses GitHub Contents API which returns JSON with base64-encoded content.
+  let latestVersion = currentVersion;
+  try {
+    const contentsUrl = `https://api.github.com/repos/${REPO}/contents/package.json?ref=${BRANCH}`;
+    const contents = await _fetchJson(contentsUrl);
+    if (contents && contents.content) {
+      const decoded = Buffer.from(contents.content, 'base64').toString('utf8');
+      const remotePkg = JSON.parse(decoded);
+      if (remotePkg.version) latestVersion = remotePkg.version;
+    }
+  } catch (e) {
+    console.warn('[updates] remote package.json fetch failed:', e.message);
+  }
+
   let commits = [];
   try {
     const compare = await _fetchJson(`https://api.github.com/repos/${REPO}/compare/${currentCommit}...${latestCommit}`);
@@ -135,17 +150,6 @@ async function _computeStatus() {
     }));
   } catch (e) {
     console.warn('[updates] GitHub compare failed:', e.message);
-  }
-
-  // Increment patch version by the number of commits ahead.
-  // e.g. current = 1.6.0, 3 commits ahead → latest = 1.6.3
-  let latestVersion = currentVersion;
-  if (commits.length > 0) {
-    const parts = currentVersion.split('.');
-    if (parts.length === 3) {
-      parts[2] = String(parseInt(parts[2] || '0', 10) + commits.length);
-      latestVersion = parts.join('.');
-    }
   }
 
   return {
