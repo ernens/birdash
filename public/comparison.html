@@ -64,7 +64,7 @@
       <!-- Still show multi-year evolution for this season -->
       <div v-if="data.evolution && data.evolution.filter(e => e.species > 0).length > 1" class="card" style="margin-top:1.5rem;max-width:600px;text-align:left;">
         <div class="card-title"><bird-icon name="trending-up" :size="16"></bird-icon> {{t('ssn_evolution_title')}} — {{t('ssn_previous_years')}}</div>
-        <div style="height:180px;"><canvas ref="chartEl"></canvas></div>
+        <div style="height:180px;"><canvas ref="futureChartEl"></canvas></div>
       </div>
     </div>
 
@@ -246,6 +246,7 @@ const app = createApp({
     const data = ref(null);
     const loading = ref(true);
     const chartEl = ref(null);
+    const futureChartEl = ref(null);
     let _chart = null;
 
     // Determine current season
@@ -334,15 +335,16 @@ const app = createApp({
       try {
         const resp = await fetch(`${BIRD_CONFIG.apiUrl}/seasons/report?season=${season.value}&year=${year.value}`);
         data.value = await resp.json();
-        await nextTick();
-        renderChart();
       } catch(e) { console.error('[seasons]', e); }
       loading.value = false;
+      // Chart must render after loading=false so the v-if template is in the DOM
+      await nextTick();
+      renderChart();
     }
 
     function renderChart() {
       if (!data.value?.evolution || data.value.evolution.length < 2) return;
-      const el = chartEl.value;
+      const el = chartEl.value || futureChartEl.value;
       if (!el) return;
       if (_chart) _chart.destroy();
 
@@ -393,7 +395,7 @@ const app = createApp({
     onMounted(loadData);
 
     return {
-      t, lang, season, year, data, loading, chartEl,
+      t, lang, season, year, data, loading, chartEl, futureChartEl,
       seasonList, seasonLabel, seasonIcon,
       isCurrentSeason, isFuture, isInProgress, isComplete, isFutureSeason,
       prevSeason, nextSeason, loadData,
