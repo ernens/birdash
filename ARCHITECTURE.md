@@ -275,8 +275,9 @@ Directory: `server/lib/`
 | File | Purpose |
 |------|---------|
 | `aggregates.js` | Pre-aggregated statistics tables (daily, monthly, species, hourly). Full rebuild on startup, incremental refresh every 5 min. |
-| `alerts.js` | Background alert monitoring (temperature, disk, service health). 60s check interval, 10-min cooldown per alert type. Multi-language alert messages. |
-| `config.js` | `birdnet.conf` parser/writer, settings validators, `execCmd` helper, `ALLOWED_SERVICES` whitelist. |
+| `alerts.js` | Background alert monitoring (temperature, disk, service health). 60s check interval, 10-min cooldown per alert type. |
+| `alert-i18n.js` | Alert message translations (4 languages). Extracted from alerts.js for separation of concerns. |
+| `config.js` | `birdnet.conf` parser/writer, settings validators, `execCmd` helper, `readJsonFile`, `APPRISE_BIN`, `ALLOWED_SERVICES`. |
 | `db.js` | Database bootstrap: opens `birds.db` (read + write connections), `birdash.db`, `taxonomy.db`. Creates tables, indexes, views. Exports all DB handles. |
 | `ebird-frequency.js` | eBird regional frequency data for rarity determination. Replaces naive "3 local observations" heuristic. |
 | `local-date.js` | Locale-aware date string helper (`localDateStr()`). Used by aggregates for timezone-correct "today". |
@@ -571,7 +572,8 @@ public/
 │   ├── bird-shared.js               # Utilities, DSP, favorites, notes API
 │   ├── bird-queries.js              # 38 parameterized SQL queries
 │   ├── bird-icons.js                # 98 Lucide SVG icons + <bird-icon> component
-│   ├── bird-vue-core.js             # Vue composables, i18n, shell component
+│   ├── bird-vue-core.js             # Vue composables, i18n, shell component (1846 lines)
+│   ├── bird-spectro-modal.js        # SpectroModal component (extracted, 390 lines)
 │   └── bird-timeline.js             # Timeline rendering (sky, stars, markers)
 ├── i18n/                            # Translation files
 │   ├── en.json

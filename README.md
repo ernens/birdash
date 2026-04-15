@@ -349,6 +349,7 @@ birdash/
 │   ├── server.js                  # HTTP server, middleware, route delegations (271 lines)
 │   ├── lib/
 │   │   ├── alerts.js              # System alert monitoring (temp, disk, RAM)
+│   │   ├── alert-i18n.js          # Alert message translations (4 langs)
 │   │   ├── config.js              # BirdNET config, settings validators, exec helper
 │   │   ├── db.js                  # Database bootstrap, tables, taxonomy
 │   │   ├── notification-watcher.js # Push notifications (polls DB, sends via Apprise)
@@ -399,6 +400,7 @@ birdash/
 │   │   ├── bird-icons.js          # Lucide icon set (98 SVG icons)
 │   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API
 │   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
+│   │   ├── bird-spectro-modal.js # SpectroModal component (extracted)
 │   │   ├── bird-timeline.js       # Timeline rendering (sky, stars, markers)
 │   │   ├── vue.global.prod.min.js # Vue 3 (vendored)
 │   │   ├── chart.umd.min.js      # Chart.js (vendored)
