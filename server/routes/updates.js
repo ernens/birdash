@@ -137,7 +137,16 @@ async function _computeStatus() {
     console.warn('[updates] GitHub compare failed:', e.message);
   }
 
-  const latestVersion = currentVersion;
+  // Increment patch version by the number of commits ahead.
+  // e.g. current = 1.6.0, 3 commits ahead → latest = 1.6.3
+  let latestVersion = currentVersion;
+  if (commits.length > 0) {
+    const parts = currentVersion.split('.');
+    if (parts.length === 3) {
+      parts[2] = String(parseInt(parts[2] || '0', 10) + commits.length);
+      latestVersion = parts.join('.');
+    }
+  }
 
   return {
     currentCommit, currentShort, currentVersion,
