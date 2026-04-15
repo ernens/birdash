@@ -7,72 +7,16 @@ const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
 const { spawn } = require('child_process');
+const adaptiveGain = require('../lib/adaptive-gain');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const AUDIO_RATE = 48000;
 
-// ── Adaptive gain system ──────────────────────────────────────────────────
-const AG_DEFAULTS = {
-  enabled: false, mode: 'balanced', observer_only: true,
-  min_db: -6, max_db: 9, step_up_db: 0.5, step_down_db: 1.5,
-  update_interval_s: 10, history_s: 30, noise_percentile: 20,
-  target_floor_dbfs: -42, clip_guard_dbfs: -3, activity_hold_s: 15,
-};
-const _agState = {
-  current_gain_db: 0, recommended_gain_db: 0, last_update_ts: 0, hold_until_ts: 0,
-  noise_floor_dbfs: null, activity_dbfs: null, peak_dbfs: null,
-  reason: 'init', history: [],
-};
-function _agPercentile(arr, p) {
-  if (!arr.length) return null;
-  const s = [...arr].sort((a,b) => a - b);
-  return s[Math.min(s.length - 1, Math.max(0, Math.floor(p / 100 * s.length)))];
-}
-function _agClamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-function agPushSample(rms_dbfs, peak_dbfs) {
-  _agState.history.push({ ts: Date.now(), rms_dbfs, peak_dbfs });
-  if (_agState.history.length > 2000) _agState.history.splice(0, _agState.history.length - 1500);
-}
-function agUpdate(cfg) {
-  const c = { ...AG_DEFAULTS, ...cfg };
-  const now = Date.now();
-  if (!c.enabled) { _agState.reason = 'disabled'; return _agState; }
-  const windowMs = c.history_s * 1000;
-  _agState.history = _agState.history.filter(x => now - x.ts <= windowMs);
-  if (_agState.history.length < 5) { _agState.reason = 'not_enough_data'; return _agState; }
-  const rms = _agState.history.map(x => x.rms_dbfs).filter(Number.isFinite);
-  const peaks = _agState.history.map(x => x.peak_dbfs).filter(Number.isFinite);
-  if (!rms.length || !peaks.length) { _agState.reason = 'invalid'; return _agState; }
-  const nf = _agPercentile(rms, c.noise_percentile);
-  const act = _agPercentile(rms, 80);
-  const pk = Math.max(...peaks);
-  _agState.noise_floor_dbfs = Math.round(nf * 10) / 10;
-  _agState.activity_dbfs = Math.round(act * 10) / 10;
-  _agState.peak_dbfs = Math.round(pk * 10) / 10;
-  if (pk >= c.clip_guard_dbfs) {
-    _agState.recommended_gain_db = _agClamp(_agState.recommended_gain_db - c.step_down_db, c.min_db, c.max_db);
-    _agState.reason = 'clip_guard';
-  } else if ((act - nf) >= 10) {
-    _agState.hold_until_ts = now + c.activity_hold_s * 1000;
-    _agState.reason = 'activity_hold';
-  } else if (now < _agState.hold_until_ts) {
-    _agState.reason = 'activity_hold';
-  } else {
-    const desired = _agClamp(c.target_floor_dbfs - nf, c.min_db, c.max_db);
-    if (desired > _agState.recommended_gain_db) {
-      _agState.recommended_gain_db = Math.min(_agState.recommended_gain_db + c.step_up_db, desired);
-      _agState.reason = 'step_up';
-    } else if (desired < _agState.recommended_gain_db) {
-      _agState.recommended_gain_db = Math.max(_agState.recommended_gain_db - c.step_down_db, desired);
-      _agState.reason = 'step_down';
-    } else { _agState.reason = 'stable'; }
-  }
-  _agState.recommended_gain_db = Math.round(_agClamp(_agState.recommended_gain_db, c.min_db, c.max_db) * 10) / 10;
-  if (!c.observer_only) _agState.current_gain_db = _agState.recommended_gain_db;
-  else _agState.reason = 'observer';
-  _agState.last_update_ts = now;
-  return _agState;
-}
+// Aliases for backward compatibility within this file
+const AG_DEFAULTS = adaptiveGain.AG_DEFAULTS;
+const _agState = adaptiveGain.getState();
+const agPushSample = adaptiveGain.pushSample;
+const agUpdate = adaptiveGain.update;
 
 // --- Shared JSON helpers
 //
