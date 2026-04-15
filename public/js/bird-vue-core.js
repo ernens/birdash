@@ -1100,8 +1100,12 @@
               clearInterval(_updatePollTimer); _updatePollTimer = null;
               if (d.state === 'done') {
                 await fetchUpdateStatus(true);
+                // Auto-reload after 2s so the user gets the new code.
+                // The old JS is still in memory — any UI shown here is
+                // from the pre-update code. A brief "success" flash then
+                // reload ensures the user sees the new version.
+                setTimeout(() => location.reload(), 2000);
               } else {
-                // Fetch update log for debugging
                 _fetchUpdateLog();
               }
             }
