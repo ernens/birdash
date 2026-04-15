@@ -265,7 +265,7 @@ Directory: `server/routes/`
 | `system.js` | Service management, health metrics, hardware info, model management | `/api/services`, `/api/health`, `/api/models` |
 | `telemetry.js` | Opt-in telemetry registration and status | `/api/telemetry/register`, `/api/telemetry/status` |
 | `timeline.js` | Timeline data with SunCalc astronomy (sunrise/sunset/moon) | `/api/timeline` |
-| `updates.js` | Update status checking, update execution | `/api/update-status`, `/api/update` |
+| `updates.js` | Update system: status, apply, rollback, force, log | `/api/update-status`, `/api/apply-update`, `/api/rollback-update`, `/api/update-snooze`, `/api/update-log` |
 | `whats-new.js` | Daily overview cards (delegates to worker thread) | `/api/whats-new` |
 
 ### Library Modules
@@ -809,33 +809,69 @@ Features:
 
 ### Version Scheme
 
-Versions are computed from git: `git describe --tags --always`. Example: tag `v1.5.0` + 48 commits = `v1.5.48`.
+Follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
+
+Source of truth: `package.json`. Bumped before each push via `scripts/bump.sh`:
+- `bump.sh patch` — bug fix, polish (1.7.0 → 1.7.1)
+- `bump.sh minor` — new feature/screen (1.7.3 → 1.8.0)
+- `bump.sh major` — breaking change (1.8.0 → 2.0.0)
+- `bump.sh` (no arg) — auto from last commit (`feat:` → minor, else → patch)
 
 ### Update Detection
 
-Endpoint: `/api/update-status`
+Endpoint: `GET /api/update-status`
 
-Compares `git rev-parse HEAD` against `git ls-remote origin main`. Result cached for 1 minute.
+1. Compares `git rev-parse HEAD` against `git ls-remote origin main` (1-minute cache)
+2. Fetches `latestVersion` from remote `package.json` via GitHub Contents API
+3. Fetches commit list via GitHub Compare API for categorized release notes
 
 ### In-App Update Flow
 
-1. Red banner appears on every page when a new version is available (e.g., `v1.5.30 -> v1.5.48`)
-2. Click **View** to see categorized release notes in a modal
-3. Three options:
-   - **Install now**: runs `scripts/update.sh`, shows progress
-   - **Later (24h)**: snoozes banner
-   - **Skip these updates**: hides until a newer version exists
-4. Snooze state stored server-side in `config/update-state.json` (persistent across browsers)
+1. Red banner appears on every page when a new version is available (e.g., `v1.7.0 → v1.8.0`)
+2. Click **View** to see release notes grouped by type (feat, fix, perf, etc.)
+3. Options:
+   - **Install now** — runs `scripts/update.sh`, polls progress via `?progress=1`
+   - **Later (24h)** — snoozes banner (server-side in `config/update-state.json`)
+   - **Skip these updates** — hides until a newer version exists
+4. On success: confirmation message, auto-reload after 2s
+5. On failure: error detail, expandable log, plus:
+   - **Roll back** — reverts to `previousCommit` via `scripts/rollback.sh`
+   - **Force update** — retries with `--force` (resets diverged history)
+   - **Dismiss** — closes the modal
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/update-status` | GET | Check for updates (cached 1min). `?progress=1` for live progress. `?refresh=1` to bypass cache |
+| `/api/apply-update` | POST | Start update. Body: `{force: true}` for force mode |
+| `/api/rollback-update` | POST | Rollback. Body: `{commit: "abc123..."}` |
+| `/api/update-snooze` | POST | Snooze. Body: `{action: "defer"|"skip"|"clear", days?: 1}` |
+| `/api/update-log` | GET | Returns last 200 lines of `config/update.log` |
 
 ### update.sh Script
 
-Path: `scripts/update.sh`
+Path: `scripts/update.sh [--write-status PATH] [--force]`
 
 Execution steps:
-1. `git pull origin main`
-2. Run migrations from `scripts/migrations/` (idempotent)
-3. `npm install` (if `package.json` changed)
-4. Selective service restart (`systemctl restart birdash`, engine if needed)
+1. Handle uncommitted changes (auto-reset `package-lock.json` if only dirty file)
+2. `git fetch --tags origin main` + fast-forward merge (or `--force` → `git reset --hard`)
+3. `npm install` if `package.json` changed (**fatal** on failure — won't restart with missing deps)
+4. `pip install -r requirements.txt` if changed (**fatal** on failure)
+5. Run migrations from `scripts/migrations/` (idempotent, non-fatal)
+6. Restart birdash with **health-check** (`/api/health` polled for 15s, not just `systemctl is-active`)
+7. Restart birdengine (**fatal** if it fails to start — detection would be broken)
+8. Write final status with `previousCommit` for rollback
+
+All output logged to `config/update.log`. Progress written atomically to `config/update-progress.json` (tmp + mv). Stale "running" states auto-expire after 10 minutes.
+
+### rollback.sh Script
+
+Path: `scripts/rollback.sh <commit-sha> [--write-status PATH]`
+
+1. `git reset --hard <commit>`
+2. `npm install` (re-sync dependencies to match rolled-back code)
+3. Restart birdash + birdengine with health-check
 
 ### Migrations System
 
@@ -851,6 +887,7 @@ Numbered shell scripts run in order after each `git pull`:
 | `004-daily-stats-filtered-count.sh` | Add `count_07` column to aggregates |
 | `005-hourly-stats-rebuild.sh` | Add `hourly_stats` table |
 | `006-caddy-api-timeout.sh` | Increase Caddy API timeout |
+| `007-pip-sync.sh` | Sync Python dependencies from `requirements.txt` |
 
 Each migration is idempotent (safe to re-run). Migration `004` creates the `.rebuild-aggregates` sentinel to force a full aggregate rebuild on next startup.
 

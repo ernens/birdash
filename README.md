@@ -282,13 +282,18 @@ Your dashboard will be available at `http://yourpi.local/birds/`
 
 ### In-app update (recommended)
 
-When a new version is available, a red banner appears at the top of every page with the version number (e.g. `v1.5.30 → v1.5.48`). Click **View** to see categorized release notes, then:
+When a new version is available, a red banner appears at the top of every page with the real semver version (e.g. `v1.7.0 → v1.7.3`). Click **View** to see categorized release notes, then:
 
-- **Install now** — applies the update, restarts services, shows progress
+- **Install now** — applies the update, restarts services with health-check, auto-reloads the page
 - **Later (24h)** — snoozes the banner for 24 hours
 - **Skip these updates** — hides until a newer version is published
 
-The update runs `scripts/update.sh` which handles `git pull`, migrations, `npm install` if needed, and selective service restarts. Your data and configuration are preserved.
+On failure:
+- **Roll back** — reverts to the previous version (appears when `previousCommit` is known)
+- **Force update** — forces the update even with diverged history or dirty files
+- **Show log** — expandable log viewer for debugging
+
+On success: a confirmation message is shown, and the page auto-reloads after 2 seconds.
 
 ### Remote update via SSH
 
@@ -304,12 +309,34 @@ for h in mickey donald papier; do
 done
 ```
 
+### Versioning (semver)
+
+BirdStation follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
+
+| Bump | When | Example |
+|------|------|---------|
+| PATCH | Bug fix, polish, CSS tweak | 1.7.0 → 1.7.1 |
+| MINOR | New feature, screen refonte | 1.7.3 → 1.8.0 |
+| MAJOR | Breaking change, DB migration | 1.8.0 → 2.0.0 |
+
+Version source of truth: `package.json`. Bump before pushing:
+
+```bash
+bash scripts/bump.sh patch    # bug fix
+bash scripts/bump.sh minor    # new feature
+bash scripts/bump.sh major    # breaking change
+bash scripts/bump.sh          # auto from last commit (feat:→minor, else→patch)
+```
+
 ### How it works
 
-- `/api/update-status` compares `git rev-parse HEAD` against `git ls-remote origin main` (1-minute cache)
-- Version number is auto-computed from `git describe` (e.g. `v1.5.0` tag + 48 commits = `v1.5.48`)
+- `/api/update-status` compares local `git rev-parse HEAD` against `git ls-remote origin main` (1-minute cache)
+- `latestVersion` is fetched from the remote `package.json` via GitHub Contents API (real version, no guessing)
+- `update.sh` runs: git fetch → merge → npm/pip install (fatal on failure) → migrations → health-check restart
+- `rollback.sh` reverts to a known commit: `git reset --hard` → npm install → health-check restart
+- All update output is logged to `config/update.log`
+- Stale "running" states auto-expire after 10 minutes
 - Snooze state stored server-side in `config/update-state.json` (persistent across browsers)
-- Migrations in `scripts/migrations/` run automatically after each pull (idempotent)
 - `BIRDASH_SKIP_BIRDNET=1` skips BirdNET download during install if desired
 
 ## What the Installer Does
@@ -426,6 +453,9 @@ birdash/
 │   ├── detection_rules.json       # Auto-flagging rules
 │   └── birdash-local.example.js   # Local config template
 ├── scripts/
+│   ├── update.sh                  # Update: git pull, deps, migrations, health-check restart
+│   ├── rollback.sh                # Rollback: git reset --hard, deps, restart
+│   ├── bump.sh                    # Semver bump (patch/minor/major/auto)
 │   └── backup.sh                  # Incremental backup (rsync)
 ├── tests/
 │   └── server.test.js             # Backend tests
