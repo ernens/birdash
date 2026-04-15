@@ -2806,12 +2806,42 @@
     .pill-2 { background:rgba(74,126,181,.15); color:#4a7eb5; }
     .pill-3 { background:rgba(200,168,75,.15); color:#c8a84b; }
 
-/* ── comparison.html */
-    .cmp-arrow { font-size:.75rem; font-weight:700; }
-    .cmp-up   { color:var(--success,#5a9e3a); }
-    .cmp-down { color:var(--danger,#e06c4a); }
-    .cmp-new  { color:var(--accent); font-weight:600; }
-    .cmp-gone { color:var(--text-faint); text-decoration:line-through; opacity:.7; }
+/* ── seasons.html (was comparison.html) ─────────────────────────────── */
+    .ssn-nav { display:flex; align-items:center; gap:.8rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+    .ssn-title { font-family:var(--font-display); font-size:1.4rem; font-weight:700; display:flex; align-items:center; gap:.5rem; }
+    .ssn-icon { font-size:1.3rem; }
+    .ssn-pills { display:flex; gap:.3rem; margin-left:auto; }
+    .ssn-pill { padding:.3rem .7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); font-size:.78rem; cursor:pointer; transition:all .15s; color:var(--text-main); }
+    .ssn-pill:hover { border-color:var(--accent); }
+    .ssn-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .ssn-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:.6rem; margin-bottom:1.2rem; }
+    .ssn-kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:.7rem .8rem; text-align:center; }
+    .ssn-kpi-val { font-family:var(--font-display); font-size:1.5rem; font-weight:700; line-height:1.2; }
+    .ssn-kpi-label { font-size:.72rem; color:var(--text-muted); margin-top:.1rem; }
+    .ssn-kpi-delta { font-size:.68rem; color:var(--text-faint); margin-top:.2rem; }
+    .ssn-kpi-delta.up { color:var(--accent); }
+    .ssn-kpi-delta.up::before { content:'▲ '; }
+    .ssn-kpi-delta.down { color:var(--danger); }
+    .ssn-kpi-delta.down::before { content:'▼ '; }
+    .ssn-sp-row { display:flex; align-items:center; gap:.5rem; padding:.4rem .2rem; border-bottom:1px solid var(--border); cursor:pointer; border-radius:4px; transition:background .1s; }
+    .ssn-sp-row:hover { background:var(--bg-card2); }
+    .ssn-thumb { width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0; background:var(--bg-deep); }
+    .ssn-sp-info { flex:1; min-width:0; }
+    .ssn-sp-name { font-size:.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ssn-sp-date { font-size:.72rem; color:var(--text-muted); display:flex; align-items:center; gap:.3rem; flex-wrap:wrap; }
+    .ssn-sp-count { font-size:.85rem; font-weight:600; color:var(--accent); flex-shrink:0; }
+    .ssn-shift { font-size:.68rem; font-weight:600; padding:.1rem .3rem; border-radius:3px; }
+    .ssn-shift-early { background:rgba(52,211,153,.15); color:var(--accent); }
+    .ssn-shift-late { background:rgba(239,68,68,.12); color:var(--danger); }
+    .ssn-new-tag { font-size:.65rem; font-weight:600; background:rgba(245,158,11,.15); color:#b45309; padding:.1rem .35rem; border-radius:3px; }
+    .ssn-best-day { display:block; background:var(--bg-card2); border:1px solid var(--border); border-radius:var(--radius); padding:.5rem .7rem; text-decoration:none; color:inherit; transition:border-color .15s; }
+    .ssn-best-day:hover { border-color:var(--accent); }
+    .ssn-best-day-date { font-size:.82rem; font-weight:600; }
+    @media (max-width:640px) {
+      .ssn-pills { margin-left:0; width:100%; }
+      .ssn-pill { flex:1; text-align:center; }
+      .ssn-kpis { grid-template-columns:repeat(2,1fr); }
+    }
     .yr-card  { text-align:center; padding:1rem; }
     .yr-card .big { font-size:1.8rem; font-weight:700; }
     .yr-card .sub { font-size:.78rem; opacity:.6; margin-top:.15rem; }
