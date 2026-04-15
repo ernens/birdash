@@ -75,7 +75,7 @@
       <div v-for="(cell, i) in cells" :key="i"
            class="cal-cell"
            :class="{ empty: !cell.day, today: cell.isToday, future: cell.isFuture, 'has-new': cell.newSp > 0, 'has-rare': cell.rareSp > 0 }"
-           @click="cell.day && !cell.isFuture ? openDay(cell.date) : null">
+           @click="openPopover(cell, $event)">
         <template v-if="cell.day">
           <div class="cal-day">{{cell.day}}</div>
           <div v-if="cell.sp > 0" class="cal-sp">
@@ -101,21 +101,92 @@
       <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-rare" style="font-size:.65rem;">◆</span> {{t('cal_legend_rare')}}</span>
     </div>
 
+    <!-- Day popover -->
+    <teleport to="body">
+      <div v-if="popover" class="cal-popover-backdrop" @click="closePopover">
+        <div class="cal-popover" :style="{ top: popover.top + 'px', left: popover.left + 'px' }" @click.stop>
+          <div class="cal-popover-header">
+            <div>
+              <div class="cal-popover-date">{{new Date(popover.date).toLocaleDateString(lang, { weekday:'long', day:'numeric', month:'long', year:'numeric' })}}</div>
+              <div class="cal-popover-stats">
+                <bird-icon name="bird" :size="13"></bird-icon> {{popover.sp}} {{t('species')}} · {{popover.det.toLocaleString()}} det.
+              </div>
+            </div>
+            <a :href="'today.html?date='+popover.date" class="cal-popover-link">
+              {{t('cal_view_day')}} <bird-icon name="chevron-right" :size="13"></bird-icon>
+            </a>
+          </div>
+          <div v-if="popover.newNames.length" class="cal-popover-section">
+            <div class="cal-popover-section-title cal-badge-new" style="display:inline-flex;align-items:center;gap:.3rem;">★ {{t('cal_new_species')}} ({{popover.newNames.length}})</div>
+            <div v-for="s in popover.newNames" :key="'n-'+s.com" class="cal-popover-species" @click="navigateTo('species.html',{species:s.com})">
+              <bird-img v-if="s.photo" :src="s.photo" class="cal-popover-thumb" :alt="s.com"></bird-img>
+              <div v-else class="cal-popover-thumb-ph"><bird-icon name="bird" :size="14"></bird-icon></div>
+              <div class="cal-popover-sp-info">
+                <div class="cal-popover-sp-name">{{spName(s.com, s.sci)}}</div>
+                <div class="cal-popover-sp-sci">{{s.sci}}</div>
+              </div>
+              <bird-icon name="chevron-right" :size="13" style="color:var(--text-faint);flex-shrink:0;"></bird-icon>
+            </div>
+          </div>
+          <div v-if="popover.rareNames.length" class="cal-popover-section">
+            <div class="cal-popover-section-title cal-badge-rare" style="display:inline-flex;align-items:center;gap:.3rem;">◆ {{t('cal_rare_species')}} ({{popover.rareNames.length}})</div>
+            <div v-for="s in popover.rareNames" :key="'r-'+s.com" class="cal-popover-species" @click="navigateTo('species.html',{species:s.com})">
+              <bird-img v-if="s.photo" :src="s.photo" class="cal-popover-thumb" :alt="s.com"></bird-img>
+              <div v-else class="cal-popover-thumb-ph"><bird-icon name="bird" :size="14"></bird-icon></div>
+              <div class="cal-popover-sp-info">
+                <div class="cal-popover-sp-name">{{spName(s.com, s.sci)}}</div>
+                <div class="cal-popover-sp-sci">{{s.sci}}</div>
+              </div>
+              <bird-icon name="chevron-right" :size="13" style="color:var(--text-faint);flex-shrink:0;"></bird-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
   </birdash-shell>
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
-const { useI18n, useTheme, useNav, birdQuery, localDateStr, navigateTo } = BIRDASH;
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery, localDateStr, navigateTo, photoUrl } = BIRDASH;
 
 const app = createApp({
   setup() {
     const { lang, t } = useI18n();
     useTheme();
     useNav('calendar');
+    const { spName } = useSpeciesNames();
 
     const todayStr = localDateStr();
     const loading = ref(false);
+
+    // Popover state
+    const popover = ref(null);  // { date, day, det, sp, newNames, rareNames, x, y }
+
+    function openPopover(cell, event) {
+      if (!cell.day || cell.isFuture) return;
+      const data = dailyData.value[cell.date] || {};
+      // If no badges, go directly to today
+      if (!data.newNames?.length && !data.rareNames?.length) {
+        openDay(cell.date);
+        return;
+      }
+      // Position near the clicked cell
+      const rect = event.currentTarget.getBoundingClientRect();
+      popover.value = {
+        date: cell.date,
+        day: cell.day,
+        det: cell.det,
+        sp: cell.sp,
+        newNames: (data.newNames || []).map(n => ({ com: n.com, sci: n.sci, photo: photoUrl(n.sci) })),
+        rareNames: (data.rareNames || []).map(n => ({ com: n.com, sci: n.sci, photo: photoUrl(n.sci) })),
+        // Position: center below the cell
+        top: rect.bottom + window.scrollY + 8,
+        left: Math.max(8, Math.min(rect.left + rect.width / 2, window.innerWidth - 200)),
+      };
+    }
+    function closePopover() { popover.value = null; }
 
     // Current viewed month (year, month 0-indexed)
     const viewYear = ref(new Date().getFullYear());
@@ -219,13 +290,13 @@ const app = createApp({
         const map = {};
         let mx = 1;
         for (const r of rows) {
-          map[r.date] = { det: r.det, sp: r.sp, newSp: 0, rareSp: 0 };
+          map[r.date] = { det: r.det, sp: r.sp, newSp: 0, rareSp: 0, newNames: [], rareNames: [] };
           if (r.det > mx) mx = r.det;
         }
 
         // 2. New species: first-ever detection date per species, keep those in this month
         const newRows = await birdQuery(
-          `SELECT Com_Name, MIN(Date) as first_date
+          `SELECT Com_Name, MAX(Sci_Name) as Sci_Name, MIN(Date) as first_date
            FROM active_detections WHERE Confidence >= ?
            GROUP BY Com_Name
            HAVING first_date >= ? AND first_date <= ?`,
@@ -233,13 +304,16 @@ const app = createApp({
         );
         const newSpeciesSet = new Set();
         for (const r of newRows) {
-          if (map[r.first_date]) map[r.first_date].newSp++;
+          if (map[r.first_date]) {
+            map[r.first_date].newSp++;
+            map[r.first_date].newNames.push({ com: r.Com_Name, sci: r.Sci_Name });
+          }
           newSpeciesSet.add(r.Com_Name);
         }
 
         // 3. Rare species (≤5 total detections ever) detected this month
         const rareRows = await birdQuery(
-          `SELECT d.Date as date, d.Com_Name
+          `SELECT d.Date as date, d.Com_Name, MAX(d.Sci_Name) as Sci_Name
            FROM active_detections d
            INNER JOIN (
              SELECT Com_Name FROM active_detections WHERE Confidence >= ?
@@ -251,7 +325,10 @@ const app = createApp({
         );
         const rareSpeciesSet = new Set();
         for (const r of rareRows) {
-          if (map[r.date]) map[r.date].rareSp++;
+          if (map[r.date]) {
+            map[r.date].rareSp++;
+            map[r.date].rareNames.push({ com: r.Com_Name, sci: r.Sci_Name });
+          }
           rareSpeciesSet.add(r.Com_Name);
         }
 
@@ -296,6 +373,8 @@ const app = createApp({
       cells, monthKpis, monthMeta, dailyData,
       barColor, barWidth,
       prevMonth, nextMonth, openDay,
+      popover, openPopover, closePopover,
+      spName, navigateTo, photoUrl,
     };
   }
 });

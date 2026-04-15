@@ -2714,12 +2714,56 @@
     .cal-kpi-label { font-size:.72rem; color:var(--text-muted); }
     .cal-legend { display:flex; flex-wrap:wrap; gap:.8rem; justify-content:center; margin-top:.6rem; font-size:.7rem; color:var(--text-faint); align-items:center; }
     .cal-legend-swatch { width:12px; height:12px; border-radius:2px; }
+    /* ── Calendar popover ──────────────────────────────────────── */
+    .cal-popover-backdrop {
+      position:fixed; inset:0; z-index:1000;
+      background:rgba(0,0,0,.2);
+    }
+    .cal-popover {
+      position:absolute; z-index:1001;
+      transform:translateX(-50%);
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,.15);
+      width:320px; max-width:calc(100vw - 16px);
+      max-height:70vh; overflow-y:auto;
+      animation:cal-pop-in .15s ease-out;
+    }
+    @keyframes cal-pop-in { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    .cal-popover-header {
+      display:flex; align-items:flex-start; justify-content:space-between; gap:.5rem;
+      padding:.8rem 1rem; border-bottom:1px solid var(--border);
+    }
+    .cal-popover-date { font-size:.9rem; font-weight:700; text-transform:capitalize; }
+    .cal-popover-stats { font-size:.78rem; color:var(--text-muted); margin-top:.15rem; display:flex; align-items:center; gap:.3rem; }
+    .cal-popover-link {
+      font-size:.78rem; color:var(--accent); text-decoration:none; white-space:nowrap;
+      display:flex; align-items:center; gap:.2rem; flex-shrink:0; font-weight:600;
+    }
+    .cal-popover-link:hover { text-decoration:underline; }
+    .cal-popover-section { padding:.6rem 1rem; }
+    .cal-popover-section + .cal-popover-section { border-top:1px solid var(--border); }
+    .cal-popover-section-title { font-size:.72rem; font-weight:600; padding:.15rem .4rem; border-radius:3px; margin-bottom:.5rem; }
+    .cal-popover-species {
+      display:flex; align-items:center; gap:.5rem; padding:.35rem .2rem;
+      cursor:pointer; border-radius:4px; transition:background .1s;
+    }
+    .cal-popover-species:hover { background:var(--bg-card2); }
+    .cal-popover-thumb { width:32px; height:32px; border-radius:50%; object-fit:cover; flex-shrink:0; }
+    .cal-popover-thumb-ph {
+      width:32px; height:32px; border-radius:50%; background:var(--bg-deep);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text-faint);
+    }
+    .cal-popover-sp-info { flex:1; min-width:0; }
+    .cal-popover-sp-name { font-size:.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cal-popover-sp-sci { font-size:.68rem; color:var(--text-muted); font-style:italic; }
+
     @media (max-width:640px) {
       .cal-cell { min-height:65px; padding:.3rem; }
       .cal-day { font-size:.82rem; }
       .cal-sp, .cal-det { font-size:.65rem; }
       .cal-badges { gap:.15rem; }
       .cal-badge { font-size:.55rem; padding:.05rem .25rem; }
+      .cal-popover { width:calc(100vw - 16px); left:50% !important; }
     }
 
 /* ── review.html */
