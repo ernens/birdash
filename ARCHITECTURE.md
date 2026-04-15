@@ -256,7 +256,7 @@ Directory: `server/routes/`
 | `audio.js` | Audio devices, adaptive gain, PCM/MP3 streaming, VU meters (SSE) | `/api/audio/devices`, `/api/audio/adaptive-gain`, `/api/audio/stream`, `/api/audio/vu` |
 | `backup.js` | Backup configuration, scheduling, export | `/api/backup/config`, `/api/backup/run`, `/api/backup/history` |
 | `bug-report.js` | In-app bug reporting via GitHub Issues API | `/api/bug-report` |
-| `comparison.js` | Station comparison features | `/api/comparison/*` |
+| `comparison.js` | Seasonal report: arrivals, departures, evolution | `/api/seasons/report` |
 | `data.js` | Favorites, notes, photo preferences, raw SQL query | `/api/favorites`, `/api/notes`, `/api/photo-pref`, `/api/query` |
 | `detections.js` | Detections CRUD, validations, auto-flagging, CSV/eBird export | `/api/detections`, `/api/validate`, `/api/flag`, `/api/export` |
 | `external.js` | BirdWeather, eBird, weather API proxies | `/api/birdweather/*`, `/api/ebird/*`, `/api/weather` |
@@ -275,6 +275,7 @@ Directory: `server/lib/`
 | File | Purpose |
 |------|---------|
 | `aggregates.js` | Pre-aggregated statistics tables (daily, monthly, species, hourly). Full rebuild on startup, incremental refresh every 5 min. |
+| `adaptive-gain.js` | Adaptive software gain algorithm: noise floor estimation, clip guard, activity hold. Extracted from audio.js for testability. |
 | `alerts.js` | Background alert monitoring (temperature, disk, service health). 60s check interval, 10-min cooldown per alert type. |
 | `alert-i18n.js` | Alert message translations (4 languages). Extracted from alerts.js for separation of concerns. |
 | `config.js` | `birdnet.conf` parser/writer, settings validators, `execCmd` helper, `readJsonFile`, `APPRISE_BIN`, `ALLOWED_SERVICES`. |
@@ -570,7 +571,7 @@ public/
 │   ├── chart.umd.min.js             # Chart.js (vendored)
 │   ├── bird-config.js               # Navigation, API config, defaults
 │   ├── bird-shared.js               # Utilities, DSP, favorites, notes API
-│   ├── bird-queries.js              # 38 parameterized SQL queries
+│   ├── bird-queries.js              # 55+ parameterized SQL queries (incl. analyses)
 │   ├── bird-icons.js                # 98 Lucide SVG icons + <bird-icon> component
 │   ├── bird-vue-core.js             # Vue composables, i18n, shell component (1846 lines)
 │   ├── bird-spectro-modal.js        # SpectroModal component (extracted, 390 lines)
@@ -657,7 +658,7 @@ The shell wraps every page and provides:
 | Analyses | `analyses.html` | Indicators |
 | Biodiversity | `biodiversity.html` | Indicators |
 | Phenology | `phenology.html` | Indicators |
-| Comparison | `comparison.html` | Indicators |
+| Seasons | `comparison.html` | Indicators |
 | Settings | `settings.html` | Station |
 | System | `system.html` | Station |
 

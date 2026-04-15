@@ -54,7 +54,7 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 </details>
 
 <details>
-<summary><b>Indicators</b> — Weather · Statistics · Models · Analyses · Biodiversity · Phenology · Comparison</summary>
+<summary><b>Indicators</b> — Weather · Statistics · Models · Analyses · Biodiversity · Phenology · Seasons</summary>
 
 <p align="center">
   <img src="screenshots/weather.png"      width="240" alt="Weather">
@@ -63,7 +63,7 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
   <img src="screenshots/analyses.png"     width="240" alt="Analyses">
   <img src="screenshots/biodiversity.png" width="240" alt="Biodiversity">
   <img src="screenshots/phenology.png"    width="240" alt="Phenology">
-  <img src="screenshots/comparison.png"   width="240" alt="Comparison">
+  <img src="screenshots/comparison.png"   width="240" alt="Seasons">
 </p>
 </details>
 
@@ -145,7 +145,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> **Live Board** — full-screen kiosk display for a dedicated screen: large species photo, KPIs, today's species list, weather, auto-refresh 30s, discreet back button
 
 **History**
-- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Calendar** — monthly grid with per-day species count, detection count and activity heatmap. Click any day to open the detail view
+- <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Calendar** — monthly grid with per-day species count, detection count, activity heatmap, new species badges (★) and rare species badges (◆). Click a cell with badges to see a popover with species photos and names. Click any day to open the detail view
 - <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — full-page interactive timeline with drag-to-zoom, unified bird density slider (0-100%), SVG sunrise/sunset/moon icons, type filter badges with blink highlight, confidence-mapped vertical layout
 - <img src="docs/icons/list.svg" width="16" align="top" alt=""> **Detections** — full filterable table with favorites, new species filter, per-detection delete, CSV/eBird export
 - <img src="docs/icons/check-circle.svg" width="16" align="top" alt=""> **Review** — auto-flagged detections with spectro modal, bulk confirm/reject/delete with preview, purge rejected
@@ -153,7 +153,7 @@ Raspberry Pi 5 + SSD
 **Species**
 - <img src="docs/icons/bird.svg" width="16" align="top" alt=""> Species cards with photos (iNaturalist + Wikipedia), IUCN status, favorites (SQLite-backed), personal notes (per-species and per-detection), phenology calendar (12-month dot map), year-over-year monthly comparison, chart PNG export, Web Share API
 - <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favorites** — dedicated page with KPIs, search, sort; heart toggle on all species lists
-- <img src="docs/icons/gem.svg" width="16" align="top" alt=""> Rare species tracking
+- <img src="docs/icons/gem.svg" width="16" align="top" alt=""> **Rarities** — full-width clickable KPI cards, filterable table (seen once / new this year), detailed species list with photos and confidence badges
 - <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Recordings** — unified audio library with two tabs: "Library" (all recordings, sortable/filterable) and "Best" (top recordings grouped by species)
 
 **Indicators**
@@ -162,6 +162,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/microscope.svg" width="16" align="top" alt=""> Advanced analyses (polar charts, heatmaps, time series, narrative)
 - <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Biodiversity — Shannon index, adaptive richness chart, taxonomy heatmap
 - <img src="docs/icons/calendar.svg" width="16" align="top" alt=""> **Phenology calendar** — observed annual cycle per species (presence/abundance/hourly modes), inferred phases (active period, peak abundance, dawn chorus, migrant detection), 53-week ribbon visualization, species suggestions on empty state
+- <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Seasons** — seasonal ornithological report (spring/summer/autumn/winter). Migratory arrivals with date comparison vs previous year (earlier/later), departures, season-exclusive species, multi-year evolution chart, best days, top species with year-over-year delta
 
 **Navigation**
 - 6 intent-based sections: Home, Live, History, Species, Indicators, Station
@@ -376,32 +377,37 @@ birdash/
 ├── server/
 │   ├── server.js                  # HTTP server, middleware, route delegations (271 lines)
 │   ├── lib/
+│   │   ├── adaptive-gain.js       # Adaptive software gain algorithm
 │   │   ├── alerts.js              # System alert monitoring (temp, disk, RAM)
 │   │   ├── alert-i18n.js          # Alert message translations (4 langs)
 │   │   ├── config.js              # BirdNET config, settings validators, exec helper
 │   │   ├── db.js                  # Database bootstrap, tables, taxonomy
 │   │   ├── notification-watcher.js # Push notifications (polls DB, sends via Apprise)
-│   │   ├── telemetry.js           # Community telemetry (Supabase)
+│   │   ├── result-cache.js        # Proactive result cache for heavy queries
+│   │   ├── safe-config.js         # Atomic JSON config read/write with mutex
+│   │   ├── telemetry.js           # Telemetry: anonymous pings + community network
 │   │   └── whats-new-worker.js    # Worker thread for heavy computation
 │   └── routes/
-│       ├── audio.js               # Audio devices, adaptive gain, streaming
+│       ├── audio.js               # Audio devices, streaming, profiles, monitoring
 │       ├── backup.js              # Backup config, scheduling, export
+│       ├── bug-report.js          # In-app bug reporting (GitHub Issues)
+│       ├── comparison.js          # Seasonal report (spring/summer/autumn/winter)
 │       ├── data.js                # Favorites, notes, photo-pref, query
 │       ├── detections.js          # Detections, validations, flagging
 │       ├── external.js            # BirdWeather, eBird, weather APIs
 │       ├── photos.js              # Photo resolution/caching, species names
 │       ├── settings.js            # Settings, apprise, alerts, logs SSE
 │       ├── system.js              # Services, health, hardware, models
-│       ├── bug-report.js           # In-app bug reporting (GitHub Issues)
-│       ├── telemetry.js            # Opt-in telemetry (Supabase)
+│       ├── telemetry.js           # Telemetry routes (register, anonymous pings toggle)
 │       ├── timeline.js            # Timeline with SunCalc astronomy
+│       ├── updates.js             # Update system: status, apply, rollback, force, log
 │       └── whats-new.js           # Daily overview cards
 ├── public/                        # Static frontend (Vue 3 (vendored))
 │   ├── index.html                 # Redirect to overview.html
 │   ├── overview.html               # Landing page — KPIs, bird of the day, weather
 │   ├── dashboard.html              # Bird Flow — live pipeline visualization
 │   ├── today.html                 # Today's detections with audio filters
-│   ├── calendar.html              # Monthly calendar grid with activity heatmap
+│   ├── calendar.html              # Monthly calendar with new/rare species badges + popover
 │   ├── timeline.html              # Full-page timeline with drag-to-zoom
 │   ├── detections.html            # Filterable detection table
 │   ├── review.html                # Detection review + bulk actions
@@ -413,6 +419,7 @@ birdash/
 │   ├── analyses.html              # Per-species deep analysis
 │   ├── biodiversity.html          # Shannon index, adaptive richness chart
 │   ├── phenology.html             # Observed phenology calendar (per species)
+│   ├── comparison.html            # Seasonal report (migratory arrivals, departures, evolution)
 │   ├── spectrogram.html           # Live spectrogram + clip playback
 │   ├── settings.html              # Full settings (9 tabs)
 │   ├── system.html                # System health + terminal
