@@ -28,7 +28,7 @@
         <bird-icon name="chevron-left" :size="16"></bird-icon>
       </button>
       <div class="ssn-title">
-        <span class="ssn-icon">{{seasonIcon}}</span>
+        <bird-icon :name="seasonIconName" :size="20" style="color:var(--accent);"></bird-icon>
         {{seasonLabel}}
       </div>
       <button class="btn btn-secondary" style="padding:.35rem .6rem;" @click="nextSeason" :disabled="isFutureSeason">
@@ -232,7 +232,7 @@
 const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useSpeciesNames, navigateTo, photoUrl, fmtDate } = BIRDASH;
 
-const SEASON_ICONS = { spring: '\uD83C\uDF3F', summer: '\u2600\uFE0F', autumn: '\uD83C\uDF42', winter: '\u2744\uFE0F' };
+const SEASON_ICON_NAMES = { spring: 'sprout', summer: 'sun', autumn: 'leaf', winter: 'snowflake' };
 const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'];
 
 const app = createApp({
@@ -270,7 +270,7 @@ const app = createApp({
       t('ssn_' + season.value) + ' ' + year.value
     );
 
-    const seasonIcon = computed(() => SEASON_ICONS[season.value] || '');
+    const seasonIconName = computed(() => SEASON_ICON_NAMES[season.value] || 'calendar');
 
     function _currentSeasonKey() {
       const curM = new Date().getMonth() + 1;
@@ -396,7 +396,7 @@ const app = createApp({
 
     return {
       t, lang, season, year, data, loading, chartEl, futureChartEl,
-      seasonList, seasonLabel, seasonIcon,
+      seasonList, seasonLabel, seasonIconName,
       isCurrentSeason, isFuture, isInProgress, isComplete, isFutureSeason,
       prevSeason, nextSeason, loadData,
       spName, navigateTo, photoUrl, fmtDate,
