@@ -20,6 +20,35 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <style>
+    .td-summary {
+      padding: .7rem .9rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card2);
+      display: flex; flex-direction: column; gap: .35rem;
+    }
+    .td-summary-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .78rem; font-weight: 600;
+      padding: .2rem .55rem; border-radius: 4px;
+      align-self: flex-start;
+      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
+    }
+    .td-summary-text {
+      font-size: .75rem; color: var(--text-muted); line-height: 1.45;
+    }
+    .td-summary--warn .td-summary-badge {
+      background: rgba(245,158,11,.12);
+      border-color: rgba(245,158,11,.4);
+      color: #f59e0b;
+    }
+    .td-summary--good .td-summary-badge {
+      background: rgba(52,211,153,.1);
+      border-color: rgba(52,211,153,.35);
+      color: var(--accent);
+    }
+    .td-summary--muted .td-summary-badge { opacity: .85; }
+  </style>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -177,6 +206,15 @@
                 </a>
               </div>
             </div>
+          </div>
+
+          <!-- Interpretive summary (single deterministic status) -->
+          <div v-if="interpretiveSummary" class="td-summary" :class="'td-summary--' + interpretiveSummary.tone">
+            <div class="td-summary-badge">
+              <bird-icon :name="interpretiveSummary.icon" :size="14"></bird-icon>
+              {{t('td_sum_' + interpretiveSummary.key)}}
+            </div>
+            <div class="td-summary-text">{{t('td_sum_' + interpretiveSummary.key + '_text', interpretiveSummary.meta)}}</div>
           </div>
 
           <!-- Mini KPIs for the selected species -->
@@ -425,6 +463,101 @@ const app = createApp({
     const selected      = ref(null);
     const selectedDets  = ref([]);
     const currentDetIdx = ref(0);
+
+    // ─── Interpretive summary (single deterministic status per species) ───
+    // Belgium-ish sunrise lookup (50.8°N), ±15 min accuracy — sufficient for
+    // the ±1.5 h dawn window rule. Avoids shipping suncalc to the client.
+    const SUNRISE_BY_MONTH = {
+      1: 8.5, 2: 7.9, 3: 7.1, 4: 6.3, 5: 5.6, 6: 5.3,
+      7: 5.5, 8: 6.1, 9: 6.8, 10: 7.5, 11: 8.2, 12: 8.6,
+    };
+    function _sunriseHourFor(dateStr) {
+      const m = parseInt(dateStr.slice(5, 7), 10);
+      return SUNRISE_BY_MONTH[m] ?? 6.5;
+    }
+    function _timeToHour(t) {
+      return parseFloat(t.slice(0, 2)) + parseFloat(t.slice(3, 5)) / 60;
+    }
+
+    const interpretiveSummary = computed(() => {
+      if (!selected.value || !selectedDets.value || selectedDets.value.length === 0) return null;
+      const dets = selectedDets.value;
+      const N = dets.length;
+      const confs = dets.map(d => parseFloat(d.Confidence));
+      const maxConf = Math.max(...confs);
+      const avgConf = confs.reduce((s, c) => s + c, 0) / N;
+
+      // 1. Needs review — ≥3 detections, even the best one is weak
+      if (N >= 3 && maxConf < 0.75) {
+        return {
+          key: 'needs_review', tone: 'warn', icon: 'alert-triangle',
+          meta: { n: N, max: Math.round(maxConf * 100) },
+        };
+      }
+
+      // 2. Single weak detection — lone detection, not convincing
+      if (N === 1 && confs[0] < 0.75) {
+        return {
+          key: 'single_weak', tone: 'muted', icon: 'help-circle',
+          meta: { conf: Math.round(confs[0] * 100), time: dets[0].Time.slice(0, 5) },
+        };
+      }
+
+      // 3. Isolated burst — one hour concentrates ≥80% of detections (and ≥8 total)
+      const hourBuckets = selectedHourly.value || [];
+      const maxCount = Math.max(...hourBuckets);
+      const maxHour = hourBuckets.indexOf(maxCount);
+      if (maxCount >= 8 && maxCount / N >= 0.8) {
+        return {
+          key: 'isolated_burst', tone: 'muted', icon: 'zap',
+          meta: { count: maxCount, n: N, hour: String(maxHour).padStart(2, '0') },
+        };
+      }
+
+      // 4. Repeated high-confidence — solid signal
+      if (N >= 5 && avgConf > 0.85) {
+        return {
+          key: 'high_conf', tone: 'good', icon: 'check-circle',
+          meta: { n: N, avg: Math.round(avgConf * 100) },
+        };
+      }
+
+      // 5. Mostly dawn active — ≥70% in [sunrise-1h, sunrise+2h]
+      if (N >= 5) {
+        const sr = _sunriseHourFor(today);
+        const dawnLow = sr - 1, dawnHigh = sr + 2;
+        const inDawn = dets.filter(d => {
+          const h = _timeToHour(d.Time);
+          return h >= dawnLow && h <= dawnHigh;
+        }).length;
+        if (inDawn / N >= 0.70) {
+          const hh = Math.floor(sr), mm = Math.round((sr - hh) * 60);
+          return {
+            key: 'dawn_active', tone: 'muted', icon: 'sunrise',
+            meta: { pct: Math.round(inDawn / N * 100), sunrise: `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}` },
+          };
+        }
+      }
+
+      // 6. Present all day — span ≥ 12 h AND ≥ 4 distinct hours populated
+      if (selected.value.first_time && selected.value.last_time) {
+        const firstH = _timeToHour(selected.value.first_time);
+        const lastH = _timeToHour(selected.value.last_time);
+        const distinctHours = hourBuckets.filter(c => c > 0).length;
+        if ((lastH - firstH) >= 12 && distinctHours >= 4) {
+          return {
+            key: 'all_day', tone: 'muted', icon: 'clock',
+            meta: {
+              first: selected.value.first_time.slice(0, 5),
+              last: selected.value.last_time.slice(0, 5),
+              hours: distinctHours,
+            },
+          };
+        }
+      }
+
+      return null;
+    });
 
     // Audio
 
@@ -717,6 +850,7 @@ const app = createApp({
       kpis, freshness,
       loadingList, speciesList, filteredSpecies,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly,
+      interpretiveSummary,
       spectroCanvas, spectro, speciesFreqRange,
       isPlaying, audioProgress, audioCurrentTime, audioDuration,
       cleanMode, cleanStrength, processingClean,
