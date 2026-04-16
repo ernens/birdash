@@ -1843,7 +1843,7 @@ const app = createApp({
 
     function _loadLeaflet() {
       if (_leafletLoaded) return Promise.resolve();
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -1851,12 +1851,14 @@ const app = createApp({
         const script = document.createElement('script');
         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         script.onload = () => { _leafletLoaded = true; resolve(); };
+        script.onerror = (e) => reject(new Error('Leaflet script failed to load from unpkg.com (network blocked?)'));
         document.head.appendChild(script);
       });
     }
 
     async function initStationMap() {
-      await _loadLeaflet();
+      try { await _loadLeaflet(); } catch (e) { console.warn('[station-map] Leaflet failed to load:', e); return; }
+      if (typeof L === 'undefined') { console.warn('[station-map] Leaflet global L not defined after load'); return; }
       // The station tab is an async component — poll for its DOM to mount
       let el = null;
       for (let i = 0; i < 30; i++) {
@@ -1864,7 +1866,8 @@ const app = createApp({
         if (el) break;
         await new Promise(r => setTimeout(r, 150));
       }
-      if (!el || _stationMap) return;
+      if (!el) { console.warn('[station-map] #station-map element never appeared'); return; }
+      if (_stationMap) return;
       const lat = parseFloat(conf.LATITUDE) || 50.5;
       const lon = parseFloat(conf.LONGITUDE) || 4.5;
       _stationMap = L.map(el).setView([lat, lon], conf.LATITUDE ? 14 : 6);
