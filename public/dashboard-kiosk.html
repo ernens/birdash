@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>BirdStation — Kiosk Dashboard</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-queries.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-page); color: var(--text-main);
+      font-family: var(--font-body);
+      overflow: hidden; height: 100vh;
+      position: relative;
+    }
+    /* Ambient breathing halo — speed driven by --pulse-duration */
+    body::before {
+      content: ''; position: fixed; inset: -20% -20% -20% -20%;
+      background: radial-gradient(ellipse at 50% 40%,
+        color-mix(in srgb, var(--accent) 14%, transparent) 0%,
+        transparent 55%);
+      pointer-events: none; z-index: 0;
+      animation: breathe var(--pulse-duration, 6s) ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: .35; transform: scale(1); }
+      50%      { opacity: .75; transform: scale(1.05); }
+    }
+    .kiosk {
+      position: relative; z-index: 1;
+      display: grid; grid-template-rows: auto auto 1fr auto auto;
+      height: 100vh; padding: 1.2rem 1.8rem; gap: 1rem;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .k-header { display: flex; justify-content: space-between; align-items: center; }
+    .k-brand { display: flex; align-items: center; gap: .8rem; }
+    .k-brand img { height: 40px; }
+    .k-brand-name { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+    .k-brand-sub { font-size: .8rem; color: var(--text-muted); }
+    .k-clock { text-align: right; }
+    .k-time { font-size: 2.4rem; font-weight: 700; font-family: var(--font-display); letter-spacing: .02em; line-height: 1; }
+    .k-date { font-size: .85rem; color: var(--text-muted); margin-top: .15rem; }
+
+    /* ── River 24h ────────────────────────────────────────────── */
+    .k-river {
+      background: var(--bg-card); border-radius: var(--radius);
+      padding: .7rem 1rem; box-shadow: var(--shadow-card);
+      position: relative;
+    }
+    .k-river-head { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; color: var(--text-muted); margin-bottom: .3rem; }
+    .k-river-title { font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .k-river-svg { width: 100%; height: 110px; display: block; }
+    .k-river-hour { fill: var(--text-faint); font-size: 9px; font-family: var(--font-mono); }
+    .k-river-grid { stroke: var(--border); stroke-width: .5; stroke-dasharray: 2 3; opacity: .45; }
+    .k-river-dot { opacity: .85; }
+    .k-river-dot.high { fill: var(--accent); }
+    .k-river-dot.mid  { fill: #eab308; }
+    .k-river-dot.low  { fill: #ef4444; }
+    @keyframes nowpulse { 0%, 100% { opacity: .9; r: 5; } 50% { opacity: .4; r: 9; } }
+    .k-river-now-pulse { animation: nowpulse 2.5s ease-in-out infinite; }
+    .k-river-now-line  { stroke: var(--accent); stroke-width: 1.5; }
+
+    /* ── Main: Last detection + Photo wall ───────────────────── */
+    .k-main { display: grid; grid-template-columns: 0.9fr 1.3fr; gap: 1rem; min-height: 0; }
+
+    .k-last {
+      background: var(--bg-card); border-radius: var(--radius);
+      padding: 1.1rem; box-shadow: var(--shadow-card);
+      display: flex; flex-direction: column; overflow: hidden;
+      transition: box-shadow .4s;
+    }
+    .k-last.flash { box-shadow: 0 0 0 2px var(--accent), var(--shadow-card); }
+    .k-last-photo { flex: 1; min-height: 0; background: var(--bg-card2); border-radius: var(--radius); overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: .8rem; }
+    .k-last-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .k-last-name { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; line-height: 1.15; }
+    .k-last-sci { font-size: .85rem; color: var(--text-muted); font-style: italic; }
+    .k-last-meta { display: flex; gap: .8rem; align-items: center; margin-top: .4rem; font-size: .82rem; color: var(--text-muted); }
+    .k-last-conf { font-weight: 700; font-size: 1.05rem; }
+    .k-last-conf.high { color: var(--accent); }
+    .k-last-conf.mid  { color: #eab308; }
+    .k-last-conf.low  { color: #ef4444; }
+    .k-last-fresh { font-size: .72rem; padding: .15rem .5rem; border-radius: 4px; background: var(--accent); color: #000; font-weight: 700; }
+
+    /* ── Photo wall (5×2) with FLIP ──────────────────────────── */
+    .k-wall {
+      background: var(--bg-card); border-radius: var(--radius);
+      padding: .9rem; box-shadow: var(--shadow-card);
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
+    .k-wall-title { font-size: .78rem; color: var(--text-muted); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; margin-bottom: .5rem; }
+    .k-wall-grid {
+      flex: 1; display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: 1fr;
+      gap: .5rem; min-height: 0;
+    }
+    .k-tile { position: relative; background: var(--bg-card2); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .55s cubic-bezier(.22,1,.36,1); }
+    .k-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .k-tile-label {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: .35rem .45rem;
+      background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 100%);
+      font-size: .72rem; color: #fff; font-weight: 600;
+      display: flex; justify-content: space-between; align-items: baseline; gap: .3rem;
+    }
+    .k-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .k-tile-time { font-family: var(--font-mono); opacity: .85; font-size: .68rem; }
+    .k-tile-new { position: absolute; top: .3rem; right: .3rem; background: var(--accent); color: #000; font-size: .65rem; font-weight: 700; padding: .1rem .35rem; border-radius: 3px; }
+
+    /* FLIP transitions */
+    .flip-move { transition: transform .55s cubic-bezier(.22,1,.36,1); }
+    .flip-enter-from { opacity: 0; transform: scale(.6); }
+    .flip-leave-to   { opacity: 0; transform: scale(.8); }
+    .flip-enter-active { transition: opacity .4s, transform .5s cubic-bezier(.22,1,.36,1); }
+    .flip-leave-active { position: absolute; transition: opacity .3s, transform .3s; }
+
+    /* ── KPI row ─────────────────────────────────────────────── */
+    .k-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; }
+    .k-kpi { background: var(--bg-card); border-radius: var(--radius); padding: .8rem 1rem; box-shadow: var(--shadow-card); display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
+    .k-kpi-value { font-size: 1.9rem; font-weight: 700; font-family: var(--font-display); line-height: 1; }
+    .k-kpi-label { font-size: .72rem; color: var(--text-muted); margin-top: .25rem; letter-spacing: .05em; text-transform: uppercase; }
+    .k-kpi.pulse .k-kpi-value { color: var(--accent); display: inline-flex; align-items: baseline; gap: .3rem; }
+    .k-kpi-heart {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent); transform: translateY(-.1em);
+      animation: heart var(--pulse-duration, 6s) ease-in-out infinite;
+      box-shadow: 0 0 12px var(--accent);
+    }
+    @keyframes heart { 0%, 100% { transform: translateY(-.1em) scale(1); } 40% { transform: translateY(-.1em) scale(1.5); } }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .k-footer { display: flex; justify-content: space-between; align-items: center; font-size: .75rem; color: var(--text-faint); }
+    .k-weather { display: flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--text-muted); }
+    .k-weather-temp { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+
+    /* Back + Fullscreen */
+    .k-back, .k-fullscreen { position: fixed; top: .8rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: .4rem .6rem; cursor: pointer; color: var(--text-muted); opacity: 0; transition: opacity .3s; z-index: 10; text-decoration: none; }
+    .k-back { left: .8rem; }
+    .k-fullscreen { right: .8rem; }
+    .k-back:hover, .k-fullscreen:hover { opacity: 1; }
+    body:hover .k-back, body:hover .k-fullscreen { opacity: .3; }
+
+    @media (max-width: 900px) {
+      .k-main { grid-template-columns: 1fr; }
+      .k-wall-grid { grid-template-columns: repeat(5, 1fr); grid-auto-rows: minmax(80px, 1fr); }
+      .k-kpis { grid-template-columns: repeat(2, 1fr); }
+      .k-time { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <a href="overview.html" class="k-back" :title="t('nav_overview')">
+    <bird-icon name="arrow-left" :size="14"></bird-icon>
+  </a>
+  <button class="k-fullscreen" @click="toggleFullscreen" :title="t('display_fullscreen')">
+    <bird-icon name="maximize-2" :size="18"></bird-icon>
+  </button>
+
+  <div class="kiosk" :style="{ '--pulse-duration': pulseDuration + 's' }">
+    <!-- Header -->
+    <div class="k-header">
+      <div class="k-brand">
+        <img src="img/robin-logo.svg" alt="BirdStation">
+        <div>
+          <div class="k-brand-name">{{brandName}}</div>
+          <div class="k-brand-sub">{{siteName}}</div>
+        </div>
+      </div>
+      <div class="k-clock">
+        <div class="k-time">{{clock}}</div>
+        <div class="k-date">{{dateStr}}</div>
+      </div>
+    </div>
+
+    <!-- River 24h -->
+    <div class="k-river">
+      <div class="k-river-head">
+        <span class="k-river-title">{{t('kiosk_river_title')}}</span>
+        <span>{{riverCount}} · 00{{t('kiosk_hours')}} → 24{{t('kiosk_hours')}}</span>
+      </div>
+      <svg class="k-river-svg" :viewBox="`0 0 ${riverW} ${riverH}`" preserveAspectRatio="none">
+        <!-- Hour grid -->
+        <g>
+          <line v-for="h in 25" :key="'g'+h"
+                :x1="(h-1) * riverW / 24" :x2="(h-1) * riverW / 24"
+                y1="0" :y2="riverH - 14" class="k-river-grid"/>
+          <text v-for="h in [0,6,12,18,24]" :key="'t'+h"
+                :x="h * riverW / 24" :y="riverH - 2"
+                :text-anchor="h === 0 ? 'start' : h === 24 ? 'end' : 'middle'"
+                class="k-river-hour">{{h}}{{t('kiosk_hours')}}</text>
+        </g>
+        <!-- Detection dots -->
+        <circle v-for="(d, i) in riverDots" :key="'d'+i"
+                :cx="d.x" :cy="d.y" :r="d.r"
+                :class="['k-river-dot', d.tier]"/>
+        <!-- Now marker -->
+        <line v-if="nowX != null"
+              :x1="nowX" :x2="nowX" y1="0" :y2="riverH - 14"
+              class="k-river-now-line"/>
+        <circle v-if="nowX != null" :cx="nowX" :cy="4" r="5"
+                class="k-river-dot high k-river-now-pulse"/>
+      </svg>
+    </div>
+
+    <!-- Main: last detection + photo wall -->
+    <div class="k-main">
+      <div class="k-last" :class="{flash: flash}">
+        <div class="k-last-photo">
+          <img v-if="lastDet.photoUrl" :src="lastDet.photoUrl" :alt="lastDet.comName">
+          <bird-icon v-else name="bird" :size="90" style="opacity:.2;"></bird-icon>
+        </div>
+        <div class="k-last-name">{{spName(lastDet.comName, lastDet.sciName)}}</div>
+        <div class="k-last-sci">{{lastDet.sciName}}</div>
+        <div class="k-last-meta">
+          <span class="k-last-conf" :class="confTier(lastDet.conf)">{{lastDet.conf}}%</span>
+          <span>{{lastDet.time}}</span>
+          <span v-if="lastDet.model" style="opacity:.6;">{{lastDet.model}}</span>
+          <span v-if="lastDet.fresh" class="k-last-fresh">{{t('display_just_now')}}</span>
+        </div>
+      </div>
+
+      <div class="k-wall">
+        <div class="k-wall-title">{{t('kiosk_last_ten')}}</div>
+        <TransitionGroup name="flip" tag="div" class="k-wall-grid">
+          <div v-for="tile in tiles" :key="tile.id" class="k-tile">
+            <img v-if="tile.photoUrl" :src="tile.photoUrl" :alt="tile.comName" onerror="this.style.display='none'">
+            <bird-icon v-else name="bird" :size="40" style="opacity:.25;margin:auto;display:block;"></bird-icon>
+            <div v-if="tile.isNew" class="k-tile-new">NEW</div>
+            <div class="k-tile-label">
+              <span class="k-tile-name">{{spName(tile.comName, tile.sciName)}}</span>
+              <span class="k-tile-time">{{tile.time}}</span>
+            </div>
+          </div>
+        </TransitionGroup>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="k-kpis">
+      <div class="k-kpi pulse">
+        <div class="k-kpi-value">
+          <span class="k-kpi-heart"></span>{{pulseRate}}
+          <span style="font-size:.9rem;font-weight:500;color:var(--text-muted);">{{t('kiosk_per_min')}}</span>
+        </div>
+        <div class="k-kpi-label">{{t('kiosk_pulse')}}</div>
+      </div>
+      <a href="today.html" class="k-kpi">
+        <div class="k-kpi-value" style="color:var(--accent);">{{kpis.species}}</div>
+        <div class="k-kpi-label">{{t('species')}}</div>
+      </a>
+      <a href="today.html" class="k-kpi">
+        <div class="k-kpi-value">{{kpis.detections}}</div>
+        <div class="k-kpi-label">{{t('detections')}}</div>
+      </a>
+      <a href="today.html" class="k-kpi">
+        <div class="k-kpi-value" style="color:var(--accent);">{{kpis.lastHour}}</div>
+        <div class="k-kpi-label">{{t('last_hour')}}</div>
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="k-footer">
+      <div class="k-weather" v-if="weather">
+        <bird-icon name="thermometer" :size="14"></bird-icon>
+        <span class="k-weather-temp">{{weather.temp}}°C</span>
+        <span>{{weather.precip}}mm</span>
+        <span>{{weather.wind}}km/h</span>
+      </div>
+      <div v-else></div>
+      <div>{{t('display_auto_refresh')}} · v{{appVersion}}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch } = Vue;
+const { useI18n, useSpeciesNames, birdQuery, localDateStr, photoUrl } = BIRDASH;
+const Q = BIRDASH_QUERIES;
+
+const app = createApp({
+  setup() {
+    const { lang, t } = useI18n();
+    const { spName } = useSpeciesNames();
+    const API = BIRD_CONFIG.apiUrl;
+    const CONF = BIRD_CONFIG.defaultConfidence;
+
+    const brandName = ref(BIRD_CONFIG.siteBrand || 'BirdStation');
+    const siteName = ref(BIRD_CONFIG.siteName || '');
+    const appVersion = ref('');
+
+    // Clock
+    const clock = ref('');
+    const dateStr = ref('');
+    function updateClock() {
+      const now = new Date();
+      clock.value = now.toLocaleTimeString(lang.value, { hour: '2-digit', minute: '2-digit' });
+      dateStr.value = now.toLocaleDateString(lang.value, { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+    updateClock();
+    const clockTimer = setInterval(updateClock, 10000);
+
+    // ── River 24h ────────────────────────────────────────────
+    // We render detections as a scatter in an SVG. X = minutes since midnight,
+    // Y = confidence mapped so higher confidence sits near the top. Uses
+    // 0..1000 viewBox so CSS stretches to container width crisply.
+    const riverW = 1000, riverH = 110;
+    const riverDots = ref([]);
+    const riverCount = ref(0);
+    const nowX = ref(null);
+    function refreshNowMarker() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      nowX.value = (mins / 1440) * riverW;
+    }
+    refreshNowMarker();
+    const nowTimer = setInterval(refreshNowMarker, 30000);
+
+    async function loadRiver() {
+      const today = localDateStr();
+      try {
+        const rows = await birdQuery(
+          'SELECT Time, Confidence FROM active_detections WHERE Date=? AND Confidence>=? ORDER BY Time ASC',
+          [today, CONF]
+        );
+        const dots = [];
+        for (const r of rows) {
+          const t = (r.Time || '').split(':');
+          if (t.length < 2) continue;
+          const mins = parseInt(t[0], 10) * 60 + parseInt(t[1], 10);
+          const x = (mins / 1440) * riverW;
+          // Map confidence 0.7..1.0 → y from riverH-20 (low) to 8 (high)
+          const c = Math.max(0.5, Math.min(1, r.Confidence || 0));
+          const yNorm = (c - 0.5) / 0.5; // 0..1
+          const y = (riverH - 22) - yNorm * (riverH - 30);
+          const tier = c >= 0.85 ? 'high' : c >= 0.70 ? 'mid' : 'low';
+          dots.push({ x, y, r: c >= 0.85 ? 3.2 : 2.6, tier });
+        }
+        riverDots.value = dots;
+        riverCount.value = dots.length;
+      } catch (e) { console.warn('[kiosk] river load failed:', e); }
+    }
+
+    // ── Pulse (breathing rate) ──────────────────────────────
+    // Detections in the last 10 min drive both the KPI number and the
+    // ambient animation speed. 0/min → 7s breath; 30/min → 1.6s breath.
+    const pulseRate = ref(0);
+    const pulseDuration = computed(() => {
+      const r = pulseRate.value;
+      // Clamp to [0, 30]/min; map to [7s, 1.6s]
+      const clamped = Math.max(0, Math.min(30, r));
+      return (7 - (clamped / 30) * 5.4).toFixed(2);
+    });
+    // Propagate to body so body::before halo animation picks it up.
+    // Vue can't :style bind on <body> since #app isn't mounted there.
+    watch(pulseDuration, (v) => { document.body.style.setProperty('--pulse-duration', v + 's'); }, { immediate: true });
+    async function loadPulse() {
+      const today = localDateStr();
+      try {
+        const [row] = await birdQuery(
+          "SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=? AND Time>=time('now','-10 minutes','localtime')",
+          [today, CONF]
+        );
+        // Per-minute rate over the 10-min window
+        pulseRate.value = row ? Math.round(row.n / 10 * 10) / 10 : 0;
+      } catch (e) { console.warn('[kiosk] pulse load failed:', e); }
+    }
+
+    // ── KPIs ────────────────────────────────────────────────
+    const kpis = reactive({ species: '—', detections: '—', lastHour: '—' });
+    async function loadKpis() {
+      const today = localDateStr();
+      try {
+        const [td] = await birdQuery(...Q.todayStats(today));
+        kpis.species = td ? td.species : 0;
+        kpis.detections = td ? (td.total || 0).toLocaleString() : '0';
+        const [lh] = await birdQuery(...Q.lastHourCount(today));
+        kpis.lastHour = lh ? lh.n : 0;
+      } catch (e) { console.warn('[kiosk] kpis load failed:', e); }
+    }
+
+    // ── Last detection ──────────────────────────────────────
+    const lastDet = reactive({ comName: '', sciName: '', conf: 0, time: '', model: '', photoUrl: null, fresh: false });
+    const flash = ref(false);
+    function confTier(c) { return c >= 80 ? 'high' : c >= 60 ? 'mid' : 'low'; }
+    async function loadLastDet() {
+      try {
+        const [row] = await birdQuery(...Q.latestDetectionRaw());
+        if (!row) return;
+        const isNew = row.Com_Name !== lastDet.comName || row.Time !== lastDet.time;
+        lastDet.comName = row.Com_Name;
+        lastDet.sciName = row.Sci_Name;
+        lastDet.conf = Math.round(row.Confidence * 100);
+        lastDet.time = row.Time ? row.Time.substring(0, 5) : '';
+        lastDet.model = row.Model || '';
+        lastDet.photoUrl = row.Sci_Name ? photoUrl(row.Sci_Name) : null;
+        const now = new Date();
+        const detT = row.Time ? row.Time.split(':') : [];
+        if (detT.length >= 2) {
+          const mins = (now.getHours() * 60 + now.getMinutes()) - (parseInt(detT[0]) * 60 + parseInt(detT[1]));
+          lastDet.fresh = mins >= 0 && mins <= 2;
+        }
+        if (isNew) { flash.value = true; setTimeout(() => { flash.value = false; }, 900); }
+      } catch (e) { console.warn('[kiosk] lastDet load failed:', e); }
+    }
+
+    // ── Photo wall (last 10 unique detections) ──────────────
+    // Tiles reorder with FLIP when a new detection arrives. Each tile has
+    // a stable `id` (Date+Time+Com_Name) so Vue can diff correctly.
+    const tiles = ref([]);
+    let _prevIds = new Set();
+    async function loadTiles() {
+      try {
+        const rows = await birdQuery(...Q.latestDetections(10));
+        const newTiles = rows.map(r => ({
+          id: `${r.Date}_${r.Time}_${r.Com_Name}`,
+          comName: r.Com_Name,
+          sciName: r.Sci_Name,
+          time: r.Time ? r.Time.substring(0, 5) : '',
+          photoUrl: r.Sci_Name ? photoUrl(r.Sci_Name) : '',
+          isNew: false,
+        }));
+        // Mark tiles that weren't there on the previous tick as NEW
+        for (const tile of newTiles) {
+          if (!_prevIds.has(tile.id)) tile.isNew = true;
+        }
+        _prevIds = new Set(newTiles.map(t => t.id));
+        tiles.value = newTiles;
+        // Fade NEW badge after 30s
+        setTimeout(() => { tiles.value.forEach(t => { t.isNew = false; }); }, 30000);
+      } catch (e) { console.warn('[kiosk] tiles load failed:', e); }
+    }
+
+    // ── Weather ─────────────────────────────────────────────
+    const weather = ref(null);
+    async function loadWeather() {
+      try {
+        const r = await fetch(`${API}/weather?days=1`);
+        if (!r.ok) return;
+        const d = await r.json();
+        const daily = d.daily || {};
+        const tMax = (daily.temperature_2m_max || [])[0];
+        const tMin = (daily.temperature_2m_min || [])[0];
+        if (tMax != null && tMin != null) {
+          weather.value = {
+            temp: Math.round((tMax + tMin) / 2),
+            precip: Math.round((daily.precipitation_sum || [])[0] || 0),
+            wind: Math.round((daily.windspeed_10m_max || [])[0] || 0),
+          };
+        }
+      } catch {}
+    }
+
+    // Version
+    fetch(`${API}/update-status`).then(r => r.json()).then(d => {
+      appVersion.value = d.currentVersion || d.currentShort || '';
+    }).catch(() => {});
+
+    // ── Refresh orchestration ───────────────────────────────
+    function refreshAll() {
+      loadKpis(); loadLastDet(); loadTiles(); loadPulse(); loadRiver();
+    }
+    onMounted(() => { refreshAll(); loadWeather(); });
+    const refreshTimer = setInterval(refreshAll, 30000);
+    const weatherTimer = setInterval(loadWeather, 10 * 60 * 1000);
+
+    onUnmounted(() => {
+      clearInterval(clockTimer); clearInterval(refreshTimer);
+      clearInterval(weatherTimer); clearInterval(nowTimer);
+    });
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    return {
+      t, spName, lang, brandName, siteName, appVersion,
+      clock, dateStr,
+      riverW, riverH, riverDots, riverCount, nowX,
+      kpis, lastDet, flash, tiles, weather,
+      pulseRate, pulseDuration,
+      confTier, toggleFullscreen,
+    };
+  }
+});
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
+</script>
+</body>
+</html>

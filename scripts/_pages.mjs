@@ -18,6 +18,7 @@ export const pages = [
   { name: 'spectrogram', path: '/birds/spectrogram.html', wait: 2000 },
   { name: 'log',         path: '/birds/log.html',         wait: 3000 },
   { name: 'liveboard',   path: '/birds/liveboard.html',   wait: 3000 },
+  { name: 'dashboard-kiosk', path: '/birds/dashboard-kiosk.html', wait: 3000 },
 
   // History
   { name: 'calendar',    path: '/birds/calendar.html',    wait: 3000 },

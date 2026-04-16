@@ -1442,5 +1442,11 @@
   "display_fullscreen": "Fullscreen",
   "display_just_now": "Just now",
   "display_species_today": "Species detected today",
-  "display_auto_refresh": "Auto-refresh 30s"
+  "display_auto_refresh": "Auto-refresh 30s",
+  "kiosk_river_title": "Today's flow",
+  "kiosk_pulse": "Pulse",
+  "kiosk_per_min": "/min",
+  "kiosk_last_ten": "Latest observations",
+  "kiosk_now": "Now",
+  "kiosk_hours": "h"
 }

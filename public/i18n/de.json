@@ -1442,5 +1442,11 @@
   "display_fullscreen": "Vollbild",
   "display_just_now": "Gerade eben",
   "display_species_today": "Heute erkannte Arten",
-  "display_auto_refresh": "Auto-Aktualisierung 30s"
+  "display_auto_refresh": "Auto-Aktualisierung 30s",
+  "kiosk_river_title": "Heutiger Verlauf",
+  "kiosk_pulse": "Puls",
+  "kiosk_per_min": "/min",
+  "kiosk_last_ten": "Letzte Beobachtungen",
+  "kiosk_now": "Jetzt",
+  "kiosk_hours": "h"
 }
