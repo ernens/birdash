@@ -402,8 +402,10 @@ class PerchModel:
         self._temperature = max(0.25, 2.0 - float(sensitivity))
         log.info("Perch temperature=%.2f (sensitivity=%.2f)", self._temperature, sensitivity)
 
-        # Bird-only filter
-        idx_path = os.path.join(models_dir, "Perch_v2_bird_indices.json")
+        # Bird-only filter — prefer variant-specific index, fallback to generic
+        idx_path = os.path.join(models_dir, f"{self.name}_bird_indices.json")
+        if not os.path.exists(idx_path):
+            idx_path = os.path.join(models_dir, "Perch_v2_bird_indices.json")
         if os.path.exists(idx_path):
             with open(idx_path) as f:
                 self._bird_indices = np.array(json.load(f), dtype=int)
@@ -456,7 +458,7 @@ class PerchModel:
 
 def get_model(model_name, models_dir, sensitivity=1.0, sf_thresh=0.03, mdata_version=2):
     """Factory: instantiate a model by name."""
-    if model_name in ("Perch_v2", "Perch_v2_int8"):
+    if model_name.startswith("perch_v2") or model_name in ("Perch_v2", "Perch_v2_int8"):
         return PerchModel(models_dir, sensitivity, sf_thresh, mdata_version,
                           model_name=model_name)
     elif model_name == "BirdNET_6K_GLOBAL_MODEL":
