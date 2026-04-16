@@ -112,6 +112,11 @@
       return ['SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name, Model FROM detections ORDER BY Date DESC, Time DESC LIMIT 1', []];
     },
 
+    /** Best detection of a given day (highest confidence) — overview */
+    bestOfDay(date) {
+      return ['SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name, Model FROM detections WHERE Date=? ORDER BY Confidence DESC, Time DESC LIMIT 1', [date]];
+    },
+
     // ═══════════════════════════════════════════════════════════
     //  SPECIES BY DATE / RANGE
     // ═══════════════════════════════════════════════════════════

@@ -206,6 +206,7 @@
   "species": "Species",
   "avg_confidence": "Avg confidence",
   "last_detection": "Last detection",
+  "best_of_today": "Best of today",
   "top_species": "Top species",
   "activity_7d": "7-day activity",
   "activity_today": "Today's activity",

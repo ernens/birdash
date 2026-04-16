@@ -12,6 +12,22 @@
   <meta property="og:image" content="/birds/img/robin-logo.svg">
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
+  <style>
+    .featured-tabs {
+      display: flex; gap: 0; margin: -.6rem -1rem .8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .featured-tab {
+      flex: 1; background: transparent; border: none;
+      padding: .6rem .9rem; font-size: .82rem; font-weight: 600;
+      color: var(--text-muted); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      letter-spacing: .04em; text-transform: uppercase;
+      transition: color .15s, border-color .15s;
+    }
+    .featured-tab:hover { color: var(--text); }
+    .featured-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  </style>
   <script src="js/vue.global.prod.min.js"></script>
   <script src="js/chart.umd.min.js"></script>
   <script src="js/birdash-local.js" onerror=""></script>
@@ -191,33 +207,38 @@
       <!-- Colonne gauche : dernière détection + activité -->
       <div style="display:flex;flex-direction:column;gap:1rem;">
       <div class="card">
-        <div class="card-title">{{t('last_detection')}}</div>
-        <div v-if="lastDet.loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="!lastDet.row" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
+        <div class="featured-tabs">
+          <button class="featured-tab" :class="{active: featuredTab==='latest'}"
+                  @click="selectFeaturedTab('latest')">{{t('last_detection')}}</button>
+          <button class="featured-tab" :class="{active: featuredTab==='best'}"
+                  @click="selectFeaturedTab('best')">{{t('best_of_today')}}</button>
+        </div>
+        <div v-if="currentFeatured.loading" class="spinner"><div></div><div></div><div></div></div>
+        <div v-else-if="!currentFeatured.row" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
         <div v-else>
           <div class="last-det-photo-wrap">
-            <bird-img v-if="lastDet.photoUrl" :src="lastDet.photoUrl" :alt="lastDet.row.Com_Name"></bird-img>
+            <bird-img v-if="currentFeatured.photoUrl" :src="currentFeatured.photoUrl" :alt="currentFeatured.row.Com_Name"></bird-img>
           </div>
           <div style="display:flex;align-items:flex-start;gap:.75rem;">
             <div style="flex:1;">
               <div style="font-size:1.05rem;font-family:var(--font-display);font-weight:600;">
-                <a class="species-link" @click="navigateTo('species.html',{species:lastDet.row.Com_Name})">{{spName(lastDet.row.Com_Name, lastDet.row.Sci_Name)}}</a>
+                <a class="species-link" @click="navigateTo('species.html',{species:currentFeatured.row.Com_Name})">{{spName(currentFeatured.row.Com_Name, currentFeatured.row.Sci_Name)}}</a>
               </div>
-              <div style="font-size:.8rem;color:var(--text-muted);font-style:italic;">{{lastDet.row.Sci_Name}}</div>
-              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">{{fmtDate(lastDet.row.Date)}} · {{fmtTime(lastDet.row.Time)}}</div>
+              <div style="font-size:.8rem;color:var(--text-muted);font-style:italic;">{{currentFeatured.row.Sci_Name}}</div>
+              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">{{fmtDate(currentFeatured.row.Date)}} · {{fmtTime(currentFeatured.row.Time)}}</div>
             </div>
             <div style="display:flex;align-items:center;gap:.3rem;">
-              <span v-if="lastDet.row.Model" class="model-tag">{{shortModel(lastDet.row.Model)}}</span>
-              <span :class="'conf-badge '+(parseFloat(lastDet.row.Confidence)>=0.8?'conf-high':parseFloat(lastDet.row.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(lastDet.row.Confidence)}}</span>
+              <span v-if="currentFeatured.row.Model" class="model-tag">{{shortModel(currentFeatured.row.Model)}}</span>
+              <span :class="'conf-badge '+(parseFloat(currentFeatured.row.Confidence)>=0.8?'conf-high':parseFloat(currentFeatured.row.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(currentFeatured.row.Confidence)}}</span>
             </div>
           </div>
-          <div v-if="lastDet.row.File_Name" class="idx-player">
-            <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(lastDet.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
+          <div v-if="currentFeatured.row.File_Name" class="idx-player">
+            <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(currentFeatured.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
             <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
             <span class="idx-duration">{{richDuration}}</span>
-            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="openSpectroModal(lastDet.row)" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
+            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="openSpectroModal(currentFeatured.row)" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
           </div>
-          <div v-if="lastDet.row.File_Name" class="idx-spectro-wrap">
+          <div v-if="currentFeatured.row.File_Name" class="idx-spectro-wrap">
             <div class="idx-spectro-freqs">
               <span class="idx-spectro-freq">12k</span>
               <span class="idx-spectro-freq">6k</span>
@@ -297,7 +318,7 @@
 
 <script>
 // ── Vue app ───────────────────────────────────────────────────────────────────
-const { createApp, ref, reactive, watch, onMounted, onUnmounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useAudio, useSpeciesNames,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, daysAgo, chartDefaults, navigateTo,
@@ -331,6 +352,11 @@ const app = createApp({
     }
     onMounted(() => document.addEventListener('click', () => { rarePanelOpen.value = false; }));
     const lastDet = ref({ loading:true, row:null, photoUrl:null });
+    const bestDet = ref({ loading:true, row:null, photoUrl:null });
+    const featuredTab = ref('latest'); // 'latest' | 'best'
+    const currentFeatured = computed(() =>
+      featuredTab.value === 'best' ? bestDet.value : lastDet.value
+    );
     const rareSpeciesToday = ref([]);
     const whatsNew = ref({
       loaded: false, alerts: [], phenology: [],
@@ -398,7 +424,7 @@ const app = createApp({
         loadRareSpeciesToday, loadKpis, loadLastDet,
         loadTopData, loadHourlyData,
       ];
-      const deferred = [loadWhatsNew, loadWeatherWidget];
+      const deferred = [loadWhatsNew, loadWeatherWidget, loadBestDet];
       const sections = [...critical, ...deferred];
       loadProgress.total = sections.length;
       loadProgress.done = 0;
@@ -444,9 +470,32 @@ const app = createApp({
         const [row] = await birdQuery(...Q.latestDetectionRaw());
         const photo = row?.Sci_Name ? photoUrl(row.Sci_Name) : null;
         lastDet.value = { loading:false, row:row||null, photoUrl: photo };
-        // Charger le spectrogramme automatiquement
-        if (row?.File_Name) await nextTick().then(loadSpectro);
+        if (featuredTab.value === 'latest' && row?.File_Name) await nextTick().then(loadSpectro);
       } catch(e) { lastDet.value = { loading:false, row:null, photoUrl:null }; }
+    }
+
+    async function loadBestDet() {
+      bestDet.value.loading = true;
+      try {
+        const [row] = await birdQuery(...Q.bestOfDay(today));
+        const photo = row?.Sci_Name ? photoUrl(row.Sci_Name) : null;
+        bestDet.value = { loading:false, row:row||null, photoUrl: photo };
+        if (featuredTab.value === 'best' && row?.File_Name) await nextTick().then(loadSpectro);
+      } catch(e) { bestDet.value = { loading:false, row:null, photoUrl:null }; }
+    }
+
+    function selectFeaturedTab(tab) {
+      if (featuredTab.value === tab) return;
+      featuredTab.value = tab;
+      // Stop current playback when switching
+      if (richPlaying.value && _richAudio) {
+        _richAudio.pause(); _richAudio = null;
+        if (_richRaf) cancelAnimationFrame(_richRaf); _richRaf = null;
+        richPlaying.value = false; richProgress.value = 0;
+      }
+      spectroState.value = 'idle';
+      const row = currentFeatured.value.row;
+      if (row?.File_Name) nextTick().then(loadSpectro);
     }
 
     // ── Player avec progression ────────────────────────────────────
@@ -495,7 +544,7 @@ const app = createApp({
 
     // ── Spectrogramme ─────────────────────────────────────────────
     async function loadSpectro() {
-      const fileName = lastDet.value.row?.File_Name;
+      const fileName = currentFeatured.value.row?.File_Name;
       if (!fileName) return;
       const url = buildAudioUrl(fileName);
       if (!url) return;
@@ -619,7 +668,8 @@ const app = createApp({
 
     return {
       lang, t, spName, daysAgo, weatherToday,
-      today, kpis, lastDet, rareSpeciesToday, rarePanelOpen, toggleRarePanel, isMultiModel, loadProgress,
+      today, kpis, lastDet, bestDet, currentFeatured, featuredTab, selectFeaturedTab,
+      rareSpeciesToday, rarePanelOpen, toggleRarePanel, isMultiModel, loadProgress,
       whatsNew, wnIcon, wnMoonIcon,
       playingFile, toggleAudio,
       richPlaying, richProgress, richDuration, toggleRichPlay, seekRich,
