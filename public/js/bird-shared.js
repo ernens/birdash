@@ -451,28 +451,133 @@
 
   // ── Species frequency ranges (kHz) for spectrogram overlay ──────────
 
+  // Expected call/song frequency range per species (kHz) for spectrogram
+  // overlay. Values are approximate — sourced from Xeno-Canto spectrograms
+  // and field guides. A ±20% tolerance is expected. Thrushes and warblers
+  // span wider bands because song is broadband; owls/doves are narrow and
+  // low. Purpose is validation help, not acoustic precision.
   const SPECIES_FREQ_RANGES = {
-    // Common European species — frequency ranges in kHz (approximate)
-    'Turdus merula': { min: 1.5, max: 6.5, label: 'Blackbird' },
-    'Erithacus rubecula': { min: 2, max: 8, label: 'Robin' },
-    'Parus major': { min: 3, max: 8, label: 'Great Tit' },
-    'Cyanistes caeruleus': { min: 4, max: 10, label: 'Blue Tit' },
-    'Phylloscopus collybita': { min: 3, max: 7, label: 'Chiffchaff' },
-    'Sylvia atricapilla': { min: 2, max: 7, label: 'Blackcap' },
-    'Fringilla coelebs': { min: 2, max: 8, label: 'Chaffinch' },
-    'Pica pica': { min: 1, max: 5, label: 'Magpie' },
-    'Columba palumbus': { min: 0.3, max: 1.5, label: 'Wood Pigeon' },
-    'Strix aluco': { min: 0.5, max: 4, label: 'Tawny Owl' },
-    'Dendrocopos major': { min: 1, max: 8, label: 'Great Spotted Woodpecker' },
-    'Garrulus glandarius': { min: 1.5, max: 6, label: 'Jay' },
-    'Troglodytes troglodytes': { min: 3, max: 10, label: 'Wren' },
-    'Sitta europaea': { min: 2, max: 8, label: 'Nuthatch' },
-    'Corvus corone': { min: 0.5, max: 3, label: 'Carrion Crow' },
-    'Sturnus vulgaris': { min: 1, max: 8, label: 'Starling' },
-    'Passer domesticus': { min: 2, max: 6, label: 'House Sparrow' },
-    'Carduelis carduelis': { min: 3, max: 9, label: 'Goldfinch' },
-    'Aegithalos caudatus': { min: 5, max: 10, label: 'Long-tailed Tit' },
-    'Certhia brachydactyla': { min: 4, max: 9, label: 'Short-toed Treecreeper' },
+    // ── Thrushes ────────────────────────────────────────
+    'Turdus merula': { min: 1.5, max: 6.5 },
+    'Turdus philomelos': { min: 1.5, max: 8 },
+    'Turdus viscivorus': { min: 1.5, max: 6 },
+    'Turdus pilaris': { min: 1, max: 6 },
+    'Turdus iliacus': { min: 2, max: 8 },
+
+    // ── Robins, chats, redstarts ───────────────────────
+    'Erithacus rubecula': { min: 2, max: 8 },
+    'Luscinia megarhynchos': { min: 1.5, max: 7 },
+    'Phoenicurus phoenicurus': { min: 3, max: 7 },
+    'Phoenicurus ochruros': { min: 2, max: 7 },
+    'Saxicola rubicola': { min: 3, max: 8 },
+
+    // ── Tits ────────────────────────────────────────────
+    'Parus major': { min: 3, max: 8 },
+    'Cyanistes caeruleus': { min: 4, max: 10 },
+    'Periparus ater': { min: 5, max: 10 },
+    'Poecile palustris': { min: 4, max: 8 },
+    'Poecile montanus': { min: 4, max: 8 },
+    'Lophophanes cristatus': { min: 4, max: 9 },
+    'Aegithalos caudatus': { min: 5, max: 10 },
+
+    // ── Warblers & kinglets ────────────────────────────
+    'Phylloscopus collybita': { min: 3, max: 7 },
+    'Phylloscopus trochilus': { min: 3, max: 6 },
+    'Phylloscopus sibilatrix': { min: 3, max: 7 },
+    'Sylvia atricapilla': { min: 2, max: 7 },
+    'Sylvia borin': { min: 2, max: 7 },
+    'Curruca communis': { min: 2, max: 8 },
+    'Curruca curruca': { min: 3, max: 7 },
+    'Regulus regulus': { min: 7, max: 11 },
+    'Regulus ignicapilla': { min: 7, max: 11 },
+    'Hippolais polyglotta': { min: 2, max: 7 },
+    'Acrocephalus scirpaceus': { min: 2, max: 7 },
+    'Acrocephalus schoenobaenus': { min: 2, max: 8 },
+
+    // ── Finches ────────────────────────────────────────
+    'Fringilla coelebs': { min: 2, max: 8 },
+    'Fringilla montifringilla': { min: 2, max: 6 },
+    'Chloris chloris': { min: 2, max: 7 },
+    'Carduelis carduelis': { min: 3, max: 9 },
+    'Spinus spinus': { min: 3, max: 9 },
+    'Linaria cannabina': { min: 3, max: 7 },
+    'Pyrrhula pyrrhula': { min: 1, max: 4 },
+    'Coccothraustes coccothraustes': { min: 3, max: 8 },
+    'Serinus serinus': { min: 3, max: 10 },
+
+    // ── Buntings, pipits, wagtails, larks ─────────────
+    'Emberiza citrinella': { min: 3, max: 8 },
+    'Emberiza schoeniclus': { min: 3, max: 7 },
+    'Emberiza cirlus': { min: 3, max: 8 },
+    'Anthus pratensis': { min: 4, max: 8 },
+    'Anthus trivialis': { min: 3, max: 8 },
+    'Motacilla alba': { min: 3, max: 7 },
+    'Motacilla cinerea': { min: 5, max: 8 },
+    'Motacilla flava': { min: 4, max: 8 },
+    'Alauda arvensis': { min: 2, max: 8 },
+    'Lullula arborea': { min: 2, max: 7 },
+    'Prunella modularis': { min: 4, max: 8 },
+
+    // ── Corvids ────────────────────────────────────────
+    'Pica pica': { min: 1, max: 5 },
+    'Garrulus glandarius': { min: 1.5, max: 6 },
+    'Corvus corone': { min: 0.5, max: 3 },
+    'Corvus frugilegus': { min: 0.5, max: 2.5 },
+    'Corvus monedula': { min: 1, max: 3 },
+    'Corvus corax': { min: 0.3, max: 2 },
+
+    // ── Pigeons & doves ───────────────────────────────
+    'Columba palumbus': { min: 0.3, max: 1.5 },
+    'Columba oenas': { min: 0.3, max: 1 },
+    'Columba livia': { min: 0.3, max: 1 },
+    'Streptopelia decaocto': { min: 0.3, max: 1 },
+    'Streptopelia turtur': { min: 0.5, max: 1.5 },
+
+    // ── Raptors & owls ────────────────────────────────
+    'Buteo buteo': { min: 1.5, max: 4 },
+    'Accipiter nisus': { min: 1.5, max: 5 },
+    'Falco tinnunculus': { min: 1, max: 5 },
+    'Strix aluco': { min: 0.5, max: 4 },
+    'Athene noctua': { min: 0.7, max: 2 },
+    'Asio otus': { min: 0.2, max: 1 },
+    'Tyto alba': { min: 2, max: 8 },
+
+    // ── Woodpeckers ───────────────────────────────────
+    'Dendrocopos major': { min: 1, max: 8 },
+    'Dendrocopos minor': { min: 1, max: 8 },
+    'Picus viridis': { min: 0.5, max: 3 },
+    'Dryocopus martius': { min: 0.5, max: 3 },
+
+    // ── Swallows, swifts ──────────────────────────────
+    'Hirundo rustica': { min: 2, max: 8 },
+    'Delichon urbicum': { min: 2, max: 7 },
+    'Riparia riparia': { min: 3, max: 8 },
+    'Apus apus': { min: 3, max: 7 },
+
+    // ── Waterbirds ────────────────────────────────────
+    'Anas platyrhynchos': { min: 0.5, max: 3 },
+    'Ardea cinerea': { min: 0.3, max: 1 },
+    'Fulica atra': { min: 0.5, max: 3 },
+    'Gallinula chloropus': { min: 0.5, max: 3 },
+
+    // ── Gulls ─────────────────────────────────────────
+    'Larus argentatus': { min: 0.5, max: 4 },
+    'Larus fuscus': { min: 0.5, max: 4 },
+    'Larus canus': { min: 0.5, max: 4 },
+    'Chroicocephalus ridibundus': { min: 0.5, max: 4 },
+
+    // ── Other common ──────────────────────────────────
+    'Troglodytes troglodytes': { min: 3, max: 10 },
+    'Sitta europaea': { min: 2, max: 8 },
+    'Sturnus vulgaris': { min: 1, max: 8 },
+    'Passer domesticus': { min: 2, max: 6 },
+    'Passer montanus': { min: 2, max: 7 },
+    'Certhia brachydactyla': { min: 4, max: 9 },
+    'Certhia familiaris': { min: 4, max: 9 },
+    'Cuculus canorus': { min: 0.4, max: 1 },
+    'Phasianus colchicus': { min: 0.5, max: 2 },
+    'Vanellus vanellus': { min: 1, max: 3 },
+    'Alcedo atthis': { min: 4, max: 8 },
   };
 
   // ── Favorites (DB-backed, localStorage fallback) ───────────────────────

@@ -55,6 +55,15 @@
       border: 1px solid var(--border);
       font-family: monospace;
     }
+    .freq-toggle-btn {
+      position: absolute; top: 6px; right: 44px; z-index: 4;
+      background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.2);
+      color: rgba(255,255,255,.75); padding: .25rem .4rem;
+      border-radius: 4px; cursor: pointer;
+      display: inline-flex; align-items: center;
+    }
+    .freq-toggle-btn:hover { background: rgba(0,0,0,.65); color: #fff; }
+    .freq-toggle-btn.freq-toggle-on { color: rgba(52,211,153,1); border-color: rgba(52,211,153,.5); }
   </style>
 </head>
 <body>
@@ -283,17 +292,25 @@
               <span class="spectro-freq-label">0</span>
             </div>
             <!-- Frequency range overlay -->
-            <div v-if="speciesFreqRange && spectro.state==='ready'"
+            <div v-if="speciesFreqRange && spectro.state==='ready' && freqOverlayOn"
                  :style="{position:'absolute', left:'0', right:'0', zIndex:2, pointerEvents:'none',
                           top: ((1 - speciesFreqRange.max/12)*100)+'%',
                           bottom: ((speciesFreqRange.min/12)*100)+'%',
-                          background:'rgba(52,211,153,.12)', borderTop:'1.5px dashed rgba(52,211,153,.55)',
-                          borderBottom:'1.5px dashed rgba(52,211,153,.55)'}">
-              <span style="position:absolute;right:4px;top:2px;font-size:.6rem;color:rgba(52,211,153,.85);
-                           font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;">
-                {{t('freq_range')}}: {{speciesFreqRange.min}}–{{speciesFreqRange.max}} kHz
+                          background:'rgba(52,211,153,.18)', borderTop:'2px dashed rgba(52,211,153,.75)',
+                          borderBottom:'2px dashed rgba(52,211,153,.75)'}">
+              <span style="position:absolute;right:6px;top:3px;font-size:.65rem;color:#fff;background:rgba(16,64,48,.8);
+                           font-weight:600;padding:.12rem .4rem;border-radius:3px;white-space:nowrap;">
+                {{t('freq_expected')}}: {{speciesFreqRange.min}}–{{speciesFreqRange.max}} kHz
               </span>
             </div>
+            <!-- Overlay toggle -->
+            <button v-if="speciesFreqRange && spectro.state==='ready'"
+                    class="freq-toggle-btn"
+                    :class="{'freq-toggle-on': freqOverlayOn}"
+                    @click.stop="toggleFreqOverlay"
+                    :title="freqOverlayOn ? t('freq_hide') : t('freq_show')">
+              <bird-icon :name="freqOverlayOn ? 'eye' : 'eye-off'" :size="14"></bird-icon>
+            </button>
             <!-- Bouton ouvrir spectro-modal -->
             <button v-if="spectro.state==='ready'" class="spectro-expand-btn"
                     @click.stop="openSpectroModal(currentDet)"
@@ -483,6 +500,11 @@ const app = createApp({
     const selectedDets  = ref([]);
     const currentDetIdx = ref(0);
     const sortMode      = ref('count'); // count | first | conf | new
+    const freqOverlayOn = ref(localStorage.getItem('birdash_freq_overlay') !== '0');
+    function toggleFreqOverlay() {
+      freqOverlayOn.value = !freqOverlayOn.value;
+      localStorage.setItem('birdash_freq_overlay', freqOverlayOn.value ? '1' : '0');
+    }
 
     // ─── Interpretive summary (single deterministic status per species) ───
     // Belgium-ish sunrise lookup (50.8°N), ±15 min accuracy — sufficient for
@@ -874,6 +896,7 @@ const app = createApp({
       today, isToday, localDateStr, navDay, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
       loadingList, speciesList, filteredSpecies, sortMode,
+      freqOverlayOn, toggleFreqOverlay,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly,
       interpretiveSummary,
       spectroCanvas, spectro, speciesFreqRange,
