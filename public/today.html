@@ -48,6 +48,13 @@
       color: var(--accent);
     }
     .td-summary--muted .td-summary-badge { opacity: .85; }
+    .sp-count-pill {
+      font-size: .7rem; font-weight: 600;
+      padding: .1rem .45rem; border-radius: 4px;
+      background: var(--bg-card2); color: var(--text-muted);
+      border: 1px solid var(--border);
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -116,11 +123,18 @@
       <!-- Colonne gauche : liste espèces -->
       <div>
         <div class="card" style="padding:0;overflow:hidden;">
-          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.4rem;">
+          <div style="padding:.6rem .85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:.4rem;flex-wrap:wrap;">
             <div class="card-title" style="margin:0;">
               {{t('species')}} — {{speciesList.length}}
             </div>
-            <div style="display:flex;align-items:center;gap:.3rem;">
+            <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;">
+              <select v-model="sortMode" class="bird-input" :title="t('td_sort_by')"
+                      style="padding:.2rem .4rem;font-size:.72rem;">
+                <option value="count">{{t('td_sort_count')}}</option>
+                <option value="first">{{t('td_sort_first')}}</option>
+                <option value="conf">{{t('td_sort_conf')}}</option>
+                <option value="new">{{t('td_sort_new')}}</option>
+              </select>
               <button v-if="newSpeciesSet.size" @click="newSpOnly = !newSpOnly"
                       style="padding:.12rem .5rem;font-size:.68rem;font-weight:600;border-radius:999px;border:1px solid;cursor:pointer;white-space:nowrap;"
                       :style="newSpOnly
@@ -152,11 +166,16 @@
                 <div class="sp-sci-row">{{s.sci}} <button @click.stop="toggleFavorite(s.Com_Name, s.sci)" :title="isFavorite(s.Com_Name) ? t('fav_remove') : t('fav_add')" :aria-label="isFavorite(s.Com_Name) ? t('fav_remove') : t('fav_add')" style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">{{isFavorite(s.Com_Name) ? '★' : '☆'}}</button></div>
               </div>
               <div class="sp-meta">
-                <span class="conf-badge" :class="s.max_conf>=0.8?'conf-high':'conf-mid'"
-                      style="font-size:.7rem;">
+                <span class="sp-count-pill" :title="t('td_list_count_tip', {n: s.n})">
                   {{s.n}}×
                 </span>
-                <span style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">
+                <span class="conf-badge" :class="s.max_conf>=0.8?'conf-high':'conf-mid'"
+                      :title="t('td_list_conf_tip', {pct: Math.round(s.max_conf*100)})"
+                      style="font-size:.7rem;">
+                  {{Math.round(s.max_conf*100)}}%
+                </span>
+                <span style="font-size:.68rem;color:var(--text-faint);font-family:monospace;"
+                      :title="t('td_list_time_tip')">
                   {{fmtTime(s.last_time)}}
                 </span>
               </div>
@@ -463,6 +482,7 @@ const app = createApp({
     const selected      = ref(null);
     const selectedDets  = ref([]);
     const currentDetIdx = ref(0);
+    const sortMode      = ref('count'); // count | first | conf | new
 
     // ─── Interpretive summary (single deterministic status per species) ───
     // Belgium-ish sunrise lookup (50.8°N), ±15 min accuracy — sufficient for
@@ -583,10 +603,15 @@ const app = createApp({
     });
 
     const filteredSpecies = computed(() => {
-      let list = speciesList.value;
+      let list = speciesList.value.slice();
       if (newSpOnly.value) list = list.filter(s => newSpeciesSet.value.has(s.Com_Name));
       const q = searchQ.value.toLowerCase().trim();
       if (q) list = list.filter(s => s.Com_Name.toLowerCase().includes(q) || (s.sci||'').toLowerCase().includes(q));
+      // Sort
+      if (sortMode.value === 'count')      list.sort((a, b) => b.n - a.n);
+      else if (sortMode.value === 'first') list.sort((a, b) => (a.first_time||'99').localeCompare(b.first_time||'99'));
+      else if (sortMode.value === 'conf')  list.sort((a, b) => (b.max_conf||0) - (a.max_conf||0));
+      else if (sortMode.value === 'new')   list.sort((a, b) => (newSpeciesSet.value.has(b.Com_Name) ? 1 : 0) - (newSpeciesSet.value.has(a.Com_Name) ? 1 : 0) || b.n - a.n);
       return list;
     });
 
@@ -848,7 +873,7 @@ const app = createApp({
       lang, t, spName, favorites, toggleFavorite, isFavorite,
       today, isToday, localDateStr, navDay, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
-      loadingList, speciesList, filteredSpecies,
+      loadingList, speciesList, filteredSpecies, sortMode,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly,
       interpretiveSummary,
       spectroCanvas, spectro, speciesFreqRange,
