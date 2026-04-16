@@ -316,6 +316,8 @@
   "notif_channel_desc": "Configureer de Apprise-URL om meldingen te ontvangen. Apprise ondersteunt 100+ diensten: ntfy, Telegram, Discord, Slack, e-mail, enz.",
   "notif_examples": "Apprise-URL-voorbeelden",
   "notif_bird_alerts_desc": "Ontvang pushberichten wanneer een opmerkelijke vogel wordt gedetecteerd. Meldingen worden verstuurd via Apprise met 5 minuten afkoeltijd per soort.",
+  "notif_min_confidence": "Minimale betrouwbaarheid",
+  "notif_min_confidence_hint": "Gedeeld filter voor alle regels — leeg = BirdNET-detectiedrempel.",
   "notif_rare_long": "Melding wanneer een soort met weinig totale detecties wordt gehoord. Ideaal voor ongewone soorten in uw regio.",
   "notif_rare_threshold": "Drempelwaarde",
   "notif_rare_unit": "max. totale detecties",

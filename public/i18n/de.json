@@ -316,6 +316,8 @@
   "notif_channel_desc": "Konfigurieren Sie die Apprise-URL für Benachrichtigungen. Apprise unterstützt 100+ Dienste: ntfy, Telegram, Discord, Slack, E-Mail usw.",
   "notif_examples": "Apprise-URL-Beispiele",
   "notif_bird_alerts_desc": "Erhalten Sie Push-Benachrichtigungen wenn ein bemerkenswerter Vogel erkannt wird. Benachrichtigungen werden über Apprise gesendet mit 5 Minuten Abklingzeit pro Art.",
+  "notif_min_confidence": "Mindest-Konfidenz",
+  "notif_min_confidence_hint": "Gemeinsamer Filter für alle Regeln — leer = BirdNET-Erkennungsschwelle.",
   "notif_rare_long": "Benachrichtigung wenn eine Art mit wenigen Gesamterkennungen gehört wird. Ideal für seltene Arten in Ihrer Region.",
   "notif_rare_threshold": "Schwellenwert",
   "notif_rare_unit": "max. Erkennungen insgesamt",

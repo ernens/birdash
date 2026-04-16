@@ -168,6 +168,7 @@ const SETTINGS_VALIDATORS = {
   NOTIFY_SEASON_DAYS: v => !isNaN(v) && v >= 7 && v <= 365,
   AUDIO_RETENTION_DAYS: v => !isNaN(v) && v >= 7 && v <= 365,
   NOTIFY_ENABLED: v => v == 0 || v == 1,
+  NOTIFY_MIN_CONFIDENCE: v => v === '' || (!isNaN(v) && v >= 0 && v <= 1),
   REC_CARD:        v => typeof v === 'string' && v.length <= 200,
   RTSP_STREAM:     v => typeof v === 'string' && v.length <= 500,
   APPRISE_NOTIFY_EACH_DETECTION: v => v == 0 || v == 1,

@@ -1474,6 +1474,18 @@ const app = createApp({
     const audioTesting = ref(false);
     const audioTestImg = ref(null);
 
+    // Notif min-confidence: stored as float 0-1 in birdnet.conf, edited as % in UI
+    const notifyMinConfPct = computed({
+      get() {
+        const v = parseFloat(conf.NOTIFY_MIN_CONFIDENCE);
+        return isNaN(v) ? '' : Math.round(v * 100);
+      },
+      set(val) {
+        conf.NOTIFY_MIN_CONFIDENCE = (val === '' || val == null)
+          ? '' : (Math.max(0, Math.min(100, parseFloat(val))) / 100).toFixed(2);
+      },
+    });
+
     const appriseEnabled = computed(() => {
       return conf.APPRISE_NOTIFY_EACH_DETECTION == 1 ||
              conf.APPRISE_NOTIFY_NEW_SPECIES == 1 ||
@@ -1534,6 +1546,7 @@ const app = createApp({
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ updates: {
             NOTIFY_ENABLED: String(conf.NOTIFY_ENABLED || 0),
+            NOTIFY_MIN_CONFIDENCE: String(conf.NOTIFY_MIN_CONFIDENCE ?? ''),
             NOTIFY_RARE_SPECIES: String(conf.NOTIFY_RARE_SPECIES || 0),
             NOTIFY_RARE_THRESHOLD: String(conf.NOTIFY_RARE_THRESHOLD || 10),
             NOTIFY_FIRST_SEASON: String(conf.NOTIFY_FIRST_SEASON || 0),
@@ -1786,7 +1799,7 @@ const app = createApp({
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
       birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
-      appriseEnabled, toggleAllApprise,
+      appriseEnabled, toggleAllApprise, notifyMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       agConf, agState, loadAgState,
@@ -1905,7 +1918,7 @@ const app = createApp({
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
       birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
-      appriseEnabled, toggleAllApprise,
+      appriseEnabled, toggleAllApprise, notifyMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       agConf, agState, loadAgState,

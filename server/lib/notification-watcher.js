@@ -152,6 +152,13 @@ function _sendApprise(title, body, photoPath) {
 async function _getNotifConfig() {
   try {
     const conf = await _parseBirdnetConf();
+    // Min confidence: explicit NOTIFY_MIN_CONFIDENCE wins; else fall back to
+    // the detection threshold (BIRDNET_CONFIDENCE) so default matches settings.
+    const explicitMin = parseFloat(conf.NOTIFY_MIN_CONFIDENCE);
+    const birdnetMin  = parseFloat(conf.BIRDNET_CONFIDENCE);
+    const minConf = !isNaN(explicitMin) ? explicitMin
+                  : !isNaN(birdnetMin)  ? birdnetMin
+                  : 0;
     return {
       enabled:        conf.NOTIFY_ENABLED !== '0',
       rareSpecies:    conf.NOTIFY_RARE_SPECIES === '1',
@@ -161,6 +168,7 @@ async function _getNotifConfig() {
       newSpecies:     conf.APPRISE_NOTIFY_NEW_SPECIES === '1',
       newDaily:       conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY === '1',
       favorites:      conf.NOTIFY_FAVORITES === '1',
+      minConfidence:  minConf,
       lang:           (conf.DATABASE_LANG || 'fr').substring(0, 2),
       stationName:    conf.SITE_NAME || conf.SITE_BRAND || require('os').hostname(),
     };
@@ -203,6 +211,8 @@ async function _poll() {
   const favorites = conf.favorites ? _loadFavorites() : new Set();
 
   for (const det of rows) {
+    // Skip low-confidence detections (configurable, defaults to BIRDNET_CONFIDENCE)
+    if (conf.minConfidence > 0 && det.Confidence < conf.minConfidence) continue;
     const sci = det.Sci_Name;
     const com = det.Com_Name;
     const isNewToday = !_speciesToday.has(sci);
