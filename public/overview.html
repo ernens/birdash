@@ -67,9 +67,9 @@
         <div class="kpi-value" style="color:var(--accent);">{{kpis.lastHour || '—'}}</div>
         <div class="kpi-label">{{t('last_hour')}}</div>
       </a>
-      <a href="stats.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
-        <div class="kpi-value muted">{{kpis.total || '—'}}</div>
-        <div class="kpi-label">{{t('all_time')}}</div>
+      <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
+        <div class="kpi-value" style="color:#f59e0b;">{{kpis.firstDet || '—'}}</div>
+        <div class="kpi-label">{{t('first_detection')}}</div>
       </a>
     </div>
 
@@ -419,8 +419,7 @@ const app = createApp({
 
     async function loadKpis() {
       try {
-        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf, COUNT(DISTINCT Model) as mc FROM active_detections WHERE Date=? AND Confidence>=?`,[today, CONF]);
-        const [tot] = await birdQuery(...Q.totalDetections());
+        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf, COUNT(DISTINCT Model) as mc, MIN(Time) as first_time FROM active_detections WHERE Date=? AND Confidence>=?`,[today, CONF]);
         isMultiModel.value = (td?.mc || 1) > 1;
         const now = new Date();
         const hh = String(now.getHours()).padStart(2,'0');
@@ -431,7 +430,8 @@ const app = createApp({
         const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=? AND Confidence>=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`, CONF]);
         kpis.value = {
           det: td?td.det.toLocaleString():'0', sp: td?td.sp:'0',
-          conf: td&&td.conf?td.conf+'%':'—', total: tot?tot.n.toLocaleString():'0',
+          conf: td&&td.conf?td.conf+'%':'—',
+          firstDet: td?.first_time ? td.first_time.slice(0, 5) : '—',
           lastHour: lh?lh.n.toLocaleString():'0',
           rareToday: String(rareSpeciesToday.value.length)
         };
