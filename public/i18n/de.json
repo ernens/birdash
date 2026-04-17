@@ -1503,6 +1503,8 @@
   "tft_mode_headline": "Letzter Vogel — großes Foto",
   "tft_mode_leaderboard": "Heute Top — Rangliste",
   "tft_mode_ambient": "Ambiente — ruhige Uhr",
+  "tft_mode_cycle": "Auto-Rotation",
+  "tft_cycle_sec": "Zeit pro Modus",
   "tft_saving": "Speichern…",
   "tft_service_title": "Service",
   "tft_service_state": "Status",

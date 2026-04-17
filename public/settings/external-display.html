@@ -120,7 +120,13 @@
         <option value="headline">{{t('tft_mode_headline')}}</option>
         <option value="leaderboard">{{t('tft_mode_leaderboard')}}</option>
         <option value="ambient">{{t('tft_mode_ambient')}}</option>
+        <option value="cycle">{{t('tft_mode_cycle')}}</option>
       </select>
+    </div>
+    <div class="set-row" v-if="tftStatus.config.mode === 'cycle'">
+      <span class="set-label">{{t('tft_cycle_sec')}}</span>
+      <input type="number" min="10" max="600" step="5" v-model.number="tftStatus.config.cycleSec"
+             @change="saveTftConfig" class="set-input" style="width:80px;"> s
     </div>
     <div v-if="tftSaving" style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem;">{{t('tft_saving')}}</div>
   </div>

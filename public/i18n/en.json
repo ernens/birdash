@@ -1503,6 +1503,8 @@
   "tft_mode_headline": "Latest bird — large photo",
   "tft_mode_leaderboard": "Top today — leaderboard",
   "tft_mode_ambient": "Ambient — calm clock",
+  "tft_mode_cycle": "Auto rotation",
+  "tft_cycle_sec": "Time per mode",
   "tft_saving": "Saving…",
   "tft_service_title": "Service",
   "tft_service_state": "State",

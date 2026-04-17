@@ -1813,7 +1813,7 @@ const app = createApp({
       spiEnabled: false, fbExists: false,
       overlayInConfig: false, overlayLine: '',
       service: { active: false, enabled: false, ramMB: null, pid: null },
-      config: { enabled: false, rotation: 90, refreshSec: 3, mode: 'pulse' },
+      config: { enabled: false, rotation: 90, refreshSec: 3, mode: 'pulse', cycleSec: 60, cycleModes: ['headline','leaderboard','ambient'] },
       sudoReady: false,
     });
     const tftInstalling = ref(false);

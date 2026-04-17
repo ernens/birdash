@@ -23,11 +23,15 @@ const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const CONFIG_PATH = path.join(PROJECT_ROOT, 'config', 'tft-display.json');
 const INSTALL_SCRIPT = path.join(PROJECT_ROOT, 'scripts', 'tft-install.sh');
 
+const DISPLAY_MODES = ['pulse', 'headline', 'leaderboard', 'ambient'];
+
 const DEFAULT_CONFIG = {
   enabled: false,
   rotation: 90,
   refreshSec: 3,
   mode: 'pulse',
+  cycleSec: 60,
+  cycleModes: ['headline', 'leaderboard', 'ambient'],
 };
 
 function _loadConfig() {
@@ -41,7 +45,11 @@ function _saveConfig(cfg) {
   merged.enabled = !!merged.enabled;
   merged.rotation = [0, 90, 180, 270].includes(+merged.rotation) ? +merged.rotation : 90;
   merged.refreshSec = Math.max(1, Math.min(60, +merged.refreshSec || 3));
-  merged.mode = ['pulse', 'headline', 'leaderboard', 'ambient'].includes(merged.mode) ? merged.mode : 'pulse';
+  merged.mode = [...DISPLAY_MODES, 'cycle'].includes(merged.mode) ? merged.mode : 'pulse';
+  merged.cycleSec = Math.max(10, Math.min(600, +merged.cycleSec || 60));
+  // cycleModes: keep only known display modes; need at least one or fall back.
+  const cm = Array.isArray(merged.cycleModes) ? merged.cycleModes.filter(m => DISPLAY_MODES.includes(m)) : [];
+  merged.cycleModes = cm.length ? cm : ['headline', 'leaderboard', 'ambient'];
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   const tmp = CONFIG_PATH + '.' + process.pid + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8');

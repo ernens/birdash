@@ -1498,6 +1498,8 @@
   "tft_mode_headline": "Dernier oiseau — grande photo",
   "tft_mode_leaderboard": "Top du jour — classement",
   "tft_mode_ambient": "Ambiance — horloge discrète",
+  "tft_mode_cycle": "Rotation automatique",
+  "tft_cycle_sec": "Durée par mode",
   "tft_saving": "Enregistrement…",
   "tft_service_title": "Service",
   "tft_service_state": "État",

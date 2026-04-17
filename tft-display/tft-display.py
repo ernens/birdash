@@ -512,6 +512,15 @@ def main():
         mode = args.mode or cfg.get('mode') or 'pulse'
         rot = int(cfg.get('rotation') or 0)
 
+        # Cycle mode: deterministically pick one of cycleModes based on
+        # wall-clock time. No persistent state needed — two renderers
+        # started at different moments still agree within a tick.
+        if mode == 'cycle':
+            rotation_list = cfg.get('cycleModes') or ['headline', 'leaderboard', 'ambient']
+            cycle_sec = max(5, int(cfg.get('cycleSec') or 60))
+            idx = (int(time.time()) // cycle_sec) % len(rotation_list)
+            mode = rotation_list[idx]
+
         try:
             data = fetch_json(f"{args.base}/api/tft-display/frame-data")
         except URLError as e:
