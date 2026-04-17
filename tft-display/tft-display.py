@@ -61,6 +61,7 @@ class Fonts:
         self.huge   = _font(FONT_BD,  30)
         self.kpi    = _font(FONT_BD,  22)
         self.it     = _font(FONT_IT,  13)
+        self.clock  = _font(FONT_BD, 140)
 
 
 def fetch_json(url, timeout=3):
@@ -89,11 +90,15 @@ def compose(data, fonts, photo_img=None, mode='pulse'):
     """Dispatcher — picks the right layout based on config.mode."""
     if mode == 'headline':    return compose_headline(data, fonts, photo_img)
     if mode == 'leaderboard': return compose_leaderboard(data, fonts, photo_img)
+    if mode == 'ambient':     return compose_ambient(data, fonts)
     return compose_pulse(data, fonts, photo_img)
 
 
 def _photo_sci_for(mode, data):
-    """Which species photo to fetch, given the current mode."""
+    """Which species photo to fetch, given the current mode.
+    None means no photo is needed — the renderer skips the fetch."""
+    if mode == 'ambient':
+        return None
     if mode == 'leaderboard':
         top = data.get('topToday') or []
         return (top[0].get('sciName') if top else None)
@@ -384,6 +389,78 @@ def compose_leaderboard(data, fonts, photo_img=None):
     return img
 
 
+def compose_ambient(data, fonts):
+    """Calm clock face — giant time, date, sun arc, and a discreet bird tally.
+
+    No photo, no river, no list. Designed for rooms where a busy dashboard
+    would be distracting (bedroom, living room). The sun arc under the clock
+    is a thin track from sunrise to sunset with a dot at the current moment.
+    """
+    img = Image.new('RGB', (W, H), COLOR_BG)
+    draw = ImageDraw.Draw(img)
+
+    station = data.get('stationName') or 'BirdStation'
+    draw.text((12, 8), station, fill=COLOR_MUTED, font=fonts.smallB)
+
+    now = datetime.now()
+    clock_str = now.strftime('%H:%M')
+    # Big digital clock, centered
+    cw = draw.textlength(clock_str, font=fonts.clock)
+    # DejaVu Bold at size 140 has large ascent → y-offset tuning
+    draw.text(((W - cw) / 2, 40), clock_str, fill=COLOR_TEXT, font=fonts.clock)
+
+    # Date line under the clock
+    weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    date_str = f"{weekdays[now.weekday()]} · {now.day} {months[now.month-1]}"
+    dw = draw.textlength(date_str, font=fonts.med)
+    draw.text(((W - dw) / 2, 205), date_str, fill=COLOR_MUTED, font=fonts.med)
+
+    # Sun arc (y ~245): thin track from sunrise to sunset with a "now" dot.
+    sun = data.get('sun') or {}
+    if sun.get('riseFrac') is not None and sun.get('setFrac') is not None:
+        arc_y = 250
+        arc_x0, arc_x1 = 60, W - 60
+        rise_f = float(sun.get('riseFrac') or 0)
+        set_f  = float(sun.get('setFrac')  or 1)
+        now_f  = float(data.get('nowFrac') or 0)
+        # Clamp rise-set span to visible region
+        draw.line((arc_x0, arc_y, arc_x1, arc_y), fill=COLOR_FAINT, width=1)
+        def frac_to_x(f):
+            if set_f <= rise_f: return arc_x0
+            k = (f - rise_f) / (set_f - rise_f)
+            return int(arc_x0 + max(0.0, min(1.0, k)) * (arc_x1 - arc_x0))
+        rx, sx = frac_to_x(rise_f), frac_to_x(set_f)
+        # Illuminated day track
+        draw.line((rx, arc_y, sx, arc_y), fill=COLOR_ACCENT, width=2)
+        # Sun rise/set markers
+        draw.ellipse((rx - 3, arc_y - 3, rx + 3, arc_y + 3), outline=COLOR_ACCENT, width=1)
+        draw.ellipse((sx - 3, arc_y - 3, sx + 3, arc_y + 3), outline=COLOR_ACCENT, width=1)
+        # Current position dot
+        nx = frac_to_x(now_f)
+        is_day = rise_f <= now_f <= set_f
+        dot_col = COLOR_MID if is_day else COLOR_MUTED
+        draw.ellipse((nx - 5, arc_y - 5, nx + 5, arc_y + 5), fill=dot_col)
+        # Labels under the arc
+        draw.text((rx - 16, arc_y + 8), sun.get('rise', ''), fill=COLOR_MUTED, font=fonts.tiny)
+        sw = draw.textlength(sun.get('set', ''), font=fonts.tiny)
+        draw.text((sx - sw + 16, arc_y + 8), sun.get('set', ''), fill=COLOR_MUTED, font=fonts.tiny)
+
+    # Discreet bird tally pill at bottom
+    kpis = data.get('kpis') or {}
+    total = kpis.get('total', 0)
+    species = kpis.get('species', 0)
+    tally = f"{total} detections · {species} species"
+    tw = int(draw.textlength(tally, font=fonts.small))
+    pill_x = (W - tw - 28) // 2
+    pill_y = H - 36
+    draw.rounded_rectangle((pill_x, pill_y, pill_x + tw + 28, pill_y + 24),
+                           radius=12, fill=COLOR_PANEL)
+    draw.text((pill_x + 14, pill_y + 5), tally, fill=COLOR_TEXT, font=fonts.small)
+
+    return img
+
+
 def rgb_to_rgb565_bytes(img):
     """Convert PIL RGB image → little-endian RGB565 bytes for fb1."""
     # numpy path is 50× faster; fall back to pure Python only if missing.
@@ -418,7 +495,7 @@ def main():
     ap.add_argument('--once', action='store_true', help='Render once then exit')
     ap.add_argument('--base', default='http://localhost/birds',
                     help='birdash base URL (default: http://localhost/birds)')
-    ap.add_argument('--mode', choices=['pulse', 'headline', 'leaderboard'],
+    ap.add_argument('--mode', choices=['pulse', 'headline', 'leaderboard', 'ambient'],
                     help='Override mode (bypasses server config, useful for preview)')
     args = ap.parse_args()
 

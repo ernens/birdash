@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
+const SunCalc = require('suncalc');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const CONFIG_PATH = path.join(PROJECT_ROOT, 'config', 'tft-display.json');
@@ -40,7 +41,7 @@ function _saveConfig(cfg) {
   merged.enabled = !!merged.enabled;
   merged.rotation = [0, 90, 180, 270].includes(+merged.rotation) ? +merged.rotation : 90;
   merged.refreshSec = Math.max(1, Math.min(60, +merged.refreshSec || 3));
-  merged.mode = ['pulse', 'headline', 'leaderboard'].includes(merged.mode) ? merged.mode : 'pulse';
+  merged.mode = ['pulse', 'headline', 'leaderboard', 'ambient'].includes(merged.mode) ? merged.mode : 'pulse';
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   const tmp = CONFIG_PATH + '.' + process.pid + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8');
@@ -134,15 +135,33 @@ function _localDateStr() {
 }
 
 // Compose all the data the Python renderer needs for one tick.
-function _frameData(ctx) {
+async function _frameData(ctx) {
   const { db, parseBirdnetConf } = ctx;
   const today = _localDateStr();
   const conf = 0.7;
-  const out = { time: new Date().toISOString(), stationName: '', pulseRate: 0, river: [], nowFrac: 0, latestDet: null, topToday: [], kpis: { species: 0, total: 0, lastHour: 0 } };
+  const out = { time: new Date().toISOString(), stationName: '', pulseRate: 0, river: [], nowFrac: 0, latestDet: null, topToday: [], sun: null, kpis: { species: 0, total: 0, lastHour: 0 } };
+
+  let bn = null;
+  try {
+    bn = await parseBirdnetConf();
+    out.stationName = (bn && (bn.SITE_NAME || bn.SITE_BRAND)) || '';
+  } catch {}
 
   try {
-    const bn = parseBirdnetConf();
-    out.stationName = (bn && (bn.SITE_NAME || bn.SITE_BRAND)) || '';
+    const lat = parseFloat(bn?.LATITUDE || bn?.LAT || '0');
+    const lon = parseFloat(bn?.LONGITUDE || bn?.LON || '0');
+    if (lat !== 0 || lon !== 0) {
+      const times = SunCalc.getTimes(new Date(), lat, lon);
+      const pad = n => String(n).padStart(2, '0');
+      const toFrac = d => (d.getHours() * 60 + d.getMinutes()) / 1440;
+      const fmt = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      out.sun = {
+        rise:     fmt(times.sunrise),
+        set:      fmt(times.sunset),
+        riseFrac: toFrac(times.sunrise),
+        setFrac:  toFrac(times.sunset),
+      };
+    }
   } catch {}
 
   const now = new Date();
@@ -259,8 +278,7 @@ function handle(req, res, pathname, ctx) {
   }
 
   if (req.method === 'GET' && pathname === '/api/tft-display/frame-data') {
-    try { jsonOk(res, _frameData(ctx)); }
-    catch (e) { jsonErr(res, 500, e.message); }
+    _frameData(ctx).then(d => jsonOk(res, d)).catch(e => jsonErr(res, 500, e.message));
     return true;
   }
 
