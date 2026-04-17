@@ -3,31 +3,38 @@
   <!-- Detection card -->
   <div class="card">
     <div class="section-title"><bird-icon name="cpu" :size="14"></bird-icon> {{t('tft_detection_title')}}</div>
-    <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('tft_detection_desc')}}</p>
 
-    <div class="set-row" style="align-items:center;">
-      <span class="set-label">HAT</span>
-      <span style="font-size:.85rem;">
-        <bird-icon :name="tftStatus.hatDetected ? 'check-circle' : 'x'" :size="14"
-                   :style="{color: tftStatus.hatDetected ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
-        {{tftStatus.hatDetected ? (tftStatus.hatProduct || t('tft_hat_unknown')) : t('tft_hat_none')}}
-      </span>
+    <!-- Primary ready indicator — this is the only thing that truly matters -->
+    <div style="display:flex;align-items:center;gap:.6rem;margin:.2rem 0 .9rem;">
+      <bird-icon :name="tftStatus.ready ? 'check-circle' : 'x'" :size="22"
+                 :style="{color: tftStatus.ready ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
+      <div>
+        <div style="font-weight:600;font-size:.95rem;">
+          {{tftStatus.ready ? t('tft_ready') : t('tft_not_ready')}}
+        </div>
+        <div style="font-size:.75rem;color:var(--text-muted);">
+          {{tftStatus.ready ? t('tft_ready_sub') : t('tft_not_ready_sub')}}
+        </div>
+      </div>
     </div>
-    <div class="set-row" style="align-items:center;">
-      <span class="set-label">SPI</span>
-      <span style="font-size:.85rem;">
-        <bird-icon :name="tftStatus.spiEnabled ? 'check-circle' : 'x'" :size="14"
-                   :style="{color: tftStatus.spiEnabled ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
-        {{tftStatus.spiEnabled ? t('tft_spi_on') : t('tft_spi_off')}}
-      </span>
+
+    <!-- Sub-rows: informational. Many Pi HATs have no EEPROM, so an empty
+         HAT row is normal and shouldn't look like an error. -->
+    <div class="set-row" style="align-items:center;font-size:.78rem;">
+      <span class="set-label" style="color:var(--text-muted);">/dev/fb1</span>
+      <span>{{tftStatus.fbExists ? '✓ ' + t('tft_fb_ready') : '— ' + t('tft_fb_missing')}}</span>
     </div>
-    <div class="set-row" style="align-items:center;">
-      <span class="set-label">/dev/fb1</span>
-      <span style="font-size:.85rem;">
-        <bird-icon :name="tftStatus.fbExists ? 'check-circle' : 'x'" :size="14"
-                   :style="{color: tftStatus.fbExists ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
-        {{tftStatus.fbExists ? t('tft_fb_ready') : t('tft_fb_missing')}}
-      </span>
+    <div class="set-row" style="align-items:center;font-size:.78rem;">
+      <span class="set-label" style="color:var(--text-muted);">{{t('tft_overlay')}}</span>
+      <span>{{tftStatus.overlayInConfig ? '✓ ' + (tftStatus.overlayLine || t('tft_overlay_present')) : '— ' + t('tft_overlay_missing')}}</span>
+    </div>
+    <div class="set-row" style="align-items:center;font-size:.78rem;">
+      <span class="set-label" style="color:var(--text-muted);">SPI</span>
+      <span>{{tftStatus.spiEnabled ? '✓ ' + t('tft_spi_on') : '— ' + t('tft_spi_off')}}</span>
+    </div>
+    <div class="set-row" style="align-items:center;font-size:.78rem;">
+      <span class="set-label" style="color:var(--text-muted);">HAT EEPROM</span>
+      <span>{{tftStatus.hatDetected ? '✓ ' + tftStatus.hatProduct : '— ' + t('tft_hat_none_info')}}</span>
     </div>
     <button class="btn btn-secondary" style="font-size:.78rem;margin-top:.5rem;" @click="loadTftStatus">
       <bird-icon name="refresh-cw" :size="13"></bird-icon> {{t('tft_refresh')}}
@@ -38,7 +45,7 @@
   <div class="card">
     <div class="section-title"><bird-icon name="wrench" :size="14"></bird-icon> {{t('tft_install_title')}}</div>
 
-    <div v-if="tftStatus.overlayLoaded" style="font-size:.82rem;color:var(--text-muted);">
+    <div v-if="tftStatus.ready" style="font-size:.82rem;color:var(--text-muted);">
       <bird-icon name="check-circle" :size="14" style="color:var(--accent);vertical-align:-2px;"></bird-icon>
       {{t('tft_install_already')}}
     </div>

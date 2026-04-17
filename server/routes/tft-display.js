@@ -51,14 +51,50 @@ function _saveConfig(cfg) {
 // Probe the system for each capability we care about. Cheap reads only —
 // this is called from the UI on every open of the tab.
 function _probeSystem() {
-  const out = { hatDetected: false, hatProduct: '', spiEnabled: false, fbExists: false, overlayLoaded: false };
+  const out = {
+    hatDetected: false, hatProduct: '',
+    spiEnabled: false, fbExists: false,
+    overlayInConfig: false, overlayLine: '',
+    ready: false,
+  };
+  // HAT EEPROM — PiTFT 3.5" has no EEPROM, so absence is normal. Informational only.
   try { out.hatProduct = fs.readFileSync('/proc/device-tree/hat/product', 'utf8').replace(/\0/g, '').trim(); } catch {}
   out.hatDetected = !!out.hatProduct;
-  try { out.spiEnabled = fs.existsSync('/dev/spidev0.0') || fs.existsSync('/dev/spidev0.1'); } catch {}
+
+  // SPI: /dev/spidev* is the naive check but the pitft35-resistive overlay
+  // claims the bus via the in-kernel fbtft driver and doesn't expose spidev.
+  // In that case the SPI bus is absolutely enabled — we just can't see it
+  // from userland. Fall back to raspi-config, then to the fbExists proxy.
+  try {
+    if (fs.existsSync('/dev/spidev0.0') || fs.existsSync('/dev/spidev0.1')) {
+      out.spiEnabled = true;
+    } else {
+      try {
+        const r = execFileSync('raspi-config', ['nonint', 'get_spi'], { encoding: 'utf8' }).trim();
+        out.spiEnabled = r === '0';  // 0 = enabled, 1 = disabled
+      } catch {}
+    }
+  } catch {}
+
   try { out.fbExists = fs.existsSync('/dev/fb1'); } catch {}
-  // A loaded pitft35-resistive overlay shows up via dmesg / modules; easier
-  // proxy: fbExists + spiEnabled is the effective "ready" state.
-  out.overlayLoaded = out.fbExists && out.spiEnabled;
+
+  // Did someone (our install script or the user) add the overlay line? Tells
+  // us whether a reboot alone would be enough to get fb1 back if it ever
+  // disappeared.
+  for (const p of ['/boot/firmware/config.txt', '/boot/config.txt']) {
+    try {
+      const txt = fs.readFileSync(p, 'utf8');
+      const m = txt.match(/^dtoverlay=pitft.*$/m);
+      if (m) { out.overlayInConfig = true; out.overlayLine = m[0]; break; }
+    } catch {}
+  }
+
+  // If the overlay claimed SPI, spidev is absent but SPI is in fact on — use
+  // fbExists as the ground truth for "the overlay is live".
+  if (out.fbExists) out.spiEnabled = true;
+
+  // The one boolean the UI really needs.
+  out.ready = out.fbExists;
   return out;
 }
 

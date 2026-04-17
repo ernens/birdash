@@ -1808,8 +1808,10 @@ const app = createApp({
 
     // ── External display (PiTFT 3.5") ──────────────────────────────
     const tftStatus = reactive({
+      ready: false,
       hatDetected: false, hatProduct: '',
-      spiEnabled: false, fbExists: false, overlayLoaded: false,
+      spiEnabled: false, fbExists: false,
+      overlayInConfig: false, overlayLine: '',
       service: { active: false, enabled: false, ramMB: null, pid: null },
       config: { enabled: false, rotation: 90, refreshSec: 3, mode: 'pulse' },
       sudoReady: false,
