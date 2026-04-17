@@ -85,7 +85,14 @@ def tier_color(tier):
     return {'high': COLOR_HIGH, 'mid': COLOR_MID, 'low': COLOR_LOW}.get(tier, COLOR_MUTED)
 
 
-def compose(data, fonts, photo_img=None):
+def compose(data, fonts, photo_img=None, mode='pulse'):
+    """Dispatcher — picks the right layout based on config.mode."""
+    if mode == 'headline':
+        return compose_headline(data, fonts, photo_img)
+    return compose_pulse(data, fonts, photo_img)
+
+
+def compose_pulse(data, fonts, photo_img=None):
     img  = Image.new('RGB', (W, H), COLOR_BG)
     draw = ImageDraw.Draw(img)
 
@@ -200,6 +207,83 @@ def compose(data, fonts, photo_img=None):
     return img
 
 
+def compose_headline(data, fonts, photo_img=None):
+    """Museum-placard layout — full-bleed photo, big name at bottom.
+
+    No river, no KPIs. The photo is the star; text overlays a dark gradient
+    on the lower half so it remains legible over any photo.
+    """
+    img = Image.new('RGB', (W, H), COLOR_BG)
+
+    det = data.get('latestDet') or {}
+    com = det.get('comName') or '—'
+    sci = det.get('sciName') or ''
+    conf = int(det.get('confidence') or 0)
+    dtime = det.get('time') or ''
+    ddate = det.get('date') or ''
+
+    if photo_img:
+        src_r = photo_img.width / photo_img.height
+        dst_r = W / H
+        if src_r > dst_r:
+            new_h = H
+            new_w = max(W, int(src_r * new_h))
+        else:
+            new_w = W
+            new_h = max(H, int(new_w / src_r))
+        photo = photo_img.resize((new_w, new_h), Image.LANCZOS)
+        ox = (new_w - W) // 2
+        oy = (new_h - H) // 2
+        photo = photo.crop((ox, oy, ox + W, oy + H))
+        img.paste(photo, (0, 0))
+    else:
+        ImageDraw.Draw(img).rectangle((0, 0, W, H), fill=COLOR_PANEL)
+
+    # Dark gradient on the lower half for text legibility.
+    overlay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    grad_start = 150
+    for y in range(grad_start, H):
+        a = int(230 * (y - grad_start) / (H - grad_start))
+        od.line((0, y, W, y), fill=(0, 0, 0, a))
+    img.paste(overlay, (0, 0), overlay)
+
+    draw = ImageDraw.Draw(img)
+
+    # Top bar: station left, clock right — small and faint over the photo.
+    station = data.get('stationName') or 'BirdStation'
+    now = datetime.now().strftime('%H:%M')
+    draw.text((12, 9), station, fill=COLOR_TEXT, font=fonts.smallB)
+    tw = draw.textlength(now, font=fonts.smallB)
+    draw.text((W - tw - 12, 9), now, fill=COLOR_TEXT, font=fonts.smallB)
+
+    # Common name — drop to big if it doesn't fit on one line at huge.
+    y = 200
+    name_font = fonts.huge
+    if draw.textlength(com, font=name_font) > W - 36:
+        name_font = fonts.big
+    draw.text((18, y), com, fill=COLOR_TEXT, font=name_font)
+    y += 40 if name_font is fonts.huge else 32
+
+    # Scientific name
+    draw.text((18, y), sci, fill=(200, 200, 204), font=fonts.it)
+    y += 28
+
+    # Confidence badge · time (or date + time if not today)
+    tier = 'high' if conf >= 85 else 'mid' if conf >= 70 else 'low'
+    label = f"{conf}%"
+    lw = int(draw.textlength(label, font=fonts.medB))
+    draw.rounded_rectangle((18, y, 18 + lw + 14, y + 22), radius=11,
+                           fill=tier_color(tier))
+    draw.text((18 + 7, y + 3), label, fill=(255, 255, 255), font=fonts.medB)
+
+    today = datetime.now().strftime('%Y-%m-%d')
+    when = dtime if (ddate == today or not ddate) else f"{ddate[5:].replace('-', '/')} · {dtime}"
+    draw.text((18 + lw + 24, y + 3), when, fill=COLOR_TEXT, font=fonts.med)
+
+    return img
+
+
 def rgb_to_rgb565_bytes(img):
     """Convert PIL RGB image → little-endian RGB565 bytes for fb1."""
     # numpy path is 50× faster; fall back to pure Python only if missing.
@@ -234,6 +318,8 @@ def main():
     ap.add_argument('--once', action='store_true', help='Render once then exit')
     ap.add_argument('--base', default='http://localhost/birds',
                     help='birdash base URL (default: http://localhost/birds)')
+    ap.add_argument('--mode', choices=['pulse', 'headline'],
+                    help='Override mode (bypasses server config, useful for preview)')
     args = ap.parse_args()
 
     fonts = Fonts()
@@ -242,6 +328,13 @@ def main():
 
     def tick():
         nonlocal last_sci, photo_cache
+        try:
+            cfg = fetch_json(f"{args.base}/api/tft-display/config")
+        except Exception:
+            cfg = {}
+        mode = args.mode or cfg.get('mode') or 'pulse'
+        rot = int(cfg.get('rotation') or 0)
+
         try:
             data = fetch_json(f"{args.base}/api/tft-display/frame-data")
         except URLError as e:
@@ -253,7 +346,7 @@ def main():
             photo_cache = fetch_photo(args.base, sci)
             last_sci = sci
 
-        img = compose(data, fonts, photo_cache)
+        img = compose(data, fonts, photo_cache, mode=mode)
 
         if args.simulate:
             out = '/tmp/tft-preview.png'
@@ -261,10 +354,6 @@ def main():
             print(f"[tft] wrote {out}")
             return
 
-        try:
-            cfg = fetch_json(f"{args.base}/api/tft-display/config")
-            rot = int(cfg.get('rotation') or 0)
-        except Exception: rot = 0
         write_fb(img, rotate=rot)
 
     try:

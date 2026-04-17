@@ -40,7 +40,7 @@ function _saveConfig(cfg) {
   merged.enabled = !!merged.enabled;
   merged.rotation = [0, 90, 180, 270].includes(+merged.rotation) ? +merged.rotation : 90;
   merged.refreshSec = Math.max(1, Math.min(60, +merged.refreshSec || 3));
-  merged.mode = ['pulse'].includes(merged.mode) ? merged.mode : 'pulse';
+  merged.mode = ['pulse', 'headline'].includes(merged.mode) ? merged.mode : 'pulse';
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   const tmp = CONFIG_PATH + '.' + process.pid + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(merged, null, 2), 'utf8');
@@ -188,6 +188,7 @@ function _frameData(ctx) {
       out.latestDet = {
         comName: ld.Com_Name,
         sciName: ld.Sci_Name,
+        date: ld.Date || '',
         time: (ld.Time || '').substring(0, 5),
         confidence: Math.round((ld.Confidence || 0) * 100),
         model: ld.Model || '',

@@ -1499,6 +1499,8 @@
   "tft_rotation": "Rotation",
   "tft_refresh_sec": "Refresh interval",
   "tft_mode": "Mode",
+  "tft_mode_pulse": "Bird Pulse — today's stream",
+  "tft_mode_headline": "Latest bird — large photo",
   "tft_saving": "Saving…",
   "tft_service_title": "Service",
   "tft_service_state": "State",

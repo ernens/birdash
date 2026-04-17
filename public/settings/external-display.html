@@ -115,8 +115,9 @@
     </div>
     <div class="set-row">
       <span class="set-label">{{t('tft_mode')}}</span>
-      <select v-model="tftStatus.config.mode" @change="saveTftConfig" class="set-select" disabled>
-        <option value="pulse">Bird Pulse</option>
+      <select v-model="tftStatus.config.mode" @change="saveTftConfig" class="set-select">
+        <option value="pulse">{{t('tft_mode_pulse')}}</option>
+        <option value="headline">{{t('tft_mode_headline')}}</option>
       </select>
     </div>
     <div v-if="tftSaving" style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem;">{{t('tft_saving')}}</div>
