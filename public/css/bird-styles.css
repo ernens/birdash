@@ -1626,6 +1626,14 @@ select, input[type="text"], input[type="number"], textarea {
 }
 .hdr-bug-btn:hover { color: #fff; background: var(--danger, #e53935); }
 
+/* ── Power button ─────────────────────────────────────────────────────────── */
+.hdr-power-btn {
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  padding: 4px 6px; border-radius: var(--radius);
+  transition: color .15s, background .15s;
+}
+.hdr-power-btn:hover { color: #fff; background: var(--text-muted); }
+
 /* ── Notification bell ────────────────────────────────────────────────────── */
 .hdr-bell { position: relative; }
 .bell-btn {

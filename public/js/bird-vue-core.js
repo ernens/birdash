@@ -1309,7 +1309,104 @@
       const drawerOpen = ref(false);
       function toggleDrawer() { drawerOpen.value = !drawerOpen.value; }
       function drawerNavClick(si) { navSectionClick(si); }
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport };
+
+      // ── Power management (restart-service / reboot / shutdown) ─────
+      // Lives at the shell level so the power icon in the header can
+      // open the modal from any page, not just settings.
+      const power = Vue.reactive({
+        modalOpen: false,
+        step: 'choose',
+        selected: null,
+        countdown: 0,
+        countdownMax: 5,
+        sliderValue: 0,
+        probed: false,
+        available: { sudoReady: false },
+        stationName: '',
+        _timer: null,
+        iconFor(a) { return a === 'restart-service' ? 'rotate-cw' : a === 'reboot' ? 'refresh-cw' : 'power'; },
+        async open() {
+          this.modalOpen = true;
+          this.step = 'choose';
+          this.selected = null;
+          this.sliderValue = 0;
+          try {
+            const r = await fetch(`${BIRD_CONFIG.apiUrl}/power`);
+            if (r.ok) this.available = await r.json();
+          } catch { this.available = { sudoReady: false }; }
+          this.probed = true;
+          // Pull the station name from settings if it's cached, so the
+          // modal header can say "Biloute" / "Mickey" instead of the
+          // generic brand.
+          try {
+            const cfg = await fetch(`${BIRD_CONFIG.apiUrl}/settings`).then(r => r.json()).catch(() => null);
+            this.stationName = (cfg && (cfg.SITE_NAME || cfg.SITE_BRAND)) || '';
+          } catch { this.stationName = ''; }
+        },
+        close() { this._clearTimer(); this.modalOpen = false; },
+        _clearTimer() { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
+        selectAction(action) {
+          this.selected = action;
+          if (action === 'shutdown') { this.step = 'confirm-slide'; this.sliderValue = 0; return; }
+          this.step = 'confirm';
+          this.countdownMax = action === 'restart-service' ? 5 : 10;
+          this.countdown = this.countdownMax;
+          this._timer = setInterval(() => {
+            this.countdown -= 1;
+            if (this.countdown <= 0) { this._clearTimer(); this.apply(); }
+          }, 1000);
+        },
+        onSliderRelease() {
+          if (this.sliderValue >= 95) { this.apply(); }
+          else {
+            const start = this.sliderValue;
+            const t0 = performance.now();
+            const tick = (now) => {
+              const p = Math.min((now - t0) / 220, 1);
+              this.sliderValue = Math.round(start * (1 - p));
+              if (p < 1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          }
+        },
+        cancel() { this._clearTimer(); this.step = 'choose'; this.sliderValue = 0; },
+        async apply() {
+          this.step = 'applying';
+          try {
+            await fetch(`${BIRD_CONFIG.apiUrl}/power`, {
+              method: 'POST', headers: BIRDASH.authHeaders(),
+              body: JSON.stringify({ action: this.selected }),
+            });
+          } catch { /* request may be cut short by the very action we triggered */ }
+          this._pollHealth();
+        },
+        _pollHealth() {
+          const started = Date.now();
+          const MAX_MS = 180000;
+          let sawOffline = false;
+          const poll = async () => {
+            if (!this.modalOpen) return;
+            if (Date.now() - started > MAX_MS) return;
+            let online = false;
+            try { const r = await fetch(`${BIRD_CONFIG.apiUrl}/health`, { cache: 'no-store' }); online = r.ok; }
+            catch { online = false; }
+            if (!online) {
+              if (!sawOffline) { sawOffline = true; this.step = 'offline'; }
+            } else if (sawOffline && this.selected !== 'shutdown') {
+              this.step = 'back';
+              return;
+            }
+            setTimeout(poll, 2000);
+          };
+          setTimeout(poll, 1500);
+        },
+        reload() { window.location.reload(); },
+      });
+
+      // Expose openPower so child pages (e.g. the Settings → Station
+      // 'Manage power' button) can trigger the shell-level modal.
+      if (window.BIRDASH) window.BIRDASH.openPower = () => power.open();
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power };
     },
     directives: {
       'click-outside': {
@@ -1362,6 +1459,10 @@
       <!-- Bug report button -->
       <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')">
         <bird-icon name="bug" :size="16"></bird-icon>
+      </button>
+      <!-- Power button — opens the same shell-level power modal -->
+      <button class="hdr-power-btn" @click="power.open()" :title="t('power_title')">
+        <bird-icon name="power" :size="16"></bird-icon>
       </button>
       <!-- Notification bell (unified, 3 severities) -->
       <div class="hdr-bell" v-click-outside="()=>bellOpen=false">
@@ -1644,6 +1745,90 @@
           </div>
         </div>
       </nav>
+    </div>
+  </transition>
+
+  <!-- Power modal — reachable from the header power icon on every page -->
+  <transition name="pw-fade">
+    <div v-if="power.modalOpen" class="pw-backdrop" @click.self="power.step === 'choose' && power.close()">
+      <div class="pw-modal" role="dialog" aria-modal="true">
+        <button v-if="power.step === 'choose'" class="pw-close" @click="power.close()" :aria-label="t('power_cancel')">
+          <bird-icon name="x" :size="16"></bird-icon>
+        </button>
+
+        <div v-if="power.step === 'choose'" class="pw-step">
+          <div class="pw-station">{{power.stationName || brandName}}</div>
+          <div class="pw-prompt">{{t('power_prompt')}}</div>
+          <div class="pw-tiles">
+            <button class="pw-tile pw-tile-svc" @click="power.selectAction('restart-service')">
+              <div class="pw-tile-icon"><bird-icon name="rotate-cw" :size="32"></bird-icon></div>
+              <div class="pw-tile-label">{{t('power_restart_svc')}}</div>
+              <div class="pw-tile-dur">~5 s</div>
+            </button>
+            <button class="pw-tile pw-tile-reboot" :disabled="!power.available.sudoReady"
+                    :title="!power.available.sudoReady ? t('power_sudo_required') : ''"
+                    @click="power.selectAction('reboot')">
+              <div class="pw-tile-icon"><bird-icon name="refresh-cw" :size="32"></bird-icon></div>
+              <div class="pw-tile-label">{{t('power_reboot')}}</div>
+              <div class="pw-tile-dur">~45 s</div>
+            </button>
+            <button class="pw-tile pw-tile-shutdown" :disabled="!power.available.sudoReady"
+                    :title="!power.available.sudoReady ? t('power_sudo_required') : ''"
+                    @click="power.selectAction('shutdown')">
+              <div class="pw-tile-icon"><bird-icon name="power" :size="32"></bird-icon></div>
+              <div class="pw-tile-label">{{t('power_shutdown')}}</div>
+              <div class="pw-tile-dur">{{t('power_permanent')}}</div>
+            </button>
+          </div>
+        </div>
+
+        <div v-else-if="power.step === 'confirm'" class="pw-step pw-step-confirm">
+          <div class="pw-confirm-icon" :class="'pw-ci-' + power.selected">
+            <bird-icon :name="power.iconFor(power.selected)" :size="48"></bird-icon>
+          </div>
+          <div class="pw-confirm-title">{{t('power_action_' + power.selected)}}</div>
+          <div class="pw-confirm-sub">{{t('power_executing_in').replace('{s}', power.countdown)}}</div>
+          <div class="pw-progress">
+            <div class="pw-progress-bar" :style="{width: ((power.countdownMax - power.countdown) / power.countdownMax * 100) + '%'}"></div>
+          </div>
+          <button class="pw-btn pw-btn-cancel" @click="power.cancel()">{{t('power_cancel')}}</button>
+        </div>
+
+        <div v-else-if="power.step === 'confirm-slide'" class="pw-step pw-step-confirm">
+          <div class="pw-confirm-icon pw-ci-shutdown"><bird-icon name="power" :size="48"></bird-icon></div>
+          <div class="pw-confirm-title">{{t('power_action_shutdown')}}</div>
+          <div class="pw-confirm-sub">{{t('power_slide_hint')}}</div>
+          <div class="pw-slider-track">
+            <input type="range" min="0" max="100" step="1" v-model.number="power.sliderValue"
+                   class="pw-slider-input"
+                   @change="power.onSliderRelease()"
+                   @pointerup="power.onSliderRelease()"
+                   @touchend="power.onSliderRelease()">
+            <div class="pw-slider-fill" :style="{width: power.sliderValue + '%'}"></div>
+            <div class="pw-slider-label">{{t('power_slide_label')}}</div>
+          </div>
+          <button class="pw-btn pw-btn-cancel" @click="power.cancel()">{{t('power_cancel')}}</button>
+        </div>
+
+        <div v-else-if="power.step === 'applying' || power.step === 'offline'" class="pw-step pw-step-applying">
+          <div class="pw-spinner"><div></div><div></div><div></div></div>
+          <div class="pw-applying-title">
+            {{power.step === 'offline' ? t('power_offline_title') : t('power_applying_title')}}
+          </div>
+          <div class="pw-applying-sub">
+            {{power.step === 'offline'
+              ? (power.selected === 'shutdown' ? t('power_offline_shutdown') : t('power_offline_rebooting'))
+              : t('power_applying_sub')}}
+          </div>
+        </div>
+
+        <div v-else-if="power.step === 'back'" class="pw-step pw-step-back">
+          <div class="pw-back-check"><bird-icon name="check-circle" :size="56"></bird-icon></div>
+          <div class="pw-back-title">{{t('power_back_title')}}</div>
+          <div class="pw-applying-sub">{{t('power_back_sub')}}</div>
+          <button class="pw-btn pw-btn-primary" @click="power.reload()">{{t('power_reload')}}</button>
+        </div>
+      </div>
     </div>
   </transition>
 </div>`
