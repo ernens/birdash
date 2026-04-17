@@ -33,6 +33,32 @@ async function waitReady(page, ms = 3000) {
   await page.waitForTimeout(ms);
 }
 
+// Wait for a "ready" selector — typically something that appears only after
+// data finishes loading (a KPI value, a chart canvas, a table row). Accepts
+// a comma-separated list; we resolve when ANY of them shows up.
+async function waitReadySelector(page, selector, timeout = 15000) {
+  if (!selector) return;
+  try {
+    await page.waitForSelector(selector, { state: 'visible', timeout });
+  } catch {
+    // Don't fail the whole run — just screenshot what we have.
+  }
+}
+
+// After the "ready" selector resolves, give chart/canvas libs a beat to
+// finish drawing. Chart.js and ECharts mount synchronously but draw on
+// the next animation frame.
+async function waitChartsSettled(page) {
+  await page.waitForTimeout(800);
+  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // Let visible <img> elements resolve so photo-heavy pages don't ship grey placeholders.
+  await page.evaluate(async () => {
+    const imgs = Array.from(document.querySelectorAll('img')).filter(i => i.offsetParent !== null);
+    await Promise.all(imgs.map(i => i.complete && i.naturalWidth > 0 ? Promise.resolve() :
+      new Promise(r => { i.onload = r; i.onerror = r; setTimeout(r, 4000); })));
+  });
+}
+
 // Page list lives in _pages.mjs (shared with smoke.mjs)
 
 (async () => {
@@ -62,7 +88,7 @@ async function waitReady(page, ms = 3000) {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
       await waitReady(page, p.wait);
 
-      // Custom action (e.g. select a species)
+      // Custom action (e.g. select a species, click Start)
       if (p.action) await p.action(page);
 
       // For settings pages with hash tabs, click the tab
@@ -74,6 +100,11 @@ async function waitReady(page, ms = 3000) {
           await page.waitForTimeout(1000);
         }
       }
+
+      // Wait for the page-specific "ready" selector, then a beat for
+      // canvas-based charts to finish drawing.
+      await waitReadySelector(page, p.ready);
+      await waitChartsSettled(page);
 
       await page.screenshot({ path: outPath, fullPage: false });
       process.stdout.write(` OK\n`);
