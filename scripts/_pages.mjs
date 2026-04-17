@@ -43,7 +43,7 @@ export const pages = [
   { name: 'dashboard-kiosk', path: '/birds/dashboard-kiosk.html', wait: 6000, ready: '.k-tile' },
 
   // History
-  { name: 'calendar',    path: '/birds/calendar.html',    wait: 3000 },
+  { name: 'calendar',    path: '/birds/calendar.html',    wait: 4000, ready: '.cal-cell .cal-day' },
   { name: 'timeline',    path: '/birds/timeline.html',    wait: 15000 },
   { name: 'detections',  path: '/birds/detections.html',  wait: 10000 },
   { name: 'review',      path: '/birds/review.html',      wait: 4000 },
