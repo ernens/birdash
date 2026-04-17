@@ -1356,18 +1356,52 @@
             if (this.countdown <= 0) { this._clearTimer(); this.apply(); }
           }, 1000);
         },
-        onSliderRelease() {
-          if (this.sliderValue >= 95) { this.apply(); }
-          else {
-            const start = this.sliderValue;
-            const t0 = performance.now();
-            const tick = (now) => {
-              const p = Math.min((now - t0) / 220, 1);
-              this.sliderValue = Math.round(start * (1 - p));
-              if (p < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
+        // Custom pointer-driven slider. Native <input type=range> with
+        // opacity:0 is unreliable — the hit area collapses to the thumb,
+        // which users can't see. This grabs the whole track.
+        sliderDragging: false,
+        _sliderTrackEl: null,
+        _onPointerMove: null,
+        _onPointerUp: null,
+        sliderBegin(ev) {
+          ev.preventDefault();
+          const track = ev.currentTarget;
+          this._sliderTrackEl = track;
+          this.sliderDragging = true;
+          track.setPointerCapture && track.setPointerCapture(ev.pointerId);
+          this.sliderUpdate(ev);
+          this._onPointerMove = (e) => this.sliderUpdate(e);
+          this._onPointerUp   = (e) => this.sliderEnd(e);
+          track.addEventListener('pointermove', this._onPointerMove);
+          track.addEventListener('pointerup',   this._onPointerUp);
+          track.addEventListener('pointercancel', this._onPointerUp);
+        },
+        sliderUpdate(ev) {
+          if (!this.sliderDragging || !this._sliderTrackEl) return;
+          const rect = this._sliderTrackEl.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+          this.sliderValue = pct;
+        },
+        sliderEnd(ev) {
+          if (!this.sliderDragging) return;
+          this.sliderDragging = false;
+          const track = this._sliderTrackEl;
+          if (track) {
+            track.removeEventListener('pointermove', this._onPointerMove);
+            track.removeEventListener('pointerup',   this._onPointerUp);
+            track.removeEventListener('pointercancel', this._onPointerUp);
+            try { track.releasePointerCapture && track.releasePointerCapture(ev.pointerId); } catch {}
           }
+          this._sliderTrackEl = null;
+          if (this.sliderValue >= 95) { this.apply(); return; }
+          const start = this.sliderValue;
+          const t0 = performance.now();
+          const tick = (now) => {
+            const p = Math.min((now - t0) / 220, 1);
+            this.sliderValue = start * (1 - p);
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
         },
         cancel() { this._clearTimer(); this.step = 'choose'; this.sliderValue = 0; },
         async apply() {
@@ -1798,14 +1832,12 @@
           <div class="pw-confirm-icon pw-ci-shutdown"><bird-icon name="power" :size="48"></bird-icon></div>
           <div class="pw-confirm-title">{{t('power_action_shutdown')}}</div>
           <div class="pw-confirm-sub">{{t('power_slide_hint')}}</div>
-          <div class="pw-slider-track">
-            <input type="range" min="0" max="100" step="1" v-model.number="power.sliderValue"
-                   class="pw-slider-input"
-                   @change="power.onSliderRelease()"
-                   @pointerup="power.onSliderRelease()"
-                   @touchend="power.onSliderRelease()">
+          <div class="pw-slider-track" @pointerdown="power.sliderBegin($event)">
             <div class="pw-slider-fill" :style="{width: power.sliderValue + '%'}"></div>
-            <div class="pw-slider-label">{{t('power_slide_label')}}</div>
+            <div class="pw-slider-thumb" :style="{left: 'calc(' + power.sliderValue + '% - 24px)'}">
+              <bird-icon name="power" :size="18"></bird-icon>
+            </div>
+            <div class="pw-slider-label" :class="{dim: power.sliderValue > 40}">{{t('power_slide_label')}}</div>
           </div>
           <button class="pw-btn pw-btn-cancel" @click="power.cancel()">{{t('power_cancel')}}</button>
         </div>
