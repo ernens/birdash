@@ -57,11 +57,17 @@ if [ ! -f "$SERVICE_SRC" ]; then
   exit 1
 fi
 # Match the user birdash.service runs as — keeps file perms sane and avoids
-# needing a dedicated system user just for the renderer.
+# needing a dedicated system user just for the renderer. Paths are also
+# rewritten so the unit works regardless of where birdash lives (mickey
+# puts it under /home/mickey/, dev machine under /home/bjorn/, etc.).
 BIRDASH_USER=$(systemctl show -p User --value birdash.service 2>/dev/null)
 [ -z "$BIRDASH_USER" ] && BIRDASH_USER="bjorn"
+TFT_DIR="$PROJECT_ROOT/tft-display"
 tmp_unit=$(mktemp)
-sed "s/^User=.*/User=${BIRDASH_USER}/" "$SERVICE_SRC" > "$tmp_unit"
+sed -e "s/^User=.*/User=${BIRDASH_USER}/" \
+    -e "s|^WorkingDirectory=.*|WorkingDirectory=${TFT_DIR}|" \
+    -e "s|^ExecStart=.*|ExecStart=/usr/bin/python3 ${TFT_DIR}/tft-display.py|" \
+    "$SERVICE_SRC" > "$tmp_unit"
 if ! cmp -s "$tmp_unit" "$SERVICE_DST" 2>/dev/null; then
   cp "$tmp_unit" "$SERVICE_DST"
   rm -f "$tmp_unit"

@@ -13,6 +13,9 @@ User=bjorn
 # the `video` group (handled by the install script when present) lets us write
 # without running as root.
 SupplementaryGroups=video
+# WorkingDirectory and ExecStart paths are rewritten by tft-install.sh to
+# match the actual project location on this host (may be /home/bjorn,
+# /home/mickey, /home/pi… depending on the install).
 WorkingDirectory=/home/bjorn/birdash/tft-display
 ExecStart=/usr/bin/python3 /home/bjorn/birdash/tft-display/tft-display.py
 Restart=on-failure
