@@ -1472,7 +1472,12 @@
     <div v-if="showUpdateBanner" class="update-banner">
       <span class="update-banner-icon"><bird-icon name="arrow-up-circle" :size="16"></bird-icon></span>
       <span class="update-banner-text">
-        {{t('update_banner_new_version')}} v{{updateInfo.latestVersion || updateInfo.latestShort}}
+        <template v-if="updateInfo.currentVersion && updateInfo.latestVersion && updateInfo.currentVersion === updateInfo.latestVersion">
+          {{updateInfo.commitsBehind || 0}} {{(updateInfo.commitsBehind || 0) === 1 ? t('update_banner_singular') : t('update_banner_plural')}}
+        </template>
+        <template v-else>
+          {{t('update_banner_new_version')}} v{{updateInfo.latestVersion || updateInfo.latestShort}}
+        </template>
       </span>
       <button class="update-banner-btn" @click="openUpdateModal">{{t('update_banner_view')}}</button>
     </div>
@@ -1487,7 +1492,12 @@
         <div>
           <div class="update-modal-title">{{t('update_title')}}</div>
           <div class="update-modal-version">
-            v{{updateInfo.currentVersion || updateInfo.currentShort}} → <strong>v{{updateInfo.latestVersion || updateInfo.latestShort}}</strong>
+            <template v-if="updateInfo.currentVersion && updateInfo.latestVersion && updateInfo.currentVersion === updateInfo.latestVersion">
+              v{{updateInfo.currentVersion}} · <strong>{{updateInfo.commitsBehind || 0}} {{(updateInfo.commitsBehind || 0) === 1 ? t('update_banner_singular') : t('update_banner_plural')}}</strong>
+            </template>
+            <template v-else>
+              v{{updateInfo.currentVersion || updateInfo.currentShort}} → <strong>v{{updateInfo.latestVersion || updateInfo.latestShort}}</strong>
+            </template>
           </div>
         </div>
         <button class="update-modal-close" @click="closeUpdateModal" aria-label="Close"><bird-icon name="x" :size="16"></bird-icon></button>
