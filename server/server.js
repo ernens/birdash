@@ -30,6 +30,7 @@ const _updateRoutes  = require('./routes/updates');
 const _bugReportRoutes = require('./routes/bug-report');
 const _telemetryRoutes = require('./routes/telemetry');
 const _powerRoutes   = require('./routes/power');
+const _tftDisplayRoutes = require('./routes/tft-display');
 const _telemetry = require('./lib/telemetry');
 const _notifWatcher = require('./lib/notification-watcher');
 const _weeklyDigest = require('./lib/weekly-digest');
@@ -268,6 +269,7 @@ const server = http.createServer((req, res) => {
   if (_bugReportRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_telemetryRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_powerRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_tftDisplayRoutes.handle(req, res, pathname, _routeCtx)) return;
 
   console.warn(`[BIRDASH] 404 — route inconnue : ${req.method} ${pathname}`);
   if (res.headersSent) return;

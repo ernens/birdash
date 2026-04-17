@@ -1,0 +1,27 @@
+[Unit]
+Description=Birdash TFT renderer (Adafruit PiTFT 3.5")
+Documentation=https://github.com/ernens/birdash
+After=network-online.target birdash.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# User and Group are substituted to match birdash.service at install time
+# by scripts/tft-install.sh — fallback is 'bjorn' (the author's dev user).
+User=bjorn
+# The framebuffer device is root:video on Raspberry Pi OS — adding the user to
+# the `video` group (handled by the install script when present) lets us write
+# without running as root.
+SupplementaryGroups=video
+WorkingDirectory=/home/bjorn/birdash/tft-display
+ExecStart=/usr/bin/python3 /home/bjorn/birdash/tft-display/tft-display.py
+Restart=on-failure
+RestartSec=5
+# Keep the memory budget tight — we target under 50 MB on a 1 GB Pi3.
+MemoryMax=80M
+Nice=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -96,10 +96,11 @@ const app = createApp({
       { id: 'backup',    icon: 'save', labelKey: 'set_tab_backup' },
       { id: 'database',  icon: 'database', labelKey: 'set_tab_database' },
       { id: 'terminal',  icon: 'terminal', labelKey: 'set_tab_terminal' },
-        { id: 'monitoring', icon: 'monitor', labelKey: 'nav_system', href: 'system.html' },
+      { id: 'external-display', icon: 'monitor', labelKey: 'set_tab_external_display' },
+      { id: 'monitoring', icon: 'monitor', labelKey: 'nav_system', href: 'system.html' },
     ];
     const hashTab = location.hash.slice(1);
-    const localTabs = ['detection', 'audio', 'notif', 'station', 'services', 'species', 'backup', 'database', 'terminal'];
+    const localTabs = ['detection', 'audio', 'notif', 'station', 'services', 'species', 'backup', 'database', 'terminal', 'external-display'];
     // Migrate old key
     if (localStorage.getItem('birdash-settings-tab') && !localStorage.getItem('birdash_settings_tab')) {
       localStorage.setItem('birdash_settings_tab', localStorage.getItem('birdash-settings-tab'));
@@ -1743,7 +1744,7 @@ const app = createApp({
       });
     }
     const tabComponents = {};
-    ['detection','audio','notif','station','services','species','backup','database','terminal'].forEach(id => {
+    ['detection','audio','notif','station','services','species','backup','database','terminal','external-display'].forEach(id => {
       tabComponents[id] = _makeTabComponent(id);
     });
 
@@ -1805,6 +1806,83 @@ const app = createApp({
     // second discoverable entry point.
     function openPower() { window.BIRDASH && window.BIRDASH.openPower && window.BIRDASH.openPower(); }
 
+    // ── External display (PiTFT 3.5") ──────────────────────────────
+    const tftStatus = reactive({
+      hatDetected: false, hatProduct: '',
+      spiEnabled: false, fbExists: false, overlayLoaded: false,
+      service: { active: false, enabled: false, ramMB: null, pid: null },
+      config: { enabled: false, rotation: 90, refreshSec: 3, mode: 'pulse' },
+      sudoReady: false,
+    });
+    const tftInstalling = ref(false);
+    const tftInstallMsg = ref('');
+    const tftInstallErr = ref('');
+    const tftInstallCmds = ref([]);  // shown when sudo is not configured
+    const tftSaving = ref(false);
+    const tftConfirmInstall = ref(false);
+
+    async function loadTftStatus() {
+      try {
+        const r = await fetch(API + '/tft-display/status');
+        if (r.ok) Object.assign(tftStatus, await r.json());
+      } catch {}
+    }
+    async function saveTftConfig() {
+      tftSaving.value = true;
+      try {
+        await fetch(API + '/tft-display/config', {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify(tftStatus.config),
+        });
+      } catch {} finally { tftSaving.value = false; }
+    }
+    async function runTftInstall() {
+      tftConfirmInstall.value = false;
+      tftInstalling.value = true;
+      tftInstallMsg.value = '';
+      tftInstallErr.value = '';
+      tftInstallCmds.value = [];
+      try {
+        const r = await fetch(API + '/tft-display/install', {
+          method: 'POST', headers: authHeaders(),
+        });
+        if (r.ok) {
+          tftInstallMsg.value = t('tft_install_running');
+          // Poll status for ~30s to see when it completes
+          for (let i = 0; i < 15; i++) {
+            await new Promise(rs => setTimeout(rs, 2000));
+            await loadTftStatus();
+          }
+          tftInstallMsg.value = t('tft_install_done');
+        } else if (r.status === 501) {
+          const d = await r.json();
+          tftInstallCmds.value = d.manualCommands || [];
+          tftInstallErr.value = d.error || '';
+        } else {
+          tftInstallErr.value = 'HTTP ' + r.status;
+        }
+      } catch (e) { tftInstallErr.value = e.message; }
+      finally { tftInstalling.value = false; }
+    }
+    async function tftServiceAction(action) {
+      try {
+        await fetch(API + '/tft-display/service', {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ action }),
+        });
+        setTimeout(loadTftStatus, 500);
+      } catch {}
+    }
+    // Auto-load when the tab opens (and refresh every 5s while on it)
+    let _tftPollTimer = null;
+    watch(() => activeTab.value, (v) => {
+      if (_tftPollTimer) { clearInterval(_tftPollTimer); _tftPollTimer = null; }
+      if (v === 'external-display') {
+        loadTftStatus();
+        _tftPollTimer = setInterval(loadTftStatus, 5000);
+      }
+    });
+
     // ── Provide context to lazy-loaded tab components ──────────────
     const settingsCtx = {
       t, lang, safeHtml, conf, models, analysisStatus, languages, services,
@@ -1843,6 +1921,8 @@ const app = createApp({
       telemetryStatus, telemetryLoading, telemetryName, telemetryJoining, enableTelemetry, disableTelemetry,
       anonPingsEnabled, toggleAnonPings,
       openPower,
+      tftStatus, tftInstalling, tftInstallMsg, tftInstallErr, tftInstallCmds,
+      tftSaving, tftConfirmInstall, loadTftStatus, saveTftConfig, runTftInstall, tftServiceAction,
     };
     // ── Station map (Leaflet) ──────────────────────────────────────
     let _stationMap = null, _stationMarker = null, _leafletLoaded = false;
@@ -1972,6 +2052,8 @@ const app = createApp({
       telemetryStatus, telemetryLoading, telemetryName, telemetryJoining, enableTelemetry, disableTelemetry,
       anonPingsEnabled, toggleAnonPings,
       openPower,
+      tftStatus, tftInstalling, tftInstallMsg, tftInstallErr, tftInstallCmds,
+      tftSaving, tftConfirmInstall, loadTftStatus, saveTftConfig, runTftInstall, tftServiceAction,
     };
   }
 });

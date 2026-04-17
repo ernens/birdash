@@ -1,0 +1,154 @@
+<div class="settings-grid" style="align-items:stretch;">
+
+  <!-- Detection card -->
+  <div class="card">
+    <div class="section-title"><bird-icon name="cpu" :size="14"></bird-icon> {{t('tft_detection_title')}}</div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('tft_detection_desc')}}</p>
+
+    <div class="set-row" style="align-items:center;">
+      <span class="set-label">HAT</span>
+      <span style="font-size:.85rem;">
+        <bird-icon :name="tftStatus.hatDetected ? 'check-circle' : 'x'" :size="14"
+                   :style="{color: tftStatus.hatDetected ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
+        {{tftStatus.hatDetected ? (tftStatus.hatProduct || t('tft_hat_unknown')) : t('tft_hat_none')}}
+      </span>
+    </div>
+    <div class="set-row" style="align-items:center;">
+      <span class="set-label">SPI</span>
+      <span style="font-size:.85rem;">
+        <bird-icon :name="tftStatus.spiEnabled ? 'check-circle' : 'x'" :size="14"
+                   :style="{color: tftStatus.spiEnabled ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
+        {{tftStatus.spiEnabled ? t('tft_spi_on') : t('tft_spi_off')}}
+      </span>
+    </div>
+    <div class="set-row" style="align-items:center;">
+      <span class="set-label">/dev/fb1</span>
+      <span style="font-size:.85rem;">
+        <bird-icon :name="tftStatus.fbExists ? 'check-circle' : 'x'" :size="14"
+                   :style="{color: tftStatus.fbExists ? 'var(--accent)' : 'var(--danger)'}"></bird-icon>
+        {{tftStatus.fbExists ? t('tft_fb_ready') : t('tft_fb_missing')}}
+      </span>
+    </div>
+    <button class="btn btn-secondary" style="font-size:.78rem;margin-top:.5rem;" @click="loadTftStatus">
+      <bird-icon name="refresh-cw" :size="13"></bird-icon> {{t('tft_refresh')}}
+    </button>
+  </div>
+
+  <!-- Install card -->
+  <div class="card">
+    <div class="section-title"><bird-icon name="wrench" :size="14"></bird-icon> {{t('tft_install_title')}}</div>
+
+    <div v-if="tftStatus.overlayLoaded" style="font-size:.82rem;color:var(--text-muted);">
+      <bird-icon name="check-circle" :size="14" style="color:var(--accent);vertical-align:-2px;"></bird-icon>
+      {{t('tft_install_already')}}
+    </div>
+
+    <template v-else>
+      <p style="font-size:.82rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('tft_install_desc')}}</p>
+      <div style="background:var(--bg-deep);border-left:3px solid var(--danger);padding:.55rem .7rem;border-radius:4px;font-size:.78rem;margin-bottom:.8rem;line-height:1.45;">
+        <bird-icon name="info" :size="13" style="vertical-align:-2px;"></bird-icon>
+        {{t('tft_install_warn')}}
+      </div>
+      <button class="btn btn-primary" :disabled="tftInstalling" @click="tftConfirmInstall = true">
+        <bird-icon name="wrench" :size="14"></bird-icon>
+        <span v-if="tftInstalling">{{t('tft_install_running_short')}}</span>
+        <span v-else>{{t('tft_install_btn')}}</span>
+      </button>
+
+      <!-- Inline confirm panel -->
+      <div v-if="tftConfirmInstall" style="margin-top:.9rem;padding:.7rem .85rem;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius);font-size:.83rem;">
+        <div style="margin-bottom:.6rem;">{{t('tft_install_confirm')}}</div>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-primary" @click="runTftInstall">{{t('tft_install_proceed')}}</button>
+          <button class="btn btn-secondary" @click="tftConfirmInstall = false">{{t('power_cancel')}}</button>
+        </div>
+      </div>
+
+      <div v-if="tftInstallMsg" style="margin-top:.8rem;font-size:.82rem;color:var(--accent);">
+        {{tftInstallMsg}}
+      </div>
+      <div v-if="tftInstallErr" style="margin-top:.8rem;font-size:.82rem;color:var(--danger);">
+        {{tftInstallErr}}
+      </div>
+
+      <!-- Manual fallback when sudo isn't wired up -->
+      <div v-if="tftInstallCmds.length" style="margin-top:.9rem;">
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">
+          <bird-icon name="info" :size="12" style="vertical-align:-2px;"></bird-icon> {{t('tft_install_manual')}}
+        </div>
+        <pre style="margin:0;padding:.7rem .85rem;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;font-family:var(--font-mono);font-size:.74rem;white-space:pre-wrap;line-height:1.5;overflow:auto;max-height:240px;">{{tftInstallCmds.join('\n')}}</pre>
+      </div>
+    </template>
+  </div>
+
+  <!-- Config card -->
+  <div class="card">
+    <div class="section-title"><bird-icon name="settings" :size="14"></bird-icon> {{t('tft_config_title')}}</div>
+
+    <div class="set-row" style="align-items:center;">
+      <span class="set-label">{{t('tft_enable')}}</span>
+      <label class="set-toggle">
+        <input type="checkbox" v-model="tftStatus.config.enabled" @change="saveTftConfig">
+        <span class="set-toggle-slider"></span>
+      </label>
+    </div>
+    <div class="set-row">
+      <span class="set-label">{{t('tft_rotation')}}</span>
+      <select v-model.number="tftStatus.config.rotation" @change="saveTftConfig" class="set-select">
+        <option :value="0">0°</option>
+        <option :value="90">90°</option>
+        <option :value="180">180°</option>
+        <option :value="270">270°</option>
+      </select>
+    </div>
+    <div class="set-row">
+      <span class="set-label">{{t('tft_refresh_sec')}}</span>
+      <input type="number" min="1" max="60" v-model.number="tftStatus.config.refreshSec"
+             @change="saveTftConfig" class="set-input" style="width:80px;"> s
+    </div>
+    <div class="set-row">
+      <span class="set-label">{{t('tft_mode')}}</span>
+      <select v-model="tftStatus.config.mode" @change="saveTftConfig" class="set-select" disabled>
+        <option value="pulse">Bird Pulse</option>
+      </select>
+    </div>
+    <div v-if="tftSaving" style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem;">{{t('tft_saving')}}</div>
+  </div>
+
+  <!-- Status card -->
+  <div class="card">
+    <div class="section-title"><bird-icon name="activity" :size="14"></bird-icon> {{t('tft_service_title')}}</div>
+
+    <div class="set-row" style="align-items:center;">
+      <span class="set-label">{{t('tft_service_state')}}</span>
+      <span style="font-size:.85rem;display:flex;align-items:center;gap:.4rem;">
+        <span :style="{display:'inline-block',width:'10px',height:'10px',borderRadius:'50%',background: tftStatus.service.active ? 'var(--accent)' : 'var(--text-faint)'}"></span>
+        {{tftStatus.service.active ? t('tft_service_running') : t('tft_service_stopped')}}
+      </span>
+    </div>
+    <div class="set-row" v-if="tftStatus.service.ramMB != null" style="align-items:center;">
+      <span class="set-label">RAM</span>
+      <span style="font-size:.85rem;font-family:var(--font-mono);">{{tftStatus.service.ramMB}} MB</span>
+    </div>
+    <div class="set-row" v-if="tftStatus.service.pid" style="align-items:center;">
+      <span class="set-label">PID</span>
+      <span style="font-size:.85rem;font-family:var(--font-mono);">{{tftStatus.service.pid}}</span>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap;">
+      <button class="btn btn-secondary" style="font-size:.78rem;" @click="tftServiceAction('start')"
+              :disabled="tftStatus.service.active">
+        <bird-icon name="check-circle" :size="13"></bird-icon> {{t('tft_service_start')}}
+      </button>
+      <button class="btn btn-secondary" style="font-size:.78rem;" @click="tftServiceAction('restart')"
+              :disabled="!tftStatus.service.active">
+        <bird-icon name="refresh-cw" :size="13"></bird-icon> {{t('tft_service_restart')}}
+      </button>
+      <button class="btn btn-secondary" style="font-size:.78rem;" @click="tftServiceAction('stop')"
+              :disabled="!tftStatus.service.active">
+        <bird-icon name="x" :size="13"></bird-icon> {{t('tft_service_stop')}}
+      </button>
+    </div>
+  </div>
+
+</div>
