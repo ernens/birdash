@@ -113,30 +113,17 @@ async function waitChartsSettled(page) {
     }
   }
 
-  // System sub-tabs (model, data, external) — need to click tabs on system.html
-  await page.goto(`${BASE}/birds/system.html`, { waitUntil: 'domcontentloaded' });
-  await waitReady(page, 3000);
-
+  // System sub-tabs (model, data, external) — the page reads location.hash
+  // on mount, so we navigate fresh to each hashed URL rather than clicking.
   for (const st of systemTabs) {
     const outPath = join(SHOTS_DIR, `${st.name}.png`);
     process.stdout.write(`  ${st.name}...`);
     try {
-      // Try clicking tab by various selectors
-      const clicked = await page.evaluate((tabName) => {
-        const btns = document.querySelectorAll('.sys-tab, [data-tab], button');
-        for (const b of btns) {
-          if (b.textContent.toLowerCase().includes(tabName) ||
-              b.dataset?.tab === tabName) {
-            b.click();
-            return true;
-          }
-        }
-        return false;
-      }, st.tab);
-
-      if (clicked) {
-        await page.waitForTimeout(1500);
-      }
+      await page.goto(`${BASE}/birds/system.html#${st.tab}`, { waitUntil: 'domcontentloaded' });
+      await waitReady(page, 4000);
+      // Each tab has its own characteristic content — wait for something visible.
+      await waitReadySelector(page, `[v-if*="${st.tab}"], .sys-tab-btn.active`, 8000);
+      await waitChartsSettled(page);
       await page.screenshot({ path: outPath, fullPage: false });
       process.stdout.write(` OK\n`);
     } catch (e) {
