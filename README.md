@@ -203,7 +203,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> System health — CPU, RAM, disk, temperature, services
 - <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Web terminal** — full bash in browser, supports Claude Code
 - <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Backup** — NFS/SMB/SFTP/S3/GDrive/WebDAV with scheduling
-- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 themes** — 7 dark (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 light (Paper, Sepia, Solar Light), plus an **Auto** mode that follows the OS `prefers-color-scheme`. Mini page previews in the picker, smooth cross-fade between themes, fully token-driven (design system documented in [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **12 themes** — 7 dark (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 4 light (Paper, Sepia, Solar Light, Colonial), plus an **Auto** mode that follows the OS `prefers-color-scheme`. Mini page previews in the picker, smooth cross-fade between themes, fully token-driven (design system documented in [`docs/THEMES.md`](docs/THEMES.md))
 - <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Photo management** — ban/replace photos, set preferred photo per species
 - <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Customizable branding** — configurable station name and header brand via settings
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI languages (FR/EN/NL/DE) + 36 languages for species names
@@ -455,7 +455,7 @@ birdash/
 │   │   ├── chart.umd.min.js      # Chart.js (vendored)
 │   │   └── echarts.min.js        # ECharts (vendored)
 │   ├── i18n/                      # Translation files (fr/en/de/nl.json)
-│   ├── css/                       # Styles + 11 themes (see docs/THEMES.md)
+│   ├── css/                       # Styles + 12 themes (see docs/THEMES.md)
 │   ├── settings/                  # Lazy-loaded settings tab fragments
 │   └── sw.js                      # Service Worker (offline cache)
 ├── engine/                        # BirdEngine (Python detection engine)

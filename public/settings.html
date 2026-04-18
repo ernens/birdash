@@ -944,6 +944,11 @@ const app = createApp({
           body: 'Longitude GPS de votre installation (4 décimales max). Utilisée par le filtre géographique MData.',
           rec: 'Utilisez Google Maps pour trouver vos coordonnées exactes.'
         },
+        elevation: {
+          title: 'Altitude',
+          body: 'Altitude de la station en mètres. Affichée dans l\'en-tête. Non utilisée par le moteur de détection.',
+          rec: 'Recherchez votre localité sur <a href="https://en-gb.topographic-map.com/" target="_blank" rel="noopener" style="color:var(--accent);">topographic-map.com</a> ou utilisez l\'altitude affichée par Google Maps.'
+        },
         species_lists: {
           title: 'Listes d\'espèces',
           body: `<strong>Liste d'inclusion</strong> : si elle n'est pas vide, SEULES les espèces listées seront détectées. Toutes les autres sont ignorées.<br><br>
@@ -1115,6 +1120,7 @@ const app = createApp({
         site_name: { title:'Site name', body:'Name shown in the header and on BirdWeather.', rec:'Your locality or garden name.' },
         latitude: { title:'Latitude', body:'GPS latitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
         longitude: { title:'Longitude', body:'GPS longitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
+        elevation: { title:'Elevation', body:'Station elevation in meters. Shown in the header. Not used by the detection engine.', rec:'Look up your locality on <a href="https://en-gb.topographic-map.com/" target="_blank" rel="noopener" style="color:var(--accent);">topographic-map.com</a> or use the altitude Google Maps shows.' },
         species_lists: {
           title: 'Species lists',
           body: '<strong>Include list</strong>: only listed species detected. <strong>Exclude list</strong>: listed species never detected. One scientific name per line.',
@@ -1161,6 +1167,7 @@ const app = createApp({
         site_name: { title:'Standortname', body:'Name im Header und auf BirdWeather.', rec:'Ihr Ort oder Gartenname.' },
         latitude: { title:'Breitengrad', body:'GPS-Breitengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
         longitude: { title:'Längengrad', body:'GPS-Längengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
+        elevation: { title:'Höhe', body:'Stationshöhe in Metern. Im Header angezeigt. Nicht vom Erkennungsmodell genutzt.', rec:'Suchen Sie Ihren Ort auf <a href="https://en-gb.topographic-map.com/" target="_blank" rel="noopener" style="color:var(--accent);">topographic-map.com</a>.' },
         species_lists: { title:'Artenlisten', body:'<strong>Einschlussliste</strong>: nur gelistete Arten. <strong>Ausschlussliste</strong>: gelistete Arten ignoriert. Ein wissenschaftlicher Name pro Zeile.', rec:'Ausschluss für wiederkehrende Fehlalarme nutzen.' },
         backup: { title:'Sicherung', body:'Automatische Sicherung Ihrer BirdNET-Station.<br><br><strong>Ziele:</strong> USB/Lokal, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV.<br><strong>Inhalt:</strong> Datenbank, Audiodateien, Konfiguration oder alles.<br><strong>Zeitplan:</strong> Manuell, täglich oder wöchentlich.', rec:'Empfohlen: tägliche Sicherung von <strong>Datenbank + Konfiguration</strong>.' },
       },
@@ -1189,6 +1196,7 @@ const app = createApp({
         site_name: { title:'Locatienaam', body:'Naam in de header en op BirdWeather.', rec:'Uw locatie of tuinnaam.' },
         latitude: { title:'Breedtegraad', body:'GPS-breedtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
         longitude: { title:'Lengtegraad', body:'GPS-lengtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
+        elevation: { title:'Hoogte', body:'Stationshoogte in meter. Weergegeven in de header. Niet gebruikt door het detectiemodel.', rec:'Zoek je locatie op <a href="https://en-gb.topographic-map.com/" target="_blank" rel="noopener" style="color:var(--accent);">topographic-map.com</a>.' },
         species_lists: { title:'Soortenlijsten', body:'<strong>Inclusielijst</strong>: alleen vermelde soorten. <strong>Exclusielijst</strong>: vermelde soorten genegeerd.', rec:'Exclusie gebruiken voor terugkerende valse positieven.' },
         backup: { title:'Back-up', body:'Automatische back-up van uw BirdNET-station.<br><br><strong>Bestemmingen:</strong> USB/Lokaal, SMB/CIFS, NFS, SFTP, Amazon S3, Google Drive, WebDAV.<br><strong>Inhoud:</strong> Database, audiobestanden, configuratie of alles.<br><strong>Planning:</strong> Handmatig, dagelijks of wekelijks.', rec:'Aanbevolen: dagelijkse back-up van <strong>database + configuratie</strong>.' },
       },

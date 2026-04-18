@@ -1,6 +1,6 @@
 # Theme system
 
-Birdash ships **11 themes** built on a single design-token system in
+Birdash ships **12 themes** built on a single design-token system in
 [`public/css/bird-styles.css`](../public/css/bird-styles.css). This document
 covers the architecture, the cascade tricks that keep it small, and how to
 add a new theme.
@@ -16,6 +16,7 @@ add a new theme.
 | `ocean`       | dark  | cyan            |                                      |
 | `dusk`        | dark  | rose            |                                      |
 | `sepia`       | light | warm brown      | Reading-optimized parchment palette  |
+| `colonial`    | light | moss green      | 1930 field-notebook carnet — IM Fell typography, paper grain, ochre/rust/berry |
 | `solar-light` | light | Solarized teal  | Schoonover's Solarized Light         |
 | `solar-dark`  | dark  | Solarized teal  | Schoonover's Solarized Dark          |
 | `nord`        | dark  | Frost cyan      | Arctic Ice Studio Nord               |

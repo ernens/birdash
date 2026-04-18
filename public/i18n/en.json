@@ -57,6 +57,7 @@
   "set_site_brand": "Brand name (header)",
   "set_latitude": "Latitude",
   "set_longitude": "Longitude",
+  "set_elevation": "Elevation (m)",
   "set_model": "Detection model",
   "set_model_choice": "AI Model",
   "set_species_freq_thresh": "Species frequency threshold",

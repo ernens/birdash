@@ -57,6 +57,7 @@
   "set_site_brand": "Merknaam (header)",
   "set_latitude": "Breedtegraad",
   "set_longitude": "Lengtegraad",
+  "set_elevation": "Hoogte (m)",
   "set_model": "Detectiemodel",
   "set_model_choice": "AI-model",
   "set_species_freq_thresh": "Soortfrequentiedrempel",

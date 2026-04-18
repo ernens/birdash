@@ -57,6 +57,7 @@
   "set_site_brand": "Markenname (Header)",
   "set_latitude": "Breitengrad",
   "set_longitude": "Längengrad",
+  "set_elevation": "Höhe (m)",
   "set_model": "Erkennungsmodell",
   "set_model_choice": "KI-Modell",
   "set_species_freq_thresh": "Artenhäufigkeitsschwelle",

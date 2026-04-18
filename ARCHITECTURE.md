@@ -921,7 +921,8 @@ All configuration files live in `~/birdash/config/` unless otherwise noted.
 Path: varies (parsed by `server/lib/config.js`)
 
 BirdNET-Pi compatible configuration. Key parameters:
-- `LATITUDE`, `LONGITUDE` — station GPS coordinates
+- `LATITUDE`, `LONGITUDE` — station GPS coordinates (also mirrored to `engine/config.toml` on save so the detection engine stays in sync)
+- `ELEVATION` — station altitude in metres, shown in the header; not used by the detection engine
 - `MODEL` — detection model path
 - `CONFIDENCE` — minimum confidence threshold
 - Parsed and written by `parseBirdnetConf()` / `writeBirdnetConf()`

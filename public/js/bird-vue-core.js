@@ -150,6 +150,7 @@
   // ── Global site identity (shared across all useNav calls) ────────────────
   const _siteName  = ref('BirdStation');
   const _brandName = ref('BirdStation');
+  const _siteElev  = ref(null);
   let _siteIdentityLoaded = false;
 
   function _loadSiteIdentity() {
@@ -166,6 +167,10 @@
         if (pageTitle !== document.title) document.title = pageTitle;
       }
       if (conf.SITE_BRAND) _brandName.value = conf.SITE_BRAND;
+      if (conf.ELEVATION != null && conf.ELEVATION !== '') {
+        const n = Number(conf.ELEVATION);
+        if (Number.isFinite(n)) _siteElev.value = Math.round(n);
+      }
     }).catch(() => {});
   }
 
@@ -226,7 +231,7 @@
     // Flat list for backwards compat
     const navItems = computed(() => navSections.value.flatMap(s => s.items));
     _loadSiteIdentity();
-    return { navItems, navSections, siteName: _siteName, brandName: _brandName };
+    return { navItems, navSections, siteName: _siteName, brandName: _brandName, siteElev: _siteElev };
   }
 
   // ── useChart ──────────────────────────────────────────────────────────────
@@ -711,7 +716,7 @@
     setup(props) {
       const { lang, t, setLang, langs } = useI18n();
       const { theme, themes, setTheme } = useTheme();
-      const { navItems, navSections, siteName, brandName } = useNav(props.page);
+      const { navItems, navSections, siteName, brandName, siteElev } = useNav(props.page);
       const { toasts } = useToast();
       // Open the section containing the current page by default
       const openSection = ref(-1); // dropdown closed by default
@@ -1452,7 +1457,7 @@
       // Expose openPower so child pages (e.g. the Settings → Station
       // 'Manage power' button) can trigger the shell-level modal.
       if (window.BIRDASH) window.BIRDASH.openPower = () => power.open();
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power };
     },
     directives: {
       'click-outside': {
@@ -1471,7 +1476,7 @@
       <img src="img/robin-logo.svg" class="brand-logo" :alt="brandName">
       <div class="brand-text">
         <span class="brand-name">{{brandName}}</span>
-        <span class="brand-sub">{{siteName}} <span v-if="appVersion" class="brand-version">v{{appVersion}}</span></span>
+        <span class="brand-sub">Poste bioacoustique · Heinsch (BE) · 49.6700° N / 5.8267° E<span v-if="siteElev != null"> · Alt. {{siteElev}} m</span><span v-if="appVersion" class="brand-version"> · v{{appVersion}}</span></span>
       </div>
     </div>
     <div class="header-right">

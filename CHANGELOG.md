@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.21.4] — 2026-04-18
+
+### Header station identity
+- Richer identity line in the header: `Poste bioacoustique · Heinsch (BE) · 49.6700° N / 5.8267° E · Alt. 280 m · v1.21.4`
+- Altitude rendered dynamically from new `ELEVATION` setting (hidden when unset)
+
+### New setting: `ELEVATION`
+- New field in **Settings → Station** next to latitude/longitude
+- Stored in `birdnet.conf` (validated server-side, range −500 to 9000 m)
+- i18n in fr/en/de/nl (`set_elevation`) + help-text with link to topographic-map.com
+- Not used by the detection engine — display-only; mirrors the lat/lon sync pattern minus the `config.toml` side
+
+### Colonial theme (1.21.0 → 1.21.3)
+- New `data-theme="colonial"` — 1930 field-notebook carnet aesthetic (IM Fell English typography, paper-grain cards, moss/ochre/rust/berry accents)
+- Theme-dot swatch in the picker uses 3 earth bands + a tiny red stamp dot so the preview reflects the palette
+- Body background: aged parchment (not dark wood) — legible contrast preserved
+- Nav / header / button contrast: `--bg-deep` raised to paper-3 and primary-button text forced to paper so button labels stay readable on moss
+
+### Kiosk (1.20.8)
+- `dashboard-kiosk.html` widens the "Dernières observations" pool from 80 → 500 rows so confidence-filtered dedupe reliably surfaces ~10+ species
+
+### Config sync (1.20.7)
+- `writeBirdnetConf` now mirrors `LATITUDE` / `LONGITUDE` to `engine/config.toml` alongside the existing `MODEL` / `CONFIDENCE` sync, keeping the detection engine aligned with the dashboard settings
+
 ## [1.5.50] — 2026-04-12
 
 ### One-line install

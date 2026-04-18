@@ -159,6 +159,7 @@ const SETTINGS_VALIDATORS = {
   SITE_BRAND:      v => typeof v === 'string' && v.length <= 50,
   LATITUDE:        v => !isNaN(v) && v >= -90 && v <= 90,
   LONGITUDE:       v => !isNaN(v) && v >= -180 && v <= 180,
+  ELEVATION:       v => v === '' || (!isNaN(v) && v >= -500 && v <= 9000),
   MODEL:           v => typeof v === 'string' && /^[a-zA-Z0-9_.\-]+$/.test(v),
   SF_THRESH:       v => !isNaN(v) && v >= 0 && v <= 1,
   CONFIDENCE:      v => !isNaN(v) && v >= 0.01 && v <= 0.99,
