@@ -1622,6 +1622,35 @@ const app = createApp({
         audioDevices.value = data.devices || [];
       } catch {}
     }
+
+    // ── Softvol Boost (hardware gain slider) ──
+    // Backed by the "Boost" control on the USB card, defined by the
+    // dsnoop+softvol migration. `available=false` on fresh installs or
+    // boxes without a USB mic — the UI hides the card in that case.
+    const boostState = reactive({ available: false, db: 0, raw: 0, min_db: -5, max_db: 30, saving: false });
+    async function loadBoost() {
+      try {
+        const d = await fetch(API + '/audio/boost').then(r => r.json());
+        Object.assign(boostState, d);
+      } catch {}
+    }
+    let _boostSaveTimer = null;
+    async function saveBoostDb(db) {
+      boostState.db = db; // optimistic UI echo
+      clearTimeout(_boostSaveTimer);
+      _boostSaveTimer = setTimeout(async () => {
+        boostState.saving = true;
+        try {
+          const r = await fetch(API + '/audio/boost', {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ db }),
+          });
+          const d = await r.json();
+          if (!r.ok || d.error) throw new Error(d.error || 'HTTP ' + r.status);
+          Object.assign(boostState, d);
+        } catch (e) { saveMsg.value = 'boost: ' + e.message; saveErr.value = true; }
+        finally { boostState.saving = false; }
+      }, 250);
+    }
     async function loadAudioProfiles() {
       try {
         const data = await fetch(API + '/audio/profiles').then(r => r.json());
@@ -1749,7 +1778,7 @@ const app = createApp({
     });
 
     onMounted(() => {
-      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); dbLoadTables(); loadAgConf(); loadAgState();
+      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState();
       if (activeTab.value === 'station') setTimeout(initStationMap, 500);
     });
 
@@ -1898,6 +1927,7 @@ const app = createApp({
       audioMonitoring, monitorLevels, audioTesting, audioTestImg,
       loadAudioDevices, selectAudioDevice, activateAudioProfile,
       duplicateAudioProfile, deleteAudioProfile,
+      boostState, saveBoostDb, loadBoost,
       startCalibration, applyCalibration,
       startMonitor, stopMonitor, testAudio,
       loading, saving, svcLoading, saveMsg, saveErr,
@@ -2030,6 +2060,7 @@ const app = createApp({
       audioMonitoring, monitorLevels, audioTesting, audioTestImg,
       loadAudioDevices, selectAudioDevice, activateAudioProfile,
       duplicateAudioProfile, deleteAudioProfile,
+      boostState, saveBoostDb, loadBoost,
       startCalibration, applyCalibration,
       startMonitor, stopMonitor, testAudio,
       loading, saving, svcLoading, saveMsg, saveErr,

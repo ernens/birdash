@@ -59,6 +59,36 @@
             </div>
             <div style="margin-top:.8rem;font-size:.82em;opacity:.6;">{{t('audio_sr_note')}}</div>
           </div>
+
+          <!-- ── Softvol Boost (hardware gain) ── -->
+          <div class="card" v-if="boostState.available">
+            <div class="section-title">
+              <bird-icon name="volume-2" :size="14"></bird-icon> {{t('audio_boost')}}
+              <span v-if="boostState.saving" style="margin-left:auto;font-size:.72em;opacity:.6;">…</span>
+            </div>
+            <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
+              {{t('audio_boost_desc')}}
+            </p>
+            <input type="range"
+                   :min="boostState.min_db" :max="boostState.max_db" step="0.5"
+                   :value="boostState.db"
+                   @input="saveBoostDb(parseFloat($event.target.value))"
+                   style="width:100%;">
+            <div style="display:flex;justify-content:space-between;font-size:.78em;opacity:.6;">
+              <span>{{ boostState.min_db }} dB</span>
+              <strong style="color:var(--accent);">{{ boostState.db.toFixed(1) }} dB</strong>
+              <span>+{{ boostState.max_db }} dB</span>
+            </div>
+            <div style="display:flex;gap:.4rem;margin-top:.5rem;">
+              <button class="btn-outline" style="font-size:.72em;" @click="saveBoostDb(0)">0 dB</button>
+              <button class="btn-outline" style="font-size:.72em;" @click="saveBoostDb(10)">+10 dB</button>
+              <button class="btn-outline" style="font-size:.72em;" @click="saveBoostDb(20)">+20 dB</button>
+              <button class="btn-outline" style="font-size:.72em;" @click="saveBoostDb(25)">+25 dB</button>
+            </div>
+            <p style="font-size:.72rem;color:var(--text-muted);margin:.5rem 0 0;font-style:italic;">
+              {{t('audio_boost_tip')}}
+            </p>
+          </div>
         </div>
 
         <!-- ══════════════════════════════════════════════════════════════ -->

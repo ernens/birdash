@@ -82,6 +82,45 @@ function jsonConfigPost(req, res, filePath, whitelist, afterSave, label) {
   });
 }
 
+// --- Softvol "Boost" helper
+//
+// Parses `amixer sget Boost` output to discover which card hosts the
+// softvol control installed by migration 001-asoundrc-dsnoop-plug. The
+// min/max dB range is also declared in that .asoundrc template — we mirror
+// the same defaults here so the UI doesn't need to parse .asoundrc itself.
+const BOOST_MIN_DB = -5;
+const BOOST_MAX_DB = 30;
+function _readBoost() {
+  const { execSync } = require('child_process');
+  // Try each capture card until we find one with a "Boost" control
+  let cards = [];
+  try {
+    const out = execSync('arecord -l 2>/dev/null || true', { encoding: 'utf8' });
+    const re = /card (\d+):/g;
+    let m;
+    while ((m = re.exec(out)) !== null) cards.push(parseInt(m[1]));
+  } catch {}
+  for (const c of cards) {
+    try {
+      const out = execSync(`amixer -c ${c} sget Boost 2>/dev/null`, { encoding: 'utf8' });
+      const valM = out.match(/:\s*(\d+)\s*\[\d+%\]\s*\[(-?[\d.]+)dB\]/);
+      const limM = out.match(/Limits:\s*(\d+)\s*-\s*(\d+)/);
+      if (valM) {
+        return {
+          available: true,
+          card: c,
+          raw: parseInt(valM[1]),
+          db: parseFloat(valM[2]),
+          raw_max: limM ? parseInt(limM[2]) : 255,
+          min_db: BOOST_MIN_DB,
+          max_db: BOOST_MAX_DB,
+        };
+      }
+    } catch {}
+  }
+  return { available: false, min_db: BOOST_MIN_DB, max_db: BOOST_MAX_DB };
+}
+
 // --- Config key whitelists (shared between routes)
 const AUDIO_KEYS = ['device_id','device_name','input_channels','capture_sample_rate','bit_depth',
   'output_sample_rate','channel_strategy','hop_size_s','highpass_enabled','highpass_cutoff_hz',
@@ -346,6 +385,47 @@ function handle(req, res, pathname, ctx) {
         }
       }
     }, 'POST /api/audio/config');
+    return true;
+  }
+
+  // ── Route : GET /api/audio/boost ────────────────────────────────────────
+  // Reads the softvol "Boost" control defined in ~/.asoundrc (migration 001).
+  // Returns { available, db, raw, min_db, max_db } — UI hides the slider
+  // when available=false (fresh install, no USB mic, or custom .asoundrc).
+  if (req.method === 'GET' && pathname === '/api/audio/boost') {
+    const info = _readBoost();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(info));
+    return true;
+  }
+
+  // ── Route : POST /api/audio/boost ───────────────────────────────────────
+  // Body: { db: number } — applied via amixer, persisted via alsactl store.
+  if (req.method === 'POST' && pathname === '/api/audio/boost') {
+    if (!requireAuth(req, res)) return true;
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { db } = JSON.parse(body || '{}');
+        if (typeof db !== 'number' || !Number.isFinite(db)) {
+          throw new Error('db must be a finite number');
+        }
+        const info = _readBoost();
+        if (!info.available) throw new Error('Boost control not available');
+        const clamped = Math.max(info.min_db, Math.min(info.max_db, db));
+        const { execSync } = require('child_process');
+        execSync(`amixer -c ${info.card} sset Boost ${clamped.toFixed(2)}dB`, { encoding: 'utf8' });
+        // Best-effort persist; sudoers may or may not allow alsactl without password
+        try { execSync(`sudo -n alsactl store ${info.card} 2>/dev/null || alsactl store ${info.card} 2>/dev/null || true`); } catch {}
+        const fresh = _readBoost();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ...fresh }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
     return true;
   }
 
