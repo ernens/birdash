@@ -471,9 +471,9 @@ const app = createApp({
     let _prevIds = new Set();
     async function loadTiles() {
       try {
-        // Fetch a larger pool since we dedupe by species — 80 rows comfortably
-        // covers even the noisiest hour of house-sparrow spam.
-        const rows = await birdQuery(...Q.latestDetections(80));
+        // Fetch a larger pool since we dedupe by species — 500 rows so a few
+        // dominant species (house sparrow, tit) can't starve the dedupe to <10.
+        const rows = await birdQuery(...Q.latestDetections(500));
         const seen = new Set();
         const unique = [];
         for (const r of rows) {
