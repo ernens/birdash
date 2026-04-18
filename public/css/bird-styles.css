@@ -280,7 +280,7 @@
    walnut, accents terreux (mousse/ocre/rouille/baie/ciel). Typographie
    IM Fell English + Special Elite. Contraste ink/paper = 10.8 (AAA). */
 [data-theme="colonial"] {
-  --bg-deep:      #2a1a0c;
+  --bg-deep:      #c8b483;      /* darker parchment band — header/nav */
   --bg-page:      #e5d6b0;
   --bg-card:      #ebdec0;
   --bg-card2:     #d9c79a;
@@ -372,6 +372,27 @@
     0 1px 0 rgba(42,20,8,.12),
     0 6px 16px rgba(42,20,8,.18),
     inset 0 0 40px rgba(80,40,10,.05);
+}
+
+/* Header/nav ride a slightly darker band of paper. Bump text off the muted
+   walnut so ink stays legible against the parchment band (muted ink vs
+   paper-3 was ~3:1 — below WCAG AA). */
+[data-theme="colonial"] .app-header,
+[data-theme="colonial"] .app-nav,
+[data-theme="colonial"] .nav-link {
+  color: var(--text-main);
+}
+[data-theme="colonial"] .nav-link:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Primary buttons: ink-dark text on moss was fine, but var(--bg-deep) is now
+   paper-3 (light) so we'd get parchment on moss — unreadable. Pin the text
+   to a deep ink under colonial. */
+[data-theme="colonial"] .btn-primary {
+  color: #ebdec0;                /* paper */
+  background: var(--accent);
+  border-color: var(--accent-dim);
 }
 
 /* Typewriter treatment on section/card labels. */
