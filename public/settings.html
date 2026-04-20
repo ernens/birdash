@@ -508,6 +508,17 @@ const app = createApp({
           BIRDNET_CONFIDENCE: confData.CONFIDENCE || '0.65',
           PERCH_CONFIDENCE: '0.15',
           PERCH_MIN_MARGIN: '0.05',
+          MQTT_ENABLED: '0',
+          MQTT_BROKER: '',
+          MQTT_PORT: '1883',
+          MQTT_USERNAME: '',
+          MQTT_PASSWORD: '',
+          MQTT_TOPIC_PREFIX: 'birdash',
+          MQTT_QOS: '0',
+          MQTT_RETAIN: '0',
+          MQTT_TLS: '0',
+          MQTT_MIN_CONFIDENCE: '',
+          MQTT_HASS_DISCOVERY: '0',
         };
         Object.assign(conf, defaults, confData);
         models.value = modelData.models || [];
@@ -1508,6 +1519,58 @@ const app = createApp({
       },
     });
 
+    // MQTT min-confidence: same shape as notif. Empty falls back to BirdNET threshold.
+    const mqttMinConfPct = computed({
+      get() {
+        const explicit = parseFloat(conf.MQTT_MIN_CONFIDENCE);
+        if (!isNaN(explicit)) return Math.round(explicit * 100);
+        const birdnet = parseFloat(conf.BIRDNET_CONFIDENCE);
+        return isNaN(birdnet) ? 70 : Math.round(birdnet * 100);
+      },
+      set(val) {
+        const n = parseInt(val, 10);
+        conf.MQTT_MIN_CONFIDENCE = isNaN(n) ? '' : (Math.max(0, Math.min(100, n)) / 100).toFixed(2);
+      },
+    });
+
+    // MQTT test — saves first (so the publisher reads fresh values), then publishes
+    // a test message and reports whether the broker accepted it.
+    const testingMqtt = ref(false);
+    const mqttMsg = ref('');
+    const mqttErr = ref(false);
+    async function testMqtt() {
+      testingMqtt.value = true;
+      mqttMsg.value = '';
+      try {
+        // Save current settings so the broker host/port/credentials on disk
+        // match what the user just typed.
+        await fetch(API + '/settings', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ updates: {
+            MQTT_ENABLED: String(conf.MQTT_ENABLED || 0),
+            MQTT_BROKER: String(conf.MQTT_BROKER || ''),
+            MQTT_PORT: String(conf.MQTT_PORT || 1883),
+            MQTT_USERNAME: String(conf.MQTT_USERNAME || ''),
+            MQTT_PASSWORD: String(conf.MQTT_PASSWORD || ''),
+            MQTT_TOPIC_PREFIX: String(conf.MQTT_TOPIC_PREFIX || 'birdash'),
+            MQTT_QOS: String(conf.MQTT_QOS || 0),
+            MQTT_RETAIN: String(conf.MQTT_RETAIN || 0),
+            MQTT_TLS: String(conf.MQTT_TLS || 0),
+            MQTT_MIN_CONFIDENCE: String(conf.MQTT_MIN_CONFIDENCE || ''),
+            MQTT_HASS_DISCOVERY: String(conf.MQTT_HASS_DISCOVERY || 0),
+          }}),
+        });
+        const res = await fetch(API + '/mqtt/test', { method: 'POST', headers: authHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) { mqttMsg.value = t('notif_mqtt_test_ok'); mqttErr.value = false; }
+        else { mqttMsg.value = t('notif_mqtt_test_fail', { error: data.error || 'unknown' }); mqttErr.value = true; }
+      } catch(e) {
+        mqttMsg.value = t('notif_mqtt_test_fail', { error: e.message }); mqttErr.value = true;
+      }
+      testingMqtt.value = false;
+    }
+
     const appriseEnabled = computed(() => {
       return conf.APPRISE_NOTIFY_EACH_DETECTION == 1 ||
              conf.APPRISE_NOTIFY_NEW_SPECIES == 1 ||
@@ -1938,6 +2001,7 @@ const app = createApp({
       appriseEnabled, toggleAllApprise, notifyMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
+      mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
       agConf, agState, loadAgState,
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,
@@ -2078,6 +2142,7 @@ const app = createApp({
       appriseEnabled, toggleAllApprise, notifyMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
+      mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
       agConf, agState, loadAgState,
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,

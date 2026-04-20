@@ -113,6 +113,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Filtres audio** — passe-haut + passe-bas (bandpass), reduction de bruit spectrale (gating stationnaire), normalisation RMS
 - <img src="docs/icons/radio.svg" width="16" align="top" alt=""> **BirdWeather** — upload automatique des paysages sonores + detections
 - <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Notifications intelligentes** — alertes ntfy.sh pour especes rares, premiere de saison, nouvelle espece, favoris (pas chaque moineau)
+- <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **MQTT** — publication de chaque detection sur un broker MQTT (Mosquitto, EMQX, HiveMQ…) avec topic `<prefix>/<station>/detection`, topic `last_species` retenu et statut online/offline (LWT). Auto-discovery Home Assistant en option : entites `Last species` + `Last confidence` creees automatiquement
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Post-traitement async** — extraction MP3, spectrogrammes, sync DB ne bloquent pas l'inference
 
 ### Dashboard

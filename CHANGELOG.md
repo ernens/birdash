@@ -2,6 +2,19 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.23.0] — 2026-04-20
+
+### MQTT publisher (Home Assistant ready)
+- New **MQTT card** in Settings → Notifications: broker host, port, optional username/password, topic prefix, QoS (0/1/2), retain flag, TLS toggle, minimum confidence slider, Home Assistant auto-discovery toggle, and a one-click Test button
+- New backend module `server/lib/mqtt-publisher.js` polls the detections DB every 15 s and publishes one JSON message per detection to `<prefix>/<station>/detection`
+- Retained `<prefix>/<station>/last_species` topic gives Home Assistant a ready-to-use sensor for the most recent bird without any template work
+- Last Will & Testament publishes `<prefix>/<station>/status` = `online`/`offline` so HA shows the station as unavailable when birdash is down
+- Optional **HA MQTT discovery** auto-creates two sensor entities (`Last species` + `Last confidence %`) under a `BirdStation <name>` device — drag-and-drop into any dashboard
+- Reconnect with exponential backoff (2 s → 60 s) and clean disconnect on settings change
+- New `POST /api/mqtt/test` endpoint connects, publishes a synthetic message to `<prefix>/<station>/test`, disconnects, returns the broker result
+- `mqtt` npm dependency added — installer picks it up automatically on update via `npm install`
+- Service worker bumped to `birdash-v121` so the new i18n keys load on first reload
+
 ## [1.22.2] — 2026-04-19
 
 ### Station tab layout polish

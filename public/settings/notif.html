@@ -219,3 +219,110 @@
                                                 border-radius:4px;font-size:.72rem;white-space:pre-wrap;">{{digestPreviewText}}</pre>
         </div>
 
+        <!-- ═══ MQTT (domotique / Home Assistant) ═══ -->
+        <div class="card">
+          <div class="section-title" style="display:flex;align-items:center;gap:.8rem;">
+            <bird-icon name="zap" :size="16"></bird-icon>
+            <span>{{t('notif_mqtt')}}</span>
+            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;margin-left:auto;">
+              <input type="checkbox" v-model="conf.MQTT_ENABLED" true-value="1" false-value="0">
+              <span :style="{color: conf.MQTT_ENABLED == 1 ? 'var(--accent)' : 'var(--text-muted)'}">
+                {{ conf.MQTT_ENABLED == 1 ? t('notif_on') : t('notif_off') }}
+              </span>
+            </label>
+          </div>
+          <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">
+            {{t('notif_mqtt_desc')}}
+          </p>
+
+          <div :style="{opacity: conf.MQTT_ENABLED == 1 ? 1 : 0.5}">
+            <!-- Broker / port -->
+            <div style="display:grid;grid-template-columns:1fr 90px;gap:.5rem;margin-bottom:.4rem;">
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_broker')}}
+                <input type="text" v-model="conf.MQTT_BROKER" placeholder="mqtt.example.com"
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_port')}}
+                <input type="number" v-model.number="conf.MQTT_PORT" min="1" max="65535"
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;">
+              </label>
+            </div>
+
+            <!-- Username / password -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem;">
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_username')}}
+                <input type="text" v-model="conf.MQTT_USERNAME" autocomplete="off"
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_password')}}
+                <input type="password" v-model="conf.MQTT_PASSWORD" autocomplete="new-password"
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+              </label>
+            </div>
+
+            <!-- Topic prefix + QoS + retain + TLS -->
+            <div style="display:grid;grid-template-columns:1fr 80px;gap:.5rem;margin-bottom:.4rem;">
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_topic_prefix')}}
+                <input type="text" v-model="conf.MQTT_TOPIC_PREFIX" placeholder="birdash"
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
+                {{t('notif_mqtt_qos')}}
+                <select v-model="conf.MQTT_QOS"
+                        style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+              </label>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:.5rem;">
+              <label class="set-check" style="cursor:pointer;">
+                <input type="checkbox" v-model="conf.MQTT_RETAIN" true-value="1" false-value="0">
+                <span>{{t('notif_mqtt_retain')}}</span>
+              </label>
+              <label class="set-check" style="cursor:pointer;">
+                <input type="checkbox" v-model="conf.MQTT_TLS" true-value="1" false-value="0">
+                <span>{{t('notif_mqtt_tls')}}</span>
+              </label>
+            </div>
+
+            <!-- Min confidence -->
+            <div style="padding:.55rem .7rem;border-radius:6px;background:var(--bg-deep);border:1px solid var(--border);margin-bottom:.5rem;">
+              <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;">
+                <bird-icon name="gauge" :size="14"></bird-icon>
+                <span style="font-size:.82rem;">{{t('notif_mqtt_min_conf')}}</span>
+              </div>
+              <div class="bf-conf-row">
+                <input type="range" class="bf-conf-slider" min="0" max="100" step="5"
+                       v-model.number="mqttMinConfPct" :aria-label="t('notif_mqtt_min_conf')">
+                <span class="bf-conf-pct">{{mqttMinConfPct}}%</span>
+              </div>
+            </div>
+
+            <!-- HA discovery -->
+            <div style="padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem;"
+                 :style="{borderColor: conf.MQTT_HASS_DISCOVERY == 1 ? 'var(--accent)' : 'var(--border)', background: conf.MQTT_HASS_DISCOVERY == 1 ? 'rgba(52,211,153,.05)' : 'transparent'}">
+              <label class="set-check" style="cursor:pointer;">
+                <input type="checkbox" v-model="conf.MQTT_HASS_DISCOVERY" true-value="1" false-value="0">
+                <span><bird-icon name="zap" :size="14"></bird-icon> <strong>{{t('notif_mqtt_hass')}}</strong></span>
+              </label>
+              <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_mqtt_hass_hint')}}</p>
+            </div>
+
+            <!-- Test button -->
+            <div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+              <button class="btn-outline" @click="testMqtt" :disabled="testingMqtt" style="font-size:.75em;">
+                {{ testingMqtt ? '...' : t('notif_test') }}
+              </button>
+              <span v-if="mqttMsg" style="font-size:.75em;" :style="{color: mqttErr ? 'var(--danger)' : 'var(--accent)'}">{{mqttMsg}}</span>
+            </div>
+          </div>
+        </div>
+

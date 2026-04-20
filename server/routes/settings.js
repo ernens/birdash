@@ -181,6 +181,26 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : POST /api/mqtt/test ───────────────────────────────────────────
+  // Connects to the configured MQTT broker and publishes a synthetic message.
+  // Reads its config from birdnet.conf so the user must save before testing
+  // (same flow as /api/apprise/test).
+  if (req.method === 'POST' && pathname === '/api/mqtt/test') {
+    if (!requireAuth(req, res)) return true;
+    (async () => {
+      try {
+        const _mqtt = require('../lib/mqtt-publisher');
+        const info = await _mqtt.publishTest();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ...info }));
+      } catch(e) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    })();
+    return true;
+  }
+
   // ── Route : POST /api/digest/preview ──────────────────────────────────────
   // Builds the weekly digest WITHOUT sending — for UI preview
   if (req.method === 'POST' && pathname === '/api/digest/preview') {

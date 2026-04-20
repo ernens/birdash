@@ -34,6 +34,7 @@ const _tftDisplayRoutes = require('./routes/tft-display');
 const _telemetry = require('./lib/telemetry');
 const _notifWatcher = require('./lib/notification-watcher');
 const _weeklyDigest = require('./lib/weekly-digest');
+const _mqttPublisher = require('./lib/mqtt-publisher');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
 
@@ -193,6 +194,8 @@ _telemetry.startDailyCron(db, parseBirdnetConf);
 _notifWatcher.start(db, birdashDb, parseBirdnetConf, ebirdFreq);
 // Weekly digest: every Monday 08:00 local (opt-in via NOTIFY_DIGEST_ENABLED)
 _weeklyDigest.startWeeklyDigestCron(db, parseBirdnetConf);
+// MQTT publisher: opt-in (MQTT_ENABLED=1), publishes detections to a broker
+_mqttPublisher.start(db, parseBirdnetConf);
 
 // ── Route context ────────────────────────────────────────────────────────────
 const _routeCtx = {
@@ -290,6 +293,7 @@ function gracefulShutdown() {
   _whatsNewRoutes.shutdown();
   _telemetry.stopDailyCron();
   _notifWatcher.stop();
+  _mqttPublisher.stop();
   closeAllDbs();
   process.exit(0);
 }
