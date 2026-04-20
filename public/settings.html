@@ -1024,6 +1024,28 @@ const app = createApp({
             Quand une voix est détectée, tout le segment audio est ignoré (pas d'extraction, pas d'enregistrement en base).`,
           rec: 'Recommandé : <strong>0</strong> en zone rurale, <strong>1</strong> en zone urbaine/résidentielle.'
         },
+        yamnet_privacy: {
+          title: 'Filtre vie privée (YAMNet)',
+          body: `Détection de voix humaine par YAMNet (Google, 521 classes audio) appliquée <strong>avant</strong> l'analyse BirdNET/Perch — aucune voix n'atteint le modèle ni la base.<br><br>
+            <strong>Seuil</strong> : probabilité minimale pour qu'un enregistrement soit considéré comme contenant une voix (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong> : très prudent, capte même les conversations distantes. Peut jeter des extraits à faible voix.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong> : équilibré (par défaut). Déclenche sur voix clairement présente.<br>
+            &nbsp;&nbsp;• <strong>0,70</strong> : strict. Ne déclenche qu'en cas de voix forte et isolée.<br><br>
+            <strong>Supprimer le WAV après filtrage (RGPD)</strong> : active par défaut — le fichier audio est effacé du disque sitôt qu'une voix est détectée. Sans cette option, le WAV survit dans <code>incoming/</code> jusqu'au purge automatique (environ 2 h) mais la détection reste bloquée.<br><br>
+            Analyse sur 3 fenêtres de 0,975 s non chevauchantes à 16 kHz ; agrégation par maximum de score. Fonctionne sur la totalité du chunk audio enregistré (durée paramétrable dans "Durée d'enregistrement" ci-dessus).`,
+          rec: 'En zone résidentielle : activer avec <strong>suppression WAV</strong> cochée et seuil <strong>0,50</strong>.'
+        },
+        yamnet_dog: {
+          title: 'Filtre aboiements chien (YAMNet)',
+          body: `Détection d'aboiements, hurlements, grognements, glapissements — les chiens aboient en salves qui s'étalent sur plusieurs enregistrements successifs et génèrent des cascades de faux positifs BirdNET/Perch.<br><br>
+            <strong>Seuil</strong> : probabilité minimale pour déclencher (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong> : sensible, capte aussi les aboiements distants.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong> : équilibré (par défaut).<br>
+            &nbsp;&nbsp;• <strong>0,70</strong> : n'agit qu'en cas d'aboiement franc et proche.<br><br>
+            <strong>Délai de récupération (cooldown)</strong> : durée (en secondes) pendant laquelle <em>aucune</em> détection n'est enregistrée après un aboiement, même si BirdNET/Perch y voit un oiseau. Par défaut 15 s — correspond à la durée moyenne d'une salve.<br><br>
+            ⚠️ Trop court : les faux positifs continuent. Trop long : tu peux rater un vrai chant entre deux aboiements.`,
+          rec: 'Si tu as un chien ou un voisin bruyant : activer, seuil <strong>0,50</strong>, cooldown <strong>15–30 s</strong>.'
+        },
         site_brand: { title:'Brand name', body:'Main name displayed in the header above the site name. Default: BirdStation.', rec:'Your project or station brand.' },
         site_name: {
           title: 'Nom du site',
@@ -1213,6 +1235,28 @@ const app = createApp({
           body: '<strong>0</strong>: disabled. <strong>1</strong>: light filtering. <strong>2-3</strong>: aggressive. When a voice is detected, the entire segment is discarded.',
           rec: 'Recommended: <strong>0</strong> rural, <strong>1</strong> urban.'
         },
+        yamnet_privacy: {
+          title: 'Privacy filter (YAMNet)',
+          body: `Human voice detection via YAMNet (Google, 521 audio classes), applied <strong>before</strong> BirdNET/Perch inference — no voice ever reaches the model or the database.<br><br>
+            <strong>Threshold</strong>: minimum probability to treat the recording as containing a voice (0.05 – 0.95).<br>
+            &nbsp;&nbsp;• <strong>0.30</strong>: very cautious, catches distant conversations. May drop clips with faint voices.<br>
+            &nbsp;&nbsp;• <strong>0.50</strong>: balanced (default). Triggers on clearly present voice.<br>
+            &nbsp;&nbsp;• <strong>0.70</strong>: strict. Only triggers on loud, isolated voices.<br><br>
+            <strong>Delete the WAV after filtering (GDPR)</strong>: on by default — the audio file is wiped from disk as soon as a voice is detected. Without it, the WAV survives in <code>incoming/</code> until the auto-purge (~2 h), but the detection is still blocked.<br><br>
+            Analyzed over 3 non-overlapping 0.975 s windows at 16 kHz; per-class max aggregation. Runs on the full recorded chunk (duration configurable in "Recording length" above).`,
+          rec: 'Residential areas: enable with <strong>delete WAV</strong> ticked and threshold <strong>0.50</strong>.'
+        },
+        yamnet_dog: {
+          title: 'Dog bark filter (YAMNet)',
+          body: `Detects barks, howls, growls, yips — dogs bark in bursts that span multiple recording windows and generate cascades of false BirdNET/Perch positives.<br><br>
+            <strong>Threshold</strong>: minimum probability to trigger (0.05 – 0.95).<br>
+            &nbsp;&nbsp;• <strong>0.30</strong>: sensitive, catches distant barks too.<br>
+            &nbsp;&nbsp;• <strong>0.50</strong>: balanced (default).<br>
+            &nbsp;&nbsp;• <strong>0.70</strong>: only acts on loud, nearby barks.<br><br>
+            <strong>Cooldown</strong>: duration (in seconds) during which <em>no</em> detections are recorded after a bark, even if BirdNET/Perch reports a bird. Default 15 s — matches the average burst length.<br><br>
+            ⚠️ Too short: false positives slip through. Too long: you may miss a real song between two barks.`,
+          rec: 'If you have a dog (or noisy neighbour): enable, threshold <strong>0.50</strong>, cooldown <strong>15–30 s</strong>.'
+        },
         site_name: { title:'Site name', body:'Name shown in the header and on BirdWeather.', rec:'Your locality or garden name.' },
         latitude: { title:'Latitude', body:'GPS latitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
         longitude: { title:'Longitude', body:'GPS longitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },
@@ -1260,6 +1304,28 @@ const app = createApp({
         purge_threshold: { title:'Bereinigungsschwelle (%)', body:'Festplattennutzung, ab der automatisch bereinigt wird (50–99%).', rec:'Empfohlen: <strong>90–95%</strong>.' },
         max_files: { title:'Max. Dateien pro Art', body:'Maximale Audiodateien pro Art (0 = unbegrenzt).', rec:'Empfohlen: <strong>0</strong> oder <strong>100–500</strong>.' },
         privacy: { title:'Sprachfilter', body:'<strong>0</strong>: aus. <strong>1</strong>: leicht. <strong>2-3</strong>: aggressiv. Bei Spracherkennung wird das Segment verworfen.', rec:'Empfohlen: <strong>0</strong> ländlich, <strong>1</strong> städtisch.' },
+        yamnet_privacy: {
+          title: 'Datenschutzfilter (YAMNet)',
+          body: `YAMNet-basierte Spracherkennung (Google, 521 Audio-Klassen), läuft <strong>vor</strong> der BirdNET/Perch-Inferenz — keine Stimme erreicht jemals das Modell oder die Datenbank.<br><br>
+            <strong>Schwellenwert</strong>: Mindestwahrscheinlichkeit, ab der die Aufnahme als sprachhaltig gilt (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong>: sehr vorsichtig, erfasst auch entfernte Gespräche.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong>: ausgewogen (Standard).<br>
+            &nbsp;&nbsp;• <strong>0,70</strong>: streng, nur laute isolierte Stimmen.<br><br>
+            <strong>WAV nach Filter löschen (DSGVO)</strong>: standardmäßig aktiv — die Audiodatei wird bei erkannter Stimme sofort von der Festplatte entfernt. Ohne diese Option bleibt die WAV bis zum Auto-Purge (~2 h) in <code>incoming/</code>, die Detektion wird aber weiterhin verworfen.<br><br>
+            Analyse über 3 nicht überlappende 0,975 s-Fenster bei 16 kHz; Maximum-Aggregation pro Klasse. Läuft auf dem kompletten aufgenommenen Chunk (Dauer einstellbar in "Aufnahmedauer" oben).`,
+          rec: 'Wohngebiete: aktivieren mit <strong>WAV löschen</strong> und Schwellenwert <strong>0,50</strong>.'
+        },
+        yamnet_dog: {
+          title: 'Hundebellen-Filter (YAMNet)',
+          body: `Erkennt Bellen, Heulen, Knurren, Jaulen — Hunde bellen in Serien, die sich über mehrere Aufnahmefenster erstrecken und Kaskaden von BirdNET/Perch-Fehlalarmen erzeugen.<br><br>
+            <strong>Schwellenwert</strong>: Mindestwahrscheinlichkeit zum Auslösen (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong>: empfindlich, erfasst auch entferntes Bellen.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong>: ausgewogen (Standard).<br>
+            &nbsp;&nbsp;• <strong>0,70</strong>: nur lautes, nahes Bellen.<br><br>
+            <strong>Cooldown</strong>: Dauer (in Sekunden), während der <em>keine</em> Detektion aufgezeichnet wird, selbst wenn BirdNET/Perch einen Vogel meldet. Standard 15 s — entspricht der durchschnittlichen Bell-Serie.<br><br>
+            ⚠️ Zu kurz: Fehlalarme kommen durch. Zu lang: echte Gesänge zwischen zwei Bellen können verpasst werden.`,
+          rec: 'Bei Hund oder lauten Nachbarn: aktivieren, Schwellenwert <strong>0,50</strong>, Cooldown <strong>15–30 s</strong>.'
+        },
         site_name: { title:'Standortname', body:'Name im Header und auf BirdWeather.', rec:'Ihr Ort oder Gartenname.' },
         latitude: { title:'Breitengrad', body:'GPS-Breitengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
         longitude: { title:'Längengrad', body:'GPS-Längengrad (4 Dezimalstellen). Für den MData-Geofilter.', rec:'Google Maps verwenden.' },
@@ -1289,6 +1355,28 @@ const app = createApp({
         purge_threshold: { title:'Opruimdrempel (%)', body:'Schijfgebruik waarbij automatisch opgeruimd wordt (50–99%).', rec:'Aanbevolen: <strong>90–95%</strong>.' },
         max_files: { title:'Max bestanden per soort', body:'Maximum audiobestanden per soort (0 = onbeperkt).', rec:'Aanbevolen: <strong>0</strong> of <strong>100–500</strong>.' },
         privacy: { title:'Stemfilter', body:'<strong>0</strong>: uit. <strong>1</strong>: licht. <strong>2-3</strong>: agressief.', rec:'Aanbevolen: <strong>0</strong> landelijk, <strong>1</strong> stedelijk.' },
+        yamnet_privacy: {
+          title: 'Privacyfilter (YAMNet)',
+          body: `YAMNet-gebaseerde stemdetectie (Google, 521 audioklassen), draait <strong>vóór</strong> de BirdNET/Perch-inferentie — geen enkele stem bereikt ooit het model of de database.<br><br>
+            <strong>Drempel</strong>: minimale waarschijnlijkheid dat de opname als stem wordt beschouwd (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong>: zeer voorzichtig, vangt ook verre gesprekken op.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong>: gebalanceerd (standaard).<br>
+            &nbsp;&nbsp;• <strong>0,70</strong>: streng, alleen luide geïsoleerde stemmen.<br><br>
+            <strong>WAV verwijderen na filter (AVG)</strong>: standaard aan — het audiobestand wordt onmiddellijk van de schijf gewist zodra er een stem wordt gedetecteerd. Zonder deze optie blijft de WAV tot de automatische opruiming (~2 u) in <code>incoming/</code>, maar de detectie blijft geblokkeerd.<br><br>
+            Analyse over 3 niet-overlappende vensters van 0,975 s bij 16 kHz; maximum-aggregatie per klasse. Werkt op de volledige opgenomen chunk (duur instelbaar in "Opnameduur" hierboven).`,
+          rec: 'Woongebieden: inschakelen met <strong>WAV verwijderen</strong> en drempel <strong>0,50</strong>.'
+        },
+        yamnet_dog: {
+          title: 'Hondengeblaf-filter (YAMNet)',
+          body: `Detecteert blaffen, huilen, grommen, janken — honden blaffen in series die zich over meerdere opnamevensters uitstrekken en cascades van valse BirdNET/Perch-positieven veroorzaken.<br><br>
+            <strong>Drempel</strong>: minimale waarschijnlijkheid om te activeren (0,05 – 0,95).<br>
+            &nbsp;&nbsp;• <strong>0,30</strong>: gevoelig, vangt ook ver geblaf op.<br>
+            &nbsp;&nbsp;• <strong>0,50</strong>: gebalanceerd (standaard).<br>
+            &nbsp;&nbsp;• <strong>0,70</strong>: alleen luid, dichtbij geblaf.<br><br>
+            <strong>Cooldown</strong>: duur (in seconden) waarin <em>geen</em> detecties worden geregistreerd na een blaf, zelfs als BirdNET/Perch een vogel meldt. Standaard 15 s — matcht de gemiddelde blafreeks.<br><br>
+            ⚠️ Te kort: valse positieven glippen door. Te lang: echte zangen tussen twee blaffen kunnen gemist worden.`,
+          rec: 'Bij hond of luide buren: inschakelen, drempel <strong>0,50</strong>, cooldown <strong>15–30 s</strong>.'
+        },
         site_name: { title:'Locatienaam', body:'Naam in de header en op BirdWeather.', rec:'Uw locatie of tuinnaam.' },
         latitude: { title:'Breedtegraad', body:'GPS-breedtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },
         longitude: { title:'Lengtegraad', body:'GPS-lengtegraad (4 decimalen). Voor het MData-geofilter.', rec:'Gebruik Google Maps.' },

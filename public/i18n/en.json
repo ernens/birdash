@@ -439,7 +439,7 @@
   "set_yamnet_title": "Pre-analysis filters (YAMNet)",
   "set_yamnet_desc": "Before BirdNET and Perch run, audio is classified with YAMNet (Google AudioSet, 521 classes). Lets you block human voices and dog barks — classic sources of false positives and GDPR concerns.",
   "set_yamnet_privacy": "Privacy filter (human voice)",
-  "set_yamnet_privacy_desc": "If a voice is detected in the 30 s clip, the recording is skipped (nothing reaches the database).",
+  "set_yamnet_privacy_desc": "If a human voice is detected in the audio clip, the recording is skipped (nothing reaches the database).",
   "set_yamnet_dog": "Dog bark filter",
   "set_yamnet_dog_desc": "Detects barks / howls / growls. Drops detections on the current clip and starts a cooldown window.",
   "set_yamnet_threshold": "Threshold",

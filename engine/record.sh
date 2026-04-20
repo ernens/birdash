@@ -12,7 +12,6 @@ elif [ -f "$SCRIPT_DIR/../config/audio_config.json" ]; then
 else
     CONFIG=""
 fi
-RECORDING_LENGTH=45
 OUTPUT_DIR="$SCRIPT_DIR/audio/incoming"
 
 # Read device from audio_config.json
@@ -22,10 +21,18 @@ if [ -f "$CONFIG" ]; then
     SAMPLE_RATE=$(python3 -c "import json; print(json.load(open('$CONFIG')).get('capture_sample_rate', 48000))" 2>/dev/null)
 fi
 
+# Read recording length from birdnet.conf (falls back to 45 s — the
+# default both here and in the UI validator, range 6-120 s).
+BIRDNET_CONF="/etc/birdnet/birdnet.conf"
+if [ -r "$BIRDNET_CONF" ]; then
+    RECORDING_LENGTH=$(grep -E '^RECORDING_LENGTH=' "$BIRDNET_CONF" | head -1 | cut -d= -f2 | tr -d '"')
+fi
+
 # Fallback to defaults
 DEVICE=${DEVICE:-default}
 CHANNELS=${CHANNELS:-2}
 SAMPLE_RATE=${SAMPLE_RATE:-48000}
+RECORDING_LENGTH=${RECORDING_LENGTH:-45}
 
 mkdir -p "$OUTPUT_DIR"
 

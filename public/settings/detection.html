@@ -178,6 +178,7 @@
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.PRIVACY_FILTER_ENABLED" true-value="1" false-value="0">
               <span><bird-icon name="user-check" :size="14"></bird-icon> <strong>{{t('set_yamnet_privacy')}}</strong></span>
+              <button class="info-btn" @click.prevent="helpKey='yamnet_privacy'" style="margin-left:.3rem;">i</button>
             </label>
             <p style="font-size:.74rem;color:var(--text-muted);margin:.25rem 0 0 1.5rem;">{{t('set_yamnet_privacy_desc')}}</p>
             <div v-if="conf.PRIVACY_FILTER_ENABLED == 1" style="margin:.5rem 0 0 1.5rem;">
@@ -200,6 +201,7 @@
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.DOG_FILTER_ENABLED" true-value="1" false-value="0">
               <span><bird-icon name="filter" :size="14"></bird-icon> <strong>{{t('set_yamnet_dog')}}</strong></span>
+              <button class="info-btn" @click.prevent="helpKey='yamnet_dog'" style="margin-left:.3rem;">i</button>
             </label>
             <p style="font-size:.74rem;color:var(--text-muted);margin:.25rem 0 0 1.5rem;">{{t('set_yamnet_dog_desc')}}</p>
             <div v-if="conf.DOG_FILTER_ENABLED == 1" style="margin:.5rem 0 0 1.5rem;">

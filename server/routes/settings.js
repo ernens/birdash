@@ -91,6 +91,13 @@ function handle(req, res, pathname, ctx) {
           if (Object.keys(validated).some(k => k.startsWith('AUTH_'))) {
             require('../lib/auth').refreshConfig().catch(e => console.warn('[settings] auth refresh:', e.message));
           }
+          // Restart the recording service when chunk length changes — arecord
+          // reads it at process start, so the new value only takes effect on
+          // the next systemd cycle.
+          if ('RECORDING_LENGTH' in validated) {
+            require('child_process').exec('sudo systemctl restart birdengine-recording',
+              (err) => { if (err) console.warn('[settings] recording restart:', err.message); });
+          }
           res.writeHead(200, { 'Content-Type': 'application/json', 'ETag': newEtag });
           res.end(JSON.stringify({
             ok: true,

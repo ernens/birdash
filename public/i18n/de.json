@@ -439,7 +439,7 @@
   "set_yamnet_title": "Voranalyse-Filter (YAMNet)",
   "set_yamnet_desc": "Vor BirdNET und Perch klassifizieren wir das Audio mit YAMNet (Google AudioSet, 521 Klassen). So lassen sich menschliche Stimmen und Hundebellen blockieren — klassische Quellen für Fehlalarme und DSGVO-Probleme.",
   "set_yamnet_privacy": "Datenschutzfilter (menschliche Stimme)",
-  "set_yamnet_privacy_desc": "Wird im 30-s-Clip eine Stimme erkannt, wird die Aufnahme übersprungen (nichts landet in der Datenbank).",
+  "set_yamnet_privacy_desc": "Wird im Audio-Clip eine menschliche Stimme erkannt, wird die Aufnahme übersprungen (nichts landet in der Datenbank).",
   "set_yamnet_dog": "Hundebell-Filter",
   "set_yamnet_dog_desc": "Erkennt Bellen / Heulen / Knurren. Verwirft Erkennungen im aktuellen Clip und startet eine Abklingphase.",
   "set_yamnet_threshold": "Schwelle",

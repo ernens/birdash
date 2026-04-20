@@ -2,6 +2,16 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.29.1] — 2026-04-20
+
+### YAMNet pre-filter UX polish + recording length actually configurable
+
+- **Privacy filter description** no longer hard-codes "30 s" — it now correctly says "the audio clip" without claiming a fixed duration. The chunk length is whatever the user has set for `RECORDING_LENGTH` (default 45 s).
+- **(i) help buttons** on the Privacy and Dog filter cards in Settings → Detection → Filtres de pré-analyse. Each opens the standard help modal with full explanation of: what the filter does, how the threshold works (with 0.30 / 0.50 / 0.70 examples), what the cooldown / delete-WAV options imply, and recommended values.
+- **`RECORDING_LENGTH` is now actually applied**. The setting and validator existed since forever, but `record.sh` hard-coded `RECORDING_LENGTH=45` and ignored `birdnet.conf`. Now `record.sh` reads the conf value (with fallback to 45 s), and changing it via the UI restarts `birdengine-recording` automatically so the new chunk length takes effect on the next recording cycle.
+- `update.sh` extended to sync `record.sh` to `$HOME/birdengine/` for legacy install layouts (preserves executable bit).
+- 4-language i18n (FR/EN/DE/NL) for the help modal content.
+
 ## [1.29.0] — 2026-04-20
 
 ### Sound-level alerts (mic dead / clipping)

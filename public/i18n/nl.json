@@ -439,7 +439,7 @@
   "set_yamnet_title": "Pre-analyse filters (YAMNet)",
   "set_yamnet_desc": "Voor BirdNET en Perch draaien, classificeren we de audio met YAMNet (Google AudioSet, 521 klassen). Zo kun je menselijke stemmen en hondengeblaf blokkeren — klassieke bronnen van valse detecties en AVG-zorgen.",
   "set_yamnet_privacy": "Privacyfilter (menselijke stem)",
-  "set_yamnet_privacy_desc": "Wordt er een stem gedetecteerd in de 30 s clip, dan wordt de opname overgeslagen (komt niet in de database).",
+  "set_yamnet_privacy_desc": "Wordt er een menselijke stem gedetecteerd in de audioclip, dan wordt de opname overgeslagen (komt niet in de database).",
   "set_yamnet_dog": "Hondengeblaf-filter",
   "set_yamnet_dog_desc": "Detecteert blaffen / huilen / grommen. Verwerpt detecties in de huidige clip en start een afkoelperiode.",
   "set_yamnet_threshold": "Drempel",

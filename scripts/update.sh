@@ -204,9 +204,13 @@ fi
 if [ -d "$HOME/birdengine" ] && [ "$HOME/birdengine" != "$REPO_DIR/engine" ]; then
     if grep -q "$HOME/birdengine/engine.py" /etc/systemd/system/birdengine.service 2>/dev/null \
        || systemctl show birdengine.service -p ExecStart 2>/dev/null | grep -q "$HOME/birdengine/engine.py"; then
-        info "Syncing engine .py files to $HOME/birdengine (legacy runtime path)..."
-        for f in engine.py range_filter_cli.py filter_preview.py yamnet_filter.py; do
-            [ -f "$REPO_DIR/engine/$f" ] && cp -f "$REPO_DIR/engine/$f" "$HOME/birdengine/$f"
+        info "Syncing engine files to $HOME/birdengine (legacy runtime path)..."
+        for f in engine.py range_filter_cli.py filter_preview.py yamnet_filter.py record.sh; do
+            if [ -f "$REPO_DIR/engine/$f" ]; then
+                cp -f "$REPO_DIR/engine/$f" "$HOME/birdengine/$f"
+                # Preserve executable bit for shell scripts
+                case "$f" in *.sh) chmod +x "$HOME/birdengine/$f" ;; esac
+            fi
         done
         # YAMNet model + labels (only sync if newer or missing — they're 4 MB)
         if [ -d "$REPO_DIR/engine/models" ] && [ -d "$HOME/birdengine/models" ]; then
