@@ -35,6 +35,8 @@ const _telemetry = require('./lib/telemetry');
 const _notifWatcher = require('./lib/notification-watcher');
 const _weeklyDigest = require('./lib/weekly-digest');
 const _mqttPublisher = require('./lib/mqtt-publisher');
+const _metrics = require('./lib/metrics');
+const _metricsRoutes = require('./routes/metrics');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
 
@@ -196,6 +198,8 @@ _notifWatcher.start(db, birdashDb, parseBirdnetConf, ebirdFreq);
 _weeklyDigest.startWeeklyDigestCron(db, parseBirdnetConf);
 // MQTT publisher: opt-in (MQTT_ENABLED=1), publishes detections to a broker
 _mqttPublisher.start(db, parseBirdnetConf);
+// Prometheus metrics: lazily refreshed on each scrape of /metrics
+_metrics.init({ db, execCmd, parseBirdnetConf });
 
 // ── Route context ────────────────────────────────────────────────────────────
 const _routeCtx = {
@@ -273,6 +277,7 @@ const server = http.createServer((req, res) => {
   if (_telemetryRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_powerRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_tftDisplayRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_metricsRoutes.handle(req, res, pathname, _routeCtx)) return;
 
   console.warn(`[BIRDASH] 404 — route inconnue : ${req.method} ${pathname}`);
   if (res.headersSent) return;

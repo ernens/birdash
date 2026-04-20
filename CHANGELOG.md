@@ -2,6 +2,18 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.24.0] — 2026-04-20
+
+### Prometheus metrics endpoint
+- New `GET /metrics` (and `/api/metrics`) serves Prometheus exposition format — point Grafana / Prometheus / VictoriaMetrics at `http://your-pi.local/birds/metrics` and you have a scrape target
+- Custom gauges: `birdash_detections_total`, `birdash_detections_today`, `birdash_detections_last_hour`, `birdash_species_today`, `birdash_species_30d`, `birdash_last_detection_age_seconds`, `birdash_db_size_bytes`
+- System gauges: `birdash_cpu_temp_celsius`, `birdash_cpu_usage_percent`, `birdash_memory_{used,total}_bytes`, `birdash_disk_{used,total}_bytes`, `birdash_fan_rpm`, `birdash_system_uptime_seconds`
+- Feature toggles: `birdash_feature_enabled{feature="mqtt|notifications|dual_model|birdweather|weekly_digest"}`
+- Standard Node.js process metrics (`birdash_node_process_*`, `birdash_node_nodejs_eventloop_lag_seconds`, GC, heap) under the `birdash_node_` prefix
+- All gauges refreshed lazily on each scrape (sub-millisecond) — no background timer
+- `birdash_version_info{version="x.y.z"}` always 1, useful for `count(birdash_version_info) by (version)` style queries
+- New `prom-client` npm dependency (~50 KB)
+
 ## [1.23.0] — 2026-04-20
 
 ### MQTT publisher (Home Assistant ready)
