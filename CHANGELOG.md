@@ -2,6 +2,13 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.25.1] — 2026-04-20
+
+### Auth fixes — no more lockout, login page text resolved
+- **Fail-safe**: if `AUTH_MODE` is set to `protected` or `public-read` but no credentials are configured (no username + password hash), the gate now degrades to `off` and logs a warning. Picking a protected mode without setting a password used to be an instant permanent lockout — you couldn't reach Settings to unset it. Fixed.
+- **Login page i18n**: the page used `BIRDASH.t` and `BIRDASH.i18nReady` which don't exist. Switched to `useI18n()` (the proper composable) and `BIRDASH.ready` (the actual promise name), so labels render translated instead of showing raw `auth_login_title` / `auth_username` keys.
+- Service worker bumped to `birdash-v123` to flush the broken cached `login.html`.
+
 ## [1.25.0] — 2026-04-20
 
 ### Auth & access control (opt-in, single-user, three modes)

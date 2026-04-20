@@ -169,15 +169,18 @@
   <script>
     (async () => {
       const { createApp, ref, computed, onMounted } = Vue;
-      // Make sure i18n + icon tooling is loaded before Vue mounts
-      if (window.BIRDASH && window.BIRDASH.i18nReady) {
-        try { await window.BIRDASH.i18nReady; } catch {}
+      // Make sure i18n is loaded before Vue mounts so translation keys
+      // don't flash as raw strings on first paint. The exposed promise
+      // is BIRDASH.ready (see bird-vue-core.js line ~2422).
+      if (window.BIRDASH && window.BIRDASH.ready) {
+        try { await window.BIRDASH.ready; } catch {}
       }
-      const t = (window.BIRDASH && window.BIRDASH.t) || (k => k);
-      const lang = (window.BIRDASH && window.BIRDASH.getLang && window.BIRDASH.getLang()) || 'en';
       const API = (window.BIRD_CONFIG && window.BIRD_CONFIG.apiUrl) || '/birds/api';
       const app = createApp({
         setup() {
+          // Use the official composable — t() is reactive on language changes,
+          // and reads from the shared _TRANSLATIONS object that we just awaited.
+          const { t } = window.BIRDASH.useI18n();
           const username = ref('');
           const password = ref('');
           const busy     = ref(false);
@@ -239,6 +242,7 @@
           }
 
           onMounted(() => { loadStatus(); loadBranding(); });
+          // t exposed in the return so the template can call it.
           return { username, password, busy, error, mode, brandName, stationName, logoSrc, t, submit };
         },
       });

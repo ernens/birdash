@@ -249,7 +249,22 @@ function gate(req, res, pathname) {
     if (apiToken && auth === `Bearer ${apiToken}`) req.user = '__bearer__';
   }
 
-  const mode = _cachedConfig.mode;
+  // Fail-safe: if auth is enabled but no credentials are configured,
+  // treat it as 'off' so the owner doesn't get locked out of their own
+  // station. Without this, picking 'protected' before setting a password
+  // is an instant permanent lockout (you can't reach the settings page
+  // to fix it). Logged once per request to make the misconfig visible.
+  let mode = _cachedConfig.mode;
+  if (mode !== 'off' && (!_cachedConfig.username || !_cachedConfig.passwordHash)) {
+    if (!gate._warnedNoCreds) {
+      console.warn(`[auth] AUTH_MODE=${mode} but no credentials set — treating as 'off' until you configure them in Settings → Station → Security`);
+      gate._warnedNoCreds = true;
+    }
+    mode = 'off';
+  } else if (gate._warnedNoCreds && _cachedConfig.username && _cachedConfig.passwordHash) {
+    gate._warnedNoCreds = false;  // re-arm warning if creds are removed later
+  }
+
   if (mode === 'off') return true;
   if (ALWAYS_PUBLIC.has(pathname)) return true;
   if (!pathname.startsWith('/api/')) return true;
