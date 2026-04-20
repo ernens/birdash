@@ -2,6 +2,20 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.28.1] — 2026-04-20
+
+### Fix: engine was analyzing only ~2 s out of every 45 s recording
+
+The Sound-level monitor added in 1.28.0 surfaced a long-standing bug. `WavHandler.on_created` fired the moment arecord opened a new WAV file — *while it was still being written*. The "wait for stable size" loop in `process_file` (5 × 0.3 s = 1.5 s of waiting) gave up before the file was complete, so `sf.read()` only saw the first ~2 seconds. BirdNET / Perch then ran inference on that 2-second slice and shutil.move'd the (still being written by arecord) file to processed/ — where it grew to its full 45 s after the move, but inference had already happened.
+
+Effect: ~95 % of every 45 s recording was never analyzed. Bird calls in seconds 2-45 of any file were silently dropped before they ever reached the model.
+
+Fix: rotate-on-rotation. When on_created fires for file N+1, file N is *guaranteed* complete (arecord just closed it before opening N+1). `WavHandler` now keeps one "pending" path and processes the *previous* file on every rotation. Startup scan defers the most recent file if its mtime is < 3 s old (probably mid-write).
+
+The wait-for-stable-size loop in `process_file` is simplified to a single 0.5 s sanity check (for the rsync multi-Pi case where atomicity isn't guaranteed).
+
+You should see more detections per file going forward, especially for sparse-but-loud events that were falling in the dropped 43 seconds. No setting to change.
+
 ## [1.28.0] — 2026-04-20
 
 ### Live sound-level monitor (Leq / peak in dBFS)

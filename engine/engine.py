@@ -783,23 +783,39 @@ def extract_clip(wav_path, det, config):
 # ---------------------------------------------------------------------------
 
 class WavHandler(FileSystemEventHandler):
-    """Watchdog handler for new WAV files."""
+    """Watchdog handler for arecord chunked WAVs.
+
+    arecord (--use-strftime --max-file-time N) creates a new file every N
+    seconds. The on_created event fires the moment the new file is opened —
+    while it's still being written. Reading it immediately yields only the
+    first ~2 s of audio (whatever arecord has flushed).
+
+    Trick: when on_created fires for file N+1, file N is GUARANTEED
+    complete (arecord just closed it before opening N+1). So we keep one
+    "pending" path and process the *previous* file on every rotation.
+    """
 
     def __init__(self, process_fn):
         self.process_fn = process_fn
+        self._pending = None
+        self._lock = threading.Lock()
+
+    def _on_new_wav(self, path):
+        with self._lock:
+            to_process = self._pending
+            self._pending = path
+        if to_process and os.path.exists(to_process):
+            self.process_fn(to_process)
 
     def on_created(self, event):
-        if event.is_directory:
+        if event.is_directory or not event.src_path.endswith(".wav"):
             return
-        if event.src_path.endswith(".wav"):
-            # Wait briefly for file to finish writing
-            time.sleep(0.5)
-            self.process_fn(event.src_path)
+        self._on_new_wav(event.src_path)
 
     def on_moved(self, event):
-        if not event.is_directory and event.dest_path.endswith(".wav"):
-            time.sleep(0.5)
-            self.process_fn(event.dest_path)
+        if event.is_directory or not event.dest_path.endswith(".wav"):
+            return
+        self._on_new_wav(event.dest_path)
 
 
 
@@ -1089,21 +1105,19 @@ class BirdEngine:
             basename = os.path.basename(file_path)
             if basename in self.processed_files:
                 return
-            # Wait for file to be fully written (rsync may still be writing)
             if not os.path.exists(file_path):
                 return
-            for _ in range(5):
-                try:
-                    size = os.path.getsize(file_path)
-                    if size == 0:
-                        time.sleep(0.5)
-                        continue
-                    time.sleep(0.3)
-                    if os.path.getsize(file_path) == size:
-                        break  # File size stable
-                except OSError:
-                    return
-            if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+            # Defensive sanity check — the watcher's "process previous on
+            # rotation" logic and the startup mtime defer mean the file
+            # should always be complete here, but if rsync (multi-Pi setup)
+            # is still writing we wait a moment more.
+            try:
+                size = os.path.getsize(file_path)
+                if size == 0:
+                    time.sleep(0.5)
+                    if os.path.getsize(file_path) == 0:
+                        return
+            except OSError:
                 return
             log.info("Analyzing: %s", basename)
             start_time = time.time()
@@ -1371,6 +1385,10 @@ class BirdEngine:
         incoming_dir = self.config["audio"]["incoming_dir"]
         os.makedirs(incoming_dir, exist_ok=True)
 
+        # Build the watcher first so we can seed its "pending" with an
+        # in-progress file if the engine restarted mid-recording.
+        handler = WavHandler(self.process_file)
+
         # Start secondary model worker thread
         if self.secondary_model:
             self._secondary_thread = threading.Thread(
@@ -1378,10 +1396,24 @@ class BirdEngine:
             self._secondary_thread.start()
             log.info("Secondary model worker started")
 
-        # Process any existing files first
+        # Process any existing files first.
+        # If the most recent file was modified within the last few seconds,
+        # arecord is probably still writing it — seed the watcher with it
+        # so it gets picked up when the next rotation creates the next file.
         existing = sorted(
             f for f in os.listdir(incoming_dir) if f.endswith(".wav")
         )
+        if existing:
+            last_path = os.path.join(incoming_dir, existing[-1])
+            try:
+                last_age = time.time() - os.path.getmtime(last_path)
+            except OSError:
+                last_age = 999
+            if last_age < 3.0:
+                handler._pending = last_path
+                log.info("Deferring in-progress file: %s (age=%.1fs)",
+                         existing[-1], last_age)
+                existing = existing[:-1]
         if existing:
             log.info("Processing %d existing files...", len(existing))
             for fname in existing:
@@ -1390,7 +1422,6 @@ class BirdEngine:
                 self.process_file(os.path.join(incoming_dir, fname))
 
         # Start file watcher
-        handler = WavHandler(self.process_file)
         observer = Observer()
         observer.schedule(handler, incoming_dir, recursive=False)
         observer.start()
