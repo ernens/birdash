@@ -37,6 +37,8 @@ const _weeklyDigest = require('./lib/weekly-digest');
 const _mqttPublisher = require('./lib/mqtt-publisher');
 const _metrics = require('./lib/metrics');
 const _metricsRoutes = require('./routes/metrics');
+const _auth = require('./lib/auth');
+const _authRoutes = require('./routes/auth');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
 
@@ -200,6 +202,12 @@ _weeklyDigest.startWeeklyDigestCron(db, parseBirdnetConf);
 _mqttPublisher.start(db, parseBirdnetConf);
 // Prometheus metrics: lazily refreshed on each scrape of /metrics
 _metrics.init({ db, execCmd, parseBirdnetConf });
+// Auth: cookie sessions, opt-in (AUTH_MODE in birdnet.conf). Init is
+// async (eager AUTH_SECRET generation) — until it resolves, gate falls
+// back to mode='off', which matches pre-feature behaviour. Safe.
+_auth.init({ parseBirdnetConf, writeBirdnetConf })
+  .then(() => console.log(`[auth] mode=${_auth.getConfig().mode}`))
+  .catch(e => console.error('[auth] init failed:', e.message));
 
 // ── Route context ────────────────────────────────────────────────────────────
 const _routeCtx = {
@@ -260,7 +268,14 @@ const server = http.createServer((req, res) => {
   if (!pathname.startsWith('/api/')) res.setHeader('Content-Security-Policy', CSP);
   console.log(`[BIRDASH] ${req.method} ${req.url} → pathname: ${pathname}`);
 
+  // ── Auth gate (synchronous, attaches req.user) ─────────────────────────
+  // Returns false + responds 401 if the route requires auth and the
+  // caller isn't authenticated. Sync to avoid losing POST body chunks
+  // between the body-size listener and the route handler's own listener.
+  if (!_auth.gate(req, res, pathname)) return;
+
   // ── Route delegations ──────────────────────────────────────────────────
+  if (_authRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_photoRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_audioRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_backupRoutes.handle(req, res, pathname, _routeCtx)) return;

@@ -145,6 +145,52 @@ const app = createApp({
     const excludeList = ref('');
     const savingLists = ref(false);
 
+    // ── Auth (security card in Station tab) ────────────────────
+    const authUser        = ref('');
+    const authCurrentPw   = ref('');
+    const authNewPw       = ref('');
+    const authNewPw2      = ref('');
+    const authSaving      = ref(false);
+    const authMsg         = ref('');
+    const authErr         = ref(false);
+    const authConfigured  = ref(false);
+    async function loadAuthStatus() {
+      try {
+        const r = await fetch(API + '/auth/status');
+        const d = await r.json();
+        authConfigured.value = !!d.configured;
+      } catch {}
+    }
+    async function saveAuthCreds() {
+      authMsg.value = ''; authErr.value = false;
+      if (!authNewPw.value || authNewPw.value.length < 8) {
+        authMsg.value = t('set_security_password_too_short'); authErr.value = true; return;
+      }
+      if (authNewPw.value !== authNewPw2.value) {
+        authMsg.value = t('set_security_password_mismatch'); authErr.value = true; return;
+      }
+      authSaving.value = true;
+      try {
+        const body = { username: authUser.value, newPassword: authNewPw.value };
+        if (authConfigured.value) body.currentPassword = authCurrentPw.value;
+        const r = await fetch(API + '/auth/set-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.message || d.error || 'HTTP ' + r.status);
+        authMsg.value = t('set_security_password_set');
+        authNewPw.value = ''; authNewPw2.value = ''; authCurrentPw.value = '';
+        authConfigured.value = true;
+        // Mirror the new username into the generic conf so that any later
+        // "Save all" doesn't roll the username back to its prior value.
+        conf.AUTH_USERNAME = authUser.value;
+      } catch(e) {
+        authMsg.value = e.message; authErr.value = true;
+      }
+      authSaving.value = false;
+    }
+
     // ── Apprise notification URLs ──────────────────────────────
     const appriseUrls    = ref('');
     const savingApprise  = ref(false);
@@ -519,8 +565,16 @@ const app = createApp({
           MQTT_TLS: '0',
           MQTT_MIN_CONFIDENCE: '',
           MQTT_HASS_DISCOVERY: '0',
+          AUTH_MODE: 'off',
+          AUTH_USERNAME: '',
+          AUTH_SESSION_HOURS: '168',
         };
         Object.assign(conf, defaults, confData);
+        // Mirror AUTH_USERNAME into the dedicated authUser ref so the form
+        // has its own state and we don't accidentally save AUTH_PASSWORD_HASH
+        // through the generic conf path.
+        authUser.value = conf.AUTH_USERNAME || '';
+        loadAuthStatus();
         models.value = modelData.models || [];
         languages.value = langData.languages || [];
         includeList.value = (listsData.include || []).join('\n');
@@ -2002,6 +2056,7 @@ const app = createApp({
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
+      authUser, authCurrentPw, authNewPw, authNewPw2, authSaving, authMsg, authErr, authConfigured, saveAuthCreds,
       agConf, agState, loadAgState,
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,
@@ -2143,6 +2198,7 @@ const app = createApp({
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
+      authUser, authCurrentPw, authNewPw, authNewPw2, authSaving, authMsg, authErr, authConfigured, saveAuthCreds,
       agConf, agState, loadAgState,
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,

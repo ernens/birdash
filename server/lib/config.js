@@ -231,6 +231,11 @@ const SETTINGS_VALIDATORS = {
   RARE_SPECIES_THRESHOLD: v => !isNaN(v) && v >= 1 && v <= 365,
   RAW_SPECTROGRAM: v => v == 0 || v == 1,
   DATA_MODEL_VERSION: v => v == 1 || v == 2,
+  AUTH_MODE:           v => ['off', 'protected', 'public-read'].includes(v),
+  AUTH_USERNAME:       v => typeof v === 'string' && v.length >= 1 && v.length <= 64 && /^[A-Za-z0-9_.\-]+$/.test(v),
+  AUTH_PASSWORD_HASH:  v => typeof v === 'string' && v.length <= 200,
+  AUTH_SECRET:         v => typeof v === 'string' && /^[a-f0-9]{32,128}$/.test(v),
+  AUTH_SESSION_HOURS:  v => !isNaN(v) && v >= 1 && v <= 720,
 };
 
 // ── Apprise binary discovery (cached at startup) ─────────────────────────

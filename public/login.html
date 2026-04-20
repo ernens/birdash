@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>BirdStation — Connexion</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-page);
+      padding: 1.5rem;
+    }
+    .login-shell {
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-brand {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .login-brand img {
+      width: 56px; height: 56px;
+      margin-bottom: .6rem;
+    }
+    .login-brand h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 .15rem;
+      color: var(--text-main);
+      letter-spacing: .02em;
+    }
+    .login-brand .station {
+      font-size: .82rem;
+      color: var(--text-muted);
+    }
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .login-title {
+      font-size: .95rem;
+      font-weight: 600;
+      margin: 0 0 .25rem;
+      color: var(--text-main);
+    }
+    .login-subtitle {
+      font-size: .78rem;
+      color: var(--text-muted);
+      margin: 0 0 1.2rem;
+    }
+    .login-field {
+      margin-bottom: .75rem;
+    }
+    .login-field label {
+      display: block;
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-bottom: .3rem;
+      font-weight: 500;
+    }
+    .login-field input {
+      width: 100%;
+      padding: .55rem .7rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-main);
+      font-size: .88rem;
+      box-sizing: border-box;
+    }
+    .login-field input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .login-submit {
+      width: 100%;
+      padding: .65rem 1rem;
+      margin-top: .5rem;
+      border-radius: 6px;
+      border: none;
+      background: var(--accent);
+      color: #061013;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .login-submit:hover:not(:disabled) { background: var(--accent-dim); color: #fff; }
+    .login-submit:disabled { opacity: .5; cursor: not-allowed; }
+    .login-error {
+      margin-top: .8rem;
+      padding: .55rem .7rem;
+      border-radius: 6px;
+      background: rgba(220,76,87,.08);
+      border: 1px solid rgba(220,76,87,.3);
+      color: #f08080;
+      font-size: .78rem;
+    }
+    .login-foot {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: .72rem;
+      color: var(--text-faint);
+    }
+    .login-foot a { color: var(--text-muted); text-decoration: none; }
+    .login-foot a:hover { color: var(--accent); }
+    .login-mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .15rem .5rem;
+      border-radius: 10px;
+      background: rgba(52,211,153,.08);
+      border: 1px solid rgba(52,211,153,.25);
+      color: var(--accent);
+      font-size: .68rem;
+      margin-top: .8rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="login-shell" v-cloak>
+    <div class="login-brand">
+      <img :src="logoSrc" alt="">
+      <h1>{{ brandName }}</h1>
+      <div class="station">{{ stationName }}</div>
+    </div>
+    <form class="login-card" @submit.prevent="submit">
+      <div class="login-title">{{ t('auth_login_title') }}</div>
+      <p class="login-subtitle">{{ t('auth_login_subtitle') }}</p>
+      <div class="login-field">
+        <label for="username">{{ t('auth_username') }}</label>
+        <input id="username" v-model="username" type="text" autocomplete="username" required autofocus>
+      </div>
+      <div class="login-field">
+        <label for="password">{{ t('auth_password') }}</label>
+        <input id="password" v-model="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-submit" :disabled="busy || !username || !password">
+        {{ busy ? t('auth_signing_in') : t('auth_sign_in') }}
+      </button>
+      <div v-if="error" class="login-error">{{ error }}</div>
+      <div v-if="mode === 'public-read'" style="text-align:center;">
+        <span class="login-mode-pill">
+          <bird-icon name="eye" :size="11"></bird-icon>
+          {{ t('auth_public_read_pill') }}
+        </span>
+      </div>
+    </form>
+    <div class="login-foot">
+      <a href="overview.html">← {{ t('auth_back_to_dashboard') }}</a>
+    </div>
+  </div>
+  <script>
+    (async () => {
+      const { createApp, ref, computed, onMounted } = Vue;
+      // Make sure i18n + icon tooling is loaded before Vue mounts
+      if (window.BIRDASH && window.BIRDASH.i18nReady) {
+        try { await window.BIRDASH.i18nReady; } catch {}
+      }
+      const t = (window.BIRDASH && window.BIRDASH.t) || (k => k);
+      const lang = (window.BIRDASH && window.BIRDASH.getLang && window.BIRDASH.getLang()) || 'en';
+      const API = (window.BIRD_CONFIG && window.BIRD_CONFIG.apiUrl) || '/birds/api';
+      const app = createApp({
+        setup() {
+          const username = ref('');
+          const password = ref('');
+          const busy     = ref(false);
+          const error    = ref('');
+          const mode     = ref('protected');
+          const brandName  = ref('BirdStation');
+          const stationName = ref('');
+          const logoSrc = ref('img/robin-logo.svg');
+
+          // Derive redirect target from ?redirect=... (kept inside same origin)
+          function safeRedirect() {
+            const p = new URLSearchParams(location.search).get('redirect');
+            if (!p || !p.startsWith('/')) return 'overview.html';
+            return p;
+          }
+
+          async function loadStatus() {
+            try {
+              const r = await fetch(API + '/auth/status');
+              const d = await r.json();
+              mode.value = d.mode;
+              if (d.authenticated) location.href = safeRedirect();
+              if (d.mode === 'off') location.href = safeRedirect();
+            } catch {}
+          }
+
+          async function loadBranding() {
+            try {
+              const r = await fetch(API + '/settings');
+              if (!r.ok) return;
+              const d = await r.json();
+              if (d.SITE_NAME) stationName.value = d.SITE_NAME;
+              if (d.SITE_BRAND) brandName.value = d.SITE_BRAND;
+            } catch {}
+          }
+
+          async function submit() {
+            busy.value = true;
+            error.value = '';
+            try {
+              const r = await fetch(API + '/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username.value, password: password.value }),
+              });
+              const d = await r.json().catch(() => ({}));
+              if (!r.ok) {
+                if (r.status === 429) error.value = t('auth_too_many_attempts');
+                else if (d.error === 'not_configured') error.value = t('auth_not_configured');
+                else error.value = t('auth_invalid_credentials');
+                busy.value = false;
+                return;
+              }
+              location.href = safeRedirect();
+            } catch (e) {
+              error.value = e.message || t('auth_unknown_error');
+              busy.value = false;
+            }
+          }
+
+          onMounted(() => { loadStatus(); loadBranding(); });
+          return { username, password, busy, error, mode, brandName, stationName, logoSrc, t, submit };
+        },
+      });
+      // Register the Lucide icon component (provides <bird-icon>)
+      if (window.BIRDASH && window.BIRDASH.registerComponents) {
+        window.BIRDASH.registerComponents(app);
+      }
+      app.mount('#app');
+    })();
+  </script>
+</body>
+</html>

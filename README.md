@@ -132,6 +132,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/bell.svg" width="16" align="top" alt=""> **Smart push notifications** — via Apprise (ntfy, Telegram, Discord, Slack, email, 100+ services) with species photo attached, station name prefix (`[Heinsch] Merle noir`). 5 configurable rules: rare species, first-of-season, new species, first-of-day, favorites
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **MQTT publisher** — opt-in, publishes each detection to any MQTT broker (Mosquitto, EMQX, HiveMQ…) on `<prefix>/<station>/detection`, with a retained `last_species` topic and LWT online/offline status. Optional **Home Assistant auto-discovery** creates `Last species` + `Last confidence` sensor entities automatically. Configurable QoS, retain, TLS, username/password, minimum confidence — one-click Test from Settings
 - <img src="docs/icons/bar-chart-3.svg" width="16" align="top" alt=""> **Prometheus `/metrics` endpoint** — scrape `http://your-pi.local/birds/metrics` from Prometheus / Grafana / VictoriaMetrics. Custom gauges (detections total/today/last-hour, distinct species, last-detection age, DB size), system gauges (CPU temp, usage, RAM, disk, fan RPM, uptime), feature toggles, and standard Node.js process metrics. Refreshed lazily on each scrape
+- <img src="docs/icons/lock.svg" width="16" align="top" alt=""> **Auth & access control** — opt-in cookie sessions (single user, bcrypt). Three modes: `off` (LAN-trust, default), `protected` (login for everything), and **`public-read`** (everyone can browse detections, species and stats — login required only to change settings or access sensitive data). HMAC-signed cookies, no DB sessions to manage. Bearer token (`BIRDASH_API_TOKEN`) still works in parallel for cron/automation. Login attempts rate-limited 5/min/IP. See **[Expose on the internet](#expose-on-the-internet)** below
 - <img src="docs/icons/bird.svg" width="16" align="top" alt=""> **Weekly editorial digest** — Monday 8am, 5 curated lines via Apprise: numbers + delta vs N-1, highlight (rare > first-of-year > notable), best moment, phenology shift, top 3 species. Opt-in, optional tag routing
 - <img src="docs/icons/zap.svg" width="16" align="top" alt=""> **Async post-processing** — MP3 extraction, spectrogram generation, DB sync don't block inference
 
@@ -233,6 +234,46 @@ Benchmarked on Raspberry Pi 5 (8 GB, Cortex-A76 @ 2.4 GHz), 20 real bird recordi
 | Storage | NVMe SSD (500GB+) |
 | Audio | Any USB audio interface (e.g., RODE AI-Micro, Focusrite Scarlett, Behringer UMC, UGreen 30724) + microphone |
 | Network | Ethernet or WiFi |
+
+## Expose on the internet
+
+By default birdash trusts the LAN — anyone on `192.168.x.x` can change settings. To safely show your station to friends or embed it in a public site:
+
+1. **Enable auth.** In **Settings → Station → Security**, pick a mode:
+   - **`Public read-only`** ⭐ — visitors can browse detections, species, stats, audio. Login required to change settings, edit detections, or see logs. **Recommended for public sharing.**
+   - **`Protected`** — login required for everything.
+
+   Set a username + password (8 chars min, bcrypt-hashed in `birdnet.conf`). Login attempts are rate-limited 5/min/IP.
+
+2. **Reverse-tunnel with Cloudflare** (no port-forwarding, free TLS, hides your home IP):
+
+   ```bash
+   # On your Pi
+   curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o cloudflared.deb
+   sudo dpkg -i cloudflared.deb
+
+   # Login + create a tunnel
+   cloudflared tunnel login
+   cloudflared tunnel create birdash
+   cloudflared tunnel route dns birdash birds.example.com
+
+   # /etc/cloudflared/config.yml
+   tunnel: <UUID-from-create>
+   credentials-file: /root/.cloudflared/<UUID>.json
+   ingress:
+     - hostname: birds.example.com
+       service: http://localhost:80
+     - service: http_status:404
+
+   sudo cloudflared service install
+   sudo systemctl restart cloudflared
+   ```
+
+   Your station is now reachable at `https://birds.example.com/birds/` with end-to-end TLS, no open ports on your router, and Cloudflare in front of any abuse.
+
+3. **Don't forget the Bearer token.** If you also use `BIRDASH_API_TOKEN` for cron/automation, that still works in parallel — set the `Authorization: Bearer <token>` header instead of logging in.
+
+Alternatives: Tailscale Funnel, ngrok, plain port-forward + Caddy with Let's Encrypt — birdash doesn't care which transport you use as long as something terminates TLS in front of it.
 
 ## Prerequisites
 

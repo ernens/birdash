@@ -21,6 +21,31 @@
     navigator.serviceWorker.register('sw.js').catch(e => console.warn('[SW] registration failed:', e.message));
   }
 
+  // ── Global fetch interceptor: 401 → redirect to login ───────────────────
+  // When AUTH_MODE is on, any API endpoint that requires auth answers 401.
+  // Wrap fetch so the user lands on the login page instead of seeing an
+  // empty card with a console error. Skip auth endpoints themselves
+  // (status/login/logout) so the login form doesn't loop on itself.
+  (function installAuthInterceptor() {
+    if (window._birdashFetchWrapped) return;
+    window._birdashFetchWrapped = true;
+    const _origFetch = window.fetch.bind(window);
+    const onLogin = /\/login\.html(\?|$)/.test(location.pathname);
+    window.fetch = async function(input, init) {
+      const res = await _origFetch(input, init);
+      if (res.status === 401 && !onLogin) {
+        const url = (typeof input === 'string') ? input : (input && input.url) || '';
+        // Don't redirect on auth probe endpoints — they're allowed to return
+        // 401 informationally without triggering navigation.
+        if (!/\/api\/auth\/(login|logout|status)\b/.test(url)) {
+          const here = location.pathname + location.search + location.hash;
+          location.href = `login.html?redirect=${encodeURIComponent(here)}`;
+        }
+      }
+      return res;
+    };
+  })();
+
   const { ref, computed, watch, onUnmounted, onMounted, nextTick, reactive } = Vue;
 
   // ── Spectrogram Modal — global reactive state ───────────────────────────
@@ -132,6 +157,8 @@
     { id:'dusk',        label:'Dusk',         colors:['#f472b6','#161218'] },
     { id:'sepia',       label:'Sepia',        colors:['#8b5a2b','#f5ecd9'] },
     { id:'colonial',    label:'Colonial',     colors:['#7a1e14','#e5d6b0'] },
+    { id:'jungle',      label:'Jungle',       colors:['#3fb886','#0a1612'] },
+    { id:'lab',         label:'Lab',          colors:['#0f5b6b','#ffffff'] },
     { id:'solar-light', label:'Solar Light',  colors:['#2aa198','#fdf6e3'] },
     { id:'solar-dark',  label:'Solar Dark',   colors:['#2aa198','#002b36'] },
     { id:'nord',        label:'Nord',         colors:['#88c0d0','#2e3440'] },
@@ -1451,6 +1478,26 @@
       const bugReportForm = reactive({ title: '', description: '', attachLogs: false, sending: false, sent: false, error: '', issueUrl: '' });
       const bugReportEnabled = ref(false);
       fetch(`${BIRD_CONFIG.apiUrl}/bug-report/status`).then(r => r.json()).then(d => { bugReportEnabled.value = d.enabled; }).catch(() => {});
+
+      // ── Auth status (for header badge + login/logout button) ─────────
+      const authStatus = reactive({ mode: 'off', authenticated: false, user: null, configured: false, canWrite: true });
+      async function refreshAuthStatus() {
+        try {
+          const r = await fetch(`${BIRD_CONFIG.apiUrl}/auth/status`);
+          if (!r.ok) return;
+          const d = await r.json();
+          Object.assign(authStatus, d);
+        } catch {}
+      }
+      refreshAuthStatus();
+      async function logout() {
+        try { await fetch(`${BIRD_CONFIG.apiUrl}/auth/logout`, { method: 'POST' }); } catch {}
+        location.reload();
+      }
+      function gotoLogin() {
+        const here = location.pathname + location.search + location.hash;
+        location.href = `login.html?redirect=${encodeURIComponent(here)}`;
+      }
       function openBugReport() {
         bugReportForm.title = '';
         bugReportForm.description = '';
@@ -1644,7 +1691,7 @@
       // Expose openPower so child pages (e.g. the Settings → Station
       // 'Manage power' button) can trigger the shell-level modal.
       if (window.BIRDASH) window.BIRDASH.openPower = () => power.open();
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power, authStatus, logout, gotoLogin };
     },
     directives: {
       'click-outside': {
@@ -1693,6 +1740,22 @@
             <span class="gSearch-rsci">{{ r.sciName }}</span>
           </button>
         </div>
+      </div>
+      <!-- Auth indicator: visitor pill + login button OR username + logout (only when AUTH_MODE != off) -->
+      <div v-if="authStatus.mode !== 'off'" class="hdr-auth" style="display:flex;align-items:center;gap:.4rem;">
+        <span v-if="authStatus.authenticated" :title="t('auth_logged_in_as', {user: authStatus.user})"
+              style="display:inline-flex;align-items:center;gap:.3rem;padding:.18rem .5rem;border-radius:10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--accent);font-size:.7rem;">
+          <bird-icon name="user-check" :size="11"></bird-icon>{{authStatus.user}}
+        </span>
+        <span v-else style="display:inline-flex;align-items:center;gap:.3rem;padding:.18rem .5rem;border-radius:10px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-size:.7rem;">
+          <bird-icon name="eye" :size="11"></bird-icon>{{t('auth_anonymous')}}
+        </span>
+        <button v-if="authStatus.authenticated" class="hdr-bug-btn" @click="logout" :title="t('auth_logout')">
+          <bird-icon name="log-out" :size="16"></bird-icon>
+        </button>
+        <button v-else class="hdr-bug-btn" @click="gotoLogin" :title="t('auth_sign_in')">
+          <bird-icon name="log-in" :size="16"></bird-icon>
+        </button>
       </div>
       <!-- Bug report button -->
       <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')">

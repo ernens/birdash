@@ -87,6 +87,10 @@ function handle(req, res, pathname, ctx) {
           if (reloadEbirdFreq && (validated.LATITUDE || validated.LONGITUDE || validated.EBIRD_API_KEY !== undefined)) {
             reloadEbirdFreq({ force: true }).catch(e => console.warn('[settings] eBird refresh:', e.message));
           }
+          // Refresh auth lib's in-memory cache when any AUTH_* changed
+          if (Object.keys(validated).some(k => k.startsWith('AUTH_'))) {
+            require('../lib/auth').refreshConfig().catch(e => console.warn('[settings] auth refresh:', e.message));
+          }
           res.writeHead(200, { 'Content-Type': 'application/json', 'ETag': newEtag });
           res.end(JSON.stringify({
             ok: true,

@@ -2,6 +2,27 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.25.0] — 2026-04-20
+
+### Auth & access control (opt-in, single-user, three modes)
+
+The killer feature for actually exposing your station to the internet — show your birds to friends without giving them admin rights.
+
+- **Three access modes** in Settings → Station → Security:
+  - `off` (default, unchanged) — LAN-trust, no auth, current behavior
+  - `protected` — login required for everything
+  - **`public-read`** — visitors can browse detections, species, stats and audio anonymously; login required only to change settings or access sensitive data (`/api/settings`, `/api/logs`, `/api/backup*`, `/api/audio/devices`, `/api/audio/profiles`)
+- New **sober login page** (`/birds/login.html`) — fully integrated with the active theme, shows station name + brand, rotating-key icons, redirect-back parameter
+- **Header indicator** on every page (when AUTH_MODE != off): green pill with username + logout button when signed in, gray "visitor (read-only)" pill + login button otherwise
+- **HMAC-signed session cookies** (no DB session table to manage). Secret auto-generated on first use into `AUTH_SECRET`, rotate it to invalidate every cookie. Configurable session duration via `AUTH_SESSION_HOURS` (default 7 days)
+- **bcrypt** password hashing (10 rounds) via the pure-JS `bcryptjs` (no native build dance on Pi 3)
+- **Login attempts rate-limited** 5/min/IP with constant-time username comparison so a wrong username can't be distinguished from a wrong password
+- **`BIRDASH_API_TOKEN` (Bearer) still works** in parallel for cron / scripted automation — useful when you want both browser auth and machine auth on the same station
+- **Global fetch interceptor** in `bird-vue-core.js` — any 401 from a non-auth endpoint triggers an automatic redirect to `/login.html?redirect=<current>`, so users land on the form instead of an empty page
+- **Settings card** in Station tab: 3-mode picker with descriptions, username + password (set/change with current-password verification), link to the Cloudflare Tunnel mini-guide in the README
+- New `/api/auth/{login,logout,status,set-password}` endpoints
+- Cloudflare Tunnel mini-guide in the README — the no-port-forward, free-TLS path to a public station
+
 ## [1.24.0] — 2026-04-20
 
 ### Prometheus metrics endpoint

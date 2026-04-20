@@ -187,6 +187,69 @@
         </div>
       </div>
 
+      <!-- ═══ Sécurité & accès ═══ -->
+      <div class="set-section">
+        <div class="set-section-title"><bird-icon name="shield" :size="15"></bird-icon> {{t('set_security')}}</div>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.8rem;">{{t('set_security_desc')}}</p>
+
+        <!-- Mode picker -->
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">{{t('set_security_mode')}}</div>
+        <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;">
+          <label v-for="opt in [
+                  {v:'off',         t:t('set_security_mode_off'),         d:t('set_security_mode_off_desc')},
+                  {v:'protected',   t:t('set_security_mode_protected'),   d:t('set_security_mode_protected_desc')},
+                  {v:'public-read', t:t('set_security_mode_public_read'), d:t('set_security_mode_public_read_desc')}]"
+                 :key="opt.v"
+                 :style="{padding:'.55rem .7rem',borderRadius:'6px',border:'1px solid '+(conf.AUTH_MODE === opt.v ? 'var(--accent)' : 'var(--border)'),background: conf.AUTH_MODE === opt.v ? 'rgba(52,211,153,.05)' : 'transparent',cursor:'pointer',display:'block'}">
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <input type="radio" :value="opt.v" v-model="conf.AUTH_MODE">
+              <strong style="font-size:.85rem;">{{opt.t}}</strong>
+            </div>
+            <p style="font-size:.74rem;color:var(--text-muted);margin:.25rem 0 0 1.5rem;">{{opt.d}}</p>
+          </label>
+        </div>
+
+        <!-- Credentials editor -->
+        <div :style="{opacity: conf.AUTH_MODE === 'off' ? 0.5 : 1}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
+            <label style="display:flex;flex-direction:column;gap:.25rem;font-size:.78rem;color:var(--text-muted);">
+              {{t('set_security_user')}}
+              <input type="text" v-model="authUser" autocomplete="username"
+                     style="padding:.35rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-size:.85rem;">
+            </label>
+            <label v-if="authConfigured" style="display:flex;flex-direction:column;gap:.25rem;font-size:.78rem;color:var(--text-muted);">
+              {{t('set_security_password_current')}}
+              <input type="password" v-model="authCurrentPw" autocomplete="current-password"
+                     style="padding:.35rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-size:.85rem;">
+            </label>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
+            <label style="display:flex;flex-direction:column;gap:.25rem;font-size:.78rem;color:var(--text-muted);">
+              {{t('set_security_password')}}
+              <input type="password" v-model="authNewPw" autocomplete="new-password"
+                     style="padding:.35rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-size:.85rem;">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:.25rem;font-size:.78rem;color:var(--text-muted);">
+              {{t('set_security_password_confirm')}}
+              <input type="password" v-model="authNewPw2" autocomplete="new-password"
+                     style="padding:.35rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-size:.85rem;">
+            </label>
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+            <button class="btn btn-secondary" @click="saveAuthCreds" :disabled="authSaving" style="font-size:.78rem;">
+              {{authSaving ? '...' : t('set_security_save')}}
+            </button>
+            <span v-if="authMsg" style="font-size:.75em;" :style="{color: authErr ? 'var(--danger)' : 'var(--accent)'}">{{authMsg}}</span>
+          </div>
+        </div>
+
+        <p style="font-size:.72rem;color:var(--text-faint);margin-top:.8rem;">
+          <bird-icon name="info" :size="12" style="vertical-align:-2px;"></bird-icon>
+          {{t('set_security_expose_help')}}
+          <a href="https://github.com/ernens/birdash#expose-on-the-internet" target="_blank" rel="noopener" style="color:var(--accent);">→ Cloudflare Tunnel</a>
+        </p>
+      </div>
+
       <!-- ═══ Power management ═══ -->
       <div class="set-section">
         <div class="set-section-title"><bird-icon name="power" :size="15"></bird-icon> {{t('power_title')}}</div>

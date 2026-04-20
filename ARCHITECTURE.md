@@ -44,7 +44,8 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
         │                 │  │  Notification watcher → Apprise     │   │
         │                 │  │  MQTT publisher → broker (HA-ready) │   │
         │                 │  │  Prometheus /metrics scrape target  │   │
-        │                 │  │  16 route modules, 14 lib modules   │   │
+        │                 │  │  Cookie auth (off/protected/public) │   │
+        │                 │  │  17 route modules, 15 lib modules   │   │
         │                 │  └──────────────┬───────────────────────┘   │
         │                 │                 │                           │
         │                 │  ┌──────────────┴───────────────────────┐   │
@@ -266,6 +267,45 @@ Opt-in publisher (`MQTT_ENABLED=1` in `birdnet.conf`) that pushes each new detec
 
 The Test button in Settings → Notifications calls `POST /api/mqtt/test`, which connects with a one-shot client, publishes a synthetic message to `<prefix>/<station>/test`, and reports the broker result back to the UI without leaving a long-lived connection behind.
 
+### Authentication (auth.js)
+
+File: `server/lib/auth.js` + `server/routes/auth.js` + `public/login.html`
+
+Opt-in, single-user. Three modes set via `AUTH_MODE` in `birdnet.conf`:
+
+| Mode | Behaviour |
+|------|-----------|
+| `off` (default) | No authentication. LAN-trust. `BIRDASH_API_TOKEN` Bearer still works for write endpoints (back-compat). |
+| `protected` | Every API call (except `/api/auth/{login,logout,status}`) requires a valid session cookie OR Bearer token. Static files stay public; the front-end redirects to `/login.html` on 401. |
+| `public-read` | GET endpoints are public except a small sensitive allowlist (`/api/settings`, `/api/logs`, `/api/apprise`, `/api/alert-*`, `/api/backup*`, `/api/audio/{devices,profiles}`). All `POST`/`DELETE` require auth. **The "show your station to friends" mode.** |
+
+**Cookie format**: `base64url(JSON({user, exp})) "." base64url(HMAC-SHA256)`.
+
+- Cookie name: `birdash_session`, `Path=/`, `HttpOnly`, `SameSite=Lax`, `Max-Age = AUTH_SESSION_HOURS * 3600` (default 168 = 7 days)
+- `AUTH_SECRET` (32 random hex bytes) is auto-generated on first use and persisted to `birdnet.conf`. Rotate it to invalidate every existing cookie at once.
+- Verification is constant-time (`crypto.timingSafeEqual`).
+
+**Why HMAC cookies and not a sessions table**:
+- One user, no multi-device session management to write
+- No DB migration, no cleanup cron
+- Revocation = rotate the secret
+
+**Why the gate is synchronous**:
+The HTTP request handler attaches a body-size limiter via `req.on('data')` at the top of every request. Inserting an `await` between that listener and the route handler's own `data` listener loses POST body chunks (the size limiter has already consumed them by the time the route attaches its listener). So `auth.js` keeps an in-memory `_cachedConfig` mirror of the AUTH_* settings — refreshed on startup and after every settings POST that touches an AUTH_* key — and the gate is fully synchronous. Cookie HMAC verify is sync (no IO); only password verification (bcrypt) is async, and that's only inside the `/login` route.
+
+**Brute-force protection**:
+- 5 login attempts per IP per 60 s window (in-memory map, periodic cleanup at 5000 entries)
+- Successful login resets the counter
+- Constant-time username comparison so a wrong username can't be distinguished from a wrong password
+
+**Bearer compatibility**:
+The pre-existing `BIRDASH_API_TOKEN` env var still works. When the gate sees `Authorization: Bearer <token>` and the token matches, it sets `req.user = '__bearer__'` so the request proceeds. This means cron/scripted automation keeps working unchanged when you turn on AUTH_MODE.
+
+**Front-end integration**:
+- `public/login.html` — sober Vue page using the active theme tokens, station-aware branding (SITE_NAME / SITE_BRAND), redirect-back via `?redirect=...`, falls back to `overview.html`
+- Header pill in `bird-vue-core.js` shell — green "user-check + username + logout" when signed in, gray "eye + visitor" + login button otherwise. Hidden entirely when `AUTH_MODE=off`.
+- Global `fetch` interceptor wraps `window.fetch` and redirects to `/login.html?redirect=<current>` on any 401 from a non-auth endpoint.
+
 ### Prometheus Metrics (metrics.js)
 
 File: `server/lib/metrics.js` + `server/routes/metrics.js`
@@ -341,6 +381,7 @@ Directory: `server/routes/`
 | `photos.js` | Photo resolution/caching (iNaturalist, Wikipedia), species name translation | `/api/photo`, `/api/species-names` |
 | `settings.js` | Settings CRUD, Apprise notifications, MQTT test, alerts config, log streaming (SSE) | `/api/settings`, `/api/apprise`, `/api/mqtt/test`, `/api/alerts`, `/api/logs` |
 | `metrics.js` | Prometheus scrape endpoint (text exposition format) | `/metrics`, `/api/metrics` |
+| `auth.js` | Login / logout / status / set-password (single-user cookie sessions) | `/api/auth/login`, `/api/auth/logout`, `/api/auth/status`, `/api/auth/set-password` |
 | `system.js` | Service management, health metrics, hardware info, model management | `/api/services`, `/api/health`, `/api/models` |
 | `telemetry.js` | Telemetry: registration, anonymous pings toggle | `/api/telemetry/register`, `/api/telemetry/status`, `/api/telemetry/anonymous-pings` |
 | `timeline.js` | Timeline data with SunCalc astronomy (sunrise/sunset/moon) | `/api/timeline` |
@@ -369,6 +410,7 @@ Directory: `server/lib/`
 | `whats-new-worker.js` | Worker thread script: runs 10 heavy SQLite queries in isolation. Computes alerts (out-of-season, activity spikes, species return), phenology (first-of-year, streaks, seasonal peaks), context (dawn chorus, acoustic quality, species richness, moon phase). |
 | `mqtt-publisher.js` | Opt-in MQTT publisher (`MQTT_ENABLED=1`). Polls detections DB every 15s, publishes JSON per detection on `<prefix>/<station>/detection`, retained `last_species`, LWT `status`. Optional Home Assistant auto-discovery (`MQTT_HASS_DISCOVERY=1`) creates Last species + Last confidence sensor entities. Reconnect with exponential backoff (2s → 60s); disconnects + reconnects when broker/credentials change. |
 | `metrics.js` | Prometheus exposition. Custom gauges (detections total/today/last-hour, species today/30d, last-detection age, DB size), system gauges (CPU temp/usage, RAM, disk, fan, uptime), feature toggles, version info. Default Node.js process metrics under `birdash_node_` prefix. Refreshed lazily on each scrape — no background timer. |
+| `auth.js` | Single-user cookie sessions. HMAC-SHA256-signed cookies (no DB session table), bcrypt password hashing, three modes (`off` / `protected` / `public-read`), synchronous gate that runs before route delegation, login-attempt rate limiter (5/min/IP). `AUTH_SECRET` auto-generated on first use. Bearer token (`BIRDASH_API_TOKEN`) accepted in parallel for cron/automation. |
 
 ### Worker Thread Architecture
 
