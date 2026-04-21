@@ -875,13 +875,44 @@ const app = createApp({
     }
 
     watch(lang, () => loadKpis());
+    // Auto-refresh: re-poll KPIs + species list every 60 s so the page
+    // reflects new detections without a manual reload. Skips when the
+    // tab is hidden (battery + bandwidth saver) and when audio is playing
+    // (avoid disrupting the user's listening). Re-fetches the currently
+    // selected species' detection list and preserves the current position
+    // by matching on File_Name when possible.
+    let _refreshTimer = null;
+    async function refreshLive() {
+      if (document.hidden || isPlaying.value) return;
+      try {
+        await Promise.all([loadKpis(), loadSpecies()]);
+        // Re-fetch detections for the selected species so newly-arrived
+        // entries appear at the top. Keep the user's audio position by
+        // re-anchoring currentDetIdx to the same File_Name if it still
+        // exists in the refreshed list.
+        if (selected.value) {
+          const sp = speciesList.value.find(s => s.Com_Name === selected.value.Com_Name);
+          if (sp) {
+            const currentFile = selectedDets.value[currentDetIdx.value]?.File_Name;
+            const rows = await birdQuery(...Q.detectionsForSpecies(today, sp.Com_Name, minConf.value));
+            selectedDets.value = rows;
+            if (currentFile) {
+              const idx = rows.findIndex(r => r.File_Name === currentFile);
+              if (idx >= 0) currentDetIdx.value = idx;
+            }
+          }
+        }
+      } catch (e) { /* silent — next tick will retry */ }
+    }
     onMounted(() => {
       document.addEventListener('keydown', _onKeydown);
       loadAll();
       if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(today);
+      _refreshTimer = setInterval(refreshLive, 60 * 1000);
     });
     onUnmounted(() => {
       document.removeEventListener('keydown', _onKeydown);
+      if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
       stopAudio();
       if (_cleanBlobUrl) { URL.revokeObjectURL(_cleanBlobUrl); _cleanBlobUrl = null; }
     });
