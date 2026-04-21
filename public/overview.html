@@ -38,6 +38,7 @@
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
   <script src="js/bird-weather-chip.js"></script>
+  <script src="js/bird-setup-wizard.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -316,6 +317,7 @@
 
 
   </birdash-shell>
+  <setup-wizard></setup-wizard>
 </div>
 
 <script>
@@ -622,9 +624,19 @@ const app = createApp({
       mountHourly(canvasHourly, ()=>({type:'bar',data:{labels:Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}h`),datasets:[{label:t('detections'),data:d,backgroundColor:d.map((v,i)=>i===curH?accent:(v>0?accent+'80':accent+'15')),borderWidth:0,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'var(--bg-card,#151b20)',borderColor:accent+'40',borderWidth:1,titleColor:'#fff',bodyColor:txtC}},scales:{x:{ticks:{color:txtC,font:{size:9}},grid:{display:false}},y:{ticks:{color:txtC},grid:{color:gridC,lineWidth:0.5},border:{display:false},beginAtZero:true}}}}));
     });
 
-    onMounted(() => {
+    onMounted(async () => {
       loadAll();
       if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(today);
+      // Auto-trigger setup wizard on first launch when essentials are
+      // missing (no setup flag, lat/lon = 0, no audio device). User can
+      // dismiss; we suppress re-pop in this session via sessionStorage.
+      if (BIRDASH.checkSetupStatus && BIRDASH.openSetupWizard
+          && !sessionStorage.getItem('birdash_wizard_dismissed')) {
+        try {
+          const status = await BIRDASH.checkSetupStatus();
+          if (status.needed) BIRDASH.openSetupWizard();
+        } catch {}
+      }
     });
     onUnmounted(() => {
       if (_richAudio) { _richAudio.pause(); _richAudio = null; }

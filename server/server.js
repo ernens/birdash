@@ -42,6 +42,7 @@ const _auth = require('./lib/auth');
 const _authRoutes = require('./routes/auth');
 const _rangeFilterRoutes = require('./routes/range-filter');
 const _soundLevelRoutes = require('./routes/sound-level');
+const _setupRoutes = require('./routes/setup');
 
 const JSON_CT = { 'Content-Type': 'application/json' };
 
@@ -302,6 +303,7 @@ const server = http.createServer((req, res) => {
   if (_metricsRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_rangeFilterRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_soundLevelRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_setupRoutes.handle(req, res, pathname, _routeCtx)) return;
 
   console.warn(`[BIRDASH] 404 — route inconnue : ${req.method} ${pathname}`);
   if (res.headersSent) return;
