@@ -85,7 +85,7 @@ async function waitChartsSettled(page) {
 
     process.stdout.write(`  ${p.name}...`);
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
       await waitReady(page, p.wait);
 
       // Custom action (e.g. select a species, click Start)
