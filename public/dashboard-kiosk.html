@@ -354,8 +354,12 @@ const app = createApp({
     async function loadRiver() {
       const today = localDateStr();
       try {
+        // Cap at 5000 rows: birdash's /api/query 400s above 10000.
+        // On busy Pi 5 days we routinely cross that. The river view is
+        // a density visualization — sampling the most recent 5000 still
+        // shows today's pattern accurately.
         const rows = await birdQuery(
-          'SELECT Time, Confidence FROM active_detections WHERE Date=? AND Confidence>=? ORDER BY Time ASC',
+          'SELECT Time, Confidence FROM active_detections WHERE Date=? AND Confidence>=? ORDER BY Time DESC LIMIT 5000',
           [today, CONF]
         );
         const dots = [];

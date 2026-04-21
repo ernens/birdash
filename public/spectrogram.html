@@ -619,10 +619,15 @@ const app = createApp({
 
       try {
         const today   = localDateStr();
+        // Same 5000-row cap as the polling loop below — birdash's
+        // /api/query 400s above 10000 rows. We only need the older
+        // detections to mark them as "already played" so the live
+        // playback starts on recent activity. 5000 most-recent covers
+        // any realistic case (more than that is hours of audio behind us).
         const allRows = await birdQuery(
           `SELECT File_Name, Com_Name, Sci_Name, Time FROM detections
            WHERE Date = ? AND Confidence >= ? AND File_Name != ''
-           ORDER BY Time ASC`,
+           ORDER BY Time DESC LIMIT 5000`,
           [today, BIRD_CONFIG.defaultConfidence]
         );
         // Marquer les anciens comme joués (inclut toutes les détections nocturnes)
@@ -639,13 +644,18 @@ const app = createApp({
         let pending = [];
         try {
           const today = localDateStr();
+          // Cap at 5000 most-recent rows: birdash's /api/query returns
+          // 400 above 10000 rows, and busy days (5000+ detections) tip
+          // over. Fetch DESC + reverse so playback still goes
+          // chronologically through the most-recent window.
           const rows  = await birdQuery(
             `SELECT Date, Time, Com_Name, Sci_Name, Confidence, File_Name
              FROM detections
              WHERE Date = ? AND Confidence >= ? AND File_Name != ''
-             ORDER BY Time ASC`,
+             ORDER BY Time DESC LIMIT 5000`,
             [today, BIRD_CONFIG.defaultConfidence]
           );
+          rows.reverse();
           _lastPoll = Date.now();
           recentDets.value = rows;
 
