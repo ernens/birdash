@@ -339,7 +339,6 @@
     'BirdNET_GLOBAL_6K_V2.4_Model_FP16': 'BirdNET',
     'BirdNET_6K_GLOBAL_MODEL':           'BirdNET v1',
     'Perch_v2':                          'Perch',
-    'BirdNET-Go_classifier_20250916':    'BN-Go',
   };
 
   function shortModel(m) {

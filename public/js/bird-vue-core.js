@@ -919,7 +919,6 @@
     'perch_v2_original':                            'Perch V2 FP32',
     'perch_v2_fp16':                                'Perch V2 FP16',
     'perch_v2_dynint8':                             'Perch V2 INT8',
-    'BirdNET-Go_classifier_20250916':               'BirdNET-Go',
   };
 
   const PibirdShell = {

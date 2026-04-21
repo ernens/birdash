@@ -547,7 +547,6 @@ const app = createApp({
       if (m === 'perch_v2_dynint8') return 'Perch V2 INT8';
       if (m === 'perch_v2_original') return 'Perch V2 FP32';
       if (m.includes('Perch') || m.includes('perch')) return 'Perch V2';
-      if (m.includes('Go')) return 'BirdNET-Go';
       return m;
     }
 
@@ -560,7 +559,6 @@ const app = createApp({
       if (m === 'perch_v2_dynint8') return t('set_model_desc_perch_dynint8');
       if (m === 'perch_v2_original') return t('set_model_desc_perch_original');
       if (m.includes('Perch') || m.includes('perch')) return t('set_model_desc_perch');
-      if (m.includes('Go')) return t('set_model_desc_go');
       return m;
     }
 
@@ -851,8 +849,7 @@ const app = createApp({
             <strong>BirdNET V2.4 + MData</strong> — Idem + filtre géographique par localisation et semaine.<br><br>
             <strong>Perch V2 FP16</strong> — Google, 10 340 oiseaux, 205 MB. Chunks de 5s à 32 kHz. ~384 ms/chunk sur Pi 5. Qualité quasi identique à l'original Google (cosine 0.9999). <em>Recommandé pour Pi 5.</em><br>
             <strong>Perch V2 INT8</strong> — Idem quantifié, 105 MB. ~299 ms/chunk sur Pi 5, ~700-900 ms sur Pi 4. Top-1 à 93% vs l'original. <em>Recommandé pour Pi 4 ou RAM limitée.</em><br>
-            <strong>Perch V2 FP32</strong> — Modèle de référence Google non modifié, 409 MB. Le plus précis mais le plus lourd.<br><br>
-            <strong>BirdNET-Go</strong> — Variante expérimentale.`,
+            <strong>Perch V2 FP32</strong> — Modèle de référence Google non modifié, 409 MB. Le plus précis mais le plus lourd.`,
           rec: 'Recommandé : <strong>BirdNET V2.4</strong> en modèle primaire + <strong>Perch V2 FP16</strong> en secondaire (dual-model) pour le meilleur des deux mondes.'
         },
         confidence: {
@@ -1098,8 +1095,7 @@ const app = createApp({
             <strong>BirdNET V2.4 + MData</strong> — Same model + geographic filter by location and week.<br><br>
             <strong>Perch V2 FP16</strong> — Google, 10,340 birds, 205 MB. 5s chunks at 32 kHz. ~384 ms/chunk on Pi 5. Near-identical quality to the original Google model (cosine 0.9999). <em>Recommended for Pi 5.</em><br>
             <strong>Perch V2 INT8</strong> — Same, quantized, 105 MB. ~299 ms/chunk on Pi 5, ~700-900 ms on Pi 4. Top-1 at 93% vs original. <em>Recommended for Pi 4 or low RAM.</em><br>
-            <strong>Perch V2 FP32</strong> — Unmodified Google reference model, 409 MB. Most accurate but heaviest.<br><br>
-            <strong>BirdNET-Go</strong> — Experimental variant.`,
+            <strong>Perch V2 FP32</strong> — Unmodified Google reference model, 409 MB. Most accurate but heaviest.`,
           rec: 'Recommended: <strong>BirdNET V2.4</strong> as primary + <strong>Perch V2 FP16</strong> as secondary (dual-model) for best of both worlds.'
         },
         confidence: {

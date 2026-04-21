@@ -222,7 +222,6 @@
   "set_model_desc_perch_fp16": "Google — 10,340 birds, ~384 ms on Pi 5. Near-perfect quality vs original (top-1 100%, top-5 99%).",
   "set_model_desc_perch_dynint8": "Google — 10,340 birds, ~299 ms on Pi 5, ~700 ms on Pi 4. 4x lighter (top-1 93%).",
   "set_model_desc_perch_original": "Google — 10,340 birds, unmodified reference. Most accurate but heaviest (~435 ms on Pi 5).",
-  "set_model_desc_go": "BirdNET-Go — experimental variant",
   "set_restart_confirm": "Restart services to apply?",
   "set_save_restart": "Save & restart",
   "today": "Today",

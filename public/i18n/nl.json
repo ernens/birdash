@@ -222,7 +222,6 @@
   "set_model_desc_perch_fp16": "Google — 10.340 vogels, ~384 ms op Pi 5. Vrijwel perfecte kwaliteit (top-1 100%, top-5 99%).",
   "set_model_desc_perch_dynint8": "Google — 10.340 vogels, ~299 ms op Pi 5, ~700 ms op Pi 4. 4× lichter (top-1 93%).",
   "set_model_desc_perch_original": "Google — 10.340 vogels, ongewijzigde referentie. Meest nauwkeurig maar zwaarst (~435 ms op Pi 5).",
-  "set_model_desc_go": "BirdNET-Go — experimentele variant",
   "set_restart_confirm": "Services herstarten om toe te passen?",
   "set_save_restart": "Opslaan & herstarten",
   "today": "Vandaag",
