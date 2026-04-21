@@ -7,11 +7,26 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const path = require('path');
 
 const PORT = 17474;
 let serverProc = null;
+
+// ── CI skip gates ─────────────────────────────────────────────────────────
+// Integration suites that need Pi-only state (real birdnet.conf, ~/birdengine
+// models, ALSA, populated DB) detect their prereq here and self-skip when
+// missing. Pi installs run the full suite; CI runners skip the unavailable
+// pieces but still validate everything else.
+const HAS_BIRDNET_CONF = fs.existsSync('/etc/birdnet/birdnet.conf');
+const HAS_AUDIO_CONFIG = fs.existsSync(path.join(__dirname, '..', 'config', 'audio_config.json'));
+const HAS_ENGINE_MODELS = (() => {
+  try {
+    return fs.readdirSync(path.join(process.env.HOME, 'birdengine', 'models')).some(f => f.endsWith('.tflite'));
+  } catch { return false; }
+})();
+const HAS_BIRDNET_LABELS = fs.existsSync(path.join(process.env.HOME, 'birdengine', 'models', 'l18n'));
 
 // ── Server start/stop ─────────────────────────────────────────────────────
 
@@ -194,7 +209,7 @@ describe('Unknown routes', () => {
 // NEW TESTS — Audio config validation
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/audio/config', () => {
+describe('GET /api/audio/config', { skip: !HAS_AUDIO_CONFIG && 'no config/audio_config.json (fresh install)' }, () => {
   it('returns audio configuration', async () => {
     const res = await request('/api/audio/config');
     assert.equal(res.status, 200);
@@ -203,7 +218,7 @@ describe('GET /api/audio/config', () => {
   });
 });
 
-describe('POST /api/audio/config — Validation', () => {
+describe('POST /api/audio/config — Validation', { skip: !HAS_AUDIO_CONFIG && 'no config/audio_config.json (fresh install)' }, () => {
   it('accepts valid audio config keys', async () => {
     const res = await request('/api/audio/config', { method: 'POST',
       body: { highpass_cutoff_hz: 100, rms_normalize: true } });
@@ -322,7 +337,7 @@ describe('GET /api/model-comparison', () => {
 // NEW TESTS — Analysis status
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/analysis-status', () => {
+describe('GET /api/analysis-status', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('returns analysis status with model info', async () => {
     const res = await request('/api/analysis-status');
     assert.equal(res.status, 200);
@@ -336,7 +351,7 @@ describe('GET /api/analysis-status', () => {
 // NEW TESTS — Settings validation
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/settings', () => {
+describe('GET /api/settings', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('returns settings from birdnet.conf', async () => {
     const res = await request('/api/settings');
     assert.equal(res.status, 200);
@@ -344,7 +359,7 @@ describe('GET /api/settings', () => {
   });
 });
 
-describe('POST /api/settings — Validation', () => {
+describe('POST /api/settings — Validation', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('rejects without updates object', async () => {
     const res = await request('/api/settings', { method: 'POST', body: { bad: 1 } });
     assert.equal(res.status, 400);
@@ -389,7 +404,7 @@ describe('GET /api/validation-stats', () => {
 // NEW TESTS — Models list
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/models', () => {
+describe('GET /api/models', { skip: !HAS_ENGINE_MODELS && 'no ~/birdengine/models/*.tflite' }, () => {
   it('returns available models', async () => {
     const res = await request('/api/models');
     assert.equal(res.status, 200);
@@ -413,7 +428,7 @@ describe('GET /api/audio/devices', () => {
 // NEW TESTS — Timeline
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/timeline', () => {
+describe('GET /api/timeline', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('returns valid structure for today', async () => {
     const res = await request('/api/timeline');
     assert.equal(res.status, 200);
@@ -731,7 +746,7 @@ describe('Validations — CRUD cycle', () => {
 // EXPANDED TESTS — eBird export
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/export/ebird', () => {
+describe('GET /api/export/ebird', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('returns CSV with correct headers', async () => {
     const res = await request('/api/export/ebird');
     assert.equal(res.status, 200);
@@ -910,7 +925,7 @@ describe('GET /api/network-info', () => {
   });
 });
 
-describe('GET /api/languages', () => {
+describe('GET /api/languages', { skip: !HAS_BIRDNET_LABELS && 'no ~/birdengine/models/l18n' }, () => {
   it('returns available language codes', async () => {
     const res = await request('/api/languages');
     assert.equal(res.status, 200);
@@ -1120,9 +1135,11 @@ describe('Concurrent requests', () => {
   });
 
   it('handles mixed endpoints in parallel', async () => {
+    // Mix endpoints that always exist regardless of Pi config state, so this
+    // test stays portable across CI / fresh installs / production Pi.
     const endpoints = [
-      '/api/health', '/api/validation-stats', '/api/models',
-      '/api/favorites', '/api/audio/config',
+      '/api/health', '/api/validation-stats', '/api/services',
+      '/api/favorites', '/api/hardware',
     ];
     const results = await Promise.all(endpoints.map(e => request(e)));
     for (const res of results) {
@@ -1160,7 +1177,7 @@ describe('POST /api/bulk-validate — Edge cases', () => {
 // EXPANDED TESTS — Timeline edge cases
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/timeline — Edge cases', () => {
+describe('GET /api/timeline — Edge cases', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('handles future date gracefully', async () => {
     const res = await request('/api/timeline?date=2099-01-01');
     assert.ok([200, 429].includes(res.status));
@@ -1214,7 +1231,7 @@ describe('GET /api/model-comparison — Edge cases', () => {
 // EXPANDED TESTS — Settings boundary checks
 // ══════════════════════════════════════════════════════════════════════════
 
-describe('GET /api/settings — Structure', () => {
+describe('GET /api/settings — Structure', { skip: !HAS_BIRDNET_CONF && 'no /etc/birdnet/birdnet.conf' }, () => {
   it('includes essential config keys', async () => {
     const res = await request('/api/settings');
     assert.equal(res.status, 200);
