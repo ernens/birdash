@@ -360,6 +360,74 @@ Writes use atomic replace (`…tmp` + `os.replace`) so Node never sees a partial
 
 Values are **dBFS, not SPL** — they track relative loudness trends, not calibrated pressure levels. A calibrated reference would require a known source + a per-mic correction offset, which birdash intentionally doesn't attempt.
 
+### Weather subsystem
+
+Per-detection weather context is provided by the `weather-watcher` background worker (`server/lib/weather-watcher.js`) and surfaced through 6 endpoints + a global Vue chip component. The whole pipeline is JOIN-at-query-time: weather snapshots live in `birdash.db` (not BirdNET-Pi's `birds.db`), keyed by `(date, hour)` — never denormalized into individual detection rows. Storage overhead is ~22 K rows for 2.5 years vs ~1 M detections (~0.02 %). If Open-Meteo backfills or corrects values, all detections pick up the change automatically.
+
+**Source**: [Open-Meteo](https://open-meteo.com/) — free for non-commercial use, no API key, no rate-limit headaches at our usage (~24 forecast requests/day, 1 archive call at startup).
+
+**Schema** (in `birdash.db`):
+
+```sql
+CREATE TABLE weather_hourly (
+  date          TEXT NOT NULL,         -- YYYY-MM-DD (local time)
+  hour          INTEGER NOT NULL,       -- 0..23 (local time)
+  temp_c        REAL,                   -- temperature 2 m
+  humidity_pct  REAL,
+  wind_kmh      REAL,
+  wind_dir_deg  INTEGER,
+  precip_mm     REAL,
+  cloud_pct     REAL,
+  pressure_hpa  REAL,
+  weather_code  INTEGER,                -- WMO code (0=clear, 95-99=storm, etc.)
+  fetched_at    INTEGER NOT NULL,       -- epoch seconds
+  PRIMARY KEY(date, hour)
+);
+```
+
+The `(date, hour)` PK doubles as the join index — each lookup is `O(log 22 K)` ≈ 15 comparisons.
+
+**Worker lifecycle** (`weather-watcher.js`):
+
+1. **On start**: forecast API call with `past_days=7` to refresh the recent week.
+2. **On start (async, +5 s)**: archive backfill — checks the oldest detection in `birds.db` vs the oldest snapshot in `weather_hourly`; if there's a gap, fetches `archive-api.open-meteo.com/v1/archive` chunked 1 year per request with a 500 ms politeness pause between chunks. Result on bird.local: 22 728 snapshots covering 2023-09-18 → 2026-04-21 in 3 calls.
+3. **Every hour**: forecast API call with `past_days=2` to UPSERT recent hours (also catches Open-Meteo's own backfill corrections).
+
+Silent skip when `LATITUDE` / `LONGITUDE` are missing from `birdnet.conf`, or the API is unreachable — detections still flow, weather chips just won't render until the next successful poll.
+
+**The standard JOIN clause** (used by every analytics endpoint):
+
+```sql
+JOIN vdb.weather_hourly w
+  ON w.date = d.Date
+ AND w.hour = CAST(SUBSTR(d.Time, 1, 2) AS INT)
+```
+
+`vdb` is the `birdash.db` connection ATTACHed onto the read-only `birds.db` connection at startup (same mechanism as the `active_detections` view).
+
+**API endpoints** (all in `server/routes/external.js`):
+
+| Endpoint | Purpose | Used by |
+|----------|---------|---------|
+| `GET /api/weather` | Daily aggregates (max/min temp, precip, wind) for the chart on weather.html | weather page 30-day chart (legacy) |
+| `GET /api/weather/at?date=&time=` | Single hourly snapshot for one detection | spectro modal |
+| `GET /api/weather/range?from=&to=` | All hourly snapshots in a date range | weather chips on detection-list pages |
+| `GET /api/weather/condition-summary?conf=` | Counts per WMO category (clear/cloudy/rain/etc.) | (analytics, optional) |
+| `GET /api/weather/species-by-condition?temp_min/max=&codes=&precip_min/max=&wind_min/max=&hour_min/max=&date_from/to=&conf=&limit=` | Top species matching arbitrary AND-combined weather predicates | leaderboards + custom-search card |
+| `GET /api/weather/species-heatmap?top=30&bin_size=5&bin_min=-15&bin_max=35` | Cross-tab matrix (species × temp bins) | heatmap card |
+| `GET /api/weather/species-profile?species=` | Per-species condition + temp distribution + summary stats | species page weather profile |
+| `GET /api/weather/match-summary?…` | Same filter shape as species-by-condition, returns just `{detections, species}` totals | live counter on custom-search card |
+
+A shared `parseWeatherFilters(params)` helper inside `external.js` keeps `species-by-condition` and `match-summary` in sync — adding a new filter dimension means one change in the helper, both endpoints get it.
+
+**Frontend integration** (`public/js/bird-weather-chip.js`):
+
+- **Cache**: `BIRDASH.weatherCache` (Map keyed by `${date}|${hour}`) populated via `BIRDASH.loadWeatherRange(from, to)`. 5-min TTL per range key + request deduplication (a second call for the same range while the first is in flight returns the same promise).
+- **Component**: `<weather-chip :date :time :detailed>` reads from the cache, renders nothing if the lookup misses (silent degradation, not a fallback fetch). Pass `:detailed="true"` for a chip with precip + wind in addition to icon + temp. Registered globally via a monkey-patched `BIRDASH.registerComponents`.
+- **Pages with chips**: today, overview (detailed), recordings, rarities, review, favorites — each calls `BIRDASH.loadWeatherRange(...)` once with its visible date range so a list of N detections costs 1 round-trip, not N.
+
+**Custom-search card** (weather.html, phase B): 6 filter rows (temp/precip/wind/hour ranges + WMO conditions checkboxes + date range), each with its own on/off toggle so empty filters mean "no constraint" (no magic-default surprise). 4 quick presets (Hard freeze / Sustained rain / Clear dawn / Rain-storm). Live update with 300 ms debounce + sequence-number race protection. URL-params persistence via `history.replaceState` so links stay shareable. CSV export of matching species.
+
 ---
 
 ## 3. Backend Architecture (Node.js)
@@ -650,6 +718,27 @@ CREATE TABLE validations (
   PRIMARY KEY (date, time, sci_name)
 );
 ```
+
+#### `weather_hourly` table
+
+```sql
+CREATE TABLE weather_hourly (
+  date          TEXT NOT NULL,         -- YYYY-MM-DD (local time)
+  hour          INTEGER NOT NULL,       -- 0..23 (local time)
+  temp_c        REAL,
+  humidity_pct  REAL,
+  wind_kmh      REAL,
+  wind_dir_deg  INTEGER,
+  precip_mm     REAL,
+  cloud_pct     REAL,
+  pressure_hpa  REAL,
+  weather_code  INTEGER,                -- WMO code via Open-Meteo
+  fetched_at    INTEGER NOT NULL,
+  PRIMARY KEY (date, hour)
+);
+```
+
+Populated by the `weather-watcher` worker (see *Weather subsystem* in §2). Joined to detections at query time via `vdb.weather_hourly` ATTACHed onto the read DB. Storage cost is ~22 K rows for 2.5 years (~0.02 % of typical detection volume); queries are fast because every JOIN hits the PK index.
 
 ### `active_detections` VIEW
 

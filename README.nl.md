@@ -83,7 +83,8 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-model inferentie** — BirdNET V2.4 + Perch V2 parallel
 - <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — volledig scherm met drag-to-zoom, uniforme dichtheidsslider, SVG-iconen, filter-badges met knippermarkering
 - <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — uniforme dagweergave met timeline + soortenlijst + audiospeler
-- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weer** — correlatieanalyse (Pearson r), prognose, soorten per omstandigheden
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weer** — Open-Meteo correlatieanalyse (Pearson r), prognose, plus volledige ornithologische analytics: 4 leaderboards (koudebestendigheid · onweerszangers · zware regen · sterke wind), heatmap soorten × temperatuur (top 30) en live aangepaste zoekkaart met 6 filterbare dimensies. URL-deelbare filters en CSV-export
+- <img src="docs/icons/thermometer.svg" width="16" align="top" alt=""> **Weercontext per waarneming** — elke waarneming wordt getagd met de uurlijkse weer-snapshot (temp, wind, regen, WMO-code) zichtbaar als compacte chip op alle detectielijsten en in de spectrogram-modal. Volledige backfill via Open-Meteo's gratis archief-API
 - <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live spectrogram** — real-time audio met vogelnamen
 - <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Review** — auto-flagging, spectrogram-modal met filters en loop-selectie, verwijderen met voorbeeldweergave
 - <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favorieten** — speciale pagina met KPIs, zoeken, sorteren; harttoggle op alle soortenlijsten

@@ -11,6 +11,29 @@ Modern bird detection dashboard and engine for Raspberry Pi 5. Standalone dual-m
 
 ## Screenshots
 
+**Highlights** — scroll horizontally to peek at the main pages. Full per-section galleries are folded below.
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/overview.png"    width="260" alt="Overview"></td>
+    <td align="center"><img src="screenshots/today.png"       width="260" alt="Today"></td>
+    <td align="center"><img src="screenshots/spectrogram.png" width="260" alt="Spectrogram modal"></td>
+    <td align="center"><img src="screenshots/weather.png"     width="260" alt="Weather analytics"></td>
+    <td align="center"><img src="screenshots/species.png"     width="260" alt="Species page"></td>
+    <td align="center"><img src="screenshots/recordings.png"  width="260" alt="Recordings"></td>
+    <td align="center"><img src="screenshots/review.png"      width="260" alt="Detection review"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Overview</b><br>KPIs &amp; bird of the day</sub></td>
+    <td align="center"><sub><b>Today</b><br>live detections + filters</sub></td>
+    <td align="center"><sub><b>Spectrogram</b><br>full-screen + weather chip</sub></td>
+    <td align="center"><sub><b>Weather</b><br>leaderboards · heatmap · search</sub></td>
+    <td align="center"><sub><b>Species</b><br>history + weather profile</sub></td>
+    <td align="center"><sub><b>Recordings</b><br>library + best per species</sub></td>
+    <td align="center"><sub><b>Review</b><br>auto-flagged + bulk actions</sub></td>
+  </tr>
+</table>
+
 <details>
 <summary><b>Home</b> — Overview · Today</summary>
 
@@ -165,7 +188,8 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Recordings** — unified audio library with two tabs: "Library" (all recordings, sortable/filterable) and "Best" (top recordings grouped by species)
 
 **Indicators**
-- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weather** — dedicated page with correlation analysis (Pearson r), tomorrow's forecast, species by weather conditions
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weather** — Open-Meteo correlation analysis (Pearson r), tomorrow's forecast, plus full ornithological analytics: 4 leaderboards (cold tolerance · storm singers · heavy rain · strong wind), species × temperature heatmap (top 30, -15…+35 °C bins), and a live custom-search card with 6 filterable dimensions (temp, precip, wind, hour-of-day, date range, conditions) — answers "which species are still active when it's freezing?" in one click. URL-shareable filters and CSV export
+- <img src="docs/icons/thermometer.svg" width="16" align="top" alt=""> **Per-detection weather context** — every detection is tagged with hourly weather snapshot (temp, humidity, wind, precip, cloud, pressure, WMO code) via background `weather-watcher` polling Open-Meteo. Compact weather chips appear on `today`, `overview`, `recordings`, `rarities`, `review`, `favorites`, and inside the spectrogram modal. Per-species "Weather profile" panel on `species.html` shows the species' typical conditions (avg temp, range, % during precip) plus distribution histograms. Backfilled to the oldest detection in the DB via Open-Meteo's free archive API (no key required)
 - <img src="docs/icons/trending-up.svg" width="16" align="top" alt=""> **Statistics** — rankings, records, distributions, annual evolution; integrated **Models** tab for dual-model comparison (daily chart, exclusive species, overlap analysis)
 - <img src="docs/icons/microscope.svg" width="16" align="top" alt=""> Advanced analyses (polar charts, heatmaps, time series, narrative)
 - <img src="docs/icons/dna.svg" width="16" align="top" alt=""> Biodiversity — Shannon index, adaptive richness chart, taxonomy heatmap
@@ -446,6 +470,7 @@ birdash/
 │   │   ├── result-cache.js        # Proactive result cache for heavy queries
 │   │   ├── safe-config.js         # Atomic JSON config read/write with mutex
 │   │   ├── telemetry.js           # Telemetry: anonymous pings + community network
+│   │   ├── weather-watcher.js     # Hourly Open-Meteo poll + archive backfill
 │   │   └── whats-new-worker.js    # Worker thread for heavy computation
 │   └── routes/
 │       ├── audio.js               # Audio devices, streaming, profiles, monitoring
@@ -454,7 +479,7 @@ birdash/
 │       ├── comparison.js          # Seasonal report (spring/summer/autumn/winter)
 │       ├── data.js                # Favorites, notes, photo-pref, query
 │       ├── detections.js          # Detections, validations, flagging
-│       ├── external.js            # BirdWeather, eBird, weather APIs
+│       ├── external.js            # BirdWeather, eBird, Open-Meteo, weather analytics
 │       ├── photos.js              # Photo resolution/caching, species names
 │       ├── settings.js            # Settings, apprise, alerts, logs SSE
 │       ├── system.js              # Services, health, hardware, models
@@ -497,6 +522,7 @@ birdash/
 │   │   ├── bird-shared.js         # Utilities, DSP, favorites, notes API
 │   │   ├── bird-vue-core.js       # Vue composables, i18n (4 langs), shell
 │   │   ├── bird-spectro-modal.js # SpectroModal component (extracted)
+│   │   ├── bird-weather-chip.js   # &lt;weather-chip&gt; component + global cache
 │   │   ├── bird-timeline.js       # Timeline rendering (sky, stars, markers)
 │   │   ├── vue.global.prod.min.js # Vue 3 (vendored)
 │   │   ├── chart.umd.min.js      # Chart.js (vendored)

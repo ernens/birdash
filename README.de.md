@@ -83,7 +83,8 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 - <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 parallel
 - <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — Ganzseitige Timeline mit Drag-to-Zoom, einheitlicher Dichte-Slider, SVG-Icons, Filter-Badges mit Blink
 - <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — Vereinigte Tagesansicht mit Timeline + Artenliste + Audioplayer
-- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Wetter** — Korrelationsanalyse (Pearson r), Prognose, Arten nach Bedingungen
+- <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Wetter** — Open-Meteo-Korrelationsanalyse (Pearson r), Tagesprognose, plus volle ornithologische Analytik: 4 Leaderboards (Kältetoleranz · Gewittersänger · Starkregen · starker Wind), Heatmap Arten × Temperatur (Top 30) und Live-Suche-Karte mit 6 filterbaren Dimensionen. URL-teilbare Filter und CSV-Export
+- <img src="docs/icons/thermometer.svg" width="16" align="top" alt=""> **Wetterkontext pro Erkennung** — jede Erkennung wird mit dem stündlichen Wetter (Temp, Wind, Regen, WMO-Code) markiert, sichtbar als kompakter Chip auf allen Detektionslisten und im Spektrogramm-Modal. Vollständiges Backfill über Open-Meteos kostenlose Archiv-API
 - <img src="docs/icons/music.svg" width="16" align="top" alt=""> **Live-Spektrogramm** — Echtzeit-Audio mit Vogelnamen
 - <img src="docs/icons/search.svg" width="16" align="top" alt=""> **Uberprufung** — Auto-Flagging, Spektrogramm-Modal mit Filtern und Loop-Auswahl, Loschen mit Vorschau
 - <img src="docs/icons/star.svg" width="16" align="top" alt=""> **Favoriten** — eigene Seite mit KPIs, Suche, Sortierung; Herz-Toggle auf allen Artenlisten
