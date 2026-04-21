@@ -127,6 +127,115 @@
       </div>
     </div>
 
+    <!-- ── Phase B: custom-search card ─────────────────────────────────── -->
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title">{{t('weather_search_title')}}</div>
+      <!-- Preset buttons -->
+      <div class="ws-presets">
+        <button v-for="p in presets" :key="p.key" class="ws-preset"
+                :class="{active: activePreset===p.key}"
+                @click="applyPreset(p)">{{t(p.label)}}</button>
+        <button class="ws-preset" @click="resetFilters">{{t('weather_search_reset')}}</button>
+      </div>
+
+      <div class="ws-filters">
+        <!-- Temperature -->
+        <label class="ws-row">
+          <input type="checkbox" v-model="filters.temp.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('temperature')}}</span>
+          <span class="ws-row-vals" v-if="filters.temp.on">{{filters.temp.min}}°C … {{filters.temp.max}}°C</span>
+          <input type="range" v-model.number="filters.temp.min" min="-15" max="35" step="1"
+                 :disabled="!filters.temp.on" @input="onFilterChange">
+          <input type="range" v-model.number="filters.temp.max" min="-15" max="35" step="1"
+                 :disabled="!filters.temp.on" @input="onFilterChange">
+        </label>
+        <!-- Precipitation -->
+        <label class="ws-row">
+          <input type="checkbox" v-model="filters.precip.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('precipitation')}}</span>
+          <span class="ws-row-vals" v-if="filters.precip.on">{{filters.precip.min}}…{{filters.precip.max}} mm/h</span>
+          <input type="range" v-model.number="filters.precip.min" min="0" max="20" step="0.5"
+                 :disabled="!filters.precip.on" @input="onFilterChange">
+          <input type="range" v-model.number="filters.precip.max" min="0" max="20" step="0.5"
+                 :disabled="!filters.precip.on" @input="onFilterChange">
+        </label>
+        <!-- Wind -->
+        <label class="ws-row">
+          <input type="checkbox" v-model="filters.wind.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('wind')}}</span>
+          <span class="ws-row-vals" v-if="filters.wind.on">{{filters.wind.min}}…{{filters.wind.max}} km/h</span>
+          <input type="range" v-model.number="filters.wind.min" min="0" max="60" step="1"
+                 :disabled="!filters.wind.on" @input="onFilterChange">
+          <input type="range" v-model.number="filters.wind.max" min="0" max="60" step="1"
+                 :disabled="!filters.wind.on" @input="onFilterChange">
+        </label>
+        <!-- Hour of day -->
+        <label class="ws-row">
+          <input type="checkbox" v-model="filters.hour.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('weather_search_hour')}}</span>
+          <span class="ws-row-vals" v-if="filters.hour.on">{{filters.hour.min}}h … {{filters.hour.max}}h</span>
+          <input type="range" v-model.number="filters.hour.min" min="0" max="23" step="1"
+                 :disabled="!filters.hour.on" @input="onFilterChange">
+          <input type="range" v-model.number="filters.hour.max" min="0" max="23" step="1"
+                 :disabled="!filters.hour.on" @input="onFilterChange">
+        </label>
+        <!-- Conditions -->
+        <div class="ws-row ws-row-cond">
+          <input type="checkbox" v-model="filters.codes.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('weather_search_conditions')}}</span>
+          <div class="ws-cond-checks">
+            <label v-for="c in conditionOptions" :key="c.key">
+              <input type="checkbox" :value="c.key" :checked="filters.codes.set.has(c.key)"
+                     :disabled="!filters.codes.on"
+                     @change="toggleCondition(c.key, $event.target.checked)">
+              <bird-icon :name="c.icon" :size="11"></bird-icon>
+              {{t(c.label)}}
+            </label>
+          </div>
+        </div>
+        <!-- Date range -->
+        <label class="ws-row">
+          <input type="checkbox" v-model="filters.date.on" @change="onFilterChange">
+          <span class="ws-row-label">{{t('weather_search_dates')}}</span>
+          <input type="date" v-model="filters.date.from" :disabled="!filters.date.on" @change="onFilterChange" class="ws-date">
+          <span style="color:var(--text-muted);">→</span>
+          <input type="date" v-model="filters.date.to" :disabled="!filters.date.on" @change="onFilterChange" class="ws-date">
+        </label>
+      </div>
+
+      <!-- Live counter + actions -->
+      <div class="ws-summary">
+        <span v-if="search.loading" style="opacity:.6;">…</span>
+        <span v-else>
+          <strong>{{search.detections.toLocaleString()}}</strong> {{t('detections').toLowerCase()}} ·
+          <strong>{{search.species}}</strong> {{t('weather_search_species_count')}}
+        </span>
+        <div style="margin-left:auto;display:flex;gap:.4rem;">
+          <button class="ws-btn" @click="copyShareLink" :title="t('weather_search_share_tip')">
+            <bird-icon name="link" :size="12"></bird-icon> {{t('weather_search_share')}}
+          </button>
+          <button class="ws-btn" @click="exportCsv" :disabled="!search.rows.length">
+            <bird-icon name="download" :size="12"></bird-icon> CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div v-if="search.rows.length" class="ws-results">
+        <div v-for="(sp, i) in search.rows" :key="sp.sci_name" class="ws-result-row"
+             style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.com_name})">
+          <span class="ws-rank">{{i + 1}}</span>
+          <span class="ws-name">{{spName(sp.com_name, sp.sci_name)}}</span>
+          <span class="ws-sci">{{sp.sci_name}}</span>
+          <span class="ws-count">{{sp.detections.toLocaleString()}}</span>
+          <span class="ws-conf">{{sp.avg_conf}}%</span>
+        </div>
+      </div>
+      <div v-else-if="!search.loading" class="hint-empty" style="padding:1.5rem;">
+        {{t('weather_no_match')}}
+      </div>
+    </div>
+
     <!-- Heatmap species × temperature -->
     <div class="card" style="margin-top:1rem;">
       <div class="card-title">{{t('weather_heatmap_title')}}</div>
@@ -162,7 +271,7 @@
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
         birdQuery, localDateStr, daysAgo, navigateTo, photoUrl, chartDefaults } = BIRDASH;
 
@@ -194,6 +303,178 @@ const app = createApp({
         loading: true, rows: [], query: 'wind_min=30' },
     ]);
     const heatmap = ref({ loading: true, bins: [], species: [] });
+
+    // ── Custom search (phase B) ─────────────────────────────────────────
+    // Filter model — each row has its own on/off toggle so an empty filter
+    // means "no constraint" rather than relying on default magic numbers.
+    const filters = reactive({
+      temp:   { on: false, min: -10, max: 25 },
+      precip: { on: false, min: 0,   max: 20 },
+      wind:   { on: false, min: 0,   max: 60 },
+      hour:   { on: false, min: 6,   max: 20 },
+      date:   { on: false, from: '', to: '' },
+      codes:  { on: false, set: new Set() },
+    });
+    const search = ref({ loading: false, detections: 0, species: 0, rows: [] });
+    const activePreset = ref(null);
+
+    // WMO category → numeric codes mapping (mirrors backend WMO_CASE bucket).
+    const conditionOptions = [
+      { key: 'clear',         label: 'weather_clear',         icon: 'sun',        codes: [0] },
+      { key: 'partly_cloudy', label: 'weather_partly_cloudy', icon: 'cloud-sun',  codes: [1, 2] },
+      { key: 'cloudy',        label: 'weather_cloudy',        icon: 'cloud',      codes: [3] },
+      { key: 'fog',           label: 'weather_fog',           icon: 'cloud',      codes: [45, 48] },
+      { key: 'drizzle',       label: 'weather_drizzle',       icon: 'cloud-rain', codes: [51, 53, 55, 56, 57] },
+      { key: 'rain',          label: 'weather_rain',          icon: 'cloud-rain', codes: [61, 63, 65, 66, 67, 80, 81, 82] },
+      { key: 'snow',          label: 'weather_snow',          icon: 'snowflake',  codes: [71, 73, 75, 77, 85, 86] },
+      { key: 'storm',         label: 'weather_storm',         icon: 'cloud-rain', codes: [95, 96, 99] },
+    ];
+
+    // Quick-start presets — answer common ornithological questions in 1 click.
+    const presets = [
+      { key: 'cold',     label: 'weather_search_preset_cold',
+        apply: () => { Object.assign(filters.temp, { on: true, min: -15, max: 0 }); } },
+      { key: 'rain',     label: 'weather_search_preset_rain',
+        apply: () => { Object.assign(filters.precip, { on: true, min: 2, max: 20 }); } },
+      { key: 'dawn',     label: 'weather_search_preset_dawn',
+        apply: () => {
+          Object.assign(filters.hour, { on: true, min: 5, max: 9 });
+          filters.codes.on = true; filters.codes.set = new Set(['clear', 'partly_cloudy']);
+        } },
+      { key: 'storm',    label: 'weather_search_preset_storm',
+        apply: () => { filters.codes.on = true; filters.codes.set = new Set(['storm', 'rain']); } },
+    ];
+
+    function resetFilters() {
+      filters.temp.on = filters.precip.on = filters.wind.on = false;
+      filters.hour.on = filters.date.on = filters.codes.on = false;
+      filters.codes.set = new Set();
+      activePreset.value = null;
+      writeUrlParams();
+      scheduleSearch();
+    }
+    function applyPreset(p) {
+      resetFilters();
+      p.apply();
+      activePreset.value = p.key;
+      writeUrlParams();
+      scheduleSearch();
+    }
+    function toggleCondition(key, checked) {
+      // Vue's checkbox+Set binding is awkward; we manage the Set ourselves.
+      const next = new Set(filters.codes.set);
+      if (checked) next.add(key); else next.delete(key);
+      filters.codes.set = next;
+      activePreset.value = null;
+      onFilterChange();
+    }
+    function onFilterChange() {
+      activePreset.value = null;
+      writeUrlParams();
+      scheduleSearch();
+    }
+
+    // Build query string from active filters (used by URL + by API call)
+    function buildQuery() {
+      const p = new URLSearchParams();
+      if (filters.temp.on)   { p.set('temp_min', filters.temp.min); p.set('temp_max', filters.temp.max); }
+      if (filters.precip.on) { p.set('precip_min', filters.precip.min); p.set('precip_max', filters.precip.max); }
+      if (filters.wind.on)   { p.set('wind_min', filters.wind.min); p.set('wind_max', filters.wind.max); }
+      if (filters.hour.on)   { p.set('hour_min', filters.hour.min); p.set('hour_max', filters.hour.max); }
+      if (filters.date.on)   {
+        if (filters.date.from) p.set('date_from', filters.date.from);
+        if (filters.date.to)   p.set('date_to',   filters.date.to);
+      }
+      if (filters.codes.on && filters.codes.set.size) {
+        const codes = [];
+        for (const k of filters.codes.set) {
+          const opt = conditionOptions.find(o => o.key === k);
+          if (opt) codes.push(...opt.codes);
+        }
+        if (codes.length) p.set('codes', codes.join(','));
+      }
+      return p;
+    }
+
+    function writeUrlParams() {
+      const p = buildQuery();
+      const qs = p.toString();
+      const url = qs ? `?${qs}` : window.location.pathname;
+      history.replaceState(null, '', url);
+    }
+    function readUrlParams() {
+      const p = new URLSearchParams(window.location.search);
+      const num = (k) => p.has(k) ? parseFloat(p.get(k)) : null;
+      const tMin = num('temp_min'), tMax = num('temp_max');
+      if (tMin != null && tMax != null) { filters.temp = { on: true, min: tMin, max: tMax }; }
+      const pMin = num('precip_min'), pMax = num('precip_max');
+      if (pMin != null && pMax != null) { filters.precip = { on: true, min: pMin, max: pMax }; }
+      const wMin = num('wind_min'), wMax = num('wind_max');
+      if (wMin != null && wMax != null) { filters.wind = { on: true, min: wMin, max: wMax }; }
+      const hMin = num('hour_min'), hMax = num('hour_max');
+      if (hMin != null && hMax != null) { filters.hour = { on: true, min: hMin, max: hMax }; }
+      if (p.get('date_from') || p.get('date_to')) {
+        filters.date = { on: true, from: p.get('date_from') || '', to: p.get('date_to') || '' };
+      }
+      if (p.get('codes')) {
+        const codeNums = new Set(p.get('codes').split(',').map(Number));
+        const matched = new Set();
+        for (const o of conditionOptions) {
+          if (o.codes.some(c => codeNums.has(c))) matched.add(o.key);
+        }
+        if (matched.size) filters.codes = { on: true, set: matched };
+      }
+    }
+
+    let _searchTimer = null, _searchSeq = 0;
+    function scheduleSearch() {
+      if (_searchTimer) clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(runSearch, 300);
+    }
+    async function runSearch() {
+      const seq = ++_searchSeq;
+      search.value.loading = true;
+      try {
+        const qs = buildQuery();
+        // Two parallel calls: list (top 20) + summary (full counts)
+        const [listRes, sumRes] = await Promise.all([
+          fetch(`${BIRD_CONFIG.apiUrl}/weather/species-by-condition?${qs.toString()}&limit=20`),
+          fetch(`${BIRD_CONFIG.apiUrl}/weather/match-summary?${qs.toString()}`),
+        ]);
+        if (seq !== _searchSeq) return;  // a newer search started while we awaited
+        const listJ = listRes.ok ? await listRes.json() : { rows: [] };
+        const sumJ  = sumRes.ok  ? await sumRes.json()  : { detections: 0, species: 0 };
+        search.value = {
+          loading: false,
+          detections: sumJ.detections || 0,
+          species: sumJ.species || 0,
+          rows: listJ.rows || [],
+        };
+      } catch {
+        if (seq === _searchSeq) search.value = { loading: false, detections: 0, species: 0, rows: [] };
+      }
+    }
+
+    function copyShareLink() {
+      const url = window.location.href;
+      navigator.clipboard?.writeText(url).then(
+        () => { /* could toast — keeping it silent for now */ },
+        () => {}
+      );
+    }
+    function exportCsv() {
+      const lines = ['rank,common_name,scientific_name,detections,avg_confidence_pct'];
+      for (let i = 0; i < search.value.rows.length; i++) {
+        const r = search.value.rows[i];
+        lines.push([i+1, JSON.stringify(r.com_name), JSON.stringify(r.sci_name), r.detections, r.avg_conf].join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `birdash-weather-search-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
 
     // Linear interpolation between transparent and accent green for cells.
     // count==0 stays empty, max value gets the full accent color.
@@ -393,12 +674,20 @@ const app = createApp({
       }
     }
 
-    onMounted(() => { loadAll(); loadAnalytics(); });
+    onMounted(() => {
+      loadAll();
+      loadAnalytics();
+      readUrlParams();
+      runSearch();    // initial load with whatever URL params provided (or empty)
+    });
 
     return {
       lang, t, spName, navigateTo, photoUrl,
       loading, error, todayWeather, forecast, corr, topByWeather, canvasWeather,
       leaderboards, heatmap, heatColor,
+      filters, search, presets, activePreset, conditionOptions,
+      onFilterChange, toggleCondition, applyPreset, resetFilters,
+      copyShareLink, exportCsv,
     };
   }
 });

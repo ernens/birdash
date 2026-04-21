@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.34.0] — 2026-04-21
+
+### Custom weather search on weather.html (Phase B reimagined)
+
+Phase B was originally planned as filters in detections.html, but the bird-vs-weather questions surface naturally on the weather page itself. New "Recherche par conditions" card lets ornithologists answer ad-hoc questions in seconds — no need to leave to a separate filter panel.
+
+Backend:
+- Extended `/api/weather/species-by-condition` with `hour_min`, `hour_max`, `date_from`, `date_to` (added to the existing temp/precip/wind/codes/conf params). All filters AND'd together, all optional.
+- New `/api/weather/match-summary` endpoint — returns just `{detections, species}` totals for the live header counter, avoiding a row transfer just to count. Same filter shape as species-by-condition, parsed via a shared `parseWeatherFilters()` helper.
+
+Frontend (weather.html):
+- New card with 6 filter rows: temperature, precipitation, wind (range sliders), hour of day, date range, and conditions (8-checkbox WMO buckets). Each row has its own on/off toggle so an empty filter means "no constraint" rather than relying on default magic numbers.
+- 4 quick presets at the top: **Grand froid** (-15…0°C), **Pluie soutenue** (≥2mm/h), **Aube dégagée** (5-9h, clear sky), **Pluie/Orage** (rain or storm codes). Click → form auto-fills.
+- Live update with 300ms debounce + sequence-number race protection (older queries discarded if a newer one starts).
+- Results: top 20 matching species with rank, common name, sci name, detection count, avg confidence. Click row → species page.
+- Live header: `12,348 detections · 47 species` updates as you slide.
+- URL params persistence via `history.replaceState` — every filter change updates the URL so links stay shareable. **Lien** button copies the current URL to clipboard.
+- **CSV** export of matching species.
+- 12 new i18n labels × 4 languages.
+
+Architecture: shared `parseWeatherFilters()` keeps backend filter parsing in one place. Frontend `buildQuery()` mirrors it for URL/API serialization. Adding a new filter dimension means changing one place on each side.
+
+This obsoletes the originally-planned phase B (filters in detections.html) — both would solve the same use cases but with a worse focus (per-detection rather than per-species).
+
 ## [1.33.0] — 2026-04-21
 
 ### Weather analytics: leaderboards, heatmap, per-species profile (Phase C)

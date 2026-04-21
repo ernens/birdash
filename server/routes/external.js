@@ -321,38 +321,60 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // Shared filter parser for /species-by-condition and /match-summary.
+  // Reads weather + time + date filters from URLSearchParams and returns
+  // { wherePred: [...], args: [...] } ready to splice into a query.
+  function parseWeatherFilters(params) {
+    const wherePred = ['d.Confidence >= ?'];
+    const args = [parseFloat(params.get('conf') || '0.7')];
+    const numFilter = (key, col, op) => {
+      const v = params.get(key);
+      if (v == null || v === '') return;
+      const n = parseFloat(v);
+      if (!isNaN(n)) { wherePred.push(`w.${col} ${op} ?`); args.push(n); }
+    };
+    numFilter('temp_min',   'temp_c',   '>=');
+    numFilter('temp_max',   'temp_c',   '<=');
+    numFilter('precip_min', 'precip_mm', '>=');
+    numFilter('precip_max', 'precip_mm', '<=');
+    numFilter('wind_min',   'wind_kmh', '>=');
+    numFilter('wind_max',   'wind_kmh', '<=');
+    const hourMin = params.get('hour_min'), hourMax = params.get('hour_max');
+    if (hourMin != null && hourMin !== '') {
+      const h = parseInt(hourMin, 10);
+      if (!isNaN(h)) { wherePred.push(`CAST(SUBSTR(d.Time, 1, 2) AS INT) >= ?`); args.push(h); }
+    }
+    if (hourMax != null && hourMax !== '') {
+      const h = parseInt(hourMax, 10);
+      if (!isNaN(h)) { wherePred.push(`CAST(SUBSTR(d.Time, 1, 2) AS INT) <= ?`); args.push(h); }
+    }
+    const dateFrom = params.get('date_from'), dateTo = params.get('date_to');
+    if (dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)) { wherePred.push(`d.Date >= ?`); args.push(dateFrom); }
+    if (dateTo   && /^\d{4}-\d{2}-\d{2}$/.test(dateTo))   { wherePred.push(`d.Date <= ?`); args.push(dateTo); }
+    const codesRaw = (params.get('codes') || '').split(',').map(s => s.trim()).filter(s => /^\d+$/.test(s));
+    if (codesRaw.length) {
+      wherePred.push(`w.weather_code IN (${codesRaw.map(() => '?').join(',')})`);
+      args.push(...codesRaw.map(Number));
+    }
+    return { wherePred, args };
+  }
+
   // ── Route : GET /api/weather/species-by-condition ────────────────────────
   // Top species matching weather predicates. Drives the cold/storm/rain/wind
-  // leaderboards. All filters optional, AND'd together.
+  // leaderboards AND the custom-search card. All filters optional, AND'd.
   // Params:
   //   temp_min, temp_max          (°C)
   //   codes=95,96,99               WMO codes (comma list)
   //   precip_min, precip_max       (mm)
   //   wind_min, wind_max           (km/h)
+  //   hour_min, hour_max           (0-23, by detection time)
+  //   date_from, date_to           (YYYY-MM-DD, season filter)
   //   conf=0.7  limit=20
   if (req.method === 'GET' && pathname === '/api/weather/species-by-condition') {
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
-      const wherePred = ['d.Confidence >= ?'];
-      const args = [parseFloat(params.get('conf') || '0.7')];
-      const numFilter = (key, col, op) => {
-        const v = params.get(key);
-        if (v == null || v === '') return;
-        const n = parseFloat(v);
-        if (!isNaN(n)) { wherePred.push(`w.${col} ${op} ?`); args.push(n); }
-      };
-      numFilter('temp_min',   'temp_c',   '>=');
-      numFilter('temp_max',   'temp_c',   '<=');
-      numFilter('precip_min', 'precip_mm', '>=');
-      numFilter('precip_max', 'precip_mm', '<=');
-      numFilter('wind_min',   'wind_kmh', '>=');
-      numFilter('wind_max',   'wind_kmh', '<=');
-      const codesRaw = (params.get('codes') || '').split(',').map(s => s.trim()).filter(s => /^\d+$/.test(s));
-      if (codesRaw.length) {
-        wherePred.push(`w.weather_code IN (${codesRaw.map(() => '?').join(',')})`);
-        args.push(...codesRaw.map(Number));
-      }
-      const limit = Math.min(100, Math.max(1, parseInt(params.get('limit') || '20')));
+      const { wherePred, args } = parseWeatherFilters(params);
+      const limit = Math.min(500, Math.max(1, parseInt(params.get('limit') || '20')));
       const rows = db.prepare(`SELECT d.Sci_Name AS sci_name, d.Com_Name AS com_name,
           COUNT(*) AS detections, ROUND(AVG(d.Confidence) * 100, 1) AS avg_conf
         FROM active_detections d ${WEATHER_JOIN}
@@ -363,6 +385,28 @@ function handle(req, res, pathname, ctx) {
       res.end(JSON.stringify({ rows, total: rows.length }));
     } catch(e) {
       console.error('[weather/species-by-condition]', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'analytics_error', message: e.message }));
+    }
+    return true;
+  }
+
+  // ── Route : GET /api/weather/match-summary ───────────────────────────────
+  // Same filter shape as species-by-condition, but returns just the totals
+  // — used by the live "12 348 détections · 47 espèces" header on the
+  // custom-search card so we don't transfer the full row list just to count.
+  if (req.method === 'GET' && pathname === '/api/weather/match-summary') {
+    try {
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const { wherePred, args } = parseWeatherFilters(params);
+      const row = db.prepare(`SELECT COUNT(*) AS detections,
+          COUNT(DISTINCT d.Sci_Name) AS species
+        FROM active_detections d ${WEATHER_JOIN}
+        WHERE ${wherePred.join(' AND ')}`).get(...args);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(row || { detections: 0, species: 0 }));
+    } catch(e) {
+      console.error('[weather/match-summary]', e.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'analytics_error', message: e.message }));
     }
