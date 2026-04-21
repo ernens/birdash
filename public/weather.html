@@ -113,7 +113,9 @@
             {{t(lb.title)}}
             <span class="weather-lb-cond">{{lb.label}}</span>
           </div>
-          <div v-if="lb.loading" class="hint-empty" style="padding:1rem;font-size:.75rem;">…</div>
+          <div v-if="lb.loading" class="hint-empty" style="padding:1rem;">
+            <span class="spinner-inline"><i></i><i></i><i></i></span>
+          </div>
           <div v-else-if="!lb.rows.length" class="hint-empty" style="padding:1rem;font-size:.75rem;">{{t('weather_no_match')}}</div>
           <ol v-else class="weather-lb-list">
             <li v-for="(sp, i) in lb.rows" :key="sp.sci_name"
@@ -129,7 +131,10 @@
 
     <!-- ── Phase B: custom-search card ─────────────────────────────────── -->
     <div class="card" style="margin-top:1rem;">
-      <div class="card-title">{{t('weather_search_title')}}</div>
+      <div class="card-title">
+        {{t('weather_search_title')}}
+        <span v-if="searchSummary" class="ws-title-tag">· {{searchSummary}}</span>
+      </div>
       <!-- Preset buttons -->
       <div class="ws-presets">
         <button v-for="p in presets" :key="p.key" class="ws-preset"
@@ -261,7 +266,9 @@
 
       <!-- Live counter + actions -->
       <div class="ws-summary">
-        <span v-if="search.loading" style="opacity:.6;">…</span>
+        <span v-if="search.loading" class="spinner-inline" :aria-label="t('loading')">
+          <i></i><i></i><i></i>
+        </span>
         <span v-else>
           <strong>{{search.detections.toLocaleString()}}</strong> {{t('detections').toLowerCase()}} ·
           <strong>{{search.species}}</strong> {{t('weather_search_species_count')}}
@@ -295,7 +302,9 @@
     <!-- Heatmap species × temperature -->
     <div class="card" style="margin-top:1rem;">
       <div class="card-title">{{t('weather_heatmap_title')}}</div>
-      <div v-if="heatmap.loading" class="hint-empty" style="padding:2rem;">…</div>
+      <div v-if="heatmap.loading" class="hint-empty" style="padding:2rem;">
+        <span class="spinner-inline"><i></i><i></i><i></i></span>
+      </div>
       <div v-else-if="!heatmap.species.length" class="hint-empty" style="padding:2rem;">{{t('no_data')}}</div>
       <div v-else class="weather-heatmap-wrap">
         <table class="weather-heatmap">
@@ -510,6 +519,45 @@ const app = createApp({
         if (seq === _searchSeq) search.value = { loading: false, detections: 0, species: 0, rows: [] };
       }
     }
+
+    // Adaptive title — summarizes active filters into a short tag string
+    // shown next to the card title. Lets the user see at a glance what
+    // their current selection actually represents.
+    const searchSummary = computed(() => {
+      // Active preset takes precedence — show its label if any preset matches
+      if (activePreset.value) {
+        const p = presets.find(x => x.key === activePreset.value);
+        if (p) return t(p.label);
+      }
+      const tags = [];
+      if (filters.temp.on) {
+        const lo = filters.temp.min, hi = filters.temp.max;
+        tags.push(`${lo}°…${hi}°C`);
+      }
+      if (filters.precip.on) {
+        const lo = filters.precip.min, hi = filters.precip.max;
+        tags.push(lo > 0 && hi >= 20 ? `≥${lo}mm` : hi < 20 && lo === 0 ? `≤${hi}mm` : `${lo}–${hi}mm`);
+      }
+      if (filters.wind.on) {
+        const lo = filters.wind.min, hi = filters.wind.max;
+        tags.push(lo > 0 && hi >= 60 ? `≥${lo}km/h` : hi < 60 && lo === 0 ? `≤${hi}km/h` : `${lo}–${hi}km/h`);
+      }
+      if (filters.hour.on) tags.push(`${filters.hour.min}–${filters.hour.max}h`);
+      if (filters.codes.on && filters.codes.set.size) {
+        if (filters.codes.set.size <= 2) {
+          tags.push([...filters.codes.set].map(k => {
+            const o = conditionOptions.find(x => x.key === k);
+            return o ? t(o.label) : k;
+          }).join(' + '));
+        } else {
+          tags.push(`${filters.codes.set.size} ${t('weather_search_conditions').toLowerCase()}`);
+        }
+      }
+      if (filters.date.on && (filters.date.from || filters.date.to)) {
+        tags.push(`${filters.date.from || '…'} → ${filters.date.to || '…'}`);
+      }
+      return tags.join(' · ');
+    });
 
     function copyShareLink() {
       const url = window.location.href;
@@ -741,7 +789,7 @@ const app = createApp({
       lang, t, spName, navigateTo, photoUrl,
       loading, error, todayWeather, forecast, corr, topByWeather, canvasWeather,
       leaderboards, heatmap, heatColor,
-      filters, search, presets, activePreset, conditionOptions,
+      filters, search, presets, activePreset, conditionOptions, searchSummary,
       onFilterChange, toggleCondition, applyPreset, resetFilters,
       copyShareLink, exportCsv,
     };
