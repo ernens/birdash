@@ -63,43 +63,28 @@
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:1rem;">
-      <!-- 30-day chart -->
-      <div class="card">
-        <div class="card-title" :title="t('activity_tooltip')">{{t('weather_activity')}}</div>
-        <div v-if="loading" class="spinner"><div></div><div></div><div></div></div>
-        <div v-else-if="error" class="error-msg">{{error}}</div>
-        <div v-else class="chart-wrap chart-wrap-tall"><canvas ref="canvasWeather"></canvas></div>
-        <!-- Correlation -->
-        <div v-if="corr" style="margin-top:.75rem;padding:.5rem;background:var(--bg-deep);border-radius:var(--radius);font-size:.82rem;">
-          <div style="font-weight:600;margin-bottom:.4rem;">{{t('weather_correlation')}}</div>
-          <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
-            <span v-if="Math.abs(corr.temp) >= 0.2"><bird-icon name="thermometer" :size="14" ></bird-icon> {{t('temperature')}} : <strong :style="{color: corr.temp > 0.3 ? '#5a9e3a' : corr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.temp.toFixed(2)}}</strong></span>
-            <span v-if="Math.abs(corr.precip) >= 0.2">🌧️ {{t('precipitation')}} : <strong :style="{color: corr.precip > 0.3 ? '#5a9e3a' : corr.precip < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.precip.toFixed(2)}}</strong></span>
-            <span v-if="Math.abs(corr.wind) >= 0.2">🌬️ {{t('wind')}} : <strong :style="{color: corr.wind > 0.3 ? '#5a9e3a' : corr.wind < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.wind.toFixed(2)}}</strong></span>
-            <span v-if="Math.abs(corr.temp) < 0.2 && Math.abs(corr.precip) < 0.2 && Math.abs(corr.wind) < 0.2" style="opacity:.6;">
-              {{t('weather_no_significant_corr')}}
-            </span>
-          </div>
-          <div v-if="corr.bestConditions" style="margin-top:.4rem;color:var(--text-muted);">
-            {{corr.bestConditions}}
-          </div>
-          <div style="margin-top:.35rem;font-size:.72rem;opacity:.5;">
-            {{t('weather_corr_caveat')}}
-          </div>
+    <!-- 30-day chart — activity × weather time series -->
+    <div class="card">
+      <div class="card-title" :title="t('activity_tooltip')">{{t('weather_activity')}}</div>
+      <div v-if="loading" class="spinner"><div></div><div></div><div></div></div>
+      <div v-else-if="error" class="error-msg">{{error}}</div>
+      <div v-else class="chart-wrap chart-wrap-tall"><canvas ref="canvasWeather"></canvas></div>
+      <!-- Correlation — shown only when at least one r crosses the |0.2|
+           significance floor. With 30 days of data this is rare, so we
+           hide the whole block rather than surface an "no significant
+           correlation" placeholder. -->
+      <div v-if="corr && corrHasSignal" style="margin-top:.75rem;padding:.5rem;background:var(--bg-deep);border-radius:var(--radius);font-size:.82rem;">
+        <div style="font-weight:600;margin-bottom:.4rem;">{{t('weather_correlation')}}</div>
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+          <span v-if="Math.abs(corr.temp) >= 0.2"><bird-icon name="thermometer" :size="14" ></bird-icon> {{t('temperature')}} : <strong :style="{color: corr.temp > 0.3 ? '#5a9e3a' : corr.temp < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.temp.toFixed(2)}}</strong></span>
+          <span v-if="Math.abs(corr.precip) >= 0.2">🌧️ {{t('precipitation')}} : <strong :style="{color: corr.precip > 0.3 ? '#5a9e3a' : corr.precip < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.precip.toFixed(2)}}</strong></span>
+          <span v-if="Math.abs(corr.wind) >= 0.2">🌬️ {{t('wind')}} : <strong :style="{color: corr.wind > 0.3 ? '#5a9e3a' : corr.wind < -0.3 ? '#e53e3e' : 'var(--text-muted)'}">r = {{corr.wind.toFixed(2)}}</strong></span>
         </div>
-      </div>
-
-      <!-- Top species by conditions -->
-      <div class="card">
-        <div class="card-title">{{t('weather_top_species')}}</div>
-        <div v-if="topByWeather.length === 0 && !loading" class="hint-empty"><bird-icon name="cloud-sun" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
-        <div v-for="sp in topByWeather" :key="sp.name" class="det-item" style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.name})">
-          <bird-img :src="photoUrl(sp.sci)" :alt="sp.name" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;"></bird-img>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{spName(sp.name, sp.sci)}}</div>
-            <div style="font-size:.7rem;color:var(--text-muted);">{{fmtTemp(sp.avgTemp)}} · {{sp.avgPrecip}}mm · {{sp.count}} det.</div>
-          </div>
+        <div v-if="corr.bestConditions" style="margin-top:.4rem;color:var(--text-muted);">
+          {{corr.bestConditions}}
+        </div>
+        <div style="margin-top:.35rem;font-size:.72rem;opacity:.5;">
+          {{t('weather_corr_caveat')}}
         </div>
       </div>
     </div>
@@ -127,6 +112,40 @@
             </li>
           </ol>
         </div>
+      </div>
+    </div>
+
+    <!-- Heatmap species × temperature — grouped with the leaderboards
+         above, both are "reading" analytics before the interactive tool. -->
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title">{{t('weather_heatmap_title')}}</div>
+      <div v-if="heatmap.loading" class="hint-empty" style="padding:2rem;">
+        <span class="spinner-inline"><i></i><i></i><i></i></span>
+      </div>
+      <div v-else-if="!heatmap.species.length" class="hint-empty" style="padding:2rem;">{{t('no_data')}}</div>
+      <div v-else class="weather-heatmap-wrap">
+        <table class="weather-heatmap">
+          <thead>
+            <tr>
+              <th class="hm-sp"></th>
+              <th v-for="b in heatmap.bins" :key="b.idx" class="hm-h">{{b.lo}}…{{b.hi}}°</th>
+              <th class="hm-tot">Σ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sp in heatmap.species" :key="sp.sci_name">
+              <td class="hm-sp" style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.com_name})">
+                {{spName(sp.com_name, sp.sci_name)}}
+              </td>
+              <td v-for="(c, i) in sp.counts" :key="i" class="hm-cell"
+                  :style="{background: heatColor(c, sp.maxC), color: c > sp.maxC * 0.6 ? '#fff' : 'inherit'}"
+                  :title="sp.com_name + ' · ' + heatmap.bins[i].lo + '…' + heatmap.bins[i].hi + '°C: ' + c + ' det.'">
+                {{c || ''}}
+              </td>
+              <td class="hm-tot">{{sp.total}}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -300,39 +319,6 @@
       </div>
     </div>
 
-    <!-- Heatmap species × temperature -->
-    <div class="card" style="margin-top:1rem;">
-      <div class="card-title">{{t('weather_heatmap_title')}}</div>
-      <div v-if="heatmap.loading" class="hint-empty" style="padding:2rem;">
-        <span class="spinner-inline"><i></i><i></i><i></i></span>
-      </div>
-      <div v-else-if="!heatmap.species.length" class="hint-empty" style="padding:2rem;">{{t('no_data')}}</div>
-      <div v-else class="weather-heatmap-wrap">
-        <table class="weather-heatmap">
-          <thead>
-            <tr>
-              <th class="hm-sp"></th>
-              <th v-for="b in heatmap.bins" :key="b.idx" class="hm-h">{{b.lo}}…{{b.hi}}°</th>
-              <th class="hm-tot">Σ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="sp in heatmap.species" :key="sp.sci_name">
-              <td class="hm-sp" style="cursor:pointer;" @click="navigateTo('species.html',{species:sp.com_name})">
-                {{spName(sp.com_name, sp.sci_name)}}
-              </td>
-              <td v-for="(c, i) in sp.counts" :key="i" class="hm-cell"
-                  :style="{background: heatColor(c, sp.maxC), color: c > sp.maxC * 0.6 ? '#fff' : 'inherit'}"
-                  :title="sp.com_name + ' · ' + heatmap.bins[i].lo + '…' + heatmap.bins[i].hi + '°C: ' + c + ' det.'">
-                {{c || ''}}
-              </td>
-              <td class="hm-tot">{{sp.total}}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </birdash-shell>
 </div>
 
@@ -354,8 +340,16 @@ const app = createApp({
     const todayWeather = ref(null);
     const forecast = ref(null);
     const corr = ref(null);
-    const topByWeather = ref([]);
     const canvasWeather = ref(null);
+    // True when at least one of temp/precip/wind has a Pearson |r|
+    // that crosses the 0.2 significance floor. Used to hide the
+    // entire correlation block when nothing is significant (common
+    // with only 30 days of data).
+    const corrHasSignal = computed(() => {
+      const c = corr.value;
+      if (!c) return false;
+      return Math.abs(c.temp) >= 0.2 || Math.abs(c.precip) >= 0.2 || Math.abs(c.wind) >= 0.2;
+    });
 
     // ── Phase C analytics state ─────────────────────────────────────────
     const leaderboards = ref([
@@ -720,29 +714,10 @@ const app = createApp({
         }
         corr.value = { temp: rT, precip: rP, wind: rW, bestConditions: bestText };
 
-        // Top species by weather conditions (top 10 species, their preferred weather)
-        try {
-          const spRows = await birdQuery(
-            `SELECT d.Com_Name, MAX(d.Sci_Name) as Sci_Name, COUNT(*) as n, d.Date
-             FROM detections d WHERE d.Date >= ? GROUP BY d.Com_Name, d.Date ORDER BY n DESC`, [daysAgo(30)]);
-          const spWeather = {};
-          for (const r of spRows) {
-            const idx = dates.indexOf(r.Date);
-            if (idx < 0 || tempData[idx] == null) continue;
-            if (!spWeather[r.Com_Name]) spWeather[r.Com_Name] = { sci: r.Sci_Name, temps: [], precips: [], count: 0 };
-            const sw = spWeather[r.Com_Name];
-            sw.temps.push(tempData[idx]); sw.precips.push(precipData[idx]); sw.count += r.n;
-          }
-          topByWeather.value = Object.entries(spWeather)
-            .sort((a,b) => b[1].count - a[1].count)
-            .slice(0, 8)
-            .map(([name, d]) => ({
-              name, sci: d.sci,
-              avgTemp: Math.round(d.temps.reduce((s,v)=>s+v,0)/d.temps.length),
-              avgPrecip: Math.round(d.precips.reduce((s,v)=>s+v,0)/d.precips.length*10)/10,
-              count: d.count
-            }));
-        } catch(e) {}
+        // Note: the old "top species by weather" card was removed in favor
+        // of the phase C leaderboards (cold/storm/rain/wind) + the custom
+        // search card below, which cover the same need with per-hour weather
+        // precision and arbitrary filters instead of 30-day daily aggregates.
 
         // Render chart — convert temp/wind to display units at render time.
         // (Chart.js captures labels at build; a preference change requires a reload.)
@@ -788,7 +763,7 @@ const app = createApp({
 
     return {
       lang, t, spName, navigateTo, photoUrl,
-      loading, error, todayWeather, forecast, corr, topByWeather, canvasWeather,
+      loading, error, todayWeather, forecast, corr, corrHasSignal, canvasWeather,
       leaderboards, heatmap, heatColor,
       filters, search, presets, activePreset, conditionOptions, searchSummary,
       onFilterChange, toggleCondition, applyPreset, resetFilters,
