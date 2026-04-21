@@ -27,7 +27,9 @@ const SunCalc = require('suncalc');
 const { dbPath, birdashDbPath, lat, lon, minConf, rulesPath } = workerData;
 
 const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-db.pragma('busy_timeout = 5000');
+// Apply same tuning as the main process so worker reads benefit from
+// the bigger cache + mmap on Pi 4/5 (and stay conservative on Pi 3).
+require('./db-pragmas').applyReadPragmas(db);
 
 // Attach birdash.db for the active_detections VIEW
 try {

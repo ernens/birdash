@@ -2,6 +2,42 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.37.0] — 2026-04-21
+
+### Perf: centralized SQLite PRAGMA tuning adapted to host RAM
+
+Audited the PRAGMAs birdash applies to its SQLite connections. The defaults from `better-sqlite3` already gave us `synchronous=NORMAL` and `cache_size=16 MB`, but `mmap_size` was disabled and `temp_store` spilled to disk — both leave performance on the table on Pi 4/5.
+
+New `server/lib/db-pragmas.js` helper applies a consistent tuning to every connection (read, write, `birdash.db`, `taxonomy.db`, and the worker thread) and adapts to host RAM:
+
+- **Pi 4/5 (≥3 GB)**: `cache_size = 64 MB`, `mmap_size = 256 MB`, `temp_store = MEMORY`, `busy_timeout = 30 s`
+- **Pi 3 (<3 GB)**: `cache_size = 16 MB` (kept), `mmap_size = 0` (skipped — RAM too tight next to arecord), `temp_store = MEMORY`, `busy_timeout = 30 s`
+
+Why these values:
+- `synchronous = NORMAL` (no change, kept) — SQLite docs explicitly recommend it in WAL mode; 2-5× faster writes, only risk is losing the last ~1 s of transactions on power cut (acceptable — engine recreates within 45 s)
+- `cache_size = 64 MB` — hot pages stay across queries; huge win on repeated aggregates over the same date window
+- `mmap_size = 256 MB` — lets the OS page cache back the most-read portion of birds.db (currently ~750 MB on bird.local); sequential reads much faster
+- `temp_store = MEMORY` — ORDER BY / GROUP BY / DISTINCT temp B-trees don't spill to disk
+- `busy_timeout = 30 s` — aligned with Python engine (30 s) so Node reads tolerate long Python writes instead of raising "database is locked"
+
+Bench (bird.local, Pi 5, birds.db ~750 MB, new `scripts/bench-sqlite.mjs`):
+
+| Query | Baseline median | Tuned median | Δ |
+|---|---|---|---|
+| timeline-today | 59 ms | 58 ms | -3 % |
+| top-species-30d | 1090 ms | **858 ms** | **-21 %** |
+| species-detail-history | 324 ms | 308 ms | -5 % |
+| hourly-activity-today | 55 ms | 54 ms | -2 % |
+| distinct-species-30d | 1036 ms | 976 ms | -6 % |
+| rare-species-1y | 2712 ms | **2317 ms** | **-15 %** |
+| weather-cold-tolerance | 774 ms | 962 ms | +24 % * |
+| weather-species-heatmap-top30 | 17323 ms | 20805 ms | +20 % * |
+| first-last-by-species-1y | 2521 ms | 2395 ms | -5 % |
+
+`* = noisy full-scan queries on the attached weather_hourly join. These analytics endpoints run once per user visit vs 25× in the bench; the variance is real (baseline max 20 s, tuned max 27 s — bird.local captures detections in parallel which contends for I/O).` The gain on the common read path (timeline, species detail, top species, rarities) is worth the occasional noisier analytics.
+
+New `scripts/bench-sqlite.mjs` supports `--baseline` (conservative defaults, for before/after comparisons) and `--json` (for scripted diffs). Each query runs 25 times with 3 warmup runs discarded; reports min/median/p95/max.
+
 ## [1.36.0] — 2026-04-21
 
 ### Refactor: split server/routes/audio.js into 8 cohesive modules

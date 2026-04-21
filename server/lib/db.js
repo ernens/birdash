@@ -35,6 +35,8 @@ const SONGS_DIR = process.env.BIRDASH_SONGS_DIR || path.join(
   process.env.HOME, 'BirdSongs', 'Extracted', 'By_Date'
 );
 
+const dbPragmas = require('./db-pragmas');
+
 // Bootstrap DB if missing (fresh install)
 if (!fs.existsSync(DB_PATH)) {
   const dbDir = path.dirname(DB_PATH);
@@ -51,18 +53,23 @@ if (!fs.existsSync(DB_PATH)) {
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
-  initDb.pragma('journal_mode = WAL');
-  initDb.pragma('busy_timeout = 5000');
+  dbPragmas.applyWritePragmas(initDb);
   initDb.close();
   console.log('[BIRDASH] Empty birds.db created successfully');
 }
 
 const db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
-db.pragma('busy_timeout = 5000');
+dbPragmas.applyReadPragmas(db);
 
 const dbWrite = new Database(DB_PATH, { fileMustExist: true });
-dbWrite.pragma('journal_mode = WAL');
-dbWrite.pragma('busy_timeout = 5000');
+const _writePragmaSnapshot = dbPragmas.applyWritePragmas(dbWrite);
+console.log('[BIRDASH] PRAGMAs:',
+  `journal=${_writePragmaSnapshot.journal_mode}`,
+  `sync=${_writePragmaSnapshot.synchronous}`,
+  `cache=${Math.abs(_writePragmaSnapshot.cache_size)}KB`,
+  `mmap=${Math.round(_writePragmaSnapshot.mmap_size / (1024*1024))}MB`,
+  `temp=${_writePragmaSnapshot.temp_store}`,
+  `busy=${_writePragmaSnapshot.busy_timeout}ms`);
 
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)');
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)');
@@ -149,8 +156,7 @@ try {
 let birdashDb;
 try {
   birdashDb = new Database(BIRDASH_DB_PATH);
-  birdashDb.pragma('journal_mode = WAL');
-  birdashDb.pragma('busy_timeout = 5000');
+  dbPragmas.applyWritePragmas(birdashDb);
   birdashDb.exec(`CREATE TABLE IF NOT EXISTS validations (
     date       TEXT,
     time       TEXT,
@@ -193,8 +199,7 @@ const TAXONOMY_SYNONYMS = {
 let taxonomyDb;
 try {
   taxonomyDb = new Database(TAXONOMY_DB_PATH);
-  taxonomyDb.pragma('journal_mode = WAL');
-  taxonomyDb.pragma('busy_timeout = 5000');
+  dbPragmas.applyWritePragmas(taxonomyDb);
   taxonomyDb.exec(`CREATE TABLE IF NOT EXISTS species_taxonomy (
     sci_name    TEXT PRIMARY KEY,
     order_name  TEXT,
