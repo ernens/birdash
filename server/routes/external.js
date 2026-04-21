@@ -3,6 +3,34 @@
  * External API routes — BirdWeather, eBird notable, weather
  */
 const https = require('https');
+const resultCache = require('../lib/result-cache');
+
+// Cache TTL for weather analytics endpoints (minutes).
+// Weather itself updates hourly and the underlying detections only
+// append, so a 5-min cache is safe and takes the weather page from
+// "25 s under load" to "instant after the first visitor warms it".
+const WEATHER_ANALYTICS_TTL = 5 * 60 * 1000;
+
+// Wrapper: try cache by normalized URL key, fall through to compute.
+// Returns true if it served a cached response (caller should return).
+function serveFromCache(req, res, ctx, label) {
+  const key = label + '|' + (req.url.split('?')[1] || '');
+  const hit = resultCache.get(key);
+  if (hit) {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
+    res.end(hit);
+    return true;
+  }
+  // Patch res.end to capture the computed response body for caching
+  const origEnd = res.end.bind(res);
+  res.end = function (body) {
+    if (typeof body === 'string' && res.statusCode === 200) {
+      resultCache.set(key, body, WEATHER_ANALYTICS_TTL);
+    }
+    return origEnd(body);
+  };
+  return false;
+}
 
 let _bwCache = null, _bwCacheTs = 0;
 const BW_TTL = 5 * 60 * 1000;
@@ -304,6 +332,7 @@ function handle(req, res, pathname, ctx) {
   // Overall counts of detections + distinct species per WMO category.
   // Drives the pie/bar overview at the top of the analytics section.
   if (req.method === 'GET' && pathname === '/api/weather/condition-summary') {
+    if (serveFromCache(req, res, ctx, 'cond-summary')) return true;
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const minConf = parseFloat(params.get('conf') || '0.7');
@@ -371,6 +400,7 @@ function handle(req, res, pathname, ctx) {
   //   date_from, date_to           (YYYY-MM-DD, season filter)
   //   conf=0.7  limit=20
   if (req.method === 'GET' && pathname === '/api/weather/species-by-condition') {
+    if (serveFromCache(req, res, ctx, 'species-by-cond')) return true;
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const { wherePred, args } = parseWeatherFilters(params);
@@ -396,6 +426,7 @@ function handle(req, res, pathname, ctx) {
   // — used by the live "12 348 détections · 47 espèces" header on the
   // custom-search card so we don't transfer the full row list just to count.
   if (req.method === 'GET' && pathname === '/api/weather/match-summary') {
+    if (serveFromCache(req, res, ctx, 'match-summary')) return true;
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const { wherePred, args } = parseWeatherFilters(params);
@@ -418,6 +449,7 @@ function handle(req, res, pathname, ctx) {
   // suitable for ECharts/Chart.js heatmap rendering.
   // Params: top=30  conf=0.7  bin_size=5  bin_min=-15  bin_max=35
   if (req.method === 'GET' && pathname === '/api/weather/species-heatmap') {
+    if (serveFromCache(req, res, ctx, 'species-heatmap')) return true;
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const minConf = parseFloat(params.get('conf') || '0.7');
@@ -479,6 +511,7 @@ function handle(req, res, pathname, ctx) {
   // Per-species distribution across weather conditions and temperature ranges.
   // Drives the "Profil météo" panel on species.html.
   if (req.method === 'GET' && pathname === '/api/weather/species-profile') {
+    if (serveFromCache(req, res, ctx, 'species-profile')) return true;
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const sciName = params.get('species') || '';
