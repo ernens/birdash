@@ -251,6 +251,41 @@
           </p>
         </div>
 
+        <!-- ═══ Noisy-species throttle ═══ -->
+        <div class="card">
+          <div class="section-title">
+            <bird-icon name="bird" :size="14"></bird-icon> {{t('set_throttle_title')}}
+            <button class="info-btn" @click.prevent="helpKey='noisy_throttle'" style="margin-left:.3rem;">i</button>
+          </div>
+          <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('set_throttle_desc')}}</p>
+
+          <div style="padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border);"
+               :style="{borderColor: conf.NOISY_THROTTLE_ENABLED == 1 ? 'var(--accent)' : 'var(--border)', background: conf.NOISY_THROTTLE_ENABLED == 1 ? 'rgba(52,211,153,.05)' : 'transparent'}">
+            <label class="set-check" style="cursor:pointer;">
+              <input type="checkbox" v-model="conf.NOISY_THROTTLE_ENABLED" true-value="1" false-value="0">
+              <span><strong>{{t('set_throttle_enable')}}</strong></span>
+            </label>
+            <p style="font-size:.74rem;color:var(--text-muted);margin:.25rem 0 0 1.5rem;">{{t('set_throttle_enable_desc')}}</p>
+
+            <div v-if="conf.NOISY_THROTTLE_ENABLED == 1" style="margin:.6rem 0 0 1.5rem;">
+              <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);min-width:150px;">{{t('set_throttle_cooldown')}}</span>
+                <input type="number" min="10" max="3600" step="10" v-model.number="conf.THROTTLE_COOLDOWN_SECONDS"
+                       style="width:80px;font-size:.82rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.25rem .4rem;text-align:right;">
+                <span style="font-size:.72rem;color:var(--text-faint);">{{t('unit_seconds')}}</span>
+              </div>
+              <p style="font-size:.7rem;color:var(--text-faint);margin:-.25rem 0 .5rem .2rem;">{{t('set_throttle_cooldown_hint')}}</p>
+
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <span style="font-size:.78rem;color:var(--text-muted);min-width:150px;">{{t('set_throttle_bypass')}}</span>
+                <input type="range" min="0.50" max="1.00" step="0.01" v-model.number="conf.THROTTLE_BYPASS_CONFIDENCE" class="set-range" style="flex:1;">
+                <span style="font-size:.78rem;font-family:monospace;min-width:44px;text-align:right;">{{Number(conf.THROTTLE_BYPASS_CONFIDENCE).toFixed(2)}}</span>
+              </div>
+              <p style="font-size:.7rem;color:var(--text-faint);margin:.25rem 0 0 .2rem;">{{t('set_throttle_bypass_hint')}}</p>
+            </div>
+          </div>
+        </div>
+
         <!-- ═══ Range Filter — Perch / eBird (Part B) ═══ -->
         <div class="card">
           <div class="section-title"><bird-icon name="filter" :size="14"></bird-icon> {{t('set_range_perch_title')}}</div>

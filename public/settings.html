@@ -1073,6 +1073,26 @@ const app = createApp({
             ⚠️ Trop court : les faux positifs continuent. Trop long : tu peux rater un vrai chant entre deux aboiements.`,
           rec: 'Si tu as un chien ou un voisin bruyant : activer, seuil <strong>0,50</strong>, cooldown <strong>15–30 s</strong>.'
         },
+        noisy_throttle: {
+          title: 'Limiter les espèces bavardes',
+          body: `Certaines espèces (Moineau domestique, Pigeon, Corneille…) campent près du micro et génèrent des centaines voire des milliers de détections par jour, qui gonflent la base SQLite, saturent le post-traitement (MP3, spectrogrammes, uploads BirdWeather) et ralentissent les analytics.<br><br>
+            <strong>Mécanisme</strong> : pour chaque détection sortant du moteur, avant l'insertion en base :<br>
+            &nbsp;&nbsp;1. Si la confiance ≥ <em>bypass</em> → toujours garder (préserve les calls parfaits)<br>
+            &nbsp;&nbsp;2. Sinon, si la même espèce a déjà été insérée il y a &lt; <em>cooldown</em> secondes → ignorer<br>
+            &nbsp;&nbsp;3. Sinon → insérer normalement et mémoriser le timestamp<br><br>
+            <strong>Cooldown (secondes)</strong> : délai minimum entre deux détections enregistrées pour une même espèce (10 – 3600 s).<br>
+            &nbsp;&nbsp;• <strong>60 s</strong> : léger — divise par ~2 le flux des espèces bavardes.<br>
+            &nbsp;&nbsp;• <strong>120 s</strong> (défaut) : équilibré — conserve la granularité temporelle utile tout en réduisant le bruit.<br>
+            &nbsp;&nbsp;• <strong>300 s</strong> : agressif — 1 détection max toutes les 5 min par espèce (sauf bypass).<br><br>
+            <strong>Seuil de bypass (confiance)</strong> : au-dessus de ce score, la détection est <em>toujours</em> gardée, même en cooldown (0,50 – 1,00).<br>
+            &nbsp;&nbsp;• <strong>0,95</strong> (défaut) : n'ignore que les détections ordinaires. Un beau call à 0,97 passe même si la même espèce vient d'être loguée 3 s plus tôt.<br>
+            &nbsp;&nbsp;• <strong>0,99</strong> : quasi-aucune exception — maximum d'économies de DB.<br>
+            &nbsp;&nbsp;• <strong>0,80</strong> : plus permissif — garde beaucoup de "bons" calls.<br><br>
+            <strong>Ce qui reste intact</strong> : la confiance affichée, la distribution de qualité sur le temps, les analytics météo — tout fonctionne normalement sur les détections gardées. Ce qui change : les répétitions quasi-identiques d'une même espèce dans une courte fenêtre ne sont plus enregistrées (sauf si elles sont excellentes).<br><br>
+            <strong>Observabilité</strong> : un compteur interne (<code>_throttle_dropped</code>) suit le nombre de détections ignorées depuis le démarrage du moteur. Visible dans les logs en mode debug.<br><br>
+            ⚠️ Le compteur est en mémoire — il est réinitialisé au redémarrage du moteur. C'est voulu : la première détection après redémarrage refait démarrer le cooldown proprement.`,
+          rec: 'Si ton Moineau/Pigeon/Corneille domine la base : activer, <strong>cooldown 120 s</strong>, <strong>bypass 0,95</strong>. Ajuste le cooldown à 300 s si tu vois encore trop de répétitions.'
+        },
         site_brand: { title:'Brand name', body:'Main name displayed in the header above the site name. Default: BirdStation.', rec:'Your project or station brand.' },
         site_name: {
           title: 'Nom du site',
@@ -1310,6 +1330,26 @@ const app = createApp({
             <strong>Cooldown</strong>: duration (in seconds) during which <em>no</em> detections are recorded after a bark, even if BirdNET/Perch reports a bird. Default 15 s — matches the average burst length.<br><br>
             ⚠️ Too short: false positives slip through. Too long: you may miss a real song between two barks.`,
           rec: 'If you have a dog (or noisy neighbour): enable, threshold <strong>0.50</strong>, cooldown <strong>15–30 s</strong>.'
+        },
+        noisy_throttle: {
+          title: 'Throttle chatty species',
+          body: `Some species (House Sparrow, Pigeon, Crow…) camp next to the mic and generate hundreds to thousands of detections per day, bloating the SQLite DB, saturating post-processing (MP3, spectrograms, BirdWeather uploads) and slowing analytics.<br><br>
+            <strong>How it works</strong> — for every detection coming out of the model, before the DB insert:<br>
+            &nbsp;&nbsp;1. If confidence ≥ <em>bypass</em> → always keep (preserves clean calls)<br>
+            &nbsp;&nbsp;2. Otherwise, if the same species was inserted &lt; <em>cooldown</em> seconds ago → drop<br>
+            &nbsp;&nbsp;3. Otherwise → insert normally and remember the timestamp<br><br>
+            <strong>Cooldown (seconds)</strong>: minimum delay between two recorded detections of the same species (10 – 3600 s).<br>
+            &nbsp;&nbsp;• <strong>60 s</strong>: light — roughly halves the flow of chatty species.<br>
+            &nbsp;&nbsp;• <strong>120 s</strong> (default): balanced — keeps useful temporal granularity while cutting the noise.<br>
+            &nbsp;&nbsp;• <strong>300 s</strong>: aggressive — at most one detection every 5 min per species (bypass aside).<br><br>
+            <strong>Bypass confidence</strong>: above this score the detection is <em>always</em> kept, even during cooldown (0.50 – 1.00).<br>
+            &nbsp;&nbsp;• <strong>0.95</strong> (default): only drops ordinary detections. A clean call at 0.97 is kept even if the same species was logged 3 s earlier.<br>
+            &nbsp;&nbsp;• <strong>0.99</strong>: almost no exceptions — maximum DB savings.<br>
+            &nbsp;&nbsp;• <strong>0.80</strong>: more permissive — keeps many "decent" calls.<br><br>
+            <strong>What stays intact</strong>: shown confidence values, quality distribution over time, weather analytics — everything works normally on the kept detections. What changes: near-identical repeats of the same species in a short window are no longer recorded (unless excellent).<br><br>
+            <strong>Observability</strong>: an internal counter (<code>_throttle_dropped</code>) tracks the number of dropped detections since engine start. Visible in debug logs.<br><br>
+            ⚠️ The counter is in memory — it resets on engine restart. That's intentional: the first detection after restart re-anchors the cooldown cleanly.`,
+          rec: 'If a Sparrow/Pigeon/Crow dominates your DB: enable, <strong>cooldown 120 s</strong>, <strong>bypass 0.95</strong>. Push cooldown to 300 s if you still see too many repeats.'
         },
         site_name: { title:'Site name', body:'Name shown in the header and on BirdWeather.', rec:'Your locality or garden name.' },
         latitude: { title:'Latitude', body:'GPS latitude (4 decimals). Used by the MData geographic filter.', rec:'Use Google Maps.' },

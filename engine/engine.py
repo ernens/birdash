@@ -929,6 +929,17 @@ class BirdEngine:
         self._post_threads = []  # Track post-processing threads for clean shutdown
         self._post_lock = threading.Lock()  # Guards _post_threads (primary + secondary workers both append)
 
+        # ── Noisy-species throttle ────────────────────────────────────────
+        # In-memory dict mapping species (Com_Name) to last DB-insert time
+        # (epoch seconds). When NOISY_THROTTLE_ENABLED is on in birdnet.conf,
+        # detections of the same species within THROTTLE_COOLDOWN_SECONDS are
+        # dropped before insert — unless their confidence is at or above
+        # THROTTLE_BYPASS_CONFIDENCE (preserves "perfect" calls regardless).
+        # Resets at process restart; that's fine, the cooldown re-anchors on
+        # the first detection after restart.
+        self._throttle_last = {}        # {com_name: last_insert_epoch}
+        self._throttle_dropped = 0       # session counter (Prom-readable later)
+
         # ── Perch eBird range filter ──────────────────────────────────────
         # Perch has no MData equivalent for geographic filtering, so its
         # outputs include species that can't possibly be at this location
@@ -1085,6 +1096,17 @@ class BirdEngine:
                     "_start": pred_start,
                     "_stop": pred_end,
                 }
+                # Noisy-species throttle (opt-in, off by default). When a
+                # species (e.g. a sparrow camped next to the mic) dominates
+                # the audio, we drop its low-confidence repeats within the
+                # cooldown window but always keep high-confidence calls.
+                if self._should_throttle(com_name, confidence):
+                    log.debug("  [%s] %s — %s (%.1f%%) THROTTLED (cooldown)",
+                              tag, com_name, sci_name, confidence * 100)
+                    # Don't insert into DB, don't append to detections list;
+                    # downstream post-processing (MP3, spectro, BirdWeather
+                    # upload) is also skipped by consequence.
+                    continue
                 with self._db_lock:
                     write_detection(self.db, det)
                 detections.append(det)
@@ -1317,6 +1339,42 @@ class BirdEngine:
         except Exception as e:
             log.warning("[range-perch] failed to load %s: %s", path_used, e)
             self.perch_ebird_set = set()
+
+    def _should_throttle(self, com_name, confidence, now=None):
+        """Return True if this detection should be dropped by the noisy-species
+        throttle. Reads fresh config from birdnet.conf on each call — cheap
+        (it's already cached in-process) and lets the user toggle the feature
+        without restarting the engine.
+
+        Logic:
+          1. Feature off (NOISY_THROTTLE_ENABLED != 1) → never throttle.
+          2. Confidence ≥ THROTTLE_BYPASS_CONFIDENCE → always keep (clear call).
+          3. Same species inserted within THROTTLE_COOLDOWN_SECONDS → drop.
+          4. Otherwise → keep, update last-seen timestamp.
+        """
+        conf = self._read_birdnet_conf()
+        if str(conf.get("NOISY_THROTTLE_ENABLED", "0")) != "1":
+            return False
+        try:
+            bypass = float(conf.get("THROTTLE_BYPASS_CONFIDENCE", "0.95"))
+        except ValueError:
+            bypass = 0.95
+        if confidence >= bypass:
+            return False
+        try:
+            cooldown = int(conf.get("THROTTLE_COOLDOWN_SECONDS", "120"))
+        except ValueError:
+            cooldown = 120
+        if cooldown <= 0:
+            return False
+        if now is None:
+            now = time.time()
+        last = self._throttle_last.get(com_name, 0)
+        if now - last < cooldown:
+            self._throttle_dropped += 1
+            return True
+        self._throttle_last[com_name] = now
+        return False
 
     def _read_birdnet_conf(self):
         """Parse birdnet.conf and return a dict of key=value pairs."""

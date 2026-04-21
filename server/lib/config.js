@@ -184,6 +184,13 @@ const SETTINGS_VALIDATORS = {
   PRIVACY_THRESHOLD: v => !isNaN(v) && v >= 0 && v <= 3,
   DUAL_MODEL_ENABLED: v => v == 0 || v == 1,
   SECONDARY_MODEL: v => typeof v === 'string' && v.length <= 100,
+  // Noisy-species throttle: skip same-species inserts inside a cooldown
+  // window unless confidence is at/above the bypass floor. Lets dominant
+  // species (e.g. a sparrow camped on the mic) not flood the DB while
+  // preserving clean high-confidence calls.
+  NOISY_THROTTLE_ENABLED:       v => v == 0 || v == 1,
+  THROTTLE_COOLDOWN_SECONDS:    v => !isNaN(v) && v >= 10 && v <= 3600,
+  THROTTLE_BYPASS_CONFIDENCE:   v => !isNaN(v) && v >= 0.5 && v <= 1.0,
   NOTIFY_RARE_SPECIES: v => v == 0 || v == 1,
   NOTIFY_RARE_THRESHOLD: v => !isNaN(v) && v >= 1 && v <= 1000,
   NOTIFY_FIRST_SEASON: v => v == 0 || v == 1,
