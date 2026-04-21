@@ -3,8 +3,8 @@
  * MQTT Publisher — publishes new bird detections to an MQTT broker.
  *
  * Mirrors the notification-watcher pattern: polls birds.db for new rows,
- * publishes one JSON message per detection. Targets the Home Assistant
- * domotic crowd (BirdNET-Go's killer integration), but works with any
+ * publishes one JSON message per detection. Built primarily for Home
+ * Assistant users (the most requested integration), but works with any
  * MQTT broker (Mosquitto, EMQX, HiveMQ).
  *
  * Topics (configurable prefix, default `birdash`):
