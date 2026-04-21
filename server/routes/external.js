@@ -200,6 +200,38 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/weather/range?from=YYYY-MM-DD&to=YYYY-MM-DD ─────────
+  // Returns all hourly snapshots in the date range (inclusive). Used by pages
+  // that display many detections at once — avoids N round-trips for N visible
+  // detections by letting the frontend look up by (date, hour) from one fetch.
+  if (req.method === 'GET' && pathname === '/api/weather/range') {
+    try {
+      if (!birdashDb) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'weather_unavailable' }));
+        return true;
+      }
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const from = params.get('from');
+      const to = params.get('to') || from;
+      if (!from || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'bad_request' }));
+        return true;
+      }
+      const rows = birdashDb.prepare(`SELECT date, hour, temp_c, humidity_pct, wind_kmh,
+          wind_dir_deg, precip_mm, cloud_pct, pressure_hpa, weather_code
+          FROM weather_hourly WHERE date >= ? AND date <= ? ORDER BY date, hour`).all(from, to);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ from, to, count: rows.length, snapshots: rows }));
+    } catch(e) {
+      console.error('[weather/range]', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'weather_error', message: e.message }));
+    }
+    return true;
+  }
+
   // ── Route : GET /api/weather/at?date=YYYY-MM-DD&time=HH:MM:SS ────────────
   // Returns the hourly weather snapshot covering the given moment, populated
   // by the weather-watcher background poller. 404 if no snapshot recorded

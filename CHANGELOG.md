@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.32.0] — 2026-04-21
+
+### Weather chips on detection lists (Phase A of weather audit)
+
+The weather context that landed in 1.31.x is now visible everywhere a detection appears, not just inside the spectrogram modal.
+
+New pieces:
+- `GET /api/weather/range?from=YYYY-MM-DD&to=YYYY-MM-DD` returns all hourly snapshots in the range as a single response — a page with N detections gets weather for all of them in 1 round-trip instead of N.
+- `BIRDASH.weatherCache` (Map) + `BIRDASH.loadWeatherRange(from, to)` — global in-memory cache with 5-minute TTL per range key, request deduplication for parallel callers, and silent degradation on network failures.
+- New `<weather-chip :date :time :detailed>` Vue component, registered globally via the patched `BIRDASH.registerComponents`. Reads from the cache, renders nothing if the lookup misses. The `detailed` prop adds precip and wind when meaningful.
+- Loaded into 23 pages via the same script-tag pattern as the spectro modal.
+
+Pages now showing weather chips:
+- `today.html` — chip next to the player meta
+- `overview.html` — detailed chip (with precip + wind) on the featured-detection card
+- `recordings.html` — chip on each recording row
+- `rarities.html` — chip on each recent-rare-detection card
+- `review.html` — chip on each flagged-detection meta line
+- `favorites.html` — chip showing weather at the last detection of each favorite species
+
+Pages still using their own fetch (no change): the spectro modal continues to fetch via `/api/weather/at` since it has no range context.
+
+Phase A of three: badges everywhere → analytics → filters (per the ornithology roadmap).
+
 ## [1.31.1] — 2026-04-21
 
 ### Weather backfill via Open-Meteo archive API

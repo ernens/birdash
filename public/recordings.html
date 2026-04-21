@@ -20,6 +20,7 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <script src="js/bird-weather-chip.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -57,6 +58,7 @@
             <button class="play-btn" style="width:28px;height:28px;font-size:.6rem;" @click="togglePlay(rec)">{{playingUid===rec.uid?'⏹':'▶'}}</button>
             <span :class="'conf-badge '+(rec.conf>=80?'conf-high':rec.conf>=60?'conf-mid':'conf-low')" style="font-size:.72rem;">{{rec.conf.toFixed(1)}}%</span>
             <span style="font-size:.72rem;color:var(--text-muted);flex:1;">{{rec.Date}} {{rec.Time.substring(0,5)}}</span>
+            <weather-chip :date="rec.Date" :time="rec.Time"></weather-chip>
             <button class="dl-btn" @click="openSpectroModal({fileName:rec.File_Name,speciesName:rec.Com_Name,sciName:rec.Sci_Name,confidence:rec.Confidence,date:rec.Date,time:rec.Time})" title="Spectrogramme"><bird-icon name="maximize-2" :size="13"></bird-icon></button>
           </div>
         </div>
@@ -403,6 +405,11 @@ const app = createApp({
     // ── Chargement ─────────────────────────────────────────────────
     async function loadData() {
       loading.value = true;
+      // Pre-load weather snapshots for the visible date range so each chip
+      // can resolve from the in-memory cache without N round-trips.
+      if (BIRDASH.loadWeatherRange && fp.dateFrom.value) {
+        BIRDASH.loadWeatherRange(fp.dateFrom.value, fp.dateTo.value || fp.dateFrom.value);
+      }
       try {
         // Build WHERE using shared helper + confidence & date from composables
         const wc = buildWhereClause({

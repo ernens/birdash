@@ -20,6 +20,7 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <script src="js/bird-weather-chip.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -148,6 +149,7 @@
                   <div class="det-sci">{{d.Sci_Name}}</div>
                 </div>
                 <span :class="'conf-badge '+(parseFloat(d.Confidence)>=0.8?'conf-high':'conf-mid')">{{fmtConf(d.Confidence)}}</span>
+                <weather-chip :date="d.Date" :time="d.Time"></weather-chip>
               </div>
             </div>
           </div>
@@ -313,6 +315,11 @@ const app = createApp({
            ORDER BY d.Date DESC,d.Time DESC LIMIT 15`,[conf,maxDet,conf]);
         assignPhotos(rows);
         recent.value = { loading:false, rows };
+        // Pre-fetch weather for the visible date range so chips populate
+        if (BIRDASH.loadWeatherRange && rows.length) {
+          const dates = rows.map(r => r.Date).sort();
+          BIRDASH.loadWeatherRange(dates[0], dates[dates.length-1]);
+        }
       } catch(e) { recent.value = { loading:false, rows:[] }; }
     }
 

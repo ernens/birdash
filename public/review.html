@@ -19,6 +19,7 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <script src="js/bird-weather-chip.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -116,7 +117,10 @@
                 {{fmtConf(det.confidence)}}
               </span>
             </div>
-            <div style="font-size:.75rem;color:var(--text-muted);">{{fmtDate(det.date)}} {{det.time.slice(0,5)}} · {{det.model}}</div>
+            <div style="font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+              <span>{{fmtDate(det.date)}} {{det.time.slice(0,5)}} · {{det.model}}</span>
+              <weather-chip :date="det.date" :time="det.time"></weather-chip>
+            </div>
             <div style="margin-top:.2rem;">
               <span v-for="r in det.reasons" :key="r" class="rv-badge">{{r}}</span>
             </div>
@@ -242,6 +246,7 @@ const app = createApp({
       try {
         const from = fp.dateFrom.value || new Date().toISOString().split('T')[0];
         const to = fp.dateTo.value || from;
+        if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(from, to);
         const resp = await fetch(`${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=2000`);
         const data = await resp.json();
         flagged.value = data.flagged || [];

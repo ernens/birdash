@@ -19,6 +19,7 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <script src="js/bird-weather-chip.js"></script>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -103,6 +104,7 @@
           <span v-if="f.last_date" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">
             {{fmtDateShort(f.last_date)}}
           </span>
+          <weather-chip v-if="f.last_date && f.last_time" :date="f.last_date" :time="f.last_time"></weather-chip>
         </div>
       </div>
     </div>
@@ -165,6 +167,11 @@ const app = Vue.createApp({
             photoUrl: photoUrl(f.sci_name),
           }));
           stats.value = data.stats || {};
+          // Pre-fetch weather for last detection dates so chips populate
+          if (BIRDASH.loadWeatherRange) {
+            const dates = favList.value.map(f => f.last_date).filter(Boolean).sort();
+            if (dates.length) BIRDASH.loadWeatherRange(dates[0], dates[dates.length-1]);
+          }
         }
       } catch (e) {
         console.warn('[favorites]', e);

@@ -20,6 +20,7 @@
   <script src="js/bird-icons.js"></script>
   <script src="js/bird-vue-core.js"></script>
   <script src="js/bird-spectro-modal.js"></script>
+  <script src="js/bird-weather-chip.js"></script>
   <style>
     .td-summary {
       padding: .7rem .9rem;
@@ -222,6 +223,7 @@
                 <span style="font-size:.75rem;color:var(--text-muted);font-family:monospace;">
                   {{fmtTime(currentDet.Time)}}
                 </span>
+                <weather-chip :date="currentDet.Date" :time="currentDet.Time"></weather-chip>
                 <a class="btn btn-secondary"
                    :href="'species.html?species='+encodeURIComponent(selected.Com_Name)"
                    style="padding:.1rem .5rem;font-size:.72rem;">
@@ -873,7 +875,11 @@ const app = createApp({
     }
 
     watch(lang, () => loadKpis());
-    onMounted(() => { document.addEventListener('keydown', _onKeydown); loadAll(); });
+    onMounted(() => {
+      document.addEventListener('keydown', _onKeydown);
+      loadAll();
+      if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(today);
+    });
     onUnmounted(() => {
       document.removeEventListener('keydown', _onKeydown);
       stopAudio();
