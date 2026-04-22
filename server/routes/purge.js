@@ -147,7 +147,7 @@ function handle(req, res, pathname, ctx) {
     const orphaned = qp.get('orphaned') === '1';
     const { whereSql, params } = buildWhere(qp);
 
-    const ORPHAN_SCAN_CAP = 10000;
+    const ORPHAN_SCAN_CAP = 50000;
     const cols = view === 'active'
       ? 'rowid AS rowid, Date, Time, Sci_Name, Com_Name, Confidence, Model, Source, File_Name'
       : 'id AS rowid, Date, Time, Sci_Name, Com_Name, Confidence, Model, Source, File_Name, trashed_at, original_path';
