@@ -494,14 +494,21 @@ const app = createApp({
     }
 
     function openModal(r) {
-      // Reuse the existing spectro modal — it expects a row with Sci_Name +
-      // File_Name. For trash rows, the audio source URL uses our purge/file
-      // endpoint instead of Caddy.
-      const args = { ...r, audioOverride: null };
-      if (view.value === 'trash') {
-        args.audioOverride = `${API}/purge/file?id=${r.rowid}`;
-      }
-      if (typeof openSpectroModal === 'function') openSpectroModal(args);
+      // The shared spectro modal expects camelCase fields, not the
+      // PascalCase the DB returns directly. Map them explicitly.
+      // Trash rows: the modal builds audio URL from fileName via the
+      // standard Caddy path — that 404s for trashed files. For now the
+      // modal opens with spectro only; an audioUrl override hook in
+      // bird-spectro-modal.js is on the follow-up list.
+      if (typeof openSpectroModal !== 'function') return;
+      openSpectroModal({
+        fileName: r.File_Name,
+        speciesName: r.Com_Name,
+        sciName: r.Sci_Name,
+        confidence: r.Confidence,
+        date: r.Date,
+        time: r.Time,
+      });
     }
 
     // Reload when filters / view / page / limit change (debounced)
