@@ -2,6 +2,84 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.44.0] — 2026-04-23
+
+### Feat: Quality page Phase B — engine instrumentation
+
+Engine now persists 5 quality counters into a new `quality_events`
+table (date+hour bucketed). The Quality page's pre-filter card flips
+from "not instrumented" placeholder to real numbers, with the green
+`measured` badge.
+
+Counters wired in `engine/engine.py` (definitions in
+`docs/QUALITY_METRICS.md`):
+
+- `privacy_dropped` — files skipped because YAMNet voice ≥ threshold
+- `dog_dropped` — files skipped because YAMNet bark ≥ threshold
+- `dog_cooldown_skipped` — files skipped because we're inside a
+  bark-cooldown window from a prior file
+- `throttle_dropped` — detections suppressed by the noisy-species
+  throttle (was already an in-memory `_throttle_dropped` counter,
+  now persisted)
+- `files_processed` — successful `process_file()` completions, used
+  as the denominator for filter rates
+
+Persistence pattern: in-memory `defaultdict(int)` accumulator with a
+threading lock; flushed every 5 min from the existing periodic loop
+in `run()` AND once more on shutdown. UPSERT with addition merges
+flushes that land in the same hour bucket — survives restarts at
+hour boundaries cleanly.
+
+### ⚠ Known gap surfaced: cross-confirm rule documented but not implemented
+
+While wiring Phase B, found that the cross-confirm rule advertised
+in v1.38.0 (`DUAL_CONFIRM_ENABLED`, `PERCH_STANDALONE_CONFIDENCE`,
+`BIRDNET_ECHO_CONFIDENCE`) has docs, settings UI, config validators,
+i18n — but **the engine never reads those keys and never runs the
+rule**. Commit e79e909 shipped the documentation/UI half without the
+matching `engine.py` change.
+
+Rather than fake a counter for a rule that doesn't run, the Quality
+page's pre-filter card surfaces this honestly: `cross_confirm_rejected`
+stays `null` and the row says "Known gap — cross-confirm logic
+documented but never wired into the engine inference loop". Fixing
+the rule itself is its own backlog item.
+
+### Schema
+
+- New `quality_events` table:
+  ```sql
+  CREATE TABLE quality_events (
+    Date TEXT, Hour INTEGER,
+    cross_confirm_rejected INTEGER DEFAULT 0,
+    privacy_dropped INTEGER DEFAULT 0,
+    dog_dropped INTEGER DEFAULT 0,
+    dog_cooldown_skipped INTEGER DEFAULT 0,
+    throttle_dropped INTEGER DEFAULT 0,
+    files_processed INTEGER DEFAULT 0,
+    PRIMARY KEY (Date, Hour)
+  );
+  ```
+- Idempotent migration in both `engine/db.py` (engine boot) and
+  `server/lib/db.js` (birdash boot, deferred-retry pattern). Either
+  can create the table, the other no-ops.
+- New `upsert_quality_events()` helper in `engine/db.py` that adds
+  to existing counts on conflict.
+
+### Frontend
+
+- Pre-filter card now shows real numbers when `quality_events` has
+  data, with per-counter rate as a percentage of total file decisions
+  (processed + privacy + dog).
+- Throttle card gets a `measured` badge with the engine's exact
+  count when available, alongside the existing inferred 7d-vs-30d
+  delta. Both surfaces cohabit so the user can compare.
+- New `quality_source_measured` badge style (deeper green than
+  `observed`) so the user reads "measured" as "ground truth" vs
+  "computed-from-DB-rows".
+
+i18n: 10 new keys × 4 langs.
+
 ## [1.43.0] — 2026-04-23
 
 ### Feat: Detection Quality page (Phase A)

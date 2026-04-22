@@ -32,8 +32,9 @@ function handle(req, res, pathname, ctx) {
         minVolume,
         review: await reviewOutcomes(db, birdashDb, days),
         agreement: await modelAgreement(db, days, minVolume),
-        prefilter: prefilterPlaceholder(),  // Phase A: not instrumented yet
+        prefilter: prefilterFromEvents(db, days),
         throttle: throttleEffect(db, parseBirdnetConf),
+        throttle_measured: throttleMeasured(db, days),
         timeline: dailyTimeline(db, days),
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -145,19 +146,72 @@ async function modelAgreement(db, days, minVolume) {
   };
 }
 
-// ── Pre-filter impact placeholder (Phase A) ────────────────────────────────
-// The engine logs "[privacy] DROP" / "[dog] DROP" / cross-confirm rejection
-// to the systemd journal but doesn't persist them. Phase B adds the
-// quality_events table; until then, this card explicitly says so rather
-// than show fake zeros.
-function prefilterPlaceholder() {
+// ── Pre-filter impact (Phase B: from quality_events) ──────────────────────
+// Reads the engine-emitted hourly counters. If the table is empty (engine
+// not yet upgraded, or no events in the period), falls back to the
+// "not instrumented" placeholder so the UI behaves identically — same
+// shape, just a different `source` badge.
+//
+// `cross_confirm_rejected` stays null even in Phase B: the cross-confirm
+// rule was added to docs/UI/config in v1.38.0 but never wired into the
+// engine inference loop. The card carries an explicit note so the user
+// knows the gap. See docs/QUALITY_METRICS.md "Out of scope" section.
+function prefilterFromEvents(db, days) {
+  // Check the table exists first — old engine deployments won't have it.
+  const tableExists = db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quality_events'"
+  ).get();
+  if (!tableExists) {
+    return {
+      source: 'not_instrumented',
+      privacy_dropped: null, dog_dropped: null, dog_cooldown_skipped: null,
+      cross_confirm_rejected: null, files_processed: null,
+      note: 'Engine has not flushed any quality_events rows yet. Either the engine is on an older version (update + restart birdengine) or no qualifying events have happened in this period.',
+    };
+  }
+  const fromDate = isoDateOffset(-days);
+  const row = db.prepare(`
+    SELECT
+      SUM(privacy_dropped)        AS privacy_dropped,
+      SUM(dog_dropped)            AS dog_dropped,
+      SUM(dog_cooldown_skipped)   AS dog_cooldown_skipped,
+      SUM(throttle_dropped)       AS throttle_dropped,
+      SUM(files_processed)        AS files_processed,
+      SUM(cross_confirm_rejected) AS cross_confirm_rejected
+    FROM quality_events WHERE Date >= ?
+  `).get(fromDate);
+  const total = (row.files_processed || 0) + (row.privacy_dropped || 0) + (row.dog_dropped || 0);
+  if (total === 0) {
+    return {
+      source: 'not_instrumented',
+      privacy_dropped: null, dog_dropped: null, dog_cooldown_skipped: null,
+      cross_confirm_rejected: null, files_processed: null,
+      note: 'No quality events recorded in this period. The engine starts emitting from v1.43.0 — restart birdengine after the update, then come back here in an hour.',
+    };
+  }
   return {
-    source: 'not_instrumented',
-    privacy_dropped: null,
-    dog_dropped: null,
-    cross_confirm_rejected: null,
-    note: 'Engine counter wired in Phase B — see docs/QUALITY_METRICS.md',
+    source: 'measured',
+    privacy_dropped:        row.privacy_dropped || 0,
+    dog_dropped:            row.dog_dropped || 0,
+    dog_cooldown_skipped:   row.dog_cooldown_skipped || 0,
+    throttle_dropped:       row.throttle_dropped || 0,
+    files_processed:        row.files_processed || 0,
+    cross_confirm_rejected: null,  // not implemented in engine — see spec
+    cross_confirm_note: 'Cross-confirm rule documented + UI present (v1.38) but never wired into the engine inference loop. No rejection counter possible until the rule actually runs.',
   };
+}
+
+// Engine-measured throttle drops, per period (Phase B).
+function throttleMeasured(db, days) {
+  const tableExists = db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quality_events'"
+  ).get();
+  if (!tableExists) return { source: 'not_instrumented', dropped: null };
+  const fromDate = isoDateOffset(-days);
+  const row = db.prepare(
+    'SELECT SUM(throttle_dropped) AS n FROM quality_events WHERE Date >= ?'
+  ).get(fromDate);
+  return { source: 'measured', dropped: row.n || 0 };
 }
 
 // ── Throttle effect (inferred) ─────────────────────────────────────────────

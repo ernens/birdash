@@ -65,7 +65,7 @@ from models import (
     MDataModel, BirdNETv1Model, BirdNETModel, PerchModel,
     get_model,
 )
-from db import init_db, write_detection
+from db import init_db, write_detection, upsert_quality_events
 from birdweather import upload_to_birdweather
 from clips import extract_clip
 from watcher import WavHandler
@@ -158,6 +158,18 @@ class BirdEngine:
         # the first detection after restart.
         self._throttle_last = {}        # {com_name: last_insert_epoch}
         self._throttle_dropped = 0       # session counter (Prom-readable later)
+
+        # ── Quality counters (Phase B) ────────────────────────────────────
+        # Per-hour accumulator flushed by _quality_flush() into the
+        # quality_events table. Definitions are spec'd in
+        # docs/QUALITY_METRICS.md — never add a key here without an entry
+        # there. UPSERT merges flushes into the same (date, hour) bucket,
+        # so flushing more often than hourly is safe (and survives crash
+        # better — at most we lose what's accumulated since the last
+        # 5-min purge cycle).
+        from collections import defaultdict
+        self._quality_acc = defaultdict(int)
+        self._quality_lock = threading.Lock()
 
         # ── Perch eBird range filter ──────────────────────────────────────
         # Perch has no MData equivalent for geographic filtering, so its
@@ -481,6 +493,7 @@ class BirdEngine:
                                 log.info("[privacy] deleted %s (RGPD)", basename)
                             except OSError as e:
                                 log.warning("[privacy] could not delete %s: %s", basename, e)
+                        self._quality_inc("privacy_dropped")
                         self.processed_files.add(basename)
                         return
                     if (self.dog_filter_enabled
@@ -489,6 +502,7 @@ class BirdEngine:
                         log.info("[dog] DROP %s — bark=%.2f (top=%s %.2f) cooldown %.0fs",
                                  basename, dog, top_label, top_score,
                                  self.dog_cooldown_sec)
+                        self._quality_inc("dog_dropped")
                         self.processed_files.add(basename)
                         return
                 except Exception as e:
@@ -501,6 +515,7 @@ class BirdEngine:
                 remaining = self._dog_silence_until - time.time()
                 log.info("[dog] cooldown active — skip %s (%.0fs remaining)",
                          basename, remaining)
+                self._quality_inc("dog_cooldown_skipped")
                 self.processed_files.add(basename)
                 return
 
@@ -560,8 +575,48 @@ class BirdEngine:
             if self.secondary_model and self._secondary_queue is not None:
                 self._secondary_queue.put((dest, file_date, week, raw_sig, raw_sr, source))
 
+            # Quality counter — fires only on a fully-processed file (after
+            # primary inference + move + post-processing kick-off). Files
+            # rejected upstream by privacy/dog/cooldown are not counted here.
+            self._quality_inc("files_processed")
+
         except Exception as e:
             log.exception("Error processing %s: %s", file_path, e)
+
+    def _quality_inc(self, key):
+        """Increment a quality counter. Thread-safe; the helper acquires
+        the lock briefly so the secondary worker + main thread can both
+        emit without losing increments."""
+        with self._quality_lock:
+            self._quality_acc[key] += 1
+
+    def _quality_flush(self):
+        """Drain the in-memory accumulator into the quality_events table.
+
+        Called from the 5-min periodic loop in run() AND on shutdown.
+        Per-hour bucket: UPSERT adds to the existing row, so multiple
+        flushes in the same hour just sum up. Hour transitions handled
+        by the date/hour computed at flush time (the accumulator itself
+        is not hour-aware — we trust that flushes happen often enough
+        that the bulk of counts land in the correct hour bucket).
+        """
+        with self._quality_lock:
+            if not self._quality_acc:
+                return
+            snap = dict(self._quality_acc)
+            self._quality_acc.clear()
+        dt = datetime.datetime.now()
+        date = dt.strftime("%Y-%m-%d")
+        hour = dt.hour
+        try:
+            with self._db_lock:
+                upsert_quality_events(self.db, date, hour, snap)
+            log.debug("[quality] flushed %s @ %s h%d", snap, date, hour)
+        except Exception as e:
+            log.warning("[quality] flush failed: %s — restoring counters", e)
+            with self._quality_lock:
+                for k, v in snap.items():
+                    self._quality_acc[k] += v
 
     def _reload_perch_ebird(self):
         """Load (or reload if stale) the eBird presence map used to filter
@@ -628,6 +683,7 @@ class BirdEngine:
         last = self._throttle_last.get(com_name, 0)
         if now - last < cooldown:
             self._throttle_dropped += 1
+            self._quality_inc("throttle_dropped")
             return True
         self._throttle_last[com_name] = now
         return False
@@ -847,6 +903,7 @@ class BirdEngine:
                 if purge_counter >= 10:
                     self._purge_processed()
                     self._check_model_change()
+                    self._quality_flush()
                     purge_counter = 0
                 self._shutdown_event.wait(timeout=rsync_interval)
         except KeyboardInterrupt:
@@ -869,6 +926,10 @@ class BirdEngine:
                 log.info("Waiting for %d post-processing threads...", len(active))
                 for t in active:
                     t.join(timeout=30)
+            # Final quality flush before closing the DB so in-flight counters
+            # since the last 5-min flush land on disk.
+            try: self._quality_flush()
+            except Exception: pass
             self.db.close()
             log.info("Shutdown complete. Processed %d files, %d detections.",
                      self.files_processed, self.detections_total)

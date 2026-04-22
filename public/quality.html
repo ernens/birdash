@@ -41,6 +41,7 @@
     margin-left: .35rem; padding: .08rem .4rem; border-radius: 3px;
     font-size: .65rem; font-weight: 500; text-transform: uppercase; letter-spacing: .04em;
   }
+  .qa-source.measured { background: rgba(16,185,129,.18); color: #10b981; }
   .qa-source.observed { background: rgba(52,211,153,.12); color: #34d399; }
   .qa-source.inferred { background: rgba(251,191,36,.15); color: #d97706; }
   .qa-source.not_instrumented { background: rgba(148,163,184,.15); color: var(--text-muted); }
@@ -198,14 +199,42 @@
         <div v-else class="qa-placeholder">{{t('quality_no_species_volume')}}</div>
       </div>
 
-      <!-- 3. Pre-filter impact (Phase A: not instrumented) -->
+      <!-- 3. Pre-filter impact -->
       <div class="qa-card">
         <div class="qa-title">
           <bird-icon name="shield" :size="15"></bird-icon>
           {{t('quality_prefilter_title')}}
           <span class="qa-source" :class="data.prefilter.source">{{t('quality_source_' + data.prefilter.source)}}</span>
         </div>
-        <div class="qa-placeholder">
+        <p class="qa-card-note">{{t('quality_prefilter_note')}}</p>
+        <div v-if="data.prefilter.source === 'measured'">
+          <div class="qa-throttle-row">
+            <span class="qa-throttle-name">🎤 {{t('quality_files_processed')}}</span>
+            <span class="qa-throttle-num">{{(data.prefilter.files_processed || 0).toLocaleString()}}</span>
+          </div>
+          <div class="qa-throttle-row">
+            <span class="qa-throttle-name">🤫 {{t('quality_privacy_dropped')}}</span>
+            <span class="qa-throttle-num">{{(data.prefilter.privacy_dropped || 0).toLocaleString()}}</span>
+            <span v-if="data.prefilter.files_processed" style="color:var(--text-muted);font-size:.72rem;">({{pct(data.prefilter.privacy_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)</span>
+          </div>
+          <div class="qa-throttle-row">
+            <span class="qa-throttle-name">🐕 {{t('quality_dog_dropped')}}</span>
+            <span class="qa-throttle-num">{{(data.prefilter.dog_dropped || 0).toLocaleString()}}</span>
+            <span v-if="data.prefilter.files_processed" style="color:var(--text-muted);font-size:.72rem;">({{pct(data.prefilter.dog_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)</span>
+          </div>
+          <div class="qa-throttle-row">
+            <span class="qa-throttle-name">⏳ {{t('quality_dog_cooldown')}}</span>
+            <span class="qa-throttle-num">{{(data.prefilter.dog_cooldown_skipped || 0).toLocaleString()}}</span>
+          </div>
+          <div class="qa-throttle-row">
+            <span class="qa-throttle-name">⚠ {{t('quality_cross_confirm')}}</span>
+            <span class="qa-throttle-num" style="color:var(--text-muted);">n/a</span>
+          </div>
+          <p style="font-size:.72rem;color:var(--text-muted);margin:.6rem 0 0;line-height:1.5;">
+            <strong>{{t('quality_cross_confirm_gap_title')}}</strong> — {{data.prefilter.cross_confirm_note}}
+          </p>
+        </div>
+        <div v-else class="qa-placeholder">
           ⚙ {{data.prefilter.note}}
         </div>
       </div>
@@ -218,6 +247,11 @@
           <span class="qa-source" :class="data.throttle.source">{{t('quality_source_' + data.throttle.source)}}</span>
         </div>
         <p class="qa-card-note">{{data.throttle.note}}</p>
+        <div v-if="data.throttle_measured && data.throttle_measured.source === 'measured' && data.throttle_measured.dropped > 0"
+             style="margin:.4rem 0 .8rem;padding:.5rem .7rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:6px;font-size:.82rem;">
+          <span class="qa-source measured" style="background:rgba(52,211,153,.18);color:#10b981;">{{t('quality_source_measured')}}</span>
+          <strong>{{data.throttle_measured.dropped.toLocaleString()}}</strong> {{t('quality_throttle_measured_drops')}}
+        </div>
         <div v-if="data.throttle.enabled && data.throttle.species && data.throttle.species.length">
           <div class="qa-throttle-row" v-for="s in data.throttle.species" :key="s.com_name">
             <span class="qa-throttle-name">{{s.com_name}}</span>

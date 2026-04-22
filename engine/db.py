@@ -48,8 +48,51 @@ def init_db(db_path):
     if "Source" not in cols:
         conn.execute("ALTER TABLE detections ADD COLUMN Source TEXT")
 
+    # Quality events — engine-emitted hourly counters consumed by the
+    # Quality page. Definitions live in docs/QUALITY_METRICS.md; never
+    # add a column here without a matching entry in that spec.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS quality_events (
+            Date TEXT NOT NULL,
+            Hour INTEGER NOT NULL,
+            cross_confirm_rejected INTEGER DEFAULT 0,
+            privacy_dropped        INTEGER DEFAULT 0,
+            dog_dropped            INTEGER DEFAULT 0,
+            dog_cooldown_skipped   INTEGER DEFAULT 0,
+            throttle_dropped       INTEGER DEFAULT 0,
+            files_processed        INTEGER DEFAULT 0,
+            PRIMARY KEY (Date, Hour)
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_quality_date ON quality_events(Date)")
+
     conn.commit()
     return conn
+
+
+def upsert_quality_events(conn, date, hour, counters):
+    """Merge a partial counter snapshot into the per-(date, hour) row.
+
+    Uses INSERT … ON CONFLICT DO UPDATE so callers don't have to know
+    whether the row already exists. Counters are added (not replaced) so
+    flushing twice in the same hour just sums them up.
+
+    `counters` is a dict with any subset of:
+      cross_confirm_rejected, privacy_dropped, dog_dropped,
+      dog_cooldown_skipped, throttle_dropped, files_processed
+    """
+    keys = ["cross_confirm_rejected", "privacy_dropped", "dog_dropped",
+            "dog_cooldown_skipped", "throttle_dropped", "files_processed"]
+    values = {k: int(counters.get(k, 0)) for k in keys}
+    cols = ", ".join(keys)
+    placeholders = ", ".join("?" * len(keys))
+    update_clause = ", ".join(f"{k} = {k} + excluded.{k}" for k in keys)
+    conn.execute(
+        f"INSERT INTO quality_events (Date, Hour, {cols}) VALUES (?, ?, {placeholders}) "
+        f"ON CONFLICT (Date, Hour) DO UPDATE SET {update_clause}",
+        (date, int(hour), *[values[k] for k in keys])
+    )
+    conn.commit()
 
 
 def write_detection(conn, det):

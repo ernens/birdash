@@ -117,7 +117,22 @@ The pre-filter card is the obvious gap in Phase A — it shows
 `Engine counter wired in Phase B`. To stay honest, here are the
 definitions Phase B will implement, locked **before** any code lands:
 
-### `cross_confirm_rejected`
+### ⚠ `cross_confirm_rejected` — DEFERRED
+
+**Status:** the cross-confirm rule is documented + has a Settings UI +
+3 birdnet.conf keys (`DUAL_CONFIRM_ENABLED`, `PERCH_STANDALONE_CONFIDENCE`,
+`BIRDNET_ECHO_CONFIDENCE`), but **the engine never reads them and the
+inference loop never runs the rule**. Commit e79e909 added the
+documentation/UI half but the matching `engine.py` change was never
+shipped. Until the rule actually runs, there's nothing to count.
+
+The Quality page's pre-filter card surfaces this as a "known gap"
+note with `cross_confirm_rejected: null`, rather than a fake zero.
+Implementing the rule + this counter is its own backlog item.
+
+Definition (kept here for when the rule lands):
+
+
 
 ```
 Increment when:

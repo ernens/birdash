@@ -125,6 +125,38 @@ function _ensureTrashTable(attempt = 1) {
 // synchronous boot phase, so a busy DB doesn't block startup.
 setTimeout(() => _ensureTrashTable(), 5 * 1000);
 
+// Quality events table (Phase B). Same deferred-retry pattern — engine
+// also creates it on its own boot, but having birdash try too means a
+// fresh install where birdash starts before birdengine still gets the
+// table created so the Quality page doesn't 500 on first load.
+const _qualitySql = [
+  `CREATE TABLE IF NOT EXISTS quality_events (
+    Date TEXT NOT NULL,
+    Hour INTEGER NOT NULL,
+    cross_confirm_rejected INTEGER DEFAULT 0,
+    privacy_dropped        INTEGER DEFAULT 0,
+    dog_dropped            INTEGER DEFAULT 0,
+    dog_cooldown_skipped   INTEGER DEFAULT 0,
+    throttle_dropped       INTEGER DEFAULT 0,
+    files_processed        INTEGER DEFAULT 0,
+    PRIMARY KEY (Date, Hour)
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_quality_date ON quality_events(Date)',
+];
+function _ensureQualityTable(attempt = 1) {
+  try {
+    for (const sql of _qualitySql) dbWrite.exec(sql);
+    if (attempt > 1) console.log('[BIRDASH] quality_events schema ready');
+  } catch (e) {
+    if (e.code === 'SQLITE_BUSY' && attempt < 60) {
+      setTimeout(() => _ensureQualityTable(attempt + 1), 30 * 1000);
+    } else {
+      console.error('[BIRDASH] quality_events migration failed:', e.message);
+    }
+  }
+}
+setTimeout(() => _ensureQualityTable(), 6 * 1000);
+
 // ── Multi-source migration (P1) ─────────────────────────────────────────────
 // Add Source column to existing tables that pre-date multi-source. The
 // engine now records `Source = 'garden' / 'feeder' / ...` for detections
