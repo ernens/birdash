@@ -379,11 +379,14 @@ function dailyTimeline(db, days) {
 function buildSynthesis({ review, agreement, prefilter, balance }) {
   const findings = [];
 
-  // Workload signal
-  if (review.unreviewed > 1000) {
+  // Real backlog = items the user explicitly flagged as "doubtful" but
+  // never resolved. Total - reviewed isn't a backlog: most stations
+  // generate way more detections than any human can curate, so framing
+  // unreviewed as "to do" is misleading.
+  if (review.doubtful > 20) {
     findings.push({
       key: 'quality_synth_backlog_high',
-      params: { count: review.unreviewed.toLocaleString('fr-FR') },
+      params: { count: review.doubtful.toLocaleString('fr-FR') },
       severity: 'attention',
     });
   }

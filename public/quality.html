@@ -260,17 +260,20 @@
 
       <!-- 4 pilot cards -->
       <div class="qa-pilots">
-        <!-- Pilot A: Backlog Review -->
+        <!-- Pilot A: Backlog Review (= items you flagged "doubtful") -->
         <div class="qa-pilot">
           <div class="qa-pilot-label">
             <bird-icon name="check-circle" :size="13"></bird-icon>
             {{t('quality_pilot_backlog')}}
           </div>
-          <div class="qa-pilot-value">{{data.review.unreviewed.toLocaleString()}}</div>
+          <div class="qa-pilot-value">{{data.review.doubtful.toLocaleString()}}</div>
           <div class="qa-pilot-sub">
             {{t('quality_pilot_backlog_sub', { reviewed: data.review.reviewed.toLocaleString() })}}
+            <div style="margin-top:.2rem;font-size:.7rem;opacity:.75;">
+              {{t('quality_pilot_backlog_unsampled', { count: data.review.unreviewed.toLocaleString() })}}
+            </div>
           </div>
-          <a v-if="data.review.unreviewed > 0" href="review.html" class="qa-pilot-cta">{{t('quality_pilot_go_review')}}</a>
+          <a v-if="data.review.doubtful > 0" href="review.html" class="qa-pilot-cta">{{t('quality_pilot_go_review')}}</a>
         </div>
 
         <!-- Pilot B: Agreement -->
@@ -350,8 +353,8 @@
             <h4>{{t('quality_review_workload')}}</h4>
             <div class="qa-workload-rows">
               <div class="qa-workload-row backlog">
-                <span>{{t('quality_review_backlog')}}</span>
-                <span class="qa-workload-num">{{data.review.unreviewed.toLocaleString()}}</span>
+                <span><strong>{{t('quality_review_backlog')}}</strong></span>
+                <span class="qa-workload-num">{{data.review.doubtful.toLocaleString()}}</span>
               </div>
               <div class="qa-workload-row">
                 <span>{{t('quality_review_reviewed')}}</span>
@@ -360,6 +363,10 @@
               <div class="qa-workload-row">
                 <span>{{t('quality_review_total')}}</span>
                 <span class="qa-workload-num">{{data.review.total.toLocaleString()}}</span>
+              </div>
+              <div class="qa-workload-row" style="opacity:.6;font-size:.78rem;">
+                <span>{{t('quality_review_unsampled')}}</span>
+                <span class="qa-workload-num">{{data.review.unreviewed.toLocaleString()}}</span>
               </div>
             </div>
           </div>
