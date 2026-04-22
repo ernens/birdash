@@ -1351,12 +1351,9 @@
       padding: .25rem .75rem; border-radius: 20px; margin-bottom: .75rem;
       text-transform: uppercase; letter-spacing: .04em;
     }
-    .cons-lc { background: #dcfce7; color: #166534; }
-    .cons-nt { background: #fef9c3; color: #854d0e; }
-    .cons-vu { background: #ffedd5; color: #9a3412; }
-    .cons-en { background: #fee2e2; color: #991b1b; }
-    .cons-cr { background: #fecaca; color: #7f1d1d; }
-    .cons-dd { background: var(--bg-card2); color: var(--text-muted); }
+    /* IUCN status modifiers (.cons-lc/.cons-nt/.cons-vu/.cons-en/.cons-cr/.cons-dd)
+       were dropped — the badge now picks its colour via inline :style on
+       .iucn-badge from the API response, no extra rules needed. */
 
     /* Species KPI grid */
     .sp-kpis {
@@ -1902,48 +1899,10 @@
     .bf-mic-sub { font-size: .66rem; color: var(--text-muted); transition: color .3s; }
     .bf-mic-sub.on { color: #4caf50; }
 
-    /* ── Connector strips ──────────────────────────────────────── */
-    .bf-conn {
-      width: 32px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-      background: var(--bg-card);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .bf-conn-track {
-      width: 4px; height: 60%;
-      background: var(--border); border-radius: 2px;
-      position: relative; overflow: hidden;
-      /* Rotated to horizontal flow */
-      transform: rotate(0deg);
-    }
-    /* Actually horizontal track */
-    .bf-conn { flex-direction: column; }
-    .bf-conn-track {
-      width: 60%; height: 4px;
-      transform: none;
-    }
-    .bf-conn-pulse {
-      position: absolute; left: -20%; top: 0;
-      width: 40%; height: 100%;
-      border-radius: 2px;
-      background: var(--accent,#5a9e3a);
-      opacity: 0;
-    }
-    .bf-conn-pulse.fire {
-      animation: connPulse .8s cubic-bezier(.22,1,.36,1);
-    }
-    @keyframes connPulse {
-      0% { left: -20%; opacity: 0; }
-      20% { opacity: 1; }
-      100% { left: 100%; opacity: 0; }
-    }
-    .bf-conn-arrow {
-      color: var(--border); font-size: .7rem; margin-top: .2rem;
-      transition: color .3s;
-    }
-    .bf-conn.active .bf-conn-arrow { color: var(--accent); }
+    /* (.bf-conn / .bf-conn-track / .bf-conn-pulse / .bf-conn-arrow +
+       @keyframes connPulse used to draw connector strips between the three
+       Bird Flow zones. The current dashboard renders zones flush against
+       each other — no connectors — so all of that was dead code.) */
 
     /* ── Zone 2: ENGINE (wide center) ──────────────────────────── */
     .bf-zone-engine {
@@ -1984,10 +1943,9 @@
     .bf-pipe-dot.warn { background:#ff9800; box-shadow:0 0 8px rgba(255,152,0,.4); }
     .bf-pipe-lbl { font-size: .55rem; color: var(--text-muted); }
 
-    /* Dual AI + stats row */
-    .bf-engine-body {
-      flex: 1; display: flex; gap: .6rem;
-    }
+    /* (.bf-engine-body wrapper was removed when the engine zone collapsed
+       to a single column — dual-AI + stats are now siblings of .bf-zone-engine.) */
+
     /* Dual AI cores */
     .bf-ai-panel { flex: 1.2; display: flex; flex-direction: column; gap: .4rem; }
     .bf-cores { display: flex; gap: .4rem; flex: 1; }
@@ -2069,19 +2027,9 @@
     .bf-fusion-bar { width:16px; height:2px; border-radius:1px; background:var(--border); transition:background .4s; }
     .bf-fusion.consensus .bf-fusion-bar { background:#26a69a; }
 
-    /* Stats column */
-    .bf-eng-stats {
-      flex: 0.8; display: flex; flex-direction: column;
-      justify-content: center; gap: .35rem;
-    }
-    .bf-eng-stat {
-      text-align: center; padding: .25rem;
-      background: var(--bg-card2, rgba(0,0,0,.03));
-      border-radius: 6px;
-    }
-    .bf-eng-num { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
-    .bf-eng-num.warn-val { color: #ff9800; }
-    .bf-eng-lbl { font-size: .55rem; color: var(--text-muted); text-transform: uppercase; }
+    /* (Stats column .bf-eng-stats / .bf-eng-stat / .bf-eng-num /
+       .bf-eng-lbl was removed when daily KPIs moved out of the engine
+       zone into the standalone .bf-kpis row below the flow.) */
 
     /* ── Zone 3: DETECTION (generous right) ─────────────────────── */
     .bf-zone-det {
@@ -2206,16 +2154,12 @@
       .bf-flow{flex-direction:column;min-height:auto}
       .bf-zone-mic{width:auto;border-radius:14px 14px 0 0;flex-direction:row;gap:.75rem;align-items:center}
       .bf-mic-bars{height:40px;flex:1}
-      .bf-conn{width:auto;height:28px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-top:none;border-bottom:none}
-      .bf-conn-track{width:4px;height:60%}
-      .bf-conn-arrow{margin-top:0;margin-left:.2rem;transform:rotate(90deg)}
       .bf-zone-engine{border-radius:0}
       .bf-zone-det{width:auto;border-radius:0 0 14px 14px}
       .bf-bottom{grid-template-columns:1fr 1fr}
       .bf-bottom>.bf-card:last-child{grid-column:1/3}
     }
     @media(max-width:640px){
-      .bf-engine-body{flex-direction:column}
       .bf-kpis{grid-template-columns:1fr 1fr}
       .bf-bottom{grid-template-columns:1fr}
       .bf-bottom>.bf-card:last-child{grid-column:auto}

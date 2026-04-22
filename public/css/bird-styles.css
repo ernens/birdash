@@ -2137,13 +2137,8 @@ select, input[type="text"], input[type="number"], textarea {
   font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.2);
 }
 
-/* ── Weather widget ───────────────────────────────────────────────────────── */
-.weather-widget {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem .8rem; background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text-main); transition: border-color .15s;
-}
-.weather-widget:hover { border-color: var(--accent); }
+/* (.weather-widget was removed — weather chips now use the dedicated
+   <weather-chip> component, inline-styled, no shared CSS class needed.) */
 
 /* ── Nav badge ────────────────────────────────────────────────────────────── */
 .nav-badge {

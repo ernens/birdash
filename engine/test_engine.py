@@ -96,38 +96,10 @@ class TestWriteDetection(unittest.TestCase):
         os.unlink(db_path)
 
 
-class TestDetToSql(unittest.TestCase):
-    def test_escaping(self):
-        from engine import _det_to_sql
-        det = {
-            'date': '2026-01-01', 'time': '12:00:00',
-            'sci_name': "Test's bird", 'com_name': "L'oiseau",
-            'confidence': 0.9, 'lat': 50.0, 'lon': 4.0,
-            'cutoff': 0.65, 'week': 1, 'sens': 1.0, 'overlap': 0.5,
-            'file_name': 'test.mp3', 'model': 'Test',
-        }
-        sql = _det_to_sql(det)
-        self.assertIn("Test''s bird", sql)
-        self.assertIn("L''oiseau", sql)
-        self.assertNotIn(";", sql.rstrip(";"))
-
-
-class TestNotifier(unittest.TestCase):
-    def test_init(self):
-        from engine import Notifier
-        config = {'notifications': {'ntfy_url': '', 'notify_new_species_daily': False, 'cooldown_seconds': 60}}
-        notifier = Notifier(config)
-        self.assertEqual(notifier.ntfy_url, '')
-        self.assertEqual(notifier.ntfy_url, '')
-
-    def test_no_notification_when_disabled(self):
-        from engine import Notifier
-        config = {'notifications': {'ntfy_url': '', 'notify_new_species_daily': False, 'cooldown_seconds': 60}}
-        notifier = Notifier(config)
-        det = {'date': '2026-01-01', 'sci_name': 'Pica pica', 'com_name': 'Magpie',
-               'confidence': 0.9, 'model': 'Test'}
-        # Should not raise
-        notifier.check_and_notify(det)
+# NOTE: Removed TestDetToSql + TestNotifier — they referenced symbols
+# (_det_to_sql, Notifier) that were dropped from engine.py long before
+# the modular split (notifications now live in server/lib/notification-watcher.js,
+# and write_detection uses parameterized queries instead of SQL building).
 
 
 class TestReadAudio(unittest.TestCase):
