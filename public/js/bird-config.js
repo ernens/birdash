@@ -71,6 +71,7 @@ const BIRD_CONFIG = {
       { id: 'favorites',    icon: 'star', file: 'favorites.html'    },
     ]},
     { section: 'nav_sec_indicators', icon: 'trending-up', items: [
+      { id: 'quality',      icon: 'shield-check', file: 'quality.html'   },
       { id: 'weather',      icon: 'cloud-sun', file: 'weather.html'     },
       { id: 'stats',        icon: 'trending-up', file: 'stats.html'        },
       { id: 'analyses',     icon: 'microscope', file: 'analyses.html'     },

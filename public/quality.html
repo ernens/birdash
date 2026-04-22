@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>BirdStation — Detection Quality</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <script src="js/chart.umd.min.js"></script>
+</head>
+<style>
+  /* ── Quality page ───────────────────────────────────────────────────── */
+  .qa-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem;
+  }
+  .qa-period { display: flex; gap: .3rem; align-items: center; font-size: .82rem; }
+  .qa-period button {
+    padding: .25rem .6rem; font-size: .78rem; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); cursor: pointer;
+  }
+  .qa-period button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .qa-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.1rem; margin-bottom: 1rem;
+  }
+  .qa-title {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .92rem; font-weight: 700; margin-bottom: .25rem; color: var(--text-main);
+  }
+  .qa-source {
+    margin-left: .35rem; padding: .08rem .4rem; border-radius: 3px;
+    font-size: .65rem; font-weight: 500; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .qa-source.observed { background: rgba(52,211,153,.12); color: #34d399; }
+  .qa-source.inferred { background: rgba(251,191,36,.15); color: #d97706; }
+  .qa-source.not_instrumented { background: rgba(148,163,184,.15); color: var(--text-muted); }
+  .qa-card-note {
+    font-size: .76rem; color: var(--text-muted); margin: 0 0 .8rem; line-height: 1.5;
+  }
+
+  /* Review breakdown — stacked bar */
+  .qa-bar {
+    display: flex; height: 30px; border-radius: 4px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--bg-deep);
+  }
+  .qa-bar-seg {
+    transition: width .3s; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: .72rem; font-weight: 600;
+  }
+  .qa-bar-seg.confirmed { background: #4caf50; }
+  .qa-bar-seg.doubtful  { background: #ff9800; }
+  .qa-bar-seg.rejected  { background: #e53935; }
+  .qa-bar-seg.unreviewed{ background: #94a3b8; }
+
+  .qa-legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .6rem; font-size: .8rem; }
+  .qa-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+  .qa-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .qa-legend-link {
+    margin-left: auto; font-size: .76rem; text-decoration: none; color: var(--accent);
+  }
+
+  /* Model agreement table */
+  .qa-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .qa-table th, .qa-table td { padding: .35rem .5rem; text-align: left; }
+  .qa-table th { font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .qa-table tr + tr td { border-top: 1px solid var(--border-subtle, var(--border)); }
+  .qa-bar-mini {
+    display: inline-block; width: 80px; height: 8px; border-radius: 2px;
+    background: var(--bg-deep); position: relative; vertical-align: middle; margin-right: .4rem;
+  }
+  .qa-bar-mini > span {
+    position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px;
+  }
+  .qa-pct.high { color: #4caf50; }
+  .qa-pct.mid  { color: #ff9800; }
+  .qa-pct.low  { color: #e53935; }
+
+  /* Throttle effect rows */
+  .qa-throttle-row {
+    display: flex; gap: .8rem; align-items: center; padding: .4rem 0;
+    font-size: .82rem; border-bottom: 1px solid var(--border-subtle, var(--border));
+  }
+  .qa-throttle-row:last-child { border-bottom: none; }
+  .qa-throttle-name { flex: 1; font-weight: 500; }
+  .qa-throttle-num { font-family: monospace; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+  .qa-delta { font-weight: 600; min-width: 60px; text-align: right; }
+  .qa-delta.up { color: #ff9800; }
+  .qa-delta.down { color: #4caf50; }
+
+  /* Placeholder */
+  .qa-placeholder {
+    padding: .9rem; background: var(--bg-deep); border-radius: 6px;
+    color: var(--text-muted); font-size: .82rem; line-height: 1.5;
+    border: 1px dashed var(--border);
+  }
+
+  .qa-chart-wrap { position: relative; height: 280px; }
+</style>
+<body>
+<div id="app" v-cloak>
+  <birdash-shell page="quality" :title="t('nav_quality')">
+
+    <div class="qa-header">
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">{{t('quality_title')}}</div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-top:.15rem;">
+          {{t('quality_subtitle')}}
+        </div>
+      </div>
+      <div class="qa-period">
+        <span>{{t('quality_period')}}:</span>
+        <button v-for="d in [7, 30, 90]" :key="d"
+                :class="{active: days === d}" @click="setDays(d)">{{d}}j</button>
+      </div>
+    </div>
+
+    <div v-if="loading" class="qa-placeholder">{{t('quality_loading')}}</div>
+
+    <template v-else-if="data">
+
+      <!-- 1. Review outcomes (top — most actionable) -->
+      <div class="qa-card">
+        <div class="qa-title">
+          <bird-icon name="check-circle" :size="15"></bird-icon>
+          {{t('quality_review_title')}}
+          <span class="qa-source" :class="data.review.source">{{t('quality_source_' + data.review.source)}}</span>
+        </div>
+        <p class="qa-card-note">{{t('quality_review_note')}}</p>
+        <div class="qa-bar" v-if="data.review.total > 0">
+          <div class="qa-bar-seg confirmed" :style="{width: pct(data.review.confirmed, data.review.total) + '%'}"
+               :title="data.review.confirmed + ' confirmed'">
+            <template v-if="pct(data.review.confirmed, data.review.total) > 8">{{pct(data.review.confirmed, data.review.total)}}%</template>
+          </div>
+          <div class="qa-bar-seg doubtful" :style="{width: pct(data.review.doubtful, data.review.total) + '%'}"
+               :title="data.review.doubtful + ' doubtful'">
+            <template v-if="pct(data.review.doubtful, data.review.total) > 8">{{pct(data.review.doubtful, data.review.total)}}%</template>
+          </div>
+          <div class="qa-bar-seg rejected" :style="{width: pct(data.review.rejected, data.review.total) + '%'}"
+               :title="data.review.rejected + ' rejected'">
+            <template v-if="pct(data.review.rejected, data.review.total) > 8">{{pct(data.review.rejected, data.review.total)}}%</template>
+          </div>
+          <div class="qa-bar-seg unreviewed" :style="{width: pct(data.review.unreviewed, data.review.total) + '%'}"
+               :title="data.review.unreviewed + ' unreviewed'">
+            <template v-if="pct(data.review.unreviewed, data.review.total) > 8">{{pct(data.review.unreviewed, data.review.total)}}%</template>
+          </div>
+        </div>
+        <div v-else class="qa-placeholder">{{t('quality_no_data')}}</div>
+        <div class="qa-legend">
+          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#4caf50;"></span>{{t('review_confirm')}} <strong>{{data.review.confirmed.toLocaleString()}}</strong></span>
+          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#ff9800;"></span>{{t('review_doubtful_btn')}} <strong>{{data.review.doubtful.toLocaleString()}}</strong></span>
+          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#e53935;"></span>{{t('review_reject')}} <strong>{{data.review.rejected.toLocaleString()}}</strong></span>
+          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#94a3b8;"></span>{{t('quality_unreviewed')}} <strong>{{data.review.unreviewed.toLocaleString()}}</strong></span>
+          <a v-if="data.review.unreviewed > 0" href="review.html" class="qa-legend-link">→ {{t('quality_go_review')}}</a>
+        </div>
+      </div>
+
+      <!-- 2. Model agreement (observed proxy) -->
+      <div class="qa-card">
+        <div class="qa-title">
+          <bird-icon name="git-compare" :size="15"></bird-icon>
+          {{t('quality_agreement_title')}}
+          <span class="qa-source" :class="data.agreement.source">{{t('quality_source_' + data.agreement.source)}}</span>
+        </div>
+        <p class="qa-card-note">{{t('quality_agreement_note', { bin: data.agreement.bin_seconds, vol: data.agreement.min_volume })}}</p>
+        <table v-if="data.agreement.species.length" class="qa-table">
+          <thead>
+            <tr>
+              <th>{{t('species_name')}}</th>
+              <th style="text-align:right;">{{t('quality_perch_hits')}}</th>
+              <th>{{t('quality_agreement_pct')}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in data.agreement.species" :key="s.sci_name">
+              <td>{{spName(s.com_name, s.sci_name)}}</td>
+              <td style="text-align:right;font-variant-numeric:tabular-nums;">{{s.perch_count.toLocaleString()}}</td>
+              <td>
+                <span class="qa-bar-mini">
+                  <span :style="{width: s.agreement_pct + '%', background: agreementColor(s.agreement_pct)}"></span>
+                </span>
+                <span class="qa-pct" :class="agreementClass(s.agreement_pct)">{{s.agreement_pct}}%</span>
+                <span style="color:var(--text-muted);margin-left:.4rem;font-size:.72rem;">({{s.agreed_count}}/{{s.perch_count}})</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else class="qa-placeholder">{{t('quality_no_species_volume')}}</div>
+      </div>
+
+      <!-- 3. Pre-filter impact (Phase A: not instrumented) -->
+      <div class="qa-card">
+        <div class="qa-title">
+          <bird-icon name="shield" :size="15"></bird-icon>
+          {{t('quality_prefilter_title')}}
+          <span class="qa-source" :class="data.prefilter.source">{{t('quality_source_' + data.prefilter.source)}}</span>
+        </div>
+        <div class="qa-placeholder">
+          ⚙ {{data.prefilter.note}}
+        </div>
+      </div>
+
+      <!-- 4. Throttle effect (inferred) -->
+      <div class="qa-card">
+        <div class="qa-title">
+          <bird-icon name="timer" :size="15"></bird-icon>
+          {{t('quality_throttle_title')}}
+          <span class="qa-source" :class="data.throttle.source">{{t('quality_source_' + data.throttle.source)}}</span>
+        </div>
+        <p class="qa-card-note">{{data.throttle.note}}</p>
+        <div v-if="data.throttle.enabled && data.throttle.species && data.throttle.species.length">
+          <div class="qa-throttle-row" v-for="s in data.throttle.species" :key="s.com_name">
+            <span class="qa-throttle-name">{{s.com_name}}</span>
+            <span class="qa-throttle-num">{{s.recent_per_day}}/j</span>
+            <span style="color:var(--text-muted);font-size:.72rem;">vs {{s.prior_per_day}}/j</span>
+            <span v-if="s.delta_pct !== null" class="qa-delta" :class="s.delta_pct < 0 ? 'down' : 'up'">
+              {{s.delta_pct > 0 ? '+' : ''}}{{s.delta_pct}}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Quality timeline -->
+      <div class="qa-card">
+        <div class="qa-title">
+          <bird-icon name="trending-up" :size="15"></bird-icon>
+          {{t('quality_timeline_title')}}
+          <span class="qa-source" :class="data.timeline.source">{{t('quality_source_' + data.timeline.source)}}</span>
+        </div>
+        <p class="qa-card-note">{{t('quality_timeline_note')}}</p>
+        <div class="qa-chart-wrap">
+          <canvas ref="timelineCanvas"></canvas>
+        </div>
+      </div>
+
+    </template>
+
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
+const { useI18n, useSpeciesNames } = BIRDASH;
+const API = BIRD_CONFIG.apiUrl;
+
+const app = createApp({
+  setup() {
+    const { t, lang } = useI18n();
+    const { spName } = useSpeciesNames();
+
+    const days = ref(30);
+    const loading = ref(true);
+    const data = ref(null);
+    const timelineCanvas = ref(null);
+    let _chart = null;
+
+    function pct(part, total) {
+      if (!total) return 0;
+      return Math.round((part / total) * 100);
+    }
+    function agreementColor(p) {
+      if (p >= 75) return '#4caf50';
+      if (p >= 50) return '#ff9800';
+      return '#e53935';
+    }
+    function agreementClass(p) {
+      if (p >= 75) return 'high';
+      if (p >= 50) return 'mid';
+      return 'low';
+    }
+
+    async function load() {
+      loading.value = true;
+      try {
+        const r = await fetch(`${API}/quality?days=${days.value}`);
+        data.value = await r.json();
+        await nextTick();
+        renderTimeline();
+      } catch (e) {
+        console.error('[quality] load failed', e);
+      }
+      loading.value = false;
+    }
+
+    function renderTimeline() {
+      if (!timelineCanvas.value || !data.value || !data.value.timeline.days.length) return;
+      const labels = data.value.timeline.days.map(d => d.Date);
+      const birdnet = data.value.timeline.days.map(d => d.birdnet);
+      const perch = data.value.timeline.days.map(d => d.perch);
+      if (_chart) _chart.destroy();
+      _chart = new Chart(timelineCanvas.value, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'BirdNET', data: birdnet, backgroundColor: '#5a9e3a', borderWidth: 0 },
+            { label: 'Perch',   data: perch,   backgroundColor: '#3b82f6', borderWidth: 0 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+            y: { stacked: true, beginAtZero: true },
+          },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: { mode: 'index', intersect: false },
+          },
+        },
+      });
+    }
+
+    function setDays(n) {
+      if (days.value === n) return;
+      days.value = n;
+      load();
+    }
+
+    onMounted(load);
+
+    return {
+      t, lang, days, loading, data, timelineCanvas,
+      pct, agreementColor, agreementClass, spName, setDays,
+    };
+  },
+});
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
+</script>
+</body>
+</html>

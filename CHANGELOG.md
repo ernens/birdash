@@ -2,6 +2,55 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.43.0] — 2026-04-23
+
+### Feat: Detection Quality page (Phase A)
+
+New `Indicators → Quality` section that surfaces the reliability of
+the inference chain. **Phase A**: read-only, computed from what's
+already in the DB. **Phase B** (engine instrumentation, see
+`docs/QUALITY_METRICS.md`) is gated on the spec staying authoritative.
+
+The deliberate design call here is that there is **no single composite
+"trust score"**. A 0-100 number gives the appearance of mastery
+without informing decisions; 5 well-chosen cards each tell a
+mechanism-specific story instead.
+
+Page layout (top to bottom, ordered by actionability):
+
+1. **Human review** (observed) — confirmed / doubtful / rejected /
+   unreviewed split as a stacked bar, with a `→ Open Review page`
+   link when the unreviewed count > 0. The page that turns the
+   highest-leverage signal into an action.
+2. **Cross-model agreement** (observed) — for each species, the
+   share of Perch detections that also have a BirdNET detection of
+   the same `Sci_Name` within ±3 s. Volume guard at 20 Perch hits
+   minimum so low-sample species don't dominate. Mini-bar + sample
+   size shown alongside every percentage.
+3. **Pre-analysis filter impact** — placeholder card with a
+   "not instrumented" badge. The structure is locked so Phase B
+   drops in real numbers without changing the UI.
+4. **Throttle effect** (inferred) — when `NOISY_THROTTLE_ENABLED=1`,
+   shows the 5 noisiest species' last-7d rate vs prior-30d rate.
+   Negative delta = damping ; positive = species genuinely more
+   vocal.
+5. **Daily volume by model** (observed) — stacked bar chart of
+   detections per day, BirdNET vs Perch.
+
+Honest labelling: every card carries a coloured `source` badge —
+green/observed, amber/inferred, grey/not_instrumented (and Phase B
+will add green/measured). The user always knows whether a number
+reflects something the engine watched happen, or our reconstruction
+after the fact.
+
+`docs/QUALITY_METRICS.md` is the semantic spec for every counter
+(when it increments, what it counts, what it doesn't, restart
+behaviour). Phase B can't ship until any new counter has an entry
+there.
+
+i18n: 22 keys × 4 languages. Backend: new
+`GET /api/quality?days=N&min_volume=N` route in `server/routes/quality.js`.
+
 ## [1.42.0] — 2026-04-23
 
 ### Feat: Purge page — single safe place to delete detections
