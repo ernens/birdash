@@ -80,13 +80,22 @@
 
   .pg-spectro {
     width: 240px; height: 80px; background: var(--bg-deep); border-radius: 4px;
-    object-fit: cover; cursor: pointer; transition: transform .15s;
+    object-fit: cover; cursor: pointer; transition: transform .15s, filter .15s;
     display: block;
   }
   .pg-spectro:hover { transform: scale(1.02); }
   .pg-spectro-missing {
     display: flex; align-items: center; justify-content: center;
     color: var(--text-faint); font-size: .7rem; font-style: italic;
+  }
+  /* Visual cue when the audio is gone but the PNG is still on disk:
+     desaturate + dim so the user reads it as "broken/incomplete" at a glance
+     while still being able to inspect the visual signature before deletion. */
+  .pg-spectro.audio-missing {
+    filter: grayscale(1) opacity(0.55);
+  }
+  .pg-spectro.audio-missing:hover {
+    filter: grayscale(1) opacity(0.85);
   }
 
   .pg-meta { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .8rem; }
@@ -215,6 +224,7 @@
            class="pg-row-card" :class="{selected: !!selected[r.rowid]}">
         <input type="checkbox" v-model="selected[r.rowid]">
         <img v-if="!brokenSpectros[r.rowid]" class="pg-spectro"
+             :class="{ 'audio-missing': filters.orphaned }"
              :src="spectroUrl(r)"
              @click="openModal(r)"
              @error="brokenSpectros[r.rowid] = true">
