@@ -1478,6 +1478,14 @@
       const bugReportEnabled = ref(false);
       fetch(`${BIRD_CONFIG.apiUrl}/bug-report/status`).then(r => r.json()).then(d => { bugReportEnabled.value = d.enabled; }).catch(() => {});
 
+      // BirdWeather status — drives the header button visibility + URL.
+      // Live from birdnet.conf (no restart needed when the user updates
+      // BIRDWEATHER_ID in Settings → Station).
+      const birdweatherStationId = ref('');
+      fetch(`${BIRD_CONFIG.apiUrl}/birdweather/status`).then(r => r.json())
+        .then(d => { birdweatherStationId.value = d.stationId || ''; })
+        .catch(() => {});
+
       // ── Auth status (for header badge + login/logout button) ─────────
       const authStatus = reactive({ mode: 'off', authenticated: false, user: null, configured: false, canWrite: true });
       async function refreshAuthStatus() {
@@ -1690,7 +1698,7 @@
       // Expose openPower so child pages (e.g. the Settings → Station
       // 'Manage power' button) can trigger the shell-level modal.
       if (window.BIRDASH) window.BIRDASH.openPower = () => power.open();
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power, authStatus, logout, gotoLogin };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power, authStatus, logout, gotoLogin, birdweatherStationId };
     },
     directives: {
       'click-outside': {
@@ -1756,6 +1764,13 @@
           <bird-icon name="log-in" :size="16"></bird-icon>
         </button>
       </div>
+      <!-- BirdWeather: open this station on app.birdweather.com (new tab) -->
+      <a v-if="birdweatherStationId" class="hdr-bug-btn"
+         :href="'https://app.birdweather.com/stations/' + birdweatherStationId"
+         target="_blank" rel="noopener noreferrer"
+         :title="t('header_birdweather_open') + ' (#' + birdweatherStationId + ')'">
+        <bird-icon name="radio" :size="16"></bird-icon>
+      </a>
       <!-- Bug report button -->
       <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')">
         <bird-icon name="bug" :size="16"></bird-icon>

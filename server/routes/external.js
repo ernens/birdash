@@ -57,6 +57,18 @@ function fetchJson(url, extraHeaders = {}) {
 function handle(req, res, pathname, ctx) {
   const { parseBirdnetConf, readJsonFile, birdashDb, db, EBIRD_API_KEY, EBIRD_REGION, BW_STATION_ID } = ctx;
 
+  // ── Route : GET /api/birdweather/status ─────────────────────────────────────
+  // Lightweight status check — used by the header to decide whether to show
+  // the "Open on BirdWeather" button. Reads live from birdnet.conf so the
+  // header reflects a station-ID change without restarting birdash.
+  if (req.method === 'GET' && pathname === '/api/birdweather/status') {
+    const conf = parseBirdnetConf();
+    const stationId = String(conf.BIRDWEATHER_ID || '').trim();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ stationId, enabled: stationId.length > 0 }));
+    return;
+  }
+
   // ── Route : GET /api/birdweather ─────────────────────────────────────────────
   // Proxy BirdWeather API — évite les CORS + cache 5 min
   // ?endpoint=stats|species|detections  ?period=day|week|month|all

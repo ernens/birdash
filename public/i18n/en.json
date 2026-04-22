@@ -1673,6 +1673,7 @@
   "update_cat_chore": "Maintenance",
   "update_cat_other": "Other",
   "bug_report_title": "Report a Bug",
+  "header_birdweather_open": "Open station on BirdWeather",
   "bug_report_submitted": "Bug report submitted!",
   "bug_report_view_github": "View issue on GitHub",
   "bug_report_label_title": "Title",

@@ -1668,6 +1668,7 @@
   "update_cat_chore": "Maintenance",
   "update_cat_other": "Autres",
   "bug_report_title": "Signaler un bug",
+  "header_birdweather_open": "Voir la station sur BirdWeather",
   "bug_report_submitted": "Rapport envoyé !",
   "bug_report_view_github": "Voir sur GitHub",
   "bug_report_label_title": "Titre",

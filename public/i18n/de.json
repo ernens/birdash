@@ -1673,6 +1673,7 @@
   "update_cat_chore": "Wartung",
   "update_cat_other": "Sonstiges",
   "bug_report_title": "Fehler melden",
+  "header_birdweather_open": "Station auf BirdWeather öffnen",
   "bug_report_submitted": "Fehlerbericht gesendet!",
   "bug_report_view_github": "Auf GitHub ansehen",
   "bug_report_label_title": "Titel",
