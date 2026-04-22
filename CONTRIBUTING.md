@@ -66,7 +66,9 @@ birdash/
 │   ├── lib/
 │   │   ├── alerts.js          # Alert monitoring system
 │   │   ├── config.js          # BirdNET config, validators, exec helper
-│   │   └── db.js              # DB bootstrap, tables, taxonomy
+│   │   ├── db.js              # DB bootstrap, tables, taxonomy
+│   │   ├── db-pragmas.js      # Hardware-aware SQLite tuning (Pi 3 vs Pi 4/5)
+│   │   └── result-cache.js    # Centralized result cache with TTL + clearAll on mutations
 │   └── routes/
 │       ├── audio.js           # Audio devices, adaptive gain, streaming
 │       ├── backup.js          # Backup config/schedule/export
@@ -120,7 +122,13 @@ birdash/
 │   ├── img/                   # SVG assets
 │   └── sw.js                  # Service Worker (offline cache)
 ├── scripts/
-│   └── backup.sh              # Backup script (rsync incremental, multi-destination)
+│   ├── backup.sh              # Backup script (rsync incremental, multi-destination)
+│   ├── update.sh              # Update: git pull, deps, migrations, health-check restart
+│   ├── rollback.sh            # Rollback: git reset --hard, deps, restart
+│   ├── bump.sh                # Semver bump (patch/minor/major/auto)
+│   ├── bench-sqlite.mjs       # SQLite bench (--baseline / --tuned, 9 representative queries)
+│   ├── cleanup_throttle.py    # Retroactive noisy-species purge (DB + audio quarantine)
+│   └── smoke.mjs              # Headless smoke test of all pages
 ├── config/
 │   ├── birdash.service        # systemd service unit
 │   ├── birdash-local.example.js
@@ -188,6 +196,8 @@ Browser                    Raspberry Pi
 | `server/routes/*.js` | Route modules | Each handles a group of API endpoints via `handle(req, res, pathname, ctx)` |
 | `server/lib/*.js` | Shared libraries | DB init, config parsing, alert system |
 | `backup.sh` | Backup script | rsync incremental with progress tracking via JSON status file, supports 7 destination types |
+| `cleanup_throttle.py` | DB maintenance | Applies the live noisy-species throttle rule retroactively. `--dry-run` by default. Backs up `birds.db` via SQLite online `.backup`, **moves** mp3+png to a quarantine dir on the same filesystem (instant rename), then deletes rows in batches. Skips files referenced by ≥ 1 kept row. |
+| `bench-sqlite.mjs` | Perf bench | 9 representative queries × 25 runs (3 warmup discarded), `--baseline` (no helper PRAGMAs) vs default. Use to validate `db-pragmas.js` changes |
 
 ### Commits
 

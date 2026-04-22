@@ -81,6 +81,8 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 ## Funktionen
 
 - <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-Modell-Inferenz** — BirdNET V2.4 + Perch V2 parallel
+- <img src="docs/icons/shield-check.svg" width="16" align="top" alt=""> **Dual-Modell-Kreuzbestatigung** — Perch-Erkennungen unter einem Standalone-Schwellwert (Standard 0.85) mussen von BirdNET (Roh-Score >= 0.15) auf einem uberlappenden Chunk bestatigt werden. Eliminiert die meisten Perch-Falschmeldungen bei niederfrequentem Larm (Wind, Fahrzeuge > Gansen/Reihern/Raben), ohne Perchs Vorteile bei seltenen Arten zu verlieren. Alle drei Schwellen einstellbar in Einstellungen > Erkennung mit (i)-Tooltips
+- <img src="docs/icons/timer.svg" width="16" align="top" alt=""> **Artspezifische Drosselung** — Opt-in, Cooldown pro Art (Standard 120 s), verhindert dass dominante Arten (Spatzen, Amseln…) die DB fluten, wahrend hochkonfidente Erkennungen (>= Bypass-Schwelle, Standard 0.95) immer durchgelassen werden. Zustand im Speicher der Engine, Hot-Reload aus `birdnet.conf`. Script `scripts/cleanup_throttle.py` wendet die Regel ruckwirkend auf historische Zeilen an (`--dry-run` / `--apply`, DB-Backup, Audio-Quarantane) — typisch 60-70 % Bereinigung auf gerauschintensiven Stationen
 - <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — Ganzseitige Timeline mit Drag-to-Zoom, einheitlicher Dichte-Slider, SVG-Icons, Filter-Badges mit Blink
 - <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — Vereinigte Tagesansicht mit Timeline + Artenliste + Audioplayer
 - <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Wetter** — Open-Meteo-Korrelationsanalyse (Pearson r), Tagesprognose, plus volle ornithologische Analytik: 4 Leaderboards (Kältetoleranz · Gewittersänger · Starkregen · starker Wind), Heatmap Arten × Temperatur (Top 30) und Live-Suche-Karte mit 6 filterbaren Dimensionen. URL-teilbare Filter und CSV-Export
@@ -103,7 +105,7 @@ Modernes Vogelerkennungs-Dashboard und Engine fur Raspberry Pi 5. Eigenstandige 
 - <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Anpassbares Branding** — Stationsname und Header uber Einstellungen konfigurierbar
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Artnamenubersetzung** — Vogelnamen in gewahlter Sprache auf allen Seiten
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI-Sprachen (FR/EN/NL/DE) + 36 Sprachen fur Artnamen
-- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 Themes** — 7 dunkel (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 hell (Paper, Sepia, Solar Light), plus ein **Auto**-Modus, der `prefers-color-scheme` des Betriebssystems folgt. Mini-Seitenvorschauen im Theme-Picker, fließende Übergänge, vollständig token-basiertes Designsystem (siehe [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **12 Themes** — 7 dunkel (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 4 hell (Paper, Sepia, Solar Light, Colonial), plus ein **Auto**-Modus, der `prefers-color-scheme` des Betriebssystems folgt. Mini-Seitenvorschauen im Theme-Picker, fließende Übergänge, vollständig token-basiertes Designsystem (siehe [`docs/THEMES.md`](docs/THEMES.md))
 
 ## Optimierte Perch V2 Modelle
 

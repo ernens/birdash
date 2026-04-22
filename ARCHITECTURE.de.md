@@ -61,4 +61,18 @@ Raspberry Pi 5 + SSD
 | Indikatoren | Wetter, Statistiken + Diversität (Tabs), Analysen, Phänologie, Vergleich |
 | Station | Einstellungen (9 Tabs), System |
 
+### Performance
+
+- **Worker-Thread** für schwere Berechnungen (What's New: 10 SQL-Abfragen → eigener Thread)
+- **Proaktiver Cache**: Aktualisierung alle 5 min im Hintergrund
+- **Voraggregierte Tabellen**: daily_stats, monthly_stats, species_stats, hourly_stats
+- **Hardware-angepasste SQLite-PRAGMAs** (`server/lib/db-pragmas.js`) — `mmap_size=256MB` + `cache_size=64MB` auf Pi 4/5, auf Pi 3 deaktiviert (RAM eng neben arecord)
+- **Ausdrucksindex** `idx_date_hour_conf` auf `(Date, hour, Confidence)` — die Wetter-Heatmap fällt von 43 s (Caddy-Timeout) auf 12 s
+- **5-min-Ergebniscache** auf den 5 Endpoints `/birds/api/external/weather/*` — warme Anfragen < 10 ms
+- **Vendored JS**: Vue.js + Chart.js lokal ausgeliefert (kein CDN)
+
+### Artspezifische Drosselung
+
+Die Engine kann dominante Arten drosseln, damit sie die DB nicht überfluten. Konfigurierbarer Cooldown pro Art (Standard 120 s) mit Konfidenz-Bypass-Schwelle (Standard 0.95), die sichere Erkennungen immer durchlässt. Zustand im Speicher der Engine, Hot-Reload aus `birdnet.conf`. Skript `scripts/cleanup_throttle.py` wendet dieselbe Regel rückwirkend auf historische Daten an, mit DB-Backup und Audio-Quarantäne.
+
 → **[Vollständige technische Dokumentation lesen (EN)](ARCHITECTURE.md)**

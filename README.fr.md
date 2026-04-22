@@ -108,6 +108,8 @@ Raspberry Pi 5 + SSD
 
 ### Moteur de detection (BirdEngine)
 - <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Inference dual-modele** — BirdNET V2.4 (rapide, ~2s) + Perch V2 (precis, ~2s) en parallele
+- <img src="docs/icons/shield-check.svg" width="16" align="top" alt=""> **Confirmation bi-modele** — les detections Perch sous un seuil standalone (defaut 0.85) doivent etre confirmees par BirdNET (echo brut >= 0.15) sur un chunk qui se chevauche. Tue la majorite des faux positifs Perch sur le bruit basse frequence (vent, vehicules > oies/herons/corbeaux) sans perdre les especes que BirdNET seul rate. 3 seuils ajustables dans Reglages > Detection avec tooltips (i)
+- <img src="docs/icons/timer.svg" width="16" align="top" alt=""> **Limite par espece (throttle)** — opt-in, cooldown par espece (defaut 120 s) qui empeche les especes dominantes (moineaux, merles…) de saturer la DB tout en laissant passer les detections de haute confiance (>= seuil bypass, defaut 0.95). Etat en memoire dans le moteur, hot-reload depuis `birdnet.conf`. Script `scripts/cleanup_throttle.py` pour purger retroactivement l'historique avec `--dry-run` / `--apply`, backup DB et quarantaine audio — 60-70 % de purge typique sur stations bruyantes
 - <img src="docs/icons/mic.svg" width="16" align="top" alt=""> **Enregistrement local** — interface USB via ALSA avec gain configurable
 - <img src="docs/icons/sliders-horizontal.svg" width="16" align="top" alt=""> **Normalisation adaptative** — gain logiciel automatique selon le bruit ambiant, protection clipping, gel activite, mode observateur
 - <img src="docs/icons/volume-x.svg" width="16" align="top" alt=""> **Filtres audio** — passe-haut + passe-bas (bandpass), reduction de bruit spectrale (gating stationnaire), normalisation RMS
@@ -163,7 +165,7 @@ Raspberry Pi 5 + SSD
 - <img src="docs/icons/monitor.svg" width="16" align="top" alt=""> Sante systeme — CPU, RAM, disque, temperature, services
 - <img src="docs/icons/terminal.svg" width="16" align="top" alt=""> **Terminal web** — bash complet dans le navigateur, supporte Claude Code
 - <img src="docs/icons/save.svg" width="16" align="top" alt=""> **Sauvegarde** — NFS/SMB/SFTP/S3/GDrive/WebDAV avec planification
-- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 themes** — 7 sombres (Foret, Nuit, Ocean, Crepuscule, Solar Dark, Nord, High Contrast AAA), 3 clairs (Papier, Sepia, Solar Light), plus un mode **Auto** qui suit le `prefers-color-scheme` du systeme. Mini-apercus de page dans le selecteur, fondu doux entre themes, systeme de design entierement par tokens (voir [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **12 themes** — 7 sombres (Foret, Nuit, Ocean, Crepuscule, Solar Dark, Nord, High Contrast AAA), 4 clairs (Papier, Sepia, Solar Light, Colonial), plus un mode **Auto** qui suit le `prefers-color-scheme` du systeme. Mini-apercus de page dans le selecteur, fondu doux entre themes, systeme de design entierement par tokens (voir [`docs/THEMES.md`](docs/THEMES.md))
 - <img src="docs/icons/image.svg" width="16" align="top" alt=""> **Gestion des photos** — bannir/remplacer, definir la photo preferee par espece
 - <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Branding personnalisable** — nom de station et en-tete configurables dans les reglages
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Traduction des noms d'especes** — noms affiches dans la langue choisie sur toutes les pages

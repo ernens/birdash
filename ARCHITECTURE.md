@@ -199,6 +199,16 @@ BirdNET detections are never filtered by this rule. The echo uses BirdNET's **ra
 
 Also: opt-in **eBird range filter for Perch** (`RANGE_FILTER_PERCH_EBIRD=1`) drops species absent from `config/ebird-frequency.json` (Perch has no MData equivalent for geographic filtering).
 
+**Noisy-species throttle.** Opt-in (`NOISY_THROTTLE_ENABLED=1`, off by default). Sits after dual-confirm and range filtering, before `write_detection`. For each detection passing those gates, `_should_throttle(com_name, confidence)` decides:
+
+- `confidence >= THROTTLE_BYPASS_CONFIDENCE` (default `0.95`) → **always pass**, never resets the cooldown
+- otherwise: drop if the same species was kept less than `THROTTLE_COOLDOWN_SECONDS` seconds ago (default `120`)
+- otherwise: keep, update `_throttle_last[com_name] = now`
+
+State is two in-memory dicts on the engine instance (`_throttle_last`, `_throttle_dropped`) — no DB writes for dropped rows, no extra disk I/O. Config is hot-reloaded from `birdnet.conf` on the engine's normal ~5 min config-cycle, no restart needed.
+
+Companion script `scripts/cleanup_throttle.py` applies the same rule retroactively to historical rows. Backs up `birds.db` via the SQLite online `.backup` API, **moves** (not deletes) matching mp3 + .mp3.png to a quarantine directory on the same filesystem (instant rename, no extra space needed), then deletes the rows in batches. `--dry-run` by default; `--apply` prompts unless `--yes`. Defaults to **yesterday** as upper bound — never touches today's incoming detections. Skips files referenced by ≥ 1 kept row (BirdNET sometimes emits multiple rows per chunk sharing the same File_Name).
+
 #### 8. Post-Processing (async, non-blocking)
 
 - MP3 extraction of detection clips
@@ -621,12 +631,15 @@ Schema is compatible with BirdNET-Pi for migration. The `Model` column distingui
 #### Indexes on `detections`
 
 ```sql
-CREATE INDEX idx_date_time ON detections(Date, Time DESC);
-CREATE INDEX idx_com_name  ON detections(Com_Name);
-CREATE INDEX idx_sci_name  ON detections(Sci_Name);
-CREATE INDEX idx_date_com  ON detections(Date, Com_Name);
-CREATE INDEX idx_date_conf ON detections(Date, Confidence);
+CREATE INDEX idx_date_time      ON detections(Date, Time DESC);
+CREATE INDEX idx_com_name       ON detections(Com_Name);
+CREATE INDEX idx_sci_name       ON detections(Sci_Name);
+CREATE INDEX idx_date_com       ON detections(Date, Com_Name);
+CREATE INDEX idx_date_conf      ON detections(Date, Confidence);
+CREATE INDEX idx_date_hour_conf ON detections(Date, CAST(SUBSTR(Time,1,2) AS INT), Confidence);
 ```
+
+The expression index `idx_date_hour_conf` accelerates the weather-analytics JOINs against `weather_hourly` (which keys by `(date, hour)`). Without it, the `weather-species-heatmap` query took ~43 s on a 1 M-row DB and tripped Caddy's 30 s upstream timeout; with it, it drops to ~12 s, and the result cache below brings warm requests under 10 ms.
 
 #### `favorites` table
 
@@ -970,8 +983,25 @@ The primary database can contain 1M+ detection rows. Naive `COUNT/GROUP BY` quer
 │  4. Proactive refresh     → 5-min timer for aggregates   │
 │  5. VIEW strategy         → raw vs active_detections     │
 │  6. Vendored JS           → no CDN latency               │
+│  7. SQLite PRAGMAs        → hardware-aware (Pi 3 vs 4/5) │
+│  8. Expression indexes    → for weather analytics JOINs  │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### SQLite PRAGMA Tuning (`server/lib/db-pragmas.js`)
+
+A single helper applies a consistent PRAGMA set to every connection (`db` read, `dbWrite`, `birdash.db`, `taxonomy.db`, the worker thread). Adapts to host RAM via `isHighMemHost()`:
+
+| PRAGMA | Pi 3 (<3 GB) | Pi 4/5 (≥3 GB) | Why |
+|---|---|---|---|
+| `journal_mode` | WAL | WAL | concurrent reads while writing |
+| `synchronous` | NORMAL | NORMAL | 2-5× faster writes; risk = ~1 s of transactions on power-cut (engine recreates within 45 s) |
+| `cache_size` | -16 MB | -64 MB | hot pages stay across queries |
+| `mmap_size` | 0 | 256 MB | OS page cache backs the most-read portion of `birds.db` (~750 MB on bird.local); skipped on Pi 3 where RAM is tight next to `arecord` |
+| `temp_store` | MEMORY | MEMORY | ORDER BY / GROUP BY / DISTINCT temp B-trees don't spill to disk |
+| `busy_timeout` | 30 s | 30 s | aligned with the Python engine so Node reads tolerate long writes instead of raising "database is locked" |
+
+Bench harness: `scripts/bench-sqlite.mjs --baseline` vs default. Typical wins on Pi 5: timeline-today -3 %, top-species-30d -21 %, hourly-activity-today -15 %. Some weather JOINs regress slightly without `idx_date_hour_conf` — the index above is what restores them.
 
 ### Worker Thread for Whats-New
 
@@ -992,6 +1022,8 @@ resultCache.clearAll();  // after any mutation (delete, validate, etc.)
 ```
 
 Every mutation handler calls `clearAll()` to prevent stale data. Query results, taxonomy lookups, model comparisons, and rare-today data all share this single cache.
+
+**Weather analytics result cache.** The 5 weather endpoints under `/birds/api/external/weather/*` (`condition-summary`, `species-by-condition`, `species-heatmap`, `match-summary`, `species-profile`) wrap their handlers in a `serveFromCache(label, TTL=5 min)` helper that intercepts the `200` response body and stores it keyed by URL query string. Warm requests serve in <10 ms with `X-Cache: HIT`. Cache is invalidated naturally by TTL expiry — these are aggregate queries that don't need same-second freshness.
 
 ### Pre-Aggregated Statistics Tables
 

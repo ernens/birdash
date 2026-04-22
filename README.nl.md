@@ -81,6 +81,8 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 ## Kenmerken
 
 - <img src="docs/icons/cpu.svg" width="16" align="top" alt=""> **Dual-model inferentie** — BirdNET V2.4 + Perch V2 parallel
+- <img src="docs/icons/shield-check.svg" width="16" align="top" alt=""> **Dual-model kruisbevestiging** — Perch-detecties onder een standalone-drempel (standaard 0.85) moeten bevestigd worden door BirdNET (ruwe score >= 0.15) op een overlappende chunk. Schakelt het gros van de Perch valse positieven op laagfrequent geluid uit (wind, voertuigen > ganzen/reigers/raven), zonder Perchs voordeel bij zeldzame soorten te verliezen. Drie drempels instelbaar in Instellingen > Detectie met (i)-tooltips
+- <img src="docs/icons/timer.svg" width="16" align="top" alt=""> **Soortspecifieke beperking** — opt-in, cooldown per soort (standaard 120 s), voorkomt dat dominante soorten (mussen, merels…) de DB overspoelen, terwijl hoge-confidentie detecties (>= bypass-drempel, standaard 0.95) altijd doorkomen. Status in geheugen van de engine, hot-reload vanuit `birdnet.conf`. Script `scripts/cleanup_throttle.py` past dezelfde regel retroactief toe op historische rijen (`--dry-run` / `--apply`, DB-backup, audio-quarantaine) — typisch 60-70 % opschoning op luidruchtige stations
 - <img src="docs/icons/sunrise.svg" width="16" align="top" alt=""> **Timeline** — volledig scherm met drag-to-zoom, uniforme dichtheidsslider, SVG-iconen, filter-badges met knippermarkering
 - <img src="docs/icons/calendar-days.svg" width="16" align="top" alt=""> **Kalender** — uniforme dagweergave met timeline + soortenlijst + audiospeler
 - <img src="docs/icons/cloud-sun.svg" width="16" align="top" alt=""> **Weer** — Open-Meteo correlatieanalyse (Pearson r), prognose, plus volledige ornithologische analytics: 4 leaderboards (koudebestendigheid · onweerszangers · zware regen · sterke wind), heatmap soorten × temperatuur (top 30) en live aangepaste zoekkaart met 6 filterbare dimensies. URL-deelbare filters en CSV-export
@@ -103,7 +105,7 @@ Modern vogeldetectie-dashboard en engine voor Raspberry Pi 5. Zelfstandige dual-
 - <img src="docs/icons/flag.svg" width="16" align="top" alt=""> **Aanpasbare branding** — stationnaam en header configureerbaar via instellingen
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> **Soortnaamvertaling** — vogelnamen in gekozen taal op alle pagina's
 - <img src="docs/icons/globe.svg" width="16" align="top" alt=""> 4 UI-talen (FR/EN/NL/DE) + 36 talen voor soortnamen
-- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **11 thema's** — 7 donker (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 3 licht (Paper, Sepia, Solar Light), plus een **Auto**-modus die de OS-instelling volgt. Mini-paginavoorbeelden in de kiezer, vloeiende overgangen, volledig token-gebaseerd ontwerpsysteem (zie [`docs/THEMES.md`](docs/THEMES.md))
+- <img src="docs/icons/sparkles.svg" width="16" align="top" alt=""> **12 thema's** — 7 donker (Forest, Night, Ocean, Dusk, Solar Dark, Nord, High Contrast AAA), 4 licht (Paper, Sepia, Solar Light, Colonial), plus een **Auto**-modus die de OS-instelling volgt. Mini-paginavoorbeelden in de kiezer, vloeiende overgangen, volledig token-gebaseerd ontwerpsysteem (zie [`docs/THEMES.md`](docs/THEMES.md))
 
 ## Geoptimaliseerde Perch V2 Modellen
 

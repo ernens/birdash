@@ -68,6 +68,13 @@ Chaque étape est configurable et peut être activée/désactivée indépendamme
 - **Worker thread** pour les calculs lourds (What's New : 10 requêtes SQL → thread séparé)
 - **Cache proactif** : rafraîchissement toutes les 5 min en arrière-plan
 - **Tables pré-agrégées** : daily_stats, monthly_stats, species_stats, hourly_stats
+- **PRAGMAs SQLite adaptés au matériel** (`server/lib/db-pragmas.js`) — `mmap_size=256MB` + `cache_size=64MB` sur Pi 4/5, désactivé sur Pi 3 (RAM serrée à côté d'arecord)
+- **Index expression** `idx_date_hour_conf` sur `(Date, hour, Confidence)` — la heatmap météo passe de 43 s (timeout Caddy) à 12 s
+- **Cache de résultats 5 min** sur les 5 endpoints `/birds/api/external/weather/*` — requêtes chaudes < 10 ms
 - **JS vendorisé** : Vue.js + Chart.js servis localement (pas de CDN)
+
+### Limite par espèce (throttle)
+
+Le moteur peut limiter les espèces dominantes pour éviter qu'elles ne saturent la DB. Cooldown configurable par espèce (défaut 120 s) avec seuil de bypass de confiance (défaut 0.95) qui laisse toujours passer les détections sûres. État en mémoire dans le moteur, hot-reloadé depuis `birdnet.conf`. Script `scripts/cleanup_throttle.py` pour appliquer la même règle rétroactivement à l'historique avec backup DB et quarantaine audio.
 
 → **[Lire la documentation technique complète (EN)](ARCHITECTURE.md)**
