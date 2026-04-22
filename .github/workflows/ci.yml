@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        # Errors fail the job; warnings surface but don't block. Catches
+        # duplicate object keys, undefined globals, unreachable code — the
+        # kind of slip the test suite wouldn't hit unless the exact path
+        # runs at runtime.
+        run: npm run lint
+
       - name: Run tests
         # Integration suites self-skip when their Pi prereqs are missing
         # (no /etc/birdnet/birdnet.conf, no ~/birdengine/models, etc.) so

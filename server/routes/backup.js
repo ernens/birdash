@@ -8,6 +8,9 @@ const fs   = require('fs');
 const fsp  = fs.promises;
 const { spawn } = require('child_process');
 const safeConfig = require('../lib/safe-config');
+// updateBackupCron runs at top level (not inside handle()), so it can't
+// rely on the ctx-destructured helpers — pull execCmd from config directly.
+const { execCmd } = require('../lib/config');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 

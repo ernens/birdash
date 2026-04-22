@@ -113,8 +113,10 @@
     'folder': '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
     'disc': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/>',
     'monitor-cog': '<path d="M12 17v4"/><path d="M15.2 4.9c-.3-.3-.7-.5-1.2-.5H5a2 2 0 0 0-2 2v9c0 .6.2 1.1.6 1.5"/><path d="M17.5 17.5L17 17"/><path d="M19 21h-4"/><path d="M20.5 14.5L20 14"/><path d="M21 13v-3"/><path d="m13.5 17.5.5-.5"/><path d="m13.5 14.5.5.5"/><circle cx="17" cy="17" r="3"/>',
-    'database': '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
-    'volume-2': '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/>',
+    // ('database' and 'volume-2' duplicates lived here — both had been
+    // re-pasted later in the file. The 'database' clone was identical;
+    // the 'volume-2' clone was missing the outer arc and silently
+    // overrode the correct icon. Now defined once at lines 87 and 93.)
     'volume-x': '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>',
     'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
     'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',

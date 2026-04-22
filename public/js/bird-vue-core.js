@@ -1671,7 +1671,7 @@
           const poll = async () => {
             if (!this.modalOpen) return;
             if (Date.now() - started > MAX_MS) return;
-            let online = false;
+            let online;
             try { const r = await fetch(`${BIRD_CONFIG.apiUrl}/health`, { cache: 'no-store' }); online = r.ok; }
             catch { online = false; }
             if (!online) {
@@ -2374,8 +2374,8 @@
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components
     PibirdShell, BirdIcon, registerComponents, MODEL_LABELS, vSwipe,
-    // Shared state (for bird-spectro-modal.js)
-    _spectroModal,
+    // (_spectroModal is also exported below alongside open/closeSpectroModal —
+    // keep that grouping, drop the duplicate here.)
     // Wrapper with reactive lang injection (calls BIRDASH_UTILS under the hood)
     buildSpeciesLinks,
     // Re-exports from BIRDASH_UTILS for backward compatibility

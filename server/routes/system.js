@@ -11,7 +11,7 @@ const safeConfig = require('../lib/safe-config');
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
 function handle(req, res, pathname, ctx) {
-  const { requireAuth, execCmd, readJsonFile, writeJsonFileAtomic, JSON_CT, parseBirdnetConf, ALLOWED_SERVICES, BIRDNET_DIR } = ctx;
+  const { requireAuth, execCmd, readJsonFile, writeJsonFileAtomic, JSON_CT, parseBirdnetConf, ALLOWED_SERVICES, BIRDNET_DIR, db } = ctx;
 
   // ── Route : GET /api/services ───────────────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/services') {
