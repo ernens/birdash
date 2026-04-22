@@ -48,6 +48,22 @@
   .qa-card-note {
     font-size: .76rem; color: var(--text-muted); margin: 0 0 .8rem; line-height: 1.5;
   }
+  /* Italic "how to read this" line under each card. Keeps the technical
+     measurement note up top, then a separate guide on interpretation +
+     suggested action — addresses the "a high number isn't always good"
+     trap. */
+  .qa-reading {
+    font-size: .74rem; color: var(--text-muted); font-style: italic;
+    margin: .5rem 0 .8rem; padding: .5rem .7rem; line-height: 1.55;
+    background: var(--bg-deep); border-left: 3px solid var(--border);
+    border-radius: 0 4px 4px 0;
+  }
+  .qa-reading strong { font-style: normal; color: var(--text-main); font-weight: 600; }
+  .qa-action {
+    margin-top: .35rem; display: inline-flex; align-items: center; gap: .25rem;
+    font-size: .76rem; text-decoration: none; color: var(--accent);
+  }
+  .qa-action::after { content: '→'; }
 
   /* Review breakdown — stacked bar */
   .qa-bar {
@@ -106,7 +122,7 @@
     border: 1px dashed var(--border);
   }
 
-  .qa-chart-wrap { position: relative; height: 280px; }
+  .qa-chart-wrap { position: relative; height: 200px; }
 </style>
 <body>
 <div id="app" v-cloak>
@@ -164,6 +180,7 @@
           <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#94a3b8;"></span>{{t('quality_unreviewed')}} <strong>{{data.review.unreviewed.toLocaleString()}}</strong></span>
           <a v-if="data.review.unreviewed > 0" href="review.html" class="qa-legend-link">→ {{t('quality_go_review')}}</a>
         </div>
+        <div class="qa-reading" v-html="safeHtml(t('quality_review_reading'))"></div>
       </div>
 
       <!-- 2. Model agreement (observed proxy) -->
@@ -197,6 +214,8 @@
           </tbody>
         </table>
         <div v-else class="qa-placeholder">{{t('quality_no_species_volume')}}</div>
+        <div class="qa-reading" v-html="safeHtml(t('quality_agreement_reading'))"></div>
+        <a href="settings.html#detection" class="qa-action">{{t('quality_action_tune_thresholds')}}</a>
       </div>
 
       <!-- 3. Pre-filter impact -->
@@ -237,6 +256,8 @@
         <div v-else class="qa-placeholder">
           ⚙ {{ data.prefilter.note_key ? t(data.prefilter.note_key) : '' }}
         </div>
+        <div class="qa-reading" v-html="safeHtml(t('quality_prefilter_reading'))"></div>
+        <a href="settings.html#detection" class="qa-action">{{t('quality_action_tune_filters')}}</a>
       </div>
 
       <!-- 4. Throttle effect (inferred) -->
@@ -262,6 +283,8 @@
             </span>
           </div>
         </div>
+        <div class="qa-reading" v-html="safeHtml(t('quality_throttle_reading'))"></div>
+        <a v-if="data.throttle.enabled" href="settings.html#detection" class="qa-action">{{t('quality_action_tune_throttle')}}</a>
       </div>
 
       <!-- 5. Quality timeline -->
@@ -275,6 +298,7 @@
         <div class="qa-chart-wrap">
           <canvas ref="timelineCanvas"></canvas>
         </div>
+        <div class="qa-reading" v-html="safeHtml(t('quality_timeline_reading'))"></div>
       </div>
 
     </template>
@@ -284,7 +308,7 @@
 
 <script>
 const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
-const { useI18n, useSpeciesNames } = BIRDASH;
+const { useI18n, useSpeciesNames, safeHtml } = BIRDASH;
 const API = BIRD_CONFIG.apiUrl;
 
 const app = createApp({
@@ -364,7 +388,7 @@ const app = createApp({
     onMounted(load);
 
     return {
-      t, lang, days, loading, data, timelineCanvas,
+      t, lang, days, loading, data, timelineCanvas, safeHtml,
       pct, agreementColor, agreementClass, spName, setDays,
     };
   },
