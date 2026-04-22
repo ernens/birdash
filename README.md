@@ -267,6 +267,8 @@ Benchmarked on Raspberry Pi 5 (8 GB, Cortex-A76 @ 2.4 GHz), 20 real bird recordi
 | Audio | Any USB audio interface (e.g., RODE AI-Micro, Focusrite Scarlett, Behringer UMC, UGreen 30724) + microphone |
 | Network | Ethernet or WiFi |
 
+> **Low-RAM Pis (≤ 4 GB)**: BirdNET + Perch + Node + arecord can pressure memory and trigger OOM kills under load. The installer auto-runs `scripts/configure_zram.sh` which tunes zstd-compressed zram swap (50 % of RAM on ≤2 GB hosts, 25 % on 3-4 GB hosts) via `systemd-zram-generator` (modern) or `zram-tools` (legacy). Re-run any time, or `bash scripts/configure_zram.sh --status` to inspect. Skipped silently on ≥6 GB hosts where modern RPi OS defaults already suffice.
+
 ## Expose on the internet
 
 By default birdash trusts the LAN — anyone on `192.168.x.x` can change settings. To safely show your station to friends or embed it in a public site:
@@ -570,6 +572,7 @@ birdash/
 │   ├── backup.sh                  # Incremental backup (rsync)
 │   ├── bench-sqlite.mjs           # SQLite query bench (--baseline / --tuned, 9 representative queries)
 │   ├── cleanup_throttle.py        # Retroactive noisy-species purge (DB + audio quarantine, --dry-run by default)
+│   ├── configure_zram.sh          # Auto-tune zram swap (zstd, % of RAM); skips on ≥6 GB hosts
 │   └── smoke.mjs                  # Headless smoke test of all pages
 ├── tests/
 │   └── server.test.js             # Backend tests

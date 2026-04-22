@@ -198,6 +198,7 @@ Browser                    Raspberry Pi
 | `backup.sh` | Backup script | rsync incremental with progress tracking via JSON status file, supports 7 destination types |
 | `cleanup_throttle.py` | DB maintenance | Applies the live noisy-species throttle rule retroactively. `--dry-run` by default. Backs up `birds.db` via SQLite online `.backup`, **moves** mp3+png to a quarantine dir on the same filesystem (instant rename), then deletes rows in batches. Skips files referenced by ≥ 1 kept row. |
 | `bench-sqlite.mjs` | Perf bench | 9 representative queries × 25 runs (3 warmup discarded), `--baseline` (no helper PRAGMAs) vs default. Use to validate `db-pragmas.js` changes |
+| `configure_zram.sh` | Memory tuning | Auto-detects Pi RAM, picks 25/50 % zram-size, writes config for `systemd-zram-generator` (modern) or `zram-tools` (legacy). `--status` to inspect, `--force` to override the ≥6 GB skip. Idempotent. |
 
 ### Commits
 

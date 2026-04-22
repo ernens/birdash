@@ -1057,6 +1057,10 @@ Vue 3 and Chart.js are vendored locally in `public/js/`. No CDN requests means:
 - Works offline (with Service Worker)
 - No dependency on third-party availability
 
+### ZRAM Compressed Swap (low-RAM hosts)
+
+On Pi 3 (1 GB) and Pi 4 (2-4 GB), simultaneous BirdNET inference, Perch inference, the Node API, the Python recording loop, and any active browser tab can pressure RAM hard enough to OOM-kill the engine silently. `scripts/configure_zram.sh` tunes a zstd-compressed zram swap device (typical compression ratio ~3×, so 1 GB physical absorbs ~3 GB of paged-out memory) with high swap priority so the kernel prefers it over disk. Sizing: 50 % of RAM on ≤2 GB hosts, 25 % on 3-4 GB. Skipped on ≥6 GB hosts. Two backends auto-detected: `systemd-zram-generator` (Bookworm/Trixie default) writes `/etc/systemd/zram-generator.conf`; `zram-tools` (legacy) writes `/etc/default/zramswap`. The script is called from `install.sh` and is idempotent — re-runnable to update or `--status` to inspect.
+
 ---
 
 ## 7. Community Network

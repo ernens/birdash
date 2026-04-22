@@ -219,6 +219,16 @@ else
 fi
 echo "  Optimal Perch model for $(echo $_PI_MODEL | grep -oP 'Pi \d+' || echo 'this hardware'): $_PERCH_MODEL"
 
+# ── ZRAM: auto-tune compressed swap on low-RAM Pis ──────────────────────────
+# Skips on hosts with ≥6 GB RAM (Pi 5 8GB, Pi 4 8GB) where modern RPi OS
+# defaults are already adequate. On Pi 3 / Pi 4 ≤4GB, configures zram-size
+# = 25-50% of RAM with zstd to absorb peaks (BirdNET + Perch + Node + Caddy
+# concurrently can OOM-kill the engine without it).
+if [ -x "$BIRDASH_DIR/scripts/configure_zram.sh" ]; then
+    echo "  Auto-configuring zram (skips silently on ≥6 GB hosts)..."
+    bash "$BIRDASH_DIR/scripts/configure_zram.sh" 2>&1 | sed 's/^/    /' || warn "zram config failed (non-fatal, continuing)"
+fi
+
 # ── GeoIP: auto-detect location + language from public IP ───────────────────
 # BirdNET filters species by geographic frequency (SF_THRESH), so shipping
 # with LAT=0 LON=0 means ~0 detections until the user sets coordinates.
