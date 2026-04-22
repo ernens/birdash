@@ -2085,17 +2085,17 @@
 
     /* ── Zone 3: DETECTION (generous right) ─────────────────────── */
     .bf-zone-det {
-      width: 320px; flex-shrink: 0;
+      width: 416px; flex-shrink: 0;
       border-radius: 0 14px 14px 0; border-left: none;
       display: flex; flex-direction: column;
     }
     .bf-det-main {
-      flex: 1; display: flex; gap: 1.1rem; align-items: center;
+      flex: 1; display: flex; gap: 1.4rem; align-items: center;
       padding: .25rem 0;
     }
     .bf-det-photo-wrap { position: relative; flex-shrink: 0; }
     .bf-det-photo {
-      width: 170px; height: 170px; border-radius: 16px;
+      width: 220px; height: 220px; border-radius: 18px;
       object-fit: cover; background: var(--bg-card2); display: block;
       transition: transform .5s cubic-bezier(.34,1.56,.64,1), box-shadow .4s;
       box-shadow: 0 2px 12px rgba(0,0,0,.08);
@@ -2107,11 +2107,11 @@
     .bf-det-enter { animation: bfDetIn .6s cubic-bezier(.22,1,.36,1); }
     @keyframes bfDetIn { from{opacity:0;transform:scale(.88) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
     .bf-det-conf {
-      position: absolute; bottom: -6px; right: -6px;
-      width: 46px; height: 46px; border-radius: 50%;
+      position: absolute; bottom: -8px; right: -8px;
+      width: 60px; height: 60px; border-radius: 50%;
       background: var(--bg-card); border: 3px solid var(--border);
       display: flex; align-items: center; justify-content: center;
-      font-size: .85rem; font-weight: 800; font-variant-numeric: tabular-nums;
+      font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums;
       transition: border-color .3s, color .3s, transform .3s;
       box-shadow: 0 2px 8px rgba(0,0,0,.12);
     }
@@ -2125,19 +2125,20 @@
       gap: .15rem;
     }
     .bf-det-name {
-      font-weight:800; font-size:1.3rem; line-height:1.15;
-      margin-bottom:.05rem; letter-spacing:-.01em;
+      font-weight:800; font-size:1.7rem; line-height:1.15;
+      margin-bottom:.1rem; letter-spacing:-.01em;
+      overflow-wrap: break-word; word-break: break-word;
     }
     .bf-det-sci {
-      font-size:.78rem; color:var(--text-muted); font-style:italic;
-      margin-bottom:.55rem;
+      font-size:.95rem; color:var(--text-muted); font-style:italic;
+      margin-bottom:.7rem;
     }
-    .bf-det-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; font-size:.78rem; }
-    .bf-badge { display:inline-flex; padding:.15rem .5rem; border-radius:5px; font-weight:700; font-size:.64rem; text-transform:uppercase; }
+    .bf-det-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; font-size:.9rem; }
+    .bf-badge { display:inline-flex; padding:.15rem .5rem; border-radius:5px; font-weight:700; font-size:.7rem; text-transform:uppercase; }
     .bf-badge.accepted{background:rgba(76,175,80,.14);color:#4caf50}
     .bf-badge.review{background:rgba(255,152,0,.14);color:#ff9800}
-    .bf-det-model { font-size:.68rem; color:var(--text-muted); margin-top:.35rem; letter-spacing:.01em; }
-    .bf-det-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.82rem; }
+    .bf-det-model { font-size:.78rem; color:var(--text-muted); margin-top:.45rem; letter-spacing:.01em; }
+    .bf-det-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.95rem; }
 
     /* Recent detections strip inside detection zone */
     .bf-det-recent {
