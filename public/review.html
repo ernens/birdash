@@ -60,11 +60,9 @@
         <button class="rv-btn rv-btn-ok" @click="bulkAction('confirmed')"><bird-icon name="check" :size="13"></bird-icon> {{t('review_confirm')}}</button>
         <button class="rv-btn rv-btn-maybe" @click="bulkAction('doubtful')"><bird-icon name="help-circle" :size="13"></bird-icon> {{t('review_doubtful_btn')}}</button>
         <button class="rv-btn rv-btn-no" @click="bulkAction('rejected')"><bird-icon name="x" :size="13"></bird-icon> {{t('review_reject')}}</button>
-        <span class="rv-sep"></span>
-        <button class="rv-btn rv-btn-no" @click="deleteSelected"><bird-icon name="trash-2" :size="13"></bird-icon> {{t('review_delete_selection')}}</button>
       </div>
 
-      <!-- Row 4: Reject by rule + purge rejected -->
+      <!-- Row 4: Reject by rule (deletion now lives on the Purge page) -->
       <div class="rv-row" v-if="reasonGroups.length || rejectedCount">
         <template v-if="reasonGroups.length">
           <span style="font-size:.72rem;color:var(--text-muted);">{{t('review_reject_rule')}} :</span>
@@ -73,10 +71,10 @@
             <bird-icon name="x" :size="11"></bird-icon> {{rg.reason}} ({{rg.count}})
           </button>
         </template>
-        <span v-if="reasonGroups.length && rejectedCount" class="rv-sep"></span>
-        <button v-if="rejectedCount" class="rv-btn rv-btn-no" style="font-size:.72rem;" @click="openDeleteModal(rejectedList)">
-          <bird-icon name="trash-2" :size="13"></bird-icon> {{t('review_purge')}} ({{rejectedCount}})
-        </button>
+        <span v-if="rejectedCount" class="rv-sep"></span>
+        <a v-if="rejectedCount" href="purge.html" class="rv-btn rv-btn-no" style="font-size:.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem;">
+          <bird-icon name="trash-2" :size="13"></bird-icon> {{t('review_manage_in_purge')}} ({{rejectedCount}}) →
+        </a>
       </div>
     </div>
 

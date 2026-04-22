@@ -83,6 +83,7 @@ const BIRD_CONFIG = {
       { id: 'settings',     icon: 'settings', file: 'settings.html'    },
       { id: 'system',       icon: 'monitor', file: 'system.html'      },
       { id: 'log',          icon: 'scroll-text', file: 'log.html'     },
+      { id: 'purge',        icon: 'trash-2', file: 'purge.html'       },
     ]},
   ],
   // Flat pages array (built from nav sections)

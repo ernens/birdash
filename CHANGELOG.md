@@ -2,6 +2,68 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.42.0] — 2026-04-23
+
+### Feat: Purge page — single safe place to delete detections
+
+`Réglages → Purge` (new entry under the System nav section) is now the
+**only** UI for deleting detections + their MP3/spectrogram files. The
+previous scattered delete buttons (per-row trash on `detections.html`,
+bulk delete on `review.html`, delete-mode on `species.html`) have been
+removed and replaced with `Manage in Purge →` shortcuts that pre-filter
+the species.
+
+Soft-delete with 90 d safety net:
+- Trash action moves the row from `detections` to `detections_trashed`
+  (same shape + `trashed_at` + `original_path`) AND mv's mp3/.png from
+  `~/BirdSongs/Extracted/By_Date/<date>/<sp>/` to
+  `~/BirdSongs/Trashed/By_Date/<date>/<sp>/` — same filesystem so it's
+  an instant rename, no extra disk used during the move.
+- Restore is the symmetric operation.
+- A nightly cron hard-purges entries older than
+  `BIRDASH_TRASH_RETENTION_DAYS` (default 90 d) + rm files. Idempotent.
+- Each trash row shows a `⏰ Permanent removal in N d` countdown.
+
+UI highlights (`public/purge.html`):
+- Sticky filter bar: species autocomplete (matches active + trash
+  combined), date range, confidence min/max, model substring,
+  pagination size (10/50/100).
+- Tabs: **Active** vs **Trash** with live counts in the badges.
+- Each row: checkbox + 240×80 inline spectrogram PNG (Caddy-served for
+  active rows, birdash-served for trash via `/api/purge/file`) + click
+  → opens the existing `<spectro-modal>` with audio + filters/gain.
+- Bulk actions: select-all-visible toggle, "Move to trash (N)" /
+  "Restore (N)", "Empty trash" (requires typing `EMPTY` to confirm).
+- Per-row trash/restore buttons for one-off cleanups.
+
+Backend:
+- `server/routes/purge.js` ships 6 endpoints: `GET /stats`, `GET /list`
+  (filterable + paginated), `GET /species` (autocomplete), `GET /file`
+  (serves trashed mp3/png — Caddy doesn't know about `Trashed/`),
+  `POST /trash`, `POST /restore`, `POST /empty-trash`.
+- New `detections_trashed` table created via deferred-retry on boot
+  (CREATE TABLE wants an EXCLUSIVE lock — during dawn chorus the
+  Python engine writes detections continuously and the 30 s
+  busy_timeout was expiring before a free window opened, crashing
+  birdash boot. The migration now retries every 30 s for up to
+  30 min in the background after the server is listening).
+- Daily retention cron wired into `server.js` startup with a 1 min
+  initial delay.
+
+Other pages:
+- `detections.html`: per-row trash button removed; `deleteDet()`
+  shortcut handler now redirects to `purge.html?species=<comName>`.
+- `review.html`: kept the validation workflow (confirm / doubtful /
+  reject + reject-by-rule), removed the bulk-delete + purge-rejected
+  buttons. Replaced with a `Manage in Purge ({rejectedCount}) →`
+  link that surfaces only when there's something to act on.
+- `species.html`: removed the `Manage` modal trigger + delete-mode
+  toggle. Kept the species notes + per-detection notes (those aren't
+  destructive). Manage button now links to the species-filtered Purge
+  page.
+
+i18n: 27 new keys × 4 langs (fr/en/de/nl), all in parity.
+
 ## [1.41.0] — 2026-04-23
 
 ### Feat: multi-source audio P1 — Source column + recursive incoming watcher

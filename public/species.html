@@ -312,22 +312,20 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
           <div class="card-title" style="margin:0;">{{t('recent_detections')}}</div>
           <div style="display:flex;gap:.3rem;">
-            <button class="sp-edit-btn" @click="openManageDets" :title="t('del_manage')"><bird-icon name="trash-2" :size="14" ></bird-icon> {{t('del_manage')}}</button>
-            <button class="sp-edit-btn" :class="{active:deleteMode}" @click="deleteMode=!deleteMode"
-                    style="font-size:.7rem;">
-              {{deleteMode ? '✕' : '✏️'}}
-            </button>
+            <a :href="'purge.html?species=' + encodeURIComponent(sp.name)" class="sp-edit-btn"
+               style="text-decoration:none;display:inline-flex;align-items:center;gap:.25rem;"
+               :title="t('del_manage')">
+              <bird-icon name="trash-2" :size="14"></bird-icon> {{t('del_manage_purge')}} →
+            </a>
           </div>
         </div>
         <div v-if="!feed.length" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
         <div v-else>
-          <div v-for="d in feed" :key="d.Date+d.Time" class="det-item" :class="{'det-item-del':deleteMode}">
-            <button v-if="d.File_Name && !deleteMode" class="play-btn"
+          <div v-for="d in feed" :key="d.Date+d.Time" class="det-item">
+            <button v-if="d.File_Name" class="play-btn"
                     style="width:22px;height:22px;font-size:.6rem;"
                     :class="{playing:playingFile===d.File_Name}"
                     @click="toggleAudio(d.File_Name)">▶</button>
-            <button v-else-if="deleteMode" class="sp-del-btn"
-                    @click="confirmDeleteOne(d)" :title="t('del_this')"><bird-icon name="trash-2" :size="16" ></bird-icon></button>
             <span v-else style="width:22px;display:inline-block;"></span>
             <div class="det-time">{{fmtDate(d.Date)}}</div>
             <div class="det-time" style="min-width:44px;">{{fmtTime(d.Time)}}</div>

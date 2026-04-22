@@ -204,9 +204,6 @@
                 <td class="hide-sm">
                   <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
                 </td>
-                <td style="width:30px;">
-                  <button class="dl-btn" @click="deleteDet(d)" title="Supprimer" style="opacity:.3;font-size:.75rem;"><bird-icon name="trash-2" :size="16" ></bird-icon></button>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -565,21 +562,11 @@ const app = createApp({
       });
     }
 
-    async function deleteDet(d) {
-      const name = spName(d.Com_Name, d.Sci_Name);
-      if (!await BIRDASH_UTILS.confirmDialog(`${t('gallery_delete_confirm')}\n\n${name} — ${fmtDate(d.Date)} ${fmtTime(d.Time)}`, { okLabel: t('gallery_delete_confirm'), danger: true })) return;
-      try {
-        const resp = await fetch(BIRD_CONFIG.apiUrl + '/detections', {
-          method: 'DELETE', headers: BIRDASH.authHeaders(),
-          body: JSON.stringify({ date: d.Date, time: d.Time, comName: d.Com_Name }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
-        await loadDetections();
-      } catch(e) {
-        console.error('deleteDet:', e);
-        window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'Delete failed: ' + e.message }));
-      }
+    // Deletion is now centralized on the Purge page (Settings → Purge).
+    // Stub kept so any keyboard shortcut still resolves, but it just
+    // routes the user there with the species pre-filtered.
+    function deleteDet(d) {
+      window.location.href = `purge.html?species=${encodeURIComponent(d.Com_Name)}`;
     }
 
     onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });

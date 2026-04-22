@@ -424,6 +424,7 @@
     favorites:    'nav_favorites',
     weather:      'nav_weather',
     log:          'nav_log',
+    purge:        'nav_purge',
     liveboard:    'nav_liveboard',
     dashboard_kiosk: 'nav_dashboard_kiosk',
     network:      'nav_network',

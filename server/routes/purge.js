@@ -369,6 +369,65 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── GET /api/purge/file?id=N&type=mp3|png ──────────────────────────────
+  // Streams a file from the trash directory. Caddy serves the live
+  // /birds/audio/* paths but doesn't know about Trashed/, so we serve it
+  // here so the Purge page can render trashed-row spectrograms + audio.
+  if (req.method === 'GET' && pathname === '/api/purge/file') {
+    const url = new URL(req.url, 'http://x');
+    const id = parseInt(url.searchParams.get('id'));
+    const type = url.searchParams.get('type') === 'png' ? '.png' : '';
+    if (!Number.isInteger(id)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end('{"error":"id required"}');
+      return true;
+    }
+    const row = db.prepare('SELECT * FROM detections_trashed WHERE id = ?').get(id);
+    if (!row) {
+      res.writeHead(404); res.end(); return true;
+    }
+    const paths = pathsForRow(row, SONGS_DIR);
+    if (!paths) {
+      res.writeHead(404); res.end(); return true;
+    }
+    const fp = paths.trashPath + type;
+    fsp.stat(fp).then((stat) => {
+      const mime = type === '.png' ? 'image/png' : 'audio/mpeg';
+      res.writeHead(200, { 'Content-Type': mime, 'Content-Length': stat.size, 'Cache-Control': 'private, max-age=300' });
+      fs.createReadStream(fp).pipe(res);
+    }).catch(() => {
+      res.writeHead(404); res.end();
+    });
+    return true;
+  }
+
+  // ── GET /api/purge/species?q=foo ───────────────────────────────────────
+  // Autocomplete for the species filter — distinct Com_Name (UNION of
+  // active + trash) matching the prefix, capped at 20 results.
+  if (req.method === 'GET' && pathname === '/api/purge/species') {
+    const q = String(new URL(req.url, 'http://x').searchParams.get('q') || '').trim();
+    if (!q) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ species: [] }));
+      return true;
+    }
+    try {
+      const rows = db.prepare(`
+        SELECT Com_Name FROM (
+          SELECT Com_Name FROM detections WHERE Com_Name LIKE ? COLLATE NOCASE
+          UNION
+          SELECT Com_Name FROM detections_trashed WHERE Com_Name LIKE ? COLLATE NOCASE
+        ) GROUP BY Com_Name ORDER BY Com_Name LIMIT 20
+      `).all(q + '%', q + '%');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ species: rows.map(r => r.Com_Name) }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return true;
+  }
+
   // ── GET /api/purge/stats ───────────────────────────────────────────────
   // Lightweight summary for the page header: counts + retention window.
   if (req.method === 'GET' && pathname === '/api/purge/stats') {

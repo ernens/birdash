@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>BirdStation — Purge</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <script src="js/bird-spectro-modal.js"></script>
+</head>
+<style>
+  /* ── Purge page ──────────────────────────────────────────────────────── */
+  .pg-warning {
+    background: rgba(229,62,62,.08); border: 1px solid rgba(229,62,62,.3);
+    border-radius: 8px; padding: .6rem .8rem; margin-bottom: 1rem;
+    font-size: .82rem; line-height: 1.5; color: var(--text-main);
+  }
+  .pg-warning strong { color: #e53e3e; }
+  .pg-tabs {
+    display: flex; gap: .3rem; margin-bottom: .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .pg-tab {
+    padding: .5rem .9rem; cursor: pointer; background: transparent; border: none;
+    color: var(--text-muted); border-bottom: 2px solid transparent;
+    font-size: .85rem; transition: color .15s, border-color .15s;
+  }
+  .pg-tab:hover { color: var(--text-main); }
+  .pg-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .pg-tab-count {
+    margin-left: .35rem; padding: .1rem .4rem; border-radius: 10px;
+    background: var(--bg-card2); font-size: .7rem; font-variant-numeric: tabular-nums;
+  }
+
+  .pg-filterbar {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: .7rem .9rem; margin-bottom: .8rem;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .pg-filter-row {
+    display: flex; gap: .6rem; flex-wrap: wrap; align-items: center;
+    margin-bottom: .4rem;
+  }
+  .pg-filter-row:last-child { margin-bottom: 0; }
+  .pg-filter-label {
+    font-size: .72rem; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .04em; min-width: 60px;
+  }
+  .pg-filter-input {
+    padding: .25rem .5rem; font-size: .82rem; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--bg-input); color: var(--text-main);
+  }
+  .pg-filter-input.species { min-width: 220px; }
+
+  .pg-bulk {
+    display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+    padding: .5rem .8rem; background: var(--bg-card2); border-radius: 6px;
+    margin-bottom: .8rem; font-size: .82rem;
+  }
+  .pg-bulk-actions { margin-left: auto; display: flex; gap: .4rem; }
+
+  .pg-list { display: flex; flex-direction: column; gap: .4rem; }
+  .pg-row-card {
+    display: grid; grid-template-columns: auto 240px 1fr auto;
+    gap: .8rem; align-items: center;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+    padding: .5rem .7rem;
+    transition: background .15s;
+  }
+  .pg-row-card:hover { background: var(--bg-card2); }
+  .pg-row-card.selected { background: rgba(52,211,153,.05); border-color: rgba(52,211,153,.4); }
+
+  .pg-spectro {
+    width: 240px; height: 80px; background: var(--bg-deep); border-radius: 4px;
+    object-fit: cover; cursor: pointer; transition: transform .15s;
+    display: block;
+  }
+  .pg-spectro:hover { transform: scale(1.02); }
+  .pg-spectro-missing {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-faint); font-size: .7rem; font-style: italic;
+  }
+
+  .pg-meta { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .8rem; }
+  .pg-meta-name { font-weight: 600; color: var(--text-main); }
+  .pg-meta-sci { font-style: italic; color: var(--text-muted); font-size: .72rem; }
+  .pg-meta-line { color: var(--text-muted); font-size: .76rem; }
+  .pg-meta-line span + span::before { content: ' · '; opacity: .5; }
+  .pg-countdown { color: #ff9800; font-size: .72rem; }
+
+  .pg-row-actions { display: flex; gap: .3rem; }
+  .pg-action-btn {
+    padding: .35rem .6rem; font-size: .72rem; border-radius: 4px;
+    background: var(--bg-deep); border: 1px solid var(--border); cursor: pointer;
+    color: var(--text-main); transition: background .15s;
+    display: inline-flex; align-items: center; gap: .25rem;
+  }
+  .pg-action-btn:hover { background: var(--bg-card2); }
+  .pg-action-btn.danger { color: #e53e3e; }
+  .pg-action-btn.danger:hover { background: rgba(229,62,62,.1); }
+
+  .pg-pagination {
+    display: flex; gap: .5rem; align-items: center; justify-content: center;
+    padding: 1rem 0; font-size: .82rem;
+  }
+  .pg-empty {
+    text-align: center; padding: 3rem 1rem; color: var(--text-faint); font-style: italic;
+  }
+  @media (max-width: 720px) {
+    .pg-row-card { grid-template-columns: auto 1fr; grid-template-rows: auto auto; }
+    .pg-spectro { width: 100%; height: 100px; grid-column: 1 / -1; grid-row: 2; }
+    .pg-row-actions { grid-column: 1 / -1; grid-row: 3; }
+  }
+</style>
+<body>
+<div id="app" v-cloak>
+  <birdash-shell page="purge" :title="t('nav_purge')">
+
+    <!-- Warning banner -->
+    <div class="pg-warning">
+      <strong>{{t('purge_warn_title')}}</strong> — {{t('purge_warn_body', { days: stats.retentionDays })}}
+    </div>
+
+    <!-- Tabs Active / Trash -->
+    <div class="pg-tabs">
+      <button class="pg-tab" :class="{active: view==='active'}" @click="setView('active')">
+        <bird-icon name="list" :size="14"></bird-icon> {{t('purge_tab_active')}}
+        <span class="pg-tab-count">{{stats.activeCount.toLocaleString()}}</span>
+      </button>
+      <button class="pg-tab" :class="{active: view==='trash'}" @click="setView('trash')">
+        <bird-icon name="trash-2" :size="14"></bird-icon> {{t('purge_tab_trash')}}
+        <span class="pg-tab-count">{{stats.trashCount.toLocaleString()}}</span>
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="pg-filterbar">
+      <div class="pg-filter-row">
+        <span class="pg-filter-label">{{t('purge_filter_species')}}</span>
+        <input class="pg-filter-input species" v-model="speciesInput" @input="onSpeciesInput"
+               :placeholder="t('purge_species_placeholder')" list="pg-species-list">
+        <datalist id="pg-species-list">
+          <option v-for="s in speciesSuggestions" :key="s" :value="s"></option>
+        </datalist>
+        <span class="pg-filter-label">{{t('purge_filter_dates')}}</span>
+        <input class="pg-filter-input" type="date" v-model="filters.dateFrom">
+        <span style="color:var(--text-muted);">→</span>
+        <input class="pg-filter-input" type="date" v-model="filters.dateTo">
+      </div>
+      <div class="pg-filter-row">
+        <span class="pg-filter-label">{{t('purge_filter_conf')}}</span>
+        <input class="pg-filter-input" type="number" min="0" max="1" step="0.05" style="width:70px;"
+               v-model.number="filters.confMin" :placeholder="t('purge_min')">
+        <span style="color:var(--text-muted);">→</span>
+        <input class="pg-filter-input" type="number" min="0" max="1" step="0.05" style="width:70px;"
+               v-model.number="filters.confMax" :placeholder="t('purge_max')">
+        <span class="pg-filter-label">{{t('purge_filter_model')}}</span>
+        <input class="pg-filter-input" v-model="filters.model" :placeholder="t('purge_model_placeholder')" style="width:160px;">
+        <span style="margin-left:auto;font-size:.78rem;color:var(--text-muted);">
+          {{total.toLocaleString()}} {{t('purge_results')}}
+        </span>
+        <select v-model.number="limit" class="pg-filter-input">
+          <option :value="10">10 / page</option>
+          <option :value="50">50 / page</option>
+          <option :value="100">100 / page</option>
+        </select>
+        <button class="pg-action-btn" @click="resetFilters">{{t('purge_reset')}}</button>
+      </div>
+    </div>
+
+    <!-- Bulk actions -->
+    <div class="pg-bulk" v-if="rows.length">
+      <label style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
+        <input type="checkbox" :checked="allVisibleSelected" @change="toggleAllVisible">
+        {{t('purge_select_all_visible')}}
+      </label>
+      <span v-if="selectedCount" style="color:var(--accent);font-weight:600;">
+        {{selectedCount}} {{t('purge_selected')}}
+      </span>
+      <div class="pg-bulk-actions">
+        <button v-if="view==='active'" class="pg-action-btn danger" :disabled="!selectedCount" @click="trashSelected">
+          <bird-icon name="trash-2" :size="13"></bird-icon> {{t('purge_trash_n', { n: selectedCount })}}
+        </button>
+        <button v-if="view==='trash'" class="pg-action-btn" :disabled="!selectedCount" @click="restoreSelected">
+          <bird-icon name="rotate-ccw" :size="13"></bird-icon> {{t('purge_restore_n', { n: selectedCount })}}
+        </button>
+        <button v-if="view==='trash' && stats.trashCount > 0" class="pg-action-btn danger" @click="emptyTrash">
+          <bird-icon name="trash-2" :size="13"></bird-icon> {{t('purge_empty_trash')}}
+        </button>
+      </div>
+    </div>
+
+    <!-- Results list -->
+    <div v-if="loading" class="pg-empty">{{t('purge_loading')}}</div>
+    <div v-else-if="!rows.length" class="pg-empty">{{t('purge_no_results')}}</div>
+    <div v-else class="pg-list">
+      <div v-for="r in rows" :key="r.rowid"
+           class="pg-row-card" :class="{selected: !!selected[r.rowid]}">
+        <input type="checkbox" v-model="selected[r.rowid]">
+        <img v-if="!brokenSpectros[r.rowid]" class="pg-spectro"
+             :src="spectroUrl(r)"
+             @click="openModal(r)"
+             @error="brokenSpectros[r.rowid] = true">
+        <div v-else class="pg-spectro pg-spectro-missing">{{t('purge_no_spectro')}}</div>
+        <div class="pg-meta">
+          <span class="pg-meta-name">{{spName(r.Com_Name, r.Sci_Name)}}</span>
+          <span class="pg-meta-sci">{{r.Sci_Name}}</span>
+          <span class="pg-meta-line">
+            <span>{{r.Date}} {{r.Time}}</span>
+            <span :style="{color: confColor(r.Confidence)}">{{(r.Confidence*100).toFixed(0)}}%</span>
+            <span>{{r.Model}}</span>
+            <span v-if="r.Source">[{{r.Source}}]</span>
+          </span>
+          <span v-if="r.trashed_at" class="pg-countdown">
+            ⏰ {{t('purge_will_be_purged', { days: daysUntilPurge(r) })}}
+          </span>
+        </div>
+        <div class="pg-row-actions">
+          <button v-if="view==='active'" class="pg-action-btn danger" @click="trashOne(r)">
+            <bird-icon name="trash-2" :size="13"></bird-icon>
+          </button>
+          <button v-if="view==='trash'" class="pg-action-btn" @click="restoreOne(r)">
+            <bird-icon name="rotate-ccw" :size="13"></bird-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="total > limit" class="pg-pagination">
+      <button class="pg-action-btn" :disabled="page === 0" @click="page--">
+        ‹ {{t('purge_prev')}}
+      </button>
+      <span style="font-variant-numeric:tabular-nums;color:var(--text-muted);">
+        {{(page * limit + 1).toLocaleString()}}–{{Math.min((page + 1) * limit, total).toLocaleString()}} / {{total.toLocaleString()}}
+      </span>
+      <button class="pg-action-btn" :disabled="(page + 1) * limit >= total" @click="page++">
+        {{t('purge_next')}} ›
+      </button>
+    </div>
+
+    <spectro-modal></spectro-modal>
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+const { useI18n, useSpeciesNames, openSpectroModal } = BIRDASH;
+const API = BIRD_CONFIG.apiUrl;
+
+const app = createApp({
+  setup() {
+    const { t, lang } = useI18n();
+    const { spName } = useSpeciesNames();
+
+    // Filters
+    const view = ref('active');
+    const filters = reactive({
+      species: '',     // single species (multi via comma later if useful)
+      dateFrom: '',
+      dateTo: '',
+      model: '',
+      confMin: '',
+      confMax: '',
+    });
+    const limit = ref(50);
+    const page = ref(0);
+
+    // Results
+    const loading = ref(false);
+    const rows = ref([]);
+    const total = ref(0);
+    const stats = reactive({ activeCount: 0, trashCount: 0, retentionDays: 90, oldestTrashedAt: null });
+    const brokenSpectros = reactive({});
+
+    // Selection
+    const selected = ref({});
+    const selectedCount = computed(() =>
+      Object.values(selected.value).filter(Boolean).length);
+    const allVisibleSelected = computed(() =>
+      rows.value.length > 0 && rows.value.every(r => selected.value[r.rowid]));
+
+    // Species autocomplete
+    const speciesInput = ref('');
+    const speciesSuggestions = ref([]);
+
+    async function load() {
+      loading.value = true;
+      const params = new URLSearchParams({
+        view: view.value,
+        limit: String(limit.value),
+        offset: String(page.value * limit.value),
+      });
+      if (filters.species) params.set('species', filters.species);
+      if (filters.dateFrom) params.set('date_from', filters.dateFrom);
+      if (filters.dateTo) params.set('date_to', filters.dateTo);
+      if (filters.model) params.set('model', filters.model);
+      if (filters.confMin !== '' && !isNaN(filters.confMin)) params.set('conf_min', String(filters.confMin));
+      if (filters.confMax !== '' && !isNaN(filters.confMax)) params.set('conf_max', String(filters.confMax));
+      try {
+        const r = await fetch(`${API}/purge/list?${params}`);
+        const d = await r.json();
+        rows.value = d.rows || [];
+        total.value = d.total || 0;
+        // Reset selection + spectro error flags on new page
+        selected.value = {};
+        for (const k of Object.keys(brokenSpectros)) delete brokenSpectros[k];
+      } catch (e) {
+        console.error('[purge] load failed:', e);
+      }
+      loading.value = false;
+    }
+
+    async function loadStats() {
+      try {
+        const r = await fetch(`${API}/purge/stats`);
+        Object.assign(stats, await r.json());
+      } catch (e) { /* keep defaults */ }
+    }
+
+    function setView(v) {
+      if (view.value === v) return;
+      view.value = v;
+      page.value = 0;
+    }
+
+    function resetFilters() {
+      filters.species = '';
+      filters.dateFrom = '';
+      filters.dateTo = '';
+      filters.model = '';
+      filters.confMin = '';
+      filters.confMax = '';
+      speciesInput.value = '';
+      page.value = 0;
+    }
+
+    // Species autocomplete: debounced, hits the existing distinct-species endpoint.
+    let _spTimer;
+    function onSpeciesInput() {
+      filters.species = speciesInput.value.trim();
+      clearTimeout(_spTimer);
+      if (!speciesInput.value || speciesInput.value.length < 2) {
+        speciesSuggestions.value = [];
+        return;
+      }
+      _spTimer = setTimeout(async () => {
+        try {
+          const r = await fetch(`${API}/purge/species?q=${encodeURIComponent(speciesInput.value)}`);
+          const d = await r.json();
+          speciesSuggestions.value = d.species || [];
+        } catch (e) {
+          speciesSuggestions.value = [];
+        }
+      }, 200);
+    }
+
+    // Spectrogram URL — Caddy serves live audio at /birds/audio/files/<date>/<sp>/<file>
+    // The trash view goes through birdash so we can serve from ~/BirdSongs/Trashed/.
+    function spectroUrl(r) {
+      if (view.value === 'trash') {
+        return `${API}/purge/file?id=${r.rowid}&type=png`;
+      }
+      const m = (r.File_Name || '').match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
+      if (!m) return '';
+      const species = m[1], date = m[2];
+      return `${BIRD_CONFIG.audioUrl}/By_Date/${encodeURIComponent(date)}/${encodeURIComponent(species)}/${encodeURIComponent(r.File_Name)}.png`;
+    }
+
+    function confColor(c) {
+      if (c >= 0.85) return '#4caf50';
+      if (c >= 0.65) return '#ff9800';
+      return '#e53e3e';
+    }
+
+    function daysUntilPurge(r) {
+      if (!r.trashed_at) return '?';
+      const cutoff = (r.trashed_at + stats.retentionDays * 86400) * 1000;
+      const days = Math.max(0, Math.ceil((cutoff - Date.now()) / 86400000));
+      return days;
+    }
+
+    function toggleAllVisible(e) {
+      const checked = e.target.checked;
+      const next = { ...selected.value };
+      for (const r of rows.value) next[r.rowid] = checked;
+      selected.value = next;
+    }
+
+    function selectedRowIds() {
+      return Object.entries(selected.value)
+        .filter(([_, v]) => v)
+        .map(([k]) => parseInt(k));
+    }
+
+    async function trashSelected() {
+      const rowids = selectedRowIds();
+      if (!rowids.length) return;
+      if (!confirm(t('purge_confirm_trash_n', { n: rowids.length }))) return;
+      await fetch(`${API}/purge/trash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify({ rowids }),
+      });
+      await Promise.all([load(), loadStats()]);
+    }
+
+    async function trashOne(r) {
+      if (!confirm(t('purge_confirm_trash_one', { name: r.Com_Name }))) return;
+      await fetch(`${API}/purge/trash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify({ rowids: [r.rowid] }),
+      });
+      await Promise.all([load(), loadStats()]);
+    }
+
+    async function restoreSelected() {
+      const ids = selectedRowIds();
+      if (!ids.length) return;
+      await fetch(`${API}/purge/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify({ ids }),
+      });
+      await Promise.all([load(), loadStats()]);
+    }
+
+    async function restoreOne(r) {
+      await fetch(`${API}/purge/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify({ ids: [r.rowid] }),
+      });
+      await Promise.all([load(), loadStats()]);
+    }
+
+    async function emptyTrash() {
+      const word = prompt(t('purge_empty_confirm_prompt'));
+      if (word !== 'EMPTY') return;
+      await fetch(`${API}/purge/empty-trash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify({ confirm: 'EMPTY' }),
+      });
+      await Promise.all([load(), loadStats()]);
+    }
+
+    function openModal(r) {
+      // Reuse the existing spectro modal — it expects a row with Sci_Name +
+      // File_Name. For trash rows, the audio source URL uses our purge/file
+      // endpoint instead of Caddy.
+      const args = { ...r, audioOverride: null };
+      if (view.value === 'trash') {
+        args.audioOverride = `${API}/purge/file?id=${r.rowid}`;
+      }
+      if (typeof openSpectroModal === 'function') openSpectroModal(args);
+    }
+
+    // Reload when filters / view / page / limit change (debounced)
+    let _t;
+    watch([view, page, limit, () => ({ ...filters })], () => {
+      clearTimeout(_t);
+      _t = setTimeout(load, 250);
+    }, { deep: true });
+
+    onMounted(() => {
+      loadStats();
+      load();
+    });
+
+    return {
+      t, lang, view, filters, limit, page, loading, rows, total, stats,
+      selected, selectedCount, allVisibleSelected, brokenSpectros,
+      speciesInput, speciesSuggestions, onSpeciesInput,
+      setView, resetFilters, spName, spectroUrl, confColor, daysUntilPurge,
+      toggleAllVisible, trashSelected, trashOne, restoreSelected, restoreOne,
+      emptyTrash, openModal,
+    };
+  },
+});
+BIRDASH.ready.then(() => BIRDASH.registerComponents(app).mount('#app'));
+</script>
+</body>
+</html>
