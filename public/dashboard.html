@@ -106,7 +106,7 @@
 
         <!-- Recent detections strip -->
         <div v-if="recentSpecies.length>1" class="bf-det-recent">
-          <a v-for="sp in recentSpecies.slice(0,6)" :key="sp.sciName" class="bf-det-mini"
+          <a v-for="sp in recentSpecies.slice(0,7)" :key="sp.sciName" class="bf-det-mini"
              :href="'species.html?species='+encodeURIComponent(sp.comName)">
             <img class="bf-det-mini-img" :src="photoUrl(sp.sciName)" @error="e=>e.target.src='img/robin-logo.svg'">
             <div class="bf-det-mini-name">{{spName(sp.comName,sp.sciName)}}</div>
