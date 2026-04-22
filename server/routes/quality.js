@@ -1,19 +1,21 @@
 'use strict';
 /**
- * Quality routes — backs the "Detection Quality" page (Phase A).
+ * Quality routes — backs the "Detection Quality" cockpit.
  *
- * Phase A: every number here is computed from `detections` + `validations`
- * after-the-fact. The engine is not yet instrumented; counters that
- * REQUIRE engine instrumentation (cross-confirm rejections, privacy/dog
- * drops, real throttle drops) are absent — the UI shows a "Counter not
- * yet wired" placeholder for those. Phase B adds a `quality_events`
- * table + engine emit; the response shape stays compatible so the page
- * doesn't change.
+ * Response shape (top-level keys consumed by quality.html):
+ *   review        — workload (backlog) + quality (% of REVIEWED items)
+ *   agreement     — to_watch / strong / median (diagnostic, not raw table)
+ *   prefilter     — measured engine counters OR not_instrumented placeholder
+ *   balance       — BirdNET vs Perch totals + delta vs prior period
+ *   throttle      — inferred per-species volume delta (proxy, not causality)
+ *   throttle_measured — engine-counted throttle drops (Phase B)
+ *   timeline      — daily volume by model
+ *   synthesis     — { headline_key, params, severity }
  *
- * Honest labelling: anything inferred is tagged in the response with a
- * `source` field set to "observed" | "inferred". Frontend uses this to
- * show "(observed)" / "(inferred)" suffixes — never as "measured by
- * engine" until Phase B replaces those values.
+ * Honest labelling: every block carries a `source` ∈
+ *   observed | inferred | measured | not_instrumented
+ * The frontend renders that as a badge so users never confuse a proxy
+ * (timeline-comparison "throttle effect") with an engine measurement.
  */
 
 function handle(req, res, pathname, ctx) {
@@ -27,15 +29,20 @@ function handle(req, res, pathname, ctx) {
 
   (async () => {
     try {
+      const review    = await reviewOutcomes(db, birdashDb, days);
+      const agreement = await modelAgreement(db, days, minVolume);
+      const prefilter = prefilterFromEvents(db, days);
+      const balance   = modelBalance(db, days);
+      const throttle  = throttleEffect(db);
+      const throttleMeasuredVal = throttleMeasured(db, days);
+      const timeline  = dailyTimeline(db, days);
+      const synthesis = buildSynthesis({ review, agreement, prefilter, balance });
+
       const result = {
-        days,
-        minVolume,
-        review: await reviewOutcomes(db, birdashDb, days),
-        agreement: await modelAgreement(db, days, minVolume),
-        prefilter: prefilterFromEvents(db, days),
-        throttle: throttleEffect(db, parseBirdnetConf),
-        throttle_measured: throttleMeasured(db, days),
-        timeline: dailyTimeline(db, days),
+        days, minVolume,
+        review, agreement, prefilter, balance,
+        throttle, throttle_measured: throttleMeasuredVal,
+        timeline, synthesis,
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
@@ -49,64 +56,68 @@ function handle(req, res, pathname, ctx) {
 }
 
 // ── Review outcomes ─────────────────────────────────────────────────────────
-// Only counts ACTIVE detections (excludes trashed). Validation states come
-// from birdash.db `validations` table; rows with no validation row are
-// treated as "unreviewed".
+// Splits explicitly into:
+//   workload : total / reviewed / unreviewed (= backlog)
+//   quality  : % among REVIEWED items (confirmed/doubtful/rejected)
+// Mixing the two was the #1 readability bug — "unreviewed = 35k" dwarfed
+// every other figure and made the quality ratio unreadable.
 async function reviewOutcomes(db, birdashDb, days) {
   const fromDate = isoDateOffset(-days);
   const total = db.prepare(
     'SELECT COUNT(*) AS n FROM detections WHERE Date >= ?'
   ).get(fromDate).n;
 
-  // birdash.db is on a separate connection. Fetch validation states by
-  // (date, time, com_name) keys — pulling all of them is fine: the
-  // validations table is much smaller than detections.
   const valRows = birdashDb.prepare(
     'SELECT status FROM validations WHERE date >= ?'
   ).all(fromDate);
 
   const counts = { confirmed: 0, doubtful: 0, rejected: 0 };
-  for (const v of valRows) {
-    if (v.status in counts) counts[v.status]++;
-  }
+  for (const v of valRows) if (v.status in counts) counts[v.status]++;
   const reviewed = counts.confirmed + counts.doubtful + counts.rejected;
+  const unreviewed = Math.max(0, total - reviewed);
+
   return {
     source: 'observed',
     total,
+    reviewed,
+    unreviewed,
     confirmed: counts.confirmed,
     doubtful: counts.doubtful,
     rejected: counts.rejected,
-    unreviewed: Math.max(0, total - reviewed),
+    // Quality ratios computed only on REVIEWED items so they are not
+    // crushed by the backlog. Frontend uses these for the bar chart.
+    quality: reviewed > 0 ? {
+      confirmed_pct: Math.round((counts.confirmed / reviewed) * 100),
+      doubtful_pct:  Math.round((counts.doubtful  / reviewed) * 100),
+      rejected_pct:  Math.round((counts.rejected  / reviewed) * 100),
+    } : null,
   };
 }
 
 // ── Model agreement (observed proxy) ───────────────────────────────────────
-// For each species, count Perch detections that have at least one BirdNET
-// detection of the same sci_name within ±3 s on the same day. This is a
-// proxy: it doesn't rerun the engine's actual cross-confirm decision (that
-// looks at chunk overlap + raw scores + per-model thresholds), it just
-// observes what made it to the DB. Useful as a directional health signal,
-// not as a verdict on the cross-confirm rule itself.
+// Returns three diagnostic views instead of a long uniform table:
+//   to_watch    — frequent species with low agreement (worth checking)
+//   strong      — species with both high agreement AND meaningful volume
+//   all         — full sorted list for the "all" tab (capped at 50)
 //
-// Volume guard: minVolume filters out species with too few Perch hits, so
-// "Bernache du Canada at 38% on 7 hits" doesn't dominate the list.
+// Plus a `median_pct` for frequent species used in the synthesis line.
+//
+// This matches the spec: "show diagnosis, not a brute table". The volume
+// guard (minVolume) still applies — species with < minVolume Perch hits
+// never appear, period.
 async function modelAgreement(db, days, minVolume) {
   const fromDate = isoDateOffset(-days);
   const rows = db.prepare(`
     SELECT Date, Sci_Name, Com_Name, Time, Model
-    FROM detections
-    WHERE Date >= ?
-      AND (Model LIKE 'perch%' OR Model NOT LIKE 'perch%')
+    FROM detections WHERE Date >= ?
   `).all(fromDate);
 
-  // Group by (date, sci_name, time-bin-3s); each bin has {birdnet, perch}.
-  // Then per species: agreed_bins = bins with both / total_bins-with-perch.
-  const bins = new Map();   // key = date|sci|bin → { birdnet, perch, com }
+  const bins = new Map();   // date|sci|3s-bin → { com, birdnet, perch }
   for (const r of rows) {
     const t = r.Time || '00:00:00';
-    const seconds = (parseInt(t.slice(0,2)) || 0) * 3600
-                  + (parseInt(t.slice(3,5)) || 0) * 60
-                  + (parseInt(t.slice(6,8)) || 0);
+    const seconds = (parseInt(t.slice(0, 2)) || 0) * 3600
+                  + (parseInt(t.slice(3, 5)) || 0) * 60
+                  + (parseInt(t.slice(6, 8)) || 0);
     const bin = Math.floor(seconds / 3);
     const key = `${r.Date}|${r.Sci_Name}|${bin}`;
     if (!bins.has(key)) bins.set(key, { com: r.Com_Name, birdnet: false, perch: false });
@@ -115,10 +126,9 @@ async function modelAgreement(db, days, minVolume) {
     else e.birdnet = true;
   }
 
-  // Per-species rollup
   const sp = new Map();   // sci → { com, perch, agreed }
   for (const [key, v] of bins) {
-    if (!v.perch) continue;  // we only care about Perch coverage
+    if (!v.perch) continue;
     const sci = key.split('|')[1];
     if (!sp.has(sci)) sp.set(sci, { com: v.com, perch: 0, agreed: 0 });
     const s = sp.get(sci);
@@ -126,10 +136,10 @@ async function modelAgreement(db, days, minVolume) {
     if (v.birdnet) s.agreed++;
   }
 
-  const list = [];
+  const all = [];
   for (const [sci, v] of sp) {
     if (v.perch < minVolume) continue;
-    list.push({
+    all.push({
       sci_name: sci,
       com_name: v.com,
       perch_count: v.perch,
@@ -137,27 +147,42 @@ async function modelAgreement(db, days, minVolume) {
       agreement_pct: v.perch ? Math.round((v.agreed / v.perch) * 100) : 0,
     });
   }
-  list.sort((a, b) => b.perch_count - a.perch_count);
+
+  // Sort once by perch_count desc — drives default "to watch" volume bias.
+  all.sort((a, b) => b.perch_count - a.perch_count);
+
+  // To watch: low agreement (<60%) AND in the top half by volume.
+  // Strong:   high agreement (>=75%) AND meaningful volume.
+  const to_watch = all
+    .filter(s => s.agreement_pct < 60)
+    .slice(0, 10);
+  const strong = all
+    .filter(s => s.agreement_pct >= 75)
+    .slice(0, 10);
+
+  // Median agreement on the (volume-filtered) population. Used in the
+  // synthesis line as a single qualitative health indicator.
+  let median_pct = null;
+  if (all.length > 0) {
+    const sorted = [...all].map(s => s.agreement_pct).sort((a, b) => a - b);
+    const m = Math.floor(sorted.length / 2);
+    median_pct = sorted.length % 2 ? sorted[m] : Math.round((sorted[m - 1] + sorted[m]) / 2);
+  }
+
   return {
     source: 'observed',
     bin_seconds: 3,
     min_volume: minVolume,
-    species: list.slice(0, 25),
+    species_count: all.length,
+    median_pct,
+    to_watch,
+    strong,
+    all: all.slice(0, 50),
   };
 }
 
 // ── Pre-filter impact (Phase B: from quality_events) ──────────────────────
-// Reads the engine-emitted hourly counters. If the table is empty (engine
-// not yet upgraded, or no events in the period), falls back to the
-// "not instrumented" placeholder so the UI behaves identically — same
-// shape, just a different `source` badge.
-//
-// `cross_confirm_rejected` stays null even in Phase B: the cross-confirm
-// rule was added to docs/UI/config in v1.38.0 but never wired into the
-// engine inference loop. The card carries an explicit note so the user
-// knows the gap. See docs/QUALITY_METRICS.md "Out of scope" section.
 function prefilterFromEvents(db, days) {
-  // Check the table exists first — old engine deployments won't have it.
   const tableExists = db.prepare(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quality_events'"
   ).get();
@@ -196,12 +221,11 @@ function prefilterFromEvents(db, days) {
     dog_cooldown_skipped:   row.dog_cooldown_skipped || 0,
     throttle_dropped:       row.throttle_dropped || 0,
     files_processed:        row.files_processed || 0,
-    cross_confirm_rejected: null,  // not implemented in engine — see spec
+    cross_confirm_rejected: null,
     cross_confirm_note_key: 'quality_cross_confirm_note',
   };
 }
 
-// Engine-measured throttle drops, per period (Phase B).
 function throttleMeasured(db, days) {
   const tableExists = db.prepare(
     "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quality_events'"
@@ -214,38 +238,64 @@ function throttleMeasured(db, days) {
   return { source: 'measured', dropped: row.n || 0 };
 }
 
-// ── Throttle effect (inferred) ─────────────────────────────────────────────
-// Compares average detections/day in the 30 days BEFORE the throttle was
-// activated vs after, restricted to the most-noisy species (the ones the
-// throttle is supposed to dampen). Without an activation timestamp, we
-// fall back to "throttle currently off — no effect to measure".
-function throttleEffect(db, parseBirdnetConf) {
-  // Read birdnet.conf SYNCHRONOUSLY via the cached path. parseBirdnetConf
-  // is async (cache TTL), but this endpoint isn't latency-critical and
-  // the cache hit makes it instant.
-  // (Falls back gracefully if the cache miss races — we just skip the
-  //  card and return 'not_enabled' for now.)
+// ── Model balance — pilot card #4 ──────────────────────────────────────────
+// Compares BirdNET vs Perch totals over the period vs the immediately prior
+// period of equal length. Used by the "Balance" pilot card and by the
+// synthesis line ("sudden BirdNET vs Perch imbalance").
+function modelBalance(db, days) {
+  const fromDate = isoDateOffset(-days);
+  const priorFrom = isoDateOffset(-2 * days);
+  const cur = db.prepare(`
+    SELECT
+      SUM(CASE WHEN Model LIKE 'perch%' THEN 1 ELSE 0 END) AS perch,
+      SUM(CASE WHEN Model NOT LIKE 'perch%' THEN 1 ELSE 0 END) AS birdnet
+    FROM detections WHERE Date >= ?
+  `).get(fromDate);
+  const prior = db.prepare(`
+    SELECT
+      SUM(CASE WHEN Model LIKE 'perch%' THEN 1 ELSE 0 END) AS perch,
+      SUM(CASE WHEN Model NOT LIKE 'perch%' THEN 1 ELSE 0 END) AS birdnet
+    FROM detections WHERE Date >= ? AND Date < ?
+  `).get(priorFrom, fromDate);
+
+  const birdnet = cur.birdnet || 0;
+  const perch   = cur.perch   || 0;
+  const total   = birdnet + perch;
+  const priorBirdnet = prior.birdnet || 0;
+  const priorPerch   = prior.perch   || 0;
+  const priorTotal   = priorBirdnet + priorPerch;
+
+  const ratio = total > 0 ? perch / total : null;          // 0..1, share of Perch
+  const priorRatio = priorTotal > 0 ? priorPerch / priorTotal : null;
+
+  return {
+    source: 'observed',
+    days,
+    birdnet, perch, total,
+    prior: { birdnet: priorBirdnet, perch: priorPerch, total: priorTotal },
+    perch_share: ratio !== null ? Math.round(ratio * 100) : null,
+    prior_perch_share: priorRatio !== null ? Math.round(priorRatio * 100) : null,
+    delta_share: (ratio !== null && priorRatio !== null)
+      ? Math.round((ratio - priorRatio) * 100) : null,
+    delta_total_pct: priorTotal > 0
+      ? Math.round((total - priorTotal) / priorTotal * 100) : null,
+  };
+}
+
+// ── Volume change per species (proxy for throttle effect) ─────────────────
+// Renamed conceptually from "throttle effect" — the title was promising
+// causality the metric cannot prove. Same data, honest framing: comparison
+// of recent vs prior per-day rate for the loudest species. Useful as a
+// directional signal, not as a measurement.
+function throttleEffect(db) {
   let enabled = false;
   try {
-    // Best-effort: peek at the sync file read result
     const fs = require('fs');
     const conf = fs.readFileSync('/etc/birdnet/birdnet.conf', 'utf8');
     const m = conf.match(/^NOISY_THROTTLE_ENABLED=(.+)/m);
     enabled = m ? m[1].trim().replace(/['"]/g, '') === '1' : false;
-  } catch (_) { /* no birdnet.conf — leave disabled */ }
+  } catch (_) { /* leave disabled */ }
 
-  if (!enabled) {
-    return {
-      source: 'inferred',
-      enabled: false,
-      note_key: 'quality_throttle_note_off',
-    };
-  }
-
-  // We don't have an "activated_at" timestamp anywhere. Use the current
-  // throttle COOLDOWN_SECONDS to find the dominant species and report the
-  // last-7-days vs prior-30-days delta as a proxy for the throttle's
-  // ongoing effect.
   const recent = db.prepare(`
     SELECT Com_Name, COUNT(*) AS n
     FROM detections
@@ -254,6 +304,15 @@ function throttleEffect(db, parseBirdnetConf) {
     ORDER BY n DESC
     LIMIT 5
   `).all();
+
+  if (recent.length === 0) {
+    return {
+      source: 'inferred', enabled,
+      note_key: enabled ? 'quality_volchange_note_on' : 'quality_volchange_note_off',
+      species: [],
+    };
+  }
+
   const byName = {};
   for (const r of recent) byName[r.Com_Name] = { recent7: r.n };
 
@@ -270,27 +329,33 @@ function throttleEffect(db, parseBirdnetConf) {
   const list = recent.map(r => {
     const e = byName[r.Com_Name];
     const recentPerDay = (e.recent7 || 0) / 7;
-    const priorPerDay = (e.prior30 || 0) / 30;
+    const priorPerDay  = (e.prior30 || 0) / 30;
+    const delta_pct = priorPerDay > 0
+      ? Math.round((recentPerDay - priorPerDay) / priorPerDay * 100)
+      : null;
+    let interpretation_key;
+    if (delta_pct === null)            interpretation_key = 'quality_volchange_interp_low_volume';
+    else if (delta_pct < -25)          interpretation_key = 'quality_volchange_interp_dampened';
+    else if (delta_pct >  50)          interpretation_key = 'quality_volchange_interp_seasonal';
+    else                                interpretation_key = 'quality_volchange_interp_stable';
     return {
       com_name: r.Com_Name,
       recent_per_day: Math.round(recentPerDay * 10) / 10,
-      prior_per_day: Math.round(priorPerDay * 10) / 10,
-      delta_pct: priorPerDay > 0
-        ? Math.round((recentPerDay - priorPerDay) / priorPerDay * 100)
-        : null,
+      prior_per_day:  Math.round(priorPerDay  * 10) / 10,
+      delta_pct,
+      interpretation_key,
     };
   });
+
   return {
     source: 'inferred',
-    enabled: true,
-    note_key: 'quality_throttle_note_on',
+    enabled,
+    note_key: enabled ? 'quality_volchange_note_on' : 'quality_volchange_note_off',
     species: list,
   };
 }
 
 // ── Daily timeline ─────────────────────────────────────────────────────────
-// Detections per day broken down by model. Lets the user eyeball volume
-// trends + dual-model balance over the period.
 function dailyTimeline(db, days) {
   const fromDate = isoDateOffset(-days);
   const rows = db.prepare(`
@@ -304,6 +369,69 @@ function dailyTimeline(db, days) {
     ORDER BY Date
   `).all(fromDate);
   return { source: 'observed', days: rows };
+}
+
+// ── Synthesis line ─────────────────────────────────────────────────────────
+// Rule-based: walks the metrics and picks the single most prominent
+// concern. No score — just one sentence pointing the user at what to
+// look at first. Order matters: backlog before agreement before balance,
+// because a 35k backlog dominates every other interpretation.
+function buildSynthesis({ review, agreement, prefilter, balance }) {
+  const findings = [];
+
+  // Workload signal
+  if (review.unreviewed > 1000) {
+    findings.push({
+      key: 'quality_synth_backlog_high',
+      params: { count: review.unreviewed.toLocaleString('fr-FR') },
+      severity: 'attention',
+    });
+  }
+
+  // Agreement signal — only if we have enough species AND median is low
+  if (agreement.species_count >= 3 && agreement.median_pct !== null && agreement.median_pct < 50) {
+    findings.push({
+      key: 'quality_synth_agreement_low',
+      params: { median: agreement.median_pct, count: agreement.to_watch.length },
+      severity: 'attention',
+    });
+  }
+
+  // Prefilter instrumentation gap
+  if (prefilter.source === 'not_instrumented') {
+    findings.push({
+      key: 'quality_synth_prefilter_pending',
+      params: {},
+      severity: 'info',
+    });
+  }
+
+  // Balance shift (only if both periods have data)
+  if (balance.delta_share !== null && Math.abs(balance.delta_share) >= 15) {
+    findings.push({
+      key: balance.delta_share > 0
+        ? 'quality_synth_balance_perch_up'
+        : 'quality_synth_balance_birdnet_up',
+      params: { delta: Math.abs(balance.delta_share) },
+      severity: 'attention',
+    });
+  }
+
+  if (findings.length === 0) {
+    return {
+      headline_key: 'quality_synth_stable',
+      params: {},
+      severity: 'ok',
+      findings: [],
+    };
+  }
+
+  return {
+    headline_key: findings[0].key,
+    params: findings[0].params,
+    severity: findings[0].severity,
+    findings,    // full list — frontend can show secondary points
+  };
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────

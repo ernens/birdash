@@ -17,22 +17,68 @@
   <script src="js/chart.umd.min.js"></script>
 </head>
 <style>
-  /* ── Quality page ───────────────────────────────────────────────────── */
+  /* ── Quality cockpit ─────────────────────────────────────────────────── */
   .qa-header {
     display: flex; align-items: baseline; justify-content: space-between;
-    flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem;
+    flex-wrap: wrap; gap: .8rem; margin-bottom: .8rem;
   }
+  .qa-header-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
   .qa-period { display: flex; gap: .3rem; align-items: center; font-size: .82rem; }
   .qa-period button {
     padding: .25rem .6rem; font-size: .78rem; background: var(--bg-card);
     border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); cursor: pointer;
   }
   .qa-period button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .qa-cta {
+    padding: .35rem .8rem; font-size: .78rem; border-radius: 4px;
+    text-decoration: none; display: inline-flex; align-items: center; gap: .35rem;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main);
+  }
+  .qa-cta.primary { background: var(--accent); color: white; border-color: var(--accent); }
 
+  /* Synthesis line — single narrative summary at top */
+  .qa-synth {
+    margin: 0 0 1.1rem; padding: .7rem 1rem; border-radius: 6px;
+    font-size: .9rem; line-height: 1.5;
+    display: flex; align-items: flex-start; gap: .6rem;
+  }
+  .qa-synth.ok        { background: rgba(76,175,80,.10);  border-left: 3px solid #4caf50; }
+  .qa-synth.attention { background: rgba(255,152,0,.10);  border-left: 3px solid #ff9800; }
+  .qa-synth.info      { background: rgba(148,163,184,.10);border-left: 3px solid #94a3b8; }
+  .qa-synth-icon { flex: 0 0 auto; margin-top: .15rem; }
+  .qa-synth strong { font-weight: 700; }
+
+  /* Pilot row — 4 compact cards */
+  .qa-pilots {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .8rem; margin-bottom: 1.2rem;
+  }
+  .qa-pilot {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: .85rem 1rem; display: flex; flex-direction: column; gap: .25rem;
+  }
+  .qa-pilot-label {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: .35rem;
+  }
+  .qa-pilot-value {
+    font-size: 1.5rem; font-weight: 700; line-height: 1.1; color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+  }
+  .qa-pilot-value.muted { color: var(--text-muted); font-size: 1.05rem; font-weight: 600; }
+  .qa-pilot-sub { font-size: .76rem; color: var(--text-muted); line-height: 1.4; }
+  .qa-pilot-cta {
+    margin-top: .3rem; font-size: .76rem; text-decoration: none; color: var(--accent);
+    display: inline-flex; align-items: center; gap: .25rem;
+  }
+  .qa-pilot-cta::after { content: '→'; }
+
+  /* Cards */
   .qa-card {
     background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
     padding: 1rem 1.1rem; margin-bottom: 1rem;
   }
+  .qa-card.compact { padding: .75rem 1rem; }
   .qa-title {
     display: flex; align-items: center; gap: .4rem;
     font-size: .92rem; font-weight: 700; margin-bottom: .25rem; color: var(--text-main);
@@ -48,26 +94,43 @@
   .qa-card-note {
     font-size: .76rem; color: var(--text-muted); margin: 0 0 .8rem; line-height: 1.5;
   }
-  /* Italic "how to read this" line under each card. Keeps the technical
-     measurement note up top, then a separate guide on interpretation +
-     suggested action — addresses the "a high number isn't always good"
-     trap. */
-  .qa-reading {
-    font-size: .74rem; color: var(--text-muted); font-style: italic;
-    margin: .5rem 0 .8rem; padding: .5rem .7rem; line-height: 1.55;
-    background: var(--bg-deep); border-left: 3px solid var(--border);
-    border-radius: 0 4px 4px 0;
+
+  /* Collapsible "How to read this" — collapsed by default */
+  .qa-reading details { margin: .6rem 0 .2rem; }
+  .qa-reading summary {
+    cursor: pointer; list-style: none; font-size: .74rem; color: var(--accent);
+    display: inline-flex; align-items: center; gap: .25rem;
   }
-  .qa-reading strong { font-style: normal; color: var(--text-main); font-weight: 600; }
+  .qa-reading summary::-webkit-details-marker { display: none; }
+  .qa-reading summary::before { content: '▸'; font-size: .65rem; }
+  .qa-reading details[open] summary::before { content: '▾'; }
+  .qa-reading-body {
+    margin-top: .4rem; padding: .5rem .7rem; line-height: 1.55; font-size: .76rem;
+    color: var(--text-muted); background: var(--bg-deep);
+    border-left: 3px solid var(--border); border-radius: 0 4px 4px 0;
+  }
+  .qa-reading-body strong { color: var(--text-main); font-weight: 600; }
+
   .qa-action {
     margin-top: .35rem; display: inline-flex; align-items: center; gap: .25rem;
     font-size: .76rem; text-decoration: none; color: var(--accent);
   }
   .qa-action::after { content: '→'; }
 
-  /* Review breakdown — stacked bar */
+  /* Review block — split workload from quality */
+  .qa-review-grid {
+    display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.2rem;
+    align-items: start;
+  }
+  @media (max-width: 640px) {
+    .qa-review-grid { grid-template-columns: 1fr; }
+  }
+  .qa-review-section h4 {
+    margin: 0 0 .5rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted); font-weight: 600;
+  }
   .qa-bar {
-    display: flex; height: 30px; border-radius: 4px; overflow: hidden;
+    display: flex; height: 26px; border-radius: 4px; overflow: hidden;
     border: 1px solid var(--border); background: var(--bg-deep);
   }
   .qa-bar-seg {
@@ -78,16 +141,34 @@
   .qa-bar-seg.confirmed { background: #4caf50; }
   .qa-bar-seg.doubtful  { background: #ff9800; }
   .qa-bar-seg.rejected  { background: #e53935; }
-  .qa-bar-seg.unreviewed{ background: #94a3b8; }
-
-  .qa-legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .6rem; font-size: .8rem; }
+  .qa-legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .5rem; font-size: .78rem; }
   .qa-legend-item { display: inline-flex; align-items: center; gap: .35rem; }
   .qa-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
-  .qa-legend-link {
-    margin-left: auto; font-size: .76rem; text-decoration: none; color: var(--accent);
+  .qa-workload-rows {
+    display: flex; flex-direction: column; gap: .35rem; font-size: .82rem;
   }
+  .qa-workload-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: .3rem .5rem; background: var(--bg-deep); border-radius: 4px;
+  }
+  .qa-workload-row.backlog { border-left: 3px solid #94a3b8; }
+  .qa-workload-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 
-  /* Model agreement table */
+  /* Species to watch — tabs + table */
+  .qa-tabs {
+    display: flex; gap: .3rem; margin: .4rem 0 .6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .qa-tab {
+    padding: .35rem .7rem; font-size: .78rem; background: none; border: none;
+    color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .qa-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .qa-tab-count {
+    margin-left: .25rem; padding: 0 .35rem; border-radius: 8px;
+    background: var(--bg-deep); font-size: .68rem; color: var(--text-muted);
+  }
   .qa-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
   .qa-table th, .qa-table td { padding: .35rem .5rem; text-align: left; }
   .qa-table th { font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
@@ -101,28 +182,47 @@
   }
   .qa-pct.high { color: #4caf50; }
   .qa-pct.mid  { color: #ff9800; }
-  .qa-pct.low  { color: #e53935; }
+  .qa-pct.low  { color: #e53935; font-weight: 600; }
+  .qa-pct.neutral { color: var(--text-muted); }
 
-  /* Throttle effect rows */
-  .qa-throttle-row {
-    display: flex; gap: .8rem; align-items: center; padding: .4rem 0;
+  /* Volume change rows */
+  .qa-vol-row {
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    gap: .8rem; align-items: center; padding: .4rem 0;
     font-size: .82rem; border-bottom: 1px solid var(--border-subtle, var(--border));
   }
-  .qa-throttle-row:last-child { border-bottom: none; }
-  .qa-throttle-name { flex: 1; font-weight: 500; }
-  .qa-throttle-num { font-family: monospace; font-variant-numeric: tabular-nums; min-width: 60px; text-align: right; }
+  .qa-vol-row:last-child { border-bottom: none; }
+  .qa-vol-name { font-weight: 500; }
+  .qa-vol-num { font-family: monospace; font-variant-numeric: tabular-nums; }
+  .qa-vol-num .small { color: var(--text-muted); font-size: .72rem; }
   .qa-delta { font-weight: 600; min-width: 60px; text-align: right; }
   .qa-delta.up { color: #ff9800; }
   .qa-delta.down { color: #4caf50; }
+  .qa-vol-tag {
+    font-size: .7rem; padding: .1rem .45rem; border-radius: 3px;
+    background: var(--bg-deep); color: var(--text-muted);
+  }
 
-  /* Placeholder */
+  /* Compact "not instrumented" prefilter card */
+  .qa-pending-line {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: .82rem; color: var(--text-muted);
+  }
+
+  /* Engine-measured throttle drops banner */
+  .qa-measured-banner {
+    margin: .4rem 0 .8rem; padding: .5rem .7rem;
+    background: rgba(52,211,153,.06); border: 1px solid rgba(52,211,153,.2);
+    border-radius: 6px; font-size: .82rem;
+  }
+
   .qa-placeholder {
     padding: .9rem; background: var(--bg-deep); border-radius: 6px;
     color: var(--text-muted); font-size: .82rem; line-height: 1.5;
     border: 1px dashed var(--border);
   }
 
-  .qa-chart-wrap { position: relative; height: 200px; }
+  .qa-chart-wrap { position: relative; height: 220px; }
 </style>
 <body>
 <div id="app" v-cloak>
@@ -135,10 +235,14 @@
           {{t('quality_subtitle')}}
         </div>
       </div>
-      <div class="qa-period">
-        <span>{{t('quality_period')}}:</span>
-        <button v-for="d in [7, 30, 90]" :key="d"
-                :class="{active: days === d}" @click="setDays(d)">{{d}}j</button>
+      <div class="qa-header-actions">
+        <div class="qa-period">
+          <span>{{t('quality_period')}}:</span>
+          <button v-for="d in [7, 30, 90]" :key="d"
+                  :class="{active: days === d}" @click="setDays(d)">{{d}}j</button>
+        </div>
+        <a href="review.html" class="qa-cta primary">{{t('quality_open_review')}}</a>
+        <a href="settings.html#detection" class="qa-cta">{{t('quality_open_settings')}}</a>
       </div>
     </div>
 
@@ -146,52 +250,178 @@
 
     <template v-else-if="data">
 
-      <!-- 1. Review outcomes (top — most actionable) -->
+      <!-- Synthesis line -->
+      <div class="qa-synth" :class="data.synthesis.severity">
+        <span class="qa-synth-icon">
+          <bird-icon :name="synthIcon(data.synthesis.severity)" :size="16"></bird-icon>
+        </span>
+        <span v-html="safeHtml(t(data.synthesis.headline_key, data.synthesis.params))"></span>
+      </div>
+
+      <!-- 4 pilot cards -->
+      <div class="qa-pilots">
+        <!-- Pilot A: Backlog Review -->
+        <div class="qa-pilot">
+          <div class="qa-pilot-label">
+            <bird-icon name="check-circle" :size="13"></bird-icon>
+            {{t('quality_pilot_backlog')}}
+          </div>
+          <div class="qa-pilot-value">{{data.review.unreviewed.toLocaleString()}}</div>
+          <div class="qa-pilot-sub">
+            {{t('quality_pilot_backlog_sub', { reviewed: data.review.reviewed.toLocaleString() })}}
+          </div>
+          <a v-if="data.review.unreviewed > 0" href="review.html" class="qa-pilot-cta">{{t('quality_pilot_go_review')}}</a>
+        </div>
+
+        <!-- Pilot B: Agreement -->
+        <div class="qa-pilot">
+          <div class="qa-pilot-label">
+            <bird-icon name="git-compare" :size="13"></bird-icon>
+            {{t('quality_pilot_agreement')}}
+          </div>
+          <div class="qa-pilot-value" v-if="data.agreement.median_pct !== null">
+            {{data.agreement.median_pct}}%
+          </div>
+          <div class="qa-pilot-value muted" v-else>{{t('quality_pilot_no_data')}}</div>
+          <div class="qa-pilot-sub">
+            {{t('quality_pilot_agreement_sub', { count: data.agreement.species_count, watch: data.agreement.to_watch.length })}}
+          </div>
+          <a v-if="data.agreement.to_watch.length" href="#species-to-watch" class="qa-pilot-cta">{{t('quality_pilot_to_watch')}}</a>
+        </div>
+
+        <!-- Pilot C: Pre-filters -->
+        <div class="qa-pilot">
+          <div class="qa-pilot-label">
+            <bird-icon name="shield" :size="13"></bird-icon>
+            {{t('quality_pilot_prefilter')}}
+          </div>
+          <template v-if="data.prefilter.source === 'measured'">
+            <div class="qa-pilot-value">{{(data.prefilter.privacy_dropped + data.prefilter.dog_dropped).toLocaleString()}}</div>
+            <div class="qa-pilot-sub">
+              {{t('quality_pilot_prefilter_sub', {
+                privacy: data.prefilter.privacy_dropped.toLocaleString(),
+                dog: data.prefilter.dog_dropped.toLocaleString()
+              })}}
+            </div>
+          </template>
+          <template v-else>
+            <div class="qa-pilot-value muted">
+              <span class="qa-source not_instrumented">{{t('quality_source_not_instrumented')}}</span>
+            </div>
+            <div class="qa-pilot-sub">{{t('quality_pilot_prefilter_pending')}}</div>
+          </template>
+        </div>
+
+        <!-- Pilot D: Model balance -->
+        <div class="qa-pilot">
+          <div class="qa-pilot-label">
+            <bird-icon name="git-compare" :size="13"></bird-icon>
+            {{t('quality_pilot_balance')}}
+          </div>
+          <div class="qa-pilot-value" v-if="data.balance.perch_share !== null">
+            <span style="color:#5a9e3a;">{{100 - data.balance.perch_share}}%</span>
+            <span style="color:var(--text-muted);font-size:.9rem;font-weight:400;"> / </span>
+            <span style="color:#3b82f6;">{{data.balance.perch_share}}%</span>
+          </div>
+          <div class="qa-pilot-value muted" v-else>{{t('quality_pilot_no_data')}}</div>
+          <div class="qa-pilot-sub">
+            <span>{{t('quality_pilot_balance_legend')}}</span>
+            <span v-if="data.balance.delta_share !== null" style="margin-left:.4rem;"
+                  :style="{color: Math.abs(data.balance.delta_share) >= 15 ? '#ff9800' : 'var(--text-muted)'}">
+              {{data.balance.delta_share > 0 ? '+' : ''}}{{data.balance.delta_share}}{{t('quality_pilot_balance_pp')}}
+            </span>
+          </div>
+          <a href="#timeline" class="qa-pilot-cta">{{t('quality_pilot_view_timeline')}}</a>
+        </div>
+      </div>
+
+      <!-- 1. Human review — workload + quality split -->
       <div class="qa-card">
         <div class="qa-title">
           <bird-icon name="check-circle" :size="15"></bird-icon>
           {{t('quality_review_title')}}
           <span class="qa-source" :class="data.review.source">{{t('quality_source_' + data.review.source)}}</span>
         </div>
-        <p class="qa-card-note">{{t('quality_review_note')}}</p>
-        <div class="qa-bar" v-if="data.review.total > 0">
-          <div class="qa-bar-seg confirmed" :style="{width: pct(data.review.confirmed, data.review.total) + '%'}"
-               :title="data.review.confirmed + ' confirmed'">
-            <template v-if="pct(data.review.confirmed, data.review.total) > 8">{{pct(data.review.confirmed, data.review.total)}}%</template>
+        <p class="qa-card-note">{{t('quality_review_note_v2')}}</p>
+
+        <div class="qa-review-grid">
+          <!-- Workload -->
+          <div class="qa-review-section">
+            <h4>{{t('quality_review_workload')}}</h4>
+            <div class="qa-workload-rows">
+              <div class="qa-workload-row backlog">
+                <span>{{t('quality_review_backlog')}}</span>
+                <span class="qa-workload-num">{{data.review.unreviewed.toLocaleString()}}</span>
+              </div>
+              <div class="qa-workload-row">
+                <span>{{t('quality_review_reviewed')}}</span>
+                <span class="qa-workload-num">{{data.review.reviewed.toLocaleString()}}</span>
+              </div>
+              <div class="qa-workload-row">
+                <span>{{t('quality_review_total')}}</span>
+                <span class="qa-workload-num">{{data.review.total.toLocaleString()}}</span>
+              </div>
+            </div>
           </div>
-          <div class="qa-bar-seg doubtful" :style="{width: pct(data.review.doubtful, data.review.total) + '%'}"
-               :title="data.review.doubtful + ' doubtful'">
-            <template v-if="pct(data.review.doubtful, data.review.total) > 8">{{pct(data.review.doubtful, data.review.total)}}%</template>
-          </div>
-          <div class="qa-bar-seg rejected" :style="{width: pct(data.review.rejected, data.review.total) + '%'}"
-               :title="data.review.rejected + ' rejected'">
-            <template v-if="pct(data.review.rejected, data.review.total) > 8">{{pct(data.review.rejected, data.review.total)}}%</template>
-          </div>
-          <div class="qa-bar-seg unreviewed" :style="{width: pct(data.review.unreviewed, data.review.total) + '%'}"
-               :title="data.review.unreviewed + ' unreviewed'">
-            <template v-if="pct(data.review.unreviewed, data.review.total) > 8">{{pct(data.review.unreviewed, data.review.total)}}%</template>
+
+          <!-- Quality among reviewed -->
+          <div class="qa-review-section">
+            <h4>{{t('quality_review_quality_header')}}</h4>
+            <template v-if="data.review.quality">
+              <div class="qa-bar">
+                <div class="qa-bar-seg confirmed" :style="{width: data.review.quality.confirmed_pct + '%'}"
+                     :title="data.review.confirmed + ' confirmed'">
+                  <template v-if="data.review.quality.confirmed_pct > 8">{{data.review.quality.confirmed_pct}}%</template>
+                </div>
+                <div class="qa-bar-seg doubtful" :style="{width: data.review.quality.doubtful_pct + '%'}"
+                     :title="data.review.doubtful + ' doubtful'">
+                  <template v-if="data.review.quality.doubtful_pct > 8">{{data.review.quality.doubtful_pct}}%</template>
+                </div>
+                <div class="qa-bar-seg rejected" :style="{width: data.review.quality.rejected_pct + '%'}"
+                     :title="data.review.rejected + ' rejected'">
+                  <template v-if="data.review.quality.rejected_pct > 8">{{data.review.quality.rejected_pct}}%</template>
+                </div>
+              </div>
+              <div class="qa-legend">
+                <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#4caf50;"></span>{{t('review_confirm')}} <strong>{{data.review.confirmed.toLocaleString()}}</strong></span>
+                <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#ff9800;"></span>{{t('review_doubtful_btn')}} <strong>{{data.review.doubtful.toLocaleString()}}</strong></span>
+                <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#e53935;"></span>{{t('review_reject')}} <strong>{{data.review.rejected.toLocaleString()}}</strong></span>
+              </div>
+            </template>
+            <div v-else class="qa-placeholder">{{t('quality_review_none_yet')}}</div>
           </div>
         </div>
-        <div v-else class="qa-placeholder">{{t('quality_no_data')}}</div>
-        <div class="qa-legend">
-          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#4caf50;"></span>{{t('review_confirm')}} <strong>{{data.review.confirmed.toLocaleString()}}</strong></span>
-          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#ff9800;"></span>{{t('review_doubtful_btn')}} <strong>{{data.review.doubtful.toLocaleString()}}</strong></span>
-          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#e53935;"></span>{{t('review_reject')}} <strong>{{data.review.rejected.toLocaleString()}}</strong></span>
-          <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#94a3b8;"></span>{{t('quality_unreviewed')}} <strong>{{data.review.unreviewed.toLocaleString()}}</strong></span>
-          <a v-if="data.review.unreviewed > 0" href="review.html" class="qa-legend-link">→ {{t('quality_go_review')}}</a>
+
+        <div class="qa-reading">
+          <details>
+            <summary>{{t('quality_how_to_read')}}</summary>
+            <div class="qa-reading-body" v-html="safeHtml(t('quality_review_reading_v2'))"></div>
+          </details>
         </div>
-        <div class="qa-reading" v-html="safeHtml(t('quality_review_reading'))"></div>
       </div>
 
-      <!-- 2. Model agreement (observed proxy) -->
-      <div class="qa-card">
+      <!-- 2. Species to watch — tabbed diagnostic -->
+      <div class="qa-card" id="species-to-watch">
         <div class="qa-title">
           <bird-icon name="git-compare" :size="15"></bird-icon>
-          {{t('quality_agreement_title')}}
+          {{t('quality_to_watch_title')}}
           <span class="qa-source" :class="data.agreement.source">{{t('quality_source_' + data.agreement.source)}}</span>
         </div>
-        <p class="qa-card-note">{{t('quality_agreement_note', { bin: data.agreement.bin_seconds, vol: data.agreement.min_volume })}}</p>
-        <table v-if="data.agreement.species.length" class="qa-table">
+        <p class="qa-card-note">{{t('quality_to_watch_note', { bin: data.agreement.bin_seconds, vol: data.agreement.min_volume })}}</p>
+
+        <div class="qa-tabs">
+          <button class="qa-tab" :class="{active: agrTab === 'watch'}" @click="agrTab='watch'">
+            {{t('quality_tab_watch')}}<span class="qa-tab-count">{{data.agreement.to_watch.length}}</span>
+          </button>
+          <button class="qa-tab" :class="{active: agrTab === 'strong'}" @click="agrTab='strong'">
+            {{t('quality_tab_strong')}}<span class="qa-tab-count">{{data.agreement.strong.length}}</span>
+          </button>
+          <button class="qa-tab" :class="{active: agrTab === 'all'}" @click="agrTab='all'">
+            {{t('quality_tab_all')}}<span class="qa-tab-count">{{data.agreement.all.length}}</span>
+          </button>
+        </div>
+
+        <table v-if="currentAgreementList.length" class="qa-table">
           <thead>
             <tr>
               <th>{{t('species_name')}}</th>
@@ -200,7 +430,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in data.agreement.species" :key="s.sci_name">
+            <tr v-for="s in currentAgreementList" :key="s.sci_name">
               <td>{{spName(s.com_name, s.sci_name)}}</td>
               <td style="text-align:right;font-variant-numeric:tabular-nums;">{{s.perch_count.toLocaleString()}}</td>
               <td>
@@ -213,82 +443,116 @@
             </tr>
           </tbody>
         </table>
-        <div v-else class="qa-placeholder">{{t('quality_no_species_volume')}}</div>
-        <div class="qa-reading" v-html="safeHtml(t('quality_agreement_reading'))"></div>
+        <div v-else class="qa-placeholder">{{tabPlaceholder}}</div>
+
+        <div class="qa-reading">
+          <details>
+            <summary>{{t('quality_how_to_read')}}</summary>
+            <div class="qa-reading-body" v-html="safeHtml(t('quality_agreement_reading_v2'))"></div>
+          </details>
+        </div>
         <a href="settings.html#detection" class="qa-action">{{t('quality_action_tune_thresholds')}}</a>
       </div>
 
-      <!-- 3. Pre-filter impact -->
-      <div class="qa-card">
+      <!-- 3. Pre-filter impact — compact when not instrumented -->
+      <div class="qa-card" :class="{compact: data.prefilter.source !== 'measured'}">
         <div class="qa-title">
           <bird-icon name="shield" :size="15"></bird-icon>
           {{t('quality_prefilter_title')}}
           <span class="qa-source" :class="data.prefilter.source">{{t('quality_source_' + data.prefilter.source)}}</span>
         </div>
-        <p class="qa-card-note">{{t('quality_prefilter_note')}}</p>
-        <div v-if="data.prefilter.source === 'measured'">
-          <div class="qa-throttle-row">
-            <span class="qa-throttle-name">🎤 {{t('quality_files_processed')}}</span>
-            <span class="qa-throttle-num">{{(data.prefilter.files_processed || 0).toLocaleString()}}</span>
+
+        <template v-if="data.prefilter.source === 'measured'">
+          <p class="qa-card-note">{{t('quality_prefilter_note')}}</p>
+          <div class="qa-vol-row">
+            <span class="qa-vol-name">🎤 {{t('quality_files_processed')}}</span>
+            <span class="qa-vol-num">{{(data.prefilter.files_processed || 0).toLocaleString()}}</span>
+            <span></span><span></span>
           </div>
-          <div class="qa-throttle-row">
-            <span class="qa-throttle-name">🤫 {{t('quality_privacy_dropped')}}</span>
-            <span class="qa-throttle-num">{{(data.prefilter.privacy_dropped || 0).toLocaleString()}}</span>
-            <span v-if="data.prefilter.files_processed" style="color:var(--text-muted);font-size:.72rem;">({{pct(data.prefilter.privacy_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)</span>
+          <div class="qa-vol-row">
+            <span class="qa-vol-name">🤫 {{t('quality_privacy_dropped')}}</span>
+            <span class="qa-vol-num">{{(data.prefilter.privacy_dropped || 0).toLocaleString()}}</span>
+            <span class="qa-vol-num small" v-if="data.prefilter.files_processed">
+              ({{pct(data.prefilter.privacy_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)
+            </span>
+            <span></span>
           </div>
-          <div class="qa-throttle-row">
-            <span class="qa-throttle-name">🐕 {{t('quality_dog_dropped')}}</span>
-            <span class="qa-throttle-num">{{(data.prefilter.dog_dropped || 0).toLocaleString()}}</span>
-            <span v-if="data.prefilter.files_processed" style="color:var(--text-muted);font-size:.72rem;">({{pct(data.prefilter.dog_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)</span>
+          <div class="qa-vol-row">
+            <span class="qa-vol-name">🐕 {{t('quality_dog_dropped')}}</span>
+            <span class="qa-vol-num">{{(data.prefilter.dog_dropped || 0).toLocaleString()}}</span>
+            <span class="qa-vol-num small" v-if="data.prefilter.files_processed">
+              ({{pct(data.prefilter.dog_dropped, data.prefilter.files_processed + data.prefilter.privacy_dropped + data.prefilter.dog_dropped)}}%)
+            </span>
+            <span></span>
           </div>
-          <div class="qa-throttle-row">
-            <span class="qa-throttle-name">⏳ {{t('quality_dog_cooldown')}}</span>
-            <span class="qa-throttle-num">{{(data.prefilter.dog_cooldown_skipped || 0).toLocaleString()}}</span>
-          </div>
-          <div class="qa-throttle-row">
-            <span class="qa-throttle-name">⚠ {{t('quality_cross_confirm')}}</span>
-            <span class="qa-throttle-num" style="color:var(--text-muted);">n/a</span>
+          <div class="qa-vol-row">
+            <span class="qa-vol-name">⏳ {{t('quality_dog_cooldown')}}</span>
+            <span class="qa-vol-num">{{(data.prefilter.dog_cooldown_skipped || 0).toLocaleString()}}</span>
+            <span></span><span></span>
           </div>
           <p style="font-size:.72rem;color:var(--text-muted);margin:.6rem 0 0;line-height:1.5;">
             <strong>{{t('quality_cross_confirm_gap_title')}}</strong> — {{ data.prefilter.cross_confirm_note_key ? t(data.prefilter.cross_confirm_note_key) : '' }}
           </p>
-        </div>
-        <div v-else class="qa-placeholder">
-          ⚙ {{ data.prefilter.note_key ? t(data.prefilter.note_key) : '' }}
-        </div>
-        <div class="qa-reading" v-html="safeHtml(t('quality_prefilter_reading'))"></div>
-        <a href="settings.html#detection" class="qa-action">{{t('quality_action_tune_filters')}}</a>
+          <div class="qa-reading">
+            <details>
+              <summary>{{t('quality_how_to_read')}}</summary>
+              <div class="qa-reading-body" v-html="safeHtml(t('quality_prefilter_reading'))"></div>
+            </details>
+          </div>
+          <a href="settings.html#detection" class="qa-action">{{t('quality_action_tune_filters')}}</a>
+        </template>
+
+        <template v-else>
+          <div class="qa-pending-line">
+            <span class="qa-source not_instrumented">{{t('quality_source_not_instrumented')}}</span>
+            <span>{{ data.prefilter.note_key ? t(data.prefilter.note_key) : '' }}</span>
+          </div>
+        </template>
       </div>
 
-      <!-- 4. Throttle effect (inferred) -->
+      <!-- 4. Volume change per species (renamed from Throttle effect) -->
       <div class="qa-card">
         <div class="qa-title">
-          <bird-icon name="timer" :size="15"></bird-icon>
-          {{t('quality_throttle_title')}}
+          <bird-icon name="gauge" :size="15"></bird-icon>
+          {{t('quality_volchange_title')}}
           <span class="qa-source" :class="data.throttle.source">{{t('quality_source_' + data.throttle.source)}}</span>
         </div>
         <p class="qa-card-note">{{ data.throttle.note_key ? t(data.throttle.note_key) : '' }}</p>
+
         <div v-if="data.throttle_measured && data.throttle_measured.source === 'measured' && data.throttle_measured.dropped > 0"
-             style="margin:.4rem 0 .8rem;padding:.5rem .7rem;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:6px;font-size:.82rem;">
-          <span class="qa-source measured" style="background:rgba(52,211,153,.18);color:#10b981;">{{t('quality_source_measured')}}</span>
+             class="qa-measured-banner">
+          <span class="qa-source measured">{{t('quality_source_measured')}}</span>
           <strong>{{data.throttle_measured.dropped.toLocaleString()}}</strong> {{t('quality_throttle_measured_drops')}}
         </div>
-        <div v-if="data.throttle.enabled && data.throttle.species && data.throttle.species.length">
-          <div class="qa-throttle-row" v-for="s in data.throttle.species" :key="s.com_name">
-            <span class="qa-throttle-name">{{s.com_name}}</span>
-            <span class="qa-throttle-num">{{s.recent_per_day}}/j</span>
-            <span style="color:var(--text-muted);font-size:.72rem;">vs {{s.prior_per_day}}/j</span>
+
+        <div v-if="data.throttle.species && data.throttle.species.length">
+          <div class="qa-vol-row" v-for="s in data.throttle.species" :key="s.com_name">
+            <span class="qa-vol-name">{{s.com_name}}</span>
+            <span class="qa-vol-num">{{s.recent_per_day}}<span class="small">/j</span></span>
+            <span class="qa-vol-num small">vs {{s.prior_per_day}}/j</span>
             <span v-if="s.delta_pct !== null" class="qa-delta" :class="s.delta_pct < 0 ? 'down' : 'up'">
               {{s.delta_pct > 0 ? '+' : ''}}{{s.delta_pct}}%
             </span>
+            <span v-else class="qa-delta" style="color:var(--text-muted);">—</span>
+          </div>
+          <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem;">
+            <span v-for="s in data.throttle.species" :key="s.com_name + '-tag'" class="qa-vol-tag">
+              {{s.com_name}}: {{t(s.interpretation_key)}}
+            </span>
           </div>
         </div>
-        <div class="qa-reading" v-html="safeHtml(t('quality_throttle_reading'))"></div>
+
+        <div class="qa-reading">
+          <details>
+            <summary>{{t('quality_how_to_read')}}</summary>
+            <div class="qa-reading-body" v-html="safeHtml(t('quality_volchange_reading'))"></div>
+          </details>
+        </div>
         <a v-if="data.throttle.enabled" href="settings.html#detection" class="qa-action">{{t('quality_action_tune_throttle')}}</a>
       </div>
 
       <!-- 5. Quality timeline -->
-      <div class="qa-card">
+      <div class="qa-card" id="timeline">
         <div class="qa-title">
           <bird-icon name="trending-up" :size="15"></bird-icon>
           {{t('quality_timeline_title')}}
@@ -298,7 +562,12 @@
         <div class="qa-chart-wrap">
           <canvas ref="timelineCanvas"></canvas>
         </div>
-        <div class="qa-reading" v-html="safeHtml(t('quality_timeline_reading'))"></div>
+        <div class="qa-reading">
+          <details>
+            <summary>{{t('quality_how_to_read')}}</summary>
+            <div class="qa-reading-body" v-html="safeHtml(t('quality_timeline_reading'))"></div>
+          </details>
+        </div>
       </div>
 
     </template>
@@ -320,6 +589,7 @@ const app = createApp({
     const loading = ref(true);
     const data = ref(null);
     const timelineCanvas = ref(null);
+    const agrTab = ref('watch');
     let _chart = null;
 
     function pct(part, total) {
@@ -336,6 +606,26 @@ const app = createApp({
       if (p >= 50) return 'mid';
       return 'low';
     }
+    function synthIcon(sev) {
+      if (sev === 'attention') return 'alert-triangle';
+      if (sev === 'ok')        return 'check-circle';
+      return 'info';
+    }
+
+    const currentAgreementList = computed(() => {
+      if (!data.value) return [];
+      const a = data.value.agreement;
+      if (agrTab.value === 'watch')  return a.to_watch;
+      if (agrTab.value === 'strong') return a.strong;
+      return a.all;
+    });
+
+    const tabPlaceholder = computed(() => {
+      if (!data.value) return '';
+      if (agrTab.value === 'watch')  return t('quality_tab_watch_empty');
+      if (agrTab.value === 'strong') return t('quality_tab_strong_empty');
+      return t('quality_no_species_volume');
+    });
 
     async function load() {
       loading.value = true;
@@ -390,6 +680,7 @@ const app = createApp({
     return {
       t, lang, days, loading, data, timelineCanvas, safeHtml,
       pct, agreementColor, agreementClass, spName, setDays,
+      agrTab, currentAgreementList, tabPlaceholder, synthIcon,
     };
   },
 });
