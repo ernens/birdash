@@ -21,6 +21,30 @@ const ALERT_CHECK_INTERVAL = 60000; // 60 seconds
 const ALERT_COOLDOWN = 600000;      // 10 minutes between same alert type
 const ALERT_BIRD_COOLDOWN = 86400000; // 24 hours for bird-specific alerts (engine handles per-detection)
 const _alertLastSent = {};          // { alertType: timestamp }
+const _svcDownStreak = {};          // { svc: consecutive inactive/failed reads }
+const SVC_DOWN_REQUIRED_STREAK = 2; // require N consecutive bad reads before alerting
+
+// systemctl is-active exits non-zero for inactive/failed/activating/etc, but
+// always prints the actual state to stdout. Use spawn directly so we capture
+// stdout regardless of exit code, and never reject — return the state string,
+// or 'error' if systemctl itself can't be invoked. This prevents transient
+// dbus glitches from being misread as "service down".
+const { spawn } = require('child_process');
+function serviceState(svc) {
+  return new Promise((resolve) => {
+    let stdout = '';
+    let done = false;
+    const finish = (s) => { if (!done) { done = true; resolve(s); } };
+    try {
+      const proc = spawn('systemctl', ['is-active', svc]);
+      proc.stdout.on('data', d => stdout += d);
+      proc.on('close', () => finish(stdout.trim() || 'error'));
+      proc.on('error', () => finish('error'));
+      // Hard timeout — systemctl shouldn't take more than 5 s
+      setTimeout(() => { try { proc.kill('SIGKILL'); } catch(_) {} finish('error'); }, 5000);
+    } catch(e) { finish('error'); }
+  });
+}
 
 // ── Alert message translations ──────────────────────────────────────────────
 const ALERT_I18N = require('./alert-i18n');
@@ -167,17 +191,26 @@ async function checkSystemAlerts() {
     }
 
     // ── Service down ──
+    // systemctl can briefly mis-report on a busy Pi (dbus contention during
+    // dawn-chorus inference, daemon-reload, etc). Require N consecutive bad
+    // reads to debounce. Transient states (activating/deactivating/reloading)
+    // and 'error' (systemctl unreachable) reset the streak — they're not
+    // confirmed down conditions.
     if (th.service_down) {
       const criticalServices = ['birdengine', 'birdengine-recording'];
       for (const svc of criticalServices) {
-        try {
-          const state = (await execCmd('systemctl', ['is-active', svc])).trim();
-          if (state === 'failed' || state === 'inactive') {
+        const state = await serviceState(svc);
+        const isDown = (state === 'inactive' || state === 'failed');
+        if (isDown) {
+          _svcDownStreak[svc] = (_svcDownStreak[svc] || 0) + 1;
+          if (_svcDownStreak[svc] >= SVC_DOWN_REQUIRED_STREAK) {
             await sendAlert('svc_' + svc, t.svc_state_title(svc, state), t.svc_state_body(svc, state));
           }
-        } catch(e) {
-          // execSync throws if exit code != 0 (service not active)
-          await sendAlert('svc_' + svc, t.svc_down_title(svc), t.svc_down_body(svc));
+        } else {
+          if (_svcDownStreak[svc]) {
+            console.log(`[ALERT] ${svc} streak reset (was ${_svcDownStreak[svc]}, state now: ${state})`);
+          }
+          _svcDownStreak[svc] = 0;
         }
       }
     }
