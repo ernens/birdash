@@ -118,6 +118,23 @@ WAV file → engine/audio/incoming/
 └─────────────────────────────────────────────────────┘
 ```
 
+### Engine source layout
+
+The engine was originally a single 1631-line `engine.py`. It has been split into seven focused sibling modules; `engine.py` itself is now just the `BirdEngine` orchestrator (~850 lines) plus `main()` and re-exports for backwards compatibility.
+
+| File | Concern |
+|---|---|
+| `engine/engine.py` | `BirdEngine` class · process loop · `_should_throttle` · `_check_model_change` · `main()` · re-exports |
+| `engine/audio.py` | `read_audio` · sound-level monitor (`compute_sound_level`, `record_sound_level`) · `apply_adaptive_gain` · `load_audio_config` · `apply_filters` · `split_signal` |
+| `engine/models.py` | `load_labels` · `load_language` · `create_interpreter` · `MDataModel` · `BirdNETv1Model` · `BirdNETModel` · `PerchModel` · `get_model` factory |
+| `engine/clips.py` | `_generate_clip_spectrogram` · `extract_clip` |
+| `engine/birdweather.py` | `upload_to_birdweather` (FLAC + per-detection POST) |
+| `engine/db.py` | `init_db` · `write_detection` |
+| `engine/watcher.py` | `WavHandler` (rotates one-behind to avoid races) |
+| `engine/yamnet_filter.py` | YAMNet-based privacy + dog pre-filter (opt-in) |
+
+Tests in `engine/test_engine.py` keep using `from engine import X` thanks to the re-exports; new code should import from the relevant module directly.
+
 ### Pipeline Stages
 
 #### 1. Recording (`engine/record.sh`)

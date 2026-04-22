@@ -71,6 +71,10 @@ Raspberry Pi 5 + SSD
 - **5-min resultaatcache** op de 5 endpoints `/birds/api/external/weather/*` — warme verzoeken < 10 ms
 - **Vendored JS**: Vue.js + Chart.js lokaal geserveerd (geen CDN)
 
+### Engine-modules (engine/)
+
+`engine.py` (~850 r) bevat nu alleen nog de `BirdEngine`-klasse + `main()`. De helpers zijn geëxtraheerd in toegewijde modules: `audio.py` (I/O + filters), `models.py` (TFLite-wrappers + factory), `clips.py` (mp3 + spectrogram), `birdweather.py`, `db.py`, `watcher.py`, `yamnet_filter.py`. Re-exports in `engine.py` houden `from engine import X` werkend voor de tests.
+
 ### Soortspecifieke beperking (throttle)
 
 De engine kan dominante soorten beperken om te voorkomen dat ze de DB overspoelen. Configureerbare cooldown per soort (standaard 120 s) met confidence-bypass drempel (standaard 0.95) die zekere detecties altijd doorlaat. Status in geheugen van de engine, hot-reload vanuit `birdnet.conf`. Script `scripts/cleanup_throttle.py` past dezelfde regel retroactief toe op historische data, met DB-backup en audio-quarantaine.

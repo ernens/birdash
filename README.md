@@ -550,7 +550,14 @@ birdash/
 │   ├── settings/                  # Lazy-loaded settings tab fragments
 │   └── sw.js                      # Service Worker (offline cache)
 ├── engine/                        # BirdEngine (Python detection engine)
-│   ├── engine.py                  # Dual-model inference (~1100 lines)
+│   ├── engine.py                  # BirdEngine orchestrator + main (~850 lines)
+│   ├── audio.py                   # I/O · sound-level · adaptive gain · filters · split_signal
+│   ├── models.py                  # TFLite wrappers (BirdNET v1/v2.4, Perch v2) + factory
+│   ├── clips.py                   # MP3 extraction + plasma-colormap spectrogram PNG
+│   ├── birdweather.py             # Soundscape + per-detection upload
+│   ├── db.py                      # SQLite bootstrap + write_detection
+│   ├── watcher.py                 # WavHandler (one-behind rotation trick)
+│   ├── yamnet_filter.py           # Privacy + dog YAMNet pre-filter (opt-in)
 │   ├── config.toml                # Engine configuration
 │   ├── record.sh                  # Audio capture (arecord)
 │   ├── purge_audio.sh             # Disk space management

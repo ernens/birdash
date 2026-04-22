@@ -2,6 +2,72 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.40.0] — 2026-04-22
+
+### Refactor: engine.py split into focused modules
+
+`engine/engine.py` had grown to **1631 lines** mixing audio I/O, model wrappers, SQLite, the watcher, BirdWeather upload, clip extraction, and the actual BirdEngine orchestrator. Hard to navigate, hard to review, hard to test in isolation.
+
+Split into seven files (behaviour byte-identical, code moved not modified):
+
+| File | Lines | Concern |
+|---|---|---|
+| `engine/engine.py` | 850 | `BirdEngine` class + `main()` + re-exports |
+| `engine/audio.py` | 266 | `read_audio` · sound-level monitor · adaptive gain · audio_config + filter pipeline · `split_signal` |
+| `engine/models.py` | 281 | TFLite wrappers (`MDataModel`, `BirdNETv1Model`, `BirdNETModel`, `PerchModel`) + `load_labels` / `load_language` / `get_model` factory |
+| `engine/clips.py` | 137 | `_generate_clip_spectrogram` + `extract_clip` |
+| `engine/birdweather.py` | 93 | `upload_to_birdweather` (FLAC + per-detection POST) |
+| `engine/db.py` | 63 | `init_db` + `write_detection` |
+| `engine/watcher.py` | 45 | `WavHandler` (rotates one-behind to avoid races) |
+
+Backwards compat: `engine.py` re-imports each public symbol so `from engine import X` keeps working for `test_engine.py` and any external tooling.
+
+### Feat: alert lifecycle log + UI history panel
+
+Alerting was opaque before this — once an alert fired (or didn't), the only trace was a `console.log` line that journalctl rotated out within days. No way to answer "does this alert keep flapping?" or "which threshold needs tuning?".
+
+- `recordAlertEvent(type, action, fields)` writes JSONL to `config/alerts.log` on every state transition. Actions captured: **sent**, **cooldown_blocked**, **streak_inc**, **streak_reset**, **send_failed**, **no_apprise_config**.
+- Rotation: amortized trim every ~5 % of writes, keep last 1 000 lines.
+- Writes serialized on a single promise chain so concurrent calls can't interleave.
+- `GET /api/alerts/history?limit=N&type=X&action=Y` returns `{ events (newest first), total, types[], actions[] }`.
+- New card in **Réglages → Notifications → Historique des alertes** with refresh + 2 filter dropdowns (auto-populated from the log) and a colour-coded sticky-header table — sent (red), streak_inc (amber), streak_reset (green), cooldown_blocked (grey), send_failed (dark red). Auto-loads when the user switches to the notif tab.
+- 9 i18n keys × 4 languages.
+
+### Fix: false "engine stopped" Apprise alerts on systemctl flakes
+
+Three bugs in `server/lib/alerts.js` were producing spurious "service down" pages, the most recent at 06:01 during dawn-chorus inference burst when the engine was actually fine:
+
+1. `execCmd` rejects on non-zero exit, but `systemctl is-active` exits 3 for inactive/failed/activating/deactivating/reloading and prints the actual state to stdout. The existing `if (state === 'failed' || ...)` branch was dead code — the promise rejected before reaching it.
+2. The `catch` block treated every non-zero exit as "service down" and fired immediately, with no way to tell apart actually-down vs transient (`activating` during a normal restart) vs dbus/systemd glitches under load.
+3. No debounce — a single bad read triggered the alert.
+
+Fix:
+- New `serviceState(svc)` helper uses `spawn` directly and **always resolves** with the state string (or `'error'` if systemctl can't be invoked at all), with a 5 s hard timeout.
+- 2-strike debounce (`SVC_DOWN_REQUIRED_STREAK = 2`): only alert after two consecutive `inactive`/`failed` reads. Transient states reset the streak.
+- Streak resets are logged (`[ALERT] svc streak reset`) so future false-positives can be diagnosed from the journal.
+
+### Feat: ZRAM auto-tune for low-RAM Pis + UI panel
+
+On Pi 3 (1 GB) and Pi 4 (2-4 GB), simultaneous BirdNET + Perch + Node + arecord + browser can OOM-kill the engine silently. Modern RPi OS does ship `systemd-zram-generator`, but defaults aren't tuned for our workload.
+
+- New `scripts/configure_zram.sh` (idempotent): detects `/proc/device-tree/model` + `MemTotal`, picks **50 % of RAM on ≤2 GB**, **25 % on 3-4 GB**, **skip on ≥6 GB** (`--force` overrides). Auto-detects backend: `systemd-zram-generator` (preferred) writes `/etc/systemd/zram-generator.conf` with `compression-algorithm = zstd` + `swap-priority = 100`; `zram-tools` (legacy) writes `/etc/default/zramswap`. Reloads the right service. `--status` for inspection.
+- Auto-called as a sub-step of `install.sh` step 6, non-fatal so it never blocks the install.
+- New backend endpoints `GET /api/zram/status` + `POST /api/zram/configure`.
+- New card in **Réglages → Services → ZRAM (swap compressé)**: host info, state badge, backend, device line (name · algo · disk size), live usage (data → compressed [ratio× ratio]), swap priority, host-specific recommendation, raw config in a `<details>` block, "Apply recommended config" button + "force" checkbox + result message, disable hint footer.
+- 18 i18n keys × 4 languages.
+
+### UI: dashboard right card +30 % visual comfort
+
+The species photo + name on the live dashboard was the natural focal point but felt cramped at 170×170 next to the wider engine zone, and long species names ("Rougequeue à front blanc", "Mésange charbonnière", compound German/Dutch names) clipped at 1.3 rem.
+
+- Card width 320 → 416 px (steals from `.bf-zone-engine` which is `flex:1`)
+- Photo 170 → 220 px + radius 16 → 18
+- Name font 1.3 → 1.7 rem with `overflow-wrap: break-word`
+- Sci name 0.78 → 0.95, confidence circle 46 → 60 px, gap 1.1 → 1.4 rem
+- Recent species strip now shows **7 thumbnails** (was 6) — fits cleanly in the new width
+
+Mobile breakpoint untouched (collapses to a column with photo at 120 px regardless).
+
 ## [1.39.0] — 2026-04-22
 
 ### Feat: noisy-species throttle to stop dominant species flooding the DB

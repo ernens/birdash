@@ -73,6 +73,10 @@ Chaque étape est configurable et peut être activée/désactivée indépendamme
 - **Cache de résultats 5 min** sur les 5 endpoints `/birds/api/external/weather/*` — requêtes chaudes < 10 ms
 - **JS vendorisé** : Vue.js + Chart.js servis localement (pas de CDN)
 
+### Modules du moteur (engine/)
+
+`engine.py` (~850 l) garde la classe `BirdEngine` + `main()`. Les helpers ont été extraits en modules dédiés : `audio.py` (I/O + filtres), `models.py` (wrappers TFLite + factory), `clips.py` (mp3 + spectrogramme), `birdweather.py`, `db.py`, `watcher.py`, `yamnet_filter.py`. Les re-exports en haut de `engine.py` préservent `from engine import X` côté tests.
+
 ### Limite par espèce (throttle)
 
 Le moteur peut limiter les espèces dominantes pour éviter qu'elles ne saturent la DB. Cooldown configurable par espèce (défaut 120 s) avec seuil de bypass de confiance (défaut 0.95) qui laisse toujours passer les détections sûres. État en mémoire dans le moteur, hot-reloadé depuis `birdnet.conf`. Script `scripts/cleanup_throttle.py` pour appliquer la même règle rétroactivement à l'historique avec backup DB et quarantaine audio.

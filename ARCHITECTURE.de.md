@@ -71,6 +71,10 @@ Raspberry Pi 5 + SSD
 - **5-min-Ergebniscache** auf den 5 Endpoints `/birds/api/external/weather/*` — warme Anfragen < 10 ms
 - **Vendored JS**: Vue.js + Chart.js lokal ausgeliefert (kein CDN)
 
+### Engine-Module (engine/)
+
+`engine.py` (~850 Zeilen) enthält jetzt nur noch die `BirdEngine`-Klasse + `main()`. Die Helfer wurden in dedizierte Module extrahiert: `audio.py` (I/O + Filter), `models.py` (TFLite-Wrappers + Factory), `clips.py` (mp3 + Spektrogramm), `birdweather.py`, `db.py`, `watcher.py`, `yamnet_filter.py`. Re-Exports in `engine.py` halten `from engine import X` für Tests am Laufen.
+
 ### Artspezifische Drosselung
 
 Die Engine kann dominante Arten drosseln, damit sie die DB nicht überfluten. Konfigurierbarer Cooldown pro Art (Standard 120 s) mit Konfidenz-Bypass-Schwelle (Standard 0.95), die sichere Erkennungen immer durchlässt. Zustand im Speicher der Engine, Hot-Reload aus `birdnet.conf`. Skript `scripts/cleanup_throttle.py` wendet dieselbe Regel rückwirkend auf historische Daten an, mit DB-Backup und Audio-Quarantäne.
