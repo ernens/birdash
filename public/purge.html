@@ -228,6 +228,9 @@
             <span>{{r.Model}}</span>
             <span v-if="r.Source">[{{r.Source}}]</span>
           </span>
+          <span v-if="filters.orphaned" class="pg-countdown" style="color:#e53e3e;">
+            🚫 {{t('purge_audio_missing')}}
+          </span>
           <span v-if="r.trashed_at" class="pg-countdown">
             ⏰ {{t('purge_will_be_purged', { days: daysUntilPurge(r) })}}
           </span>

@@ -46,6 +46,7 @@
   "purge_filter_orphaned": "Sans fichier audio",
   "purge_orphaned_hint": "N'affiche que les détections dont le mp3 est absent du disque (cassée, supprimée à la main, perdue dans une crise du moteur). Scan limité à 50 000 lignes — affine d'abord les filtres si la sélection est trop large.",
   "purge_orphan_too_many": "Trop de lignes pour le scan orphelins. Affine les filtres (date, espèce…) pour passer sous 50 000 lignes.",
+  "purge_audio_missing": "MP3 absent du disque",
   "purge_species_placeholder": "Tape pour filtrer (ex: Bernache)",
   "purge_model_placeholder": "BirdNET, perch_v2…",
   "purge_min": "min",
