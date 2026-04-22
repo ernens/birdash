@@ -33,9 +33,25 @@ export const pages = [
     const startBtn = page.locator('button.btn-primary:has-text("Start"), button.btn-primary:has-text("Démarrer")').first();
     if (await startBtn.isVisible().catch(() => false)) {
       await startBtn.click().catch(() => {});
-      // Let the canvas accumulate enough frames to look like a spectrogram
-      await page.waitForTimeout(6000);
     }
+    // Wait until the canvas actually has painted content. The old 6 s flat
+    // wait caught empty frames when no recent clip was available — now we
+    // poll the pixel data until there's a visible spectrogram, up to ~60 s
+    // (enough to cover a full engine recording+extract cycle).
+    await page.waitForFunction(() => {
+      const c = document.getElementById('spectroCanvas');
+      if (!c || c.width === 0) return false;
+      try {
+        const ctx = c.getContext('2d');
+        const x = Math.floor(c.width * 0.5), y = Math.floor(c.height * 0.5);
+        const data = ctx.getImageData(x, y, 16, 16).data;
+        let energy = 0;
+        for (let i = 0; i < data.length; i += 4) energy += data[i] + data[i + 1] + data[i + 2];
+        return energy > 2000;  // non-black pixels present
+      } catch { return false; }
+    }, { timeout: 60000, polling: 1500 }).catch(() => {});
+    // A beat more so a few frames are drawn, gives a richer image.
+    await page.waitForTimeout(2500);
   }},
   { name: 'log',         path: '/birds/log.html',         wait: 3000 },
   { name: 'liveboard',   path: '/birds/liveboard.html',   wait: 3000 },

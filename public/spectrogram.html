@@ -634,6 +634,14 @@ const app = createApp({
         for (const r of allRows) {
           if (r.Time && r.Time < initCutoff) _playedFiles.add(r.File_Name);
         }
+        // Outside dawn-chorus there may be nothing in the last 10 min, which
+        // would leave pending empty forever and the user staring at an idle
+        // canvas. Always leave the most recent detection unplayed so the
+        // page has something to start with — once it drains, the polling
+        // loop picks up new arrivals normally.
+        if (allRows.length > 0 && allRows[0].File_Name) {
+          _playedFiles.delete(allRows[0].File_Name);
+        }
         // playback init done
       } catch(e) {
         console.error('[playback] init query error', e);
