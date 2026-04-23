@@ -1974,5 +1974,8 @@
   "wn_primary_cta": "Details bekijken",
   "overview_top_new": "nieuw",
   "overview_baseline_30d": "Gemiddelde 30 d",
-  "overview_baseline_vs_avg": "vs gem."
+  "overview_baseline_vs_avg": "vs gem.",
+  "overview_ctx_family_conditions": "Omstandigheden",
+  "overview_ctx_family_ecological": "Ecologische lezing",
+  "overview_ctx_family_editorial": "Redactioneel signaal"
 }

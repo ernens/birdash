@@ -1969,5 +1969,8 @@
   "wn_primary_cta": "Voir les détails",
   "overview_top_new": "nouveau",
   "overview_baseline_30d": "Moyenne 30 jours",
-  "overview_baseline_vs_avg": "vs moyenne"
+  "overview_baseline_vs_avg": "vs moyenne",
+  "overview_ctx_family_conditions": "Conditions",
+  "overview_ctx_family_ecological": "Lecture écologique",
+  "overview_ctx_family_editorial": "Signal éditorial"
 }

@@ -83,38 +83,70 @@
       .hero-strip-thumb { width: 100%; height: 160px; flex: none; }
     }
 
-    /* ── What's New primary (Phase 2 editorial pole position) ─────── */
+    /* ── What's New primary (Phase 2/4 editorial pole position) ────
+       Pushed harder than the original Phase 2 styling — secondary cards
+       were too close in weight, so the user's eye couldn't pick out the
+       day's signal at a glance. Now: 48 px icon, 1.15rem headline, more
+       padding, subtle accent background tint. The neighbouring secondary
+       cards get a compact treatment (see .wn-card--compact below) so
+       the contrast becomes obvious. */
     .wn-primary {
-      display: flex; gap: .9rem; align-items: flex-start;
-      padding: .9rem 1.1rem; margin-bottom: .9rem;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-left: 4px solid var(--accent); border-radius: 10px;
+      display: flex; gap: 1.1rem; align-items: flex-start;
+      padding: 1.15rem 1.25rem; margin-bottom: 1rem;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, var(--bg-card)) 0%, var(--bg-card) 60%);
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--accent); border-radius: 10px;
     }
-    .wn-primary--clickable { cursor: pointer; transition: background .12s, border-color .12s; }
-    .wn-primary--clickable:hover { background: var(--bg-card2); border-left-color: var(--accent-hover, var(--accent)); }
+    .wn-primary--clickable { cursor: pointer; transition: background .12s, transform .12s; }
+    .wn-primary--clickable:hover { transform: translateY(-1px); }
     .wn-primary--calm {
+      background: var(--bg-card);
       border-left-color: var(--text-muted);
-      opacity: .9;
+      opacity: .85;
     }
     .wn-primary-icon {
       flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--bg-card2); color: var(--accent);
+      width: 48px; height: 48px; border-radius: 50%;
+      background: color-mix(in srgb, var(--accent) 12%, var(--bg-card2));
+      color: var(--accent);
     }
-    .wn-primary--calm .wn-primary-icon { color: var(--text-muted); }
-    .wn-primary-body { flex: 1; min-width: 0; }
+    .wn-primary--calm .wn-primary-icon {
+      background: var(--bg-card2);
+      color: var(--text-muted);
+    }
+    .wn-primary-body { flex: 1; min-width: 0; padding-top: .15rem; }
     .wn-primary-eyebrow {
-      font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--text-muted); font-weight: 600; margin-bottom: .15rem;
+      font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent); font-weight: 700; margin-bottom: .3rem;
     }
+    .wn-primary--calm .wn-primary-eyebrow { color: var(--text-muted); }
     .wn-primary-headline {
-      font-size: 1rem; font-family: var(--font-display);
-      color: var(--text-main); line-height: 1.4;
+      font-size: 1.15rem; font-family: var(--font-display);
+      color: var(--text-main); line-height: 1.35;
     }
-    .wn-primary-headline strong { color: var(--accent); font-weight: 600; }
+    .wn-primary-headline strong { color: var(--accent); font-weight: 700; }
     .wn-primary-cta {
-      display: inline-block; margin-top: .4rem;
-      font-size: .76rem; color: var(--accent); font-weight: 600;
+      display: inline-block; margin-top: .55rem;
+      font-size: .78rem; color: var(--accent); font-weight: 600;
+    }
+    /* Compact treatment for secondary What's New cards — smaller padding,
+       no big body, just type + first species line. Visually clearly subordinate. */
+    .wn-trio-grid .wn-card { padding: .55rem .7rem; min-height: 0; }
+    .wn-trio-grid .wn-card-header { gap: .35rem; margin-bottom: .25rem; }
+    .wn-trio-grid .wn-card-icon { transform: scale(.85); }
+    .wn-trio-grid .wn-card-title { font-size: .72rem; }
+    .wn-trio-grid .wn-species-row { font-size: .76rem; }
+    .wn-trio-grid .wn-species-meta { font-size: .68rem; }
+
+    /* ── Context cards regrouped by family (Phase 4 hierarchy polish) ─ */
+    .ctx-family { margin-bottom: .9rem; }
+    .ctx-family:last-child { margin-bottom: 0; }
+    .ctx-family-header {
+      font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--text-muted); font-weight: 600;
+      padding: 0 .15rem .35rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: .55rem;
     }
   </style>
   <script src="js/vue.global.prod.min.js"></script>
@@ -426,72 +458,86 @@
       <div class="idx-right-stack">
       <div v-if="whatsNew.loaded" class="card">
         <div class="card-title">{{t('wn_level_context')}}</div>
-        <div class="wn-context-grid" style="grid-template-columns:1fr;">
-          <a v-if="weatherToday" href="weather.html" class="wn-ctx-card" style="text-decoration:none;color:inherit;">
-            <div class="wn-ctx-icon"><bird-icon name="thermometer" :size="16"></bird-icon></div>
-            <div class="wn-ctx-body">
-              <div class="wn-ctx-label">{{t('wn_card_weather')}}</div>
-              <div class="wn-ctx-hero">{{fmtTemp(weatherToday.temp)}}</div>
-              <div class="wn-ctx-sub"><bird-icon name="cloud" :size="11"></bird-icon> {{weatherToday.precip}}mm · <bird-icon name="wind" :size="11"></bird-icon> {{fmtWind(weatherToday.wind)}}</div>
-            </div>
-          </a>
 
-          <!-- Species of the month: newcomer this month with most detections,
-               or biggest comeback (current/avg-prev ratio). Hidden when
-               neither candidate qualifies. -->
-          <a v-if="whatsNew.context.species_of_month?.active"
-             :href="'species.html?species=' + encodeURIComponent(whatsNew.context.species_of_month.data.com_name)"
-             class="wn-ctx-card" style="text-decoration:none;color:inherit;">
-            <div class="wn-ctx-icon" style="padding:0;overflow:hidden;border-radius:8px;width:34px;height:34px;flex-shrink:0;">
-              <img :src="photoUrl(whatsNew.context.species_of_month.data.sci_name)"
-                   :alt="whatsNew.context.species_of_month.data.com_name"
-                   @error="e => e.target.src = 'img/robin-logo.svg'"
-                   style="width:100%;height:100%;object-fit:cover;display:block;">
-            </div>
-            <div class="wn-ctx-body" style="min-width:0;">
-              <div class="wn-ctx-label">{{t('wn_card_species_of_month')}}</div>
-              <div class="wn-ctx-hero" style="font-size:.95rem;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                {{spName(whatsNew.context.species_of_month.data.com_name, whatsNew.context.species_of_month.data.sci_name)}}
+        <!-- Family 1: Conditions (weather + acoustic + lunar context) -->
+        <div v-if="weatherToday || whatsNew.context.acoustic_quality.data || whatsNew.context.moon_phase.data" class="ctx-family">
+          <div class="ctx-family-header">{{t('overview_ctx_family_conditions')}}</div>
+          <div class="wn-context-grid" style="grid-template-columns:1fr;">
+            <a v-if="weatherToday" href="weather.html" class="wn-ctx-card" style="text-decoration:none;color:inherit;">
+              <div class="wn-ctx-icon"><bird-icon name="thermometer" :size="16"></bird-icon></div>
+              <div class="wn-ctx-body">
+                <div class="wn-ctx-label">{{t('wn_card_weather')}}</div>
+                <div class="wn-ctx-hero">{{fmtTemp(weatherToday.temp)}}</div>
+                <div class="wn-ctx-sub"><bird-icon name="cloud" :size="11"></bird-icon> {{weatherToday.precip}}mm · <bird-icon name="wind" :size="11"></bird-icon> {{fmtWind(weatherToday.wind)}}</div>
               </div>
-              <div class="wn-ctx-sub">
-                <template v-if="whatsNew.context.species_of_month.data.kind === 'newcomer'">
-                  <bird-icon name="sparkles" :size="11"></bird-icon> {{t('wn_newcomer')}} · {{whatsNew.context.species_of_month.data.count}} {{t('wn_detections_short')}}
-                </template>
-                <template v-else>
-                  <bird-icon name="trending-up" :size="11"></bird-icon> {{t('wn_comeback')}} · ×{{whatsNew.context.species_of_month.data.ratio}}
-                </template>
+            </a>
+            <div class="wn-ctx-card" v-if="whatsNew.context.acoustic_quality.data">
+              <div class="wn-ctx-icon"><span class="wn-quality-dot" :class="'wn-quality-dot--'+whatsNew.context.acoustic_quality.data.qualityLevel" style="width:12px;height:12px;"></span></div>
+              <div class="wn-ctx-body">
+                <div class="wn-ctx-label">{{t('wn_card_acoustic_quality')}}</div>
+                <div class="wn-ctx-hero">{{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}<span class="wn-ctx-unit"> · {{Math.round(whatsNew.context.acoustic_quality.data.strongRate * 100)}}%</span></div>
               </div>
             </div>
-          </a>
-          <div class="wn-ctx-card" v-if="whatsNew.context.dawn_chorus.data">
-            <div class="wn-ctx-icon">☀</div>
-            <div class="wn-ctx-body">
-              <div class="wn-ctx-label">{{t('wn_card_dawn_chorus')}}</div>
-              <div class="wn-ctx-hero">{{whatsNew.context.dawn_chorus.data.speciesCount}}<span class="wn-ctx-unit"> {{t('wn_species_detected')}}</span></div>
-              <div class="wn-ctx-sub">{{whatsNew.context.dawn_chorus.data.detectionCount}} det. · {{whatsNew.context.dawn_chorus.data.sunriseTime}}–{{whatsNew.context.dawn_chorus.data.windowEnd}}</div>
+            <div class="wn-ctx-card" v-if="whatsNew.context.moon_phase.data">
+              <div class="wn-ctx-icon" style="font-size:1.4rem;">{{wnMoonIcon(whatsNew.context.moon_phase.data.phaseName)}}</div>
+              <div class="wn-ctx-body">
+                <div class="wn-ctx-label">{{t('wn_card_moon_phase')}}</div>
+                <div class="wn-ctx-hero">{{t('wn_moon_'+whatsNew.context.moon_phase.data.phaseName)}} · {{Math.round(whatsNew.context.moon_phase.data.illumination * 100)}}%</div>
+              </div>
             </div>
           </div>
-          <div class="wn-ctx-card" v-if="whatsNew.context.species_richness.data">
-            <div class="wn-ctx-icon"><bird-icon name="leaf" :size="16" ></bird-icon></div>
-            <div class="wn-ctx-body">
-              <div class="wn-ctx-label">{{t('wn_card_species_richness')}}</div>
-              <div class="wn-ctx-hero">{{whatsNew.context.species_richness.data.todayCount}} <span class="wn-trend-indicator" :class="'wn-trend--'+whatsNew.context.species_richness.data.trend" style="font-size:.82rem;">{{whatsNew.context.species_richness.data.deltaPct > 0 ? '+' : ''}}{{whatsNew.context.species_richness.data.deltaPct}}%</span></div>
-              <div class="wn-ctx-sub">{{t('wn_vs_avg')}} {{whatsNew.context.species_richness.data.historicalAvg}}</div>
+        </div>
+
+        <!-- Family 2: Ecological reading (dawn chorus + diversity trend) -->
+        <div v-if="whatsNew.context.dawn_chorus.data || whatsNew.context.species_richness.data" class="ctx-family">
+          <div class="ctx-family-header">{{t('overview_ctx_family_ecological')}}</div>
+          <div class="wn-context-grid" style="grid-template-columns:1fr;">
+            <div class="wn-ctx-card" v-if="whatsNew.context.dawn_chorus.data">
+              <div class="wn-ctx-icon">☀</div>
+              <div class="wn-ctx-body">
+                <div class="wn-ctx-label">{{t('wn_card_dawn_chorus')}}</div>
+                <div class="wn-ctx-hero">{{whatsNew.context.dawn_chorus.data.speciesCount}}<span class="wn-ctx-unit"> {{t('wn_species_detected')}}</span></div>
+                <div class="wn-ctx-sub">{{whatsNew.context.dawn_chorus.data.detectionCount}} det. · {{whatsNew.context.dawn_chorus.data.sunriseTime}}–{{whatsNew.context.dawn_chorus.data.windowEnd}}</div>
+              </div>
+            </div>
+            <div class="wn-ctx-card" v-if="whatsNew.context.species_richness.data">
+              <div class="wn-ctx-icon"><bird-icon name="leaf" :size="16" ></bird-icon></div>
+              <div class="wn-ctx-body">
+                <div class="wn-ctx-label">{{t('wn_card_species_richness')}}</div>
+                <div class="wn-ctx-hero">{{whatsNew.context.species_richness.data.todayCount}} <span class="wn-trend-indicator" :class="'wn-trend--'+whatsNew.context.species_richness.data.trend" style="font-size:.82rem;">{{whatsNew.context.species_richness.data.deltaPct > 0 ? '+' : ''}}{{whatsNew.context.species_richness.data.deltaPct}}%</span></div>
+                <div class="wn-ctx-sub">{{t('wn_vs_avg')}} {{whatsNew.context.species_richness.data.historicalAvg}}</div>
+              </div>
             </div>
           </div>
-          <div class="wn-ctx-card" v-if="whatsNew.context.acoustic_quality.data">
-            <div class="wn-ctx-icon"><span class="wn-quality-dot" :class="'wn-quality-dot--'+whatsNew.context.acoustic_quality.data.qualityLevel" style="width:12px;height:12px;"></span></div>
-            <div class="wn-ctx-body">
-              <div class="wn-ctx-label">{{t('wn_card_acoustic_quality')}}</div>
-              <div class="wn-ctx-hero">{{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}<span class="wn-ctx-unit"> · {{Math.round(whatsNew.context.acoustic_quality.data.strongRate * 100)}}%</span></div>
-            </div>
-          </div>
-          <div class="wn-ctx-card" v-if="whatsNew.context.moon_phase.data">
-            <div class="wn-ctx-icon" style="font-size:1.4rem;">{{wnMoonIcon(whatsNew.context.moon_phase.data.phaseName)}}</div>
-            <div class="wn-ctx-body">
-              <div class="wn-ctx-label">{{t('wn_card_moon_phase')}}</div>
-              <div class="wn-ctx-hero">{{t('wn_moon_'+whatsNew.context.moon_phase.data.phaseName)}} · {{Math.round(whatsNew.context.moon_phase.data.illumination * 100)}}%</div>
-            </div>
+        </div>
+
+        <!-- Family 3: Editorial signal (species of the month) -->
+        <div v-if="whatsNew.context.species_of_month?.active" class="ctx-family">
+          <div class="ctx-family-header">{{t('overview_ctx_family_editorial')}}</div>
+          <div class="wn-context-grid" style="grid-template-columns:1fr;">
+            <a :href="'species.html?species=' + encodeURIComponent(whatsNew.context.species_of_month.data.com_name)"
+               class="wn-ctx-card" style="text-decoration:none;color:inherit;">
+              <div class="wn-ctx-icon" style="padding:0;overflow:hidden;border-radius:8px;width:34px;height:34px;flex-shrink:0;">
+                <img :src="photoUrl(whatsNew.context.species_of_month.data.sci_name)"
+                     :alt="whatsNew.context.species_of_month.data.com_name"
+                     @error="e => e.target.src = 'img/robin-logo.svg'"
+                     style="width:100%;height:100%;object-fit:cover;display:block;">
+              </div>
+              <div class="wn-ctx-body" style="min-width:0;">
+                <div class="wn-ctx-label">{{t('wn_card_species_of_month')}}</div>
+                <div class="wn-ctx-hero" style="font-size:.95rem;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  {{spName(whatsNew.context.species_of_month.data.com_name, whatsNew.context.species_of_month.data.sci_name)}}
+                </div>
+                <div class="wn-ctx-sub">
+                  <template v-if="whatsNew.context.species_of_month.data.kind === 'newcomer'">
+                    <bird-icon name="sparkles" :size="11"></bird-icon> {{t('wn_newcomer')}} · {{whatsNew.context.species_of_month.data.count}} {{t('wn_detections_short')}}
+                  </template>
+                  <template v-else>
+                    <bird-icon name="trending-up" :size="11"></bird-icon> {{t('wn_comeback')}} · ×{{whatsNew.context.species_of_month.data.ratio}}
+                  </template>
+                </div>
+              </div>
+            </a>
           </div>
         </div>
       </div>
@@ -905,7 +951,25 @@ const app = createApp({
           },
           scales: {
             x: { ticks: { color: txtC }, grid: { color: gridC, lineWidth: 0.5 }, border: { display: false }, beginAtZero: true },
-            y: { ticks: { color: txtC, font: { size: 11 } }, grid: { display: false } },
+            y: {
+              ticks: {
+                color: txtC, font: { size: 11 },
+                // Inline trend suffix on the Y-axis label so the user
+                // sees the variation without hovering. Opacity stays as
+                // a secondary visual cue for high-confidence rises.
+                callback: function(value, index) {
+                  const r = d[index];
+                  if (!r) return '';
+                  const name = spName(r.Com_Name, r.Sci_Name);
+                  if (r.n_prev === 0) return name + '  ✦';
+                  if (r.pct_change == null) return name;
+                  if (r.pct_change >= 20) return name + `  ↑${r.pct_change}%`;
+                  if (r.pct_change <= -20) return name + `  ↓${Math.abs(r.pct_change)}%`;
+                  return name + '  ≈';
+                },
+              },
+              grid: { display: false }
+            },
           },
         },
       }));

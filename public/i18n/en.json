@@ -1974,5 +1974,8 @@
   "wn_primary_cta": "See details",
   "overview_top_new": "new",
   "overview_baseline_30d": "30-day average",
-  "overview_baseline_vs_avg": "vs avg"
+  "overview_baseline_vs_avg": "vs avg",
+  "overview_ctx_family_conditions": "Conditions",
+  "overview_ctx_family_ecological": "Ecological reading",
+  "overview_ctx_family_editorial": "Editorial signal"
 }

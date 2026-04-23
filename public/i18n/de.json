@@ -1974,5 +1974,8 @@
   "wn_primary_cta": "Details anzeigen",
   "overview_top_new": "neu",
   "overview_baseline_30d": "30-Tage-Schnitt",
-  "overview_baseline_vs_avg": "vs. Schnitt"
+  "overview_baseline_vs_avg": "vs. Schnitt",
+  "overview_ctx_family_conditions": "Bedingungen",
+  "overview_ctx_family_ecological": "Ökologische Lesart",
+  "overview_ctx_family_editorial": "Redaktionelles Signal"
 }
