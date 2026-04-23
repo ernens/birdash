@@ -2003,6 +2003,6 @@
   "wn_sec_activity_spike": "<strong>{sp}</strong>, {ratio}× über dem 7-Tage-Schnitt",
   "wn_sec_out_of_season": "<strong>{sp}</strong>, außerhalb der Saison erkannt ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, erste des Jahres",
-  "wn_sec_species_streak": "<strong>{sp}</strong>, {days} Tage ununterbrochene Präsenz",
+  "wn_sec_species_streak": "<strong>{sp}</strong>, {days} Tage in Folge",
   "wn_sec_seasonal_peak": "<strong>{sp}</strong>, Saisonhoch ({count} diese Woche)"
 }

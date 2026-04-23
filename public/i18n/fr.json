@@ -1998,6 +1998,6 @@
   "wn_sec_activity_spike": "<strong>{sp}</strong>, {ratio}× au-dessus de la moyenne 7 j",
   "wn_sec_out_of_season": "<strong>{sp}</strong>, détectée hors saison ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, première de l'année",
-  "wn_sec_species_streak": "<strong>{sp}</strong>, {days} jours de présence consécutive",
+  "wn_sec_species_streak": "<strong>{sp}</strong>, {days} jours d'affilée",
   "wn_sec_seasonal_peak": "<strong>{sp}</strong>, plus haut niveau saisonnier ({count} cette semaine)"
 }

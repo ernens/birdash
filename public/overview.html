@@ -301,17 +301,10 @@
         <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
         <div class="kpi-label">{{t('avg_confidence')}}</div>
       </div>
-      <!-- Acoustic quality KPI promoted to the top strip — Birdash's most
-           differentiating metric (most stations don't have one). Reuses
-           context.acoustic_quality from /api/whats-new (no extra query). -->
-      <div v-if="whatsNew.context?.acoustic_quality?.data" class="kpi-card"
-           :title="t('overview_kpi_quality_tooltip')">
-        <div class="kpi-value" style="font-size:1.05rem;display:flex;align-items:center;gap:.4rem;justify-content:center;">
-          <span class="wn-quality-dot" :class="'wn-quality-dot--'+whatsNew.context.acoustic_quality.data.qualityLevel" style="width:10px;height:10px;display:inline-block;"></span>
-          {{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}
-        </div>
-        <div class="kpi-label">{{t('overview_kpi_quality')}}</div>
-      </div>
+      <!-- "Qualité du jour" KPI removed: the label was ambiguous (acoustic?
+           confidence? pipeline?) and redundant with the explicit Acoustic
+           Quality card already shown in the right-column context block.
+           Each top-strip card must be auto-explanatory; this one wasn't. -->
       <div v-if="kpis.deltaPct !== null && kpis.deltaPct !== undefined" class="kpi-card"
            :title="t('overview_delta_tooltip')">
         <div class="kpi-value" :style="{color: kpis.deltaPct > 0 ? 'var(--accent)' : kpis.deltaPct < 0 ? 'var(--text-muted)' : 'var(--text-main)'}">
