@@ -83,22 +83,14 @@
       .hero-strip-thumb { width: 100%; height: 160px; flex: none; }
     }
 
-    /* ── What's New v4 — primary + 3 secondaries side-by-side ──────
-       Per product spec: editorial primary on the LEFT (~50% width on
-       desktop), 3 compact secondaries STACKED on the right. The primary
-       has 5 stacked elements (badge / title / sentence / context / cta)
-       so it reads like a real headline, not "another tile in the row".
-       Secondaries stay structured (label + species + metric) but are
-       clearly subordinate — no thumbnail, smaller padding, single line
-       of content. Avoids the previous "pills are too neutral" pitfall. */
-    .wn-redesign-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      gap: 1rem; align-items: start;
-    }
-    @media (max-width: 900px) {
-      .wn-redesign-grid { grid-template-columns: 1fr; }
-    }
+    /* ── What's New v5 — vertical stack inside the left column ────
+       The previous v4 (primary left + secondaries right, full-width
+       above the 2-col grid) created a layout/grid mismatch — the right
+       half of the row stayed empty when there were < 4 secondaries.
+       v5 moves the whole block INTO the left column, where its width
+       matches Hero strip and Activity. Internal layout: primary takes
+       the column's full width, the 3 secondaries sit underneath as a
+       3-column grid (single column on narrow viewports). */
     .wn-primary {
       display: flex; gap: 1.15rem; align-items: flex-start;
       padding: 1.25rem 1.35rem;
@@ -176,11 +168,15 @@
       font-size: .78rem; color: var(--accent); font-weight: 600;
     }
 
-    /* Secondaries — stack of compact structured cards. Subordinate but
-       readable: uppercase mini-label on top, species + metric on the
-       second line. No thumbnail, no body panel. */
+    /* Secondaries — under the primary now, as a 3-column grid (one row
+       of three). Compact structured cards: uppercase mini-label on top,
+       species + metric on the second line. Single column on narrow. */
     .wn-secondaries {
-      display: flex; flex-direction: column; gap: .55rem;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .55rem; margin-top: .8rem;
+    }
+    @media (max-width: 700px) {
+      .wn-secondaries { grid-template-columns: 1fr; }
     }
     .wn-secondary {
       padding: .65rem .85rem;
@@ -313,22 +309,30 @@
       <span>{{t('overview_first_at')}} <strong>{{kpis.firstDet || '—'}}</strong></span>
     </div>
 
-    <!-- ═══ What's New — editorial primary + 3 secondary signals ═══ -->
-    <div v-if="whatsNew.loaded" class="wn-section" style="margin-bottom:1rem;">
-      <div class="wn-sun-bar">
-        <span class="wn-sun-title">{{t('wn_title')}}</span>
-      </div>
+    <!-- ═══ Main grid — left col: What's New + Last detection + Activity
+                       right col: Day context + Top species ═══
+         What's New lives INSIDE the left column (same width as Hero strip
+         and Activity below) so the page reads as 2 well-tuned columns.
+         Pre-2025-04 it sat full-width above the grid; the right side
+         stayed empty and broke the layout's spatial logic. -->
+    <!-- ═══ Dernière détection + Contexte du jour ═══ -->
+    <div class="grid-2" style="margin-bottom:1rem;">
 
-      <div class="wn-redesign-grid">
-        <!-- ── Editorial primary (left, ~50% on wide screens) ──
-             5-line structure per product spec:
-               1. badge (Alert / Phenology / Today)  — provenance
-               2. title (editorial: "Notable return")
-               3. sentence (species + key metric)
-               4. context (last seen / vs avg / record)  — light gray
-               5. CTA (discreet accent link)
-             Garde-fou: title + sentence carry the EVENT, complement of
-             the synthesis line above (which carries the GLOBAL day reading). -->
+      <!-- Colonne gauche : What's New + dernière détection + activité -->
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- ── What's New (editorial primary above + 3 secondaries below) ──
+           Wrapped in a .card so width/padding match Hero strip and Activity.
+           Internal layout: primary takes the full column width; the 3
+           secondary signals stack as a 3-column grid underneath (single
+           column on narrow viewports). 5-line primary structure per spec:
+             1. badge (Alert/Phenology/Today)  — provenance
+             2. title (editorial)
+             3. sentence (species + key metric)
+             4. context (last seen / vs avg / record)  — light gray
+             5. CTA (discreet accent link) -->
+      <div v-if="whatsNew.loaded" class="card">
+        <div class="card-title">{{t('wn_title')}}</div>
         <div v-if="whatsNew.primary" class="wn-primary"
              :class="{'wn-primary--calm': whatsNew.primary.type==='calm',
                       'wn-primary--clickable': whatsNew.primary.link && whatsNew.primary.active}"
@@ -340,15 +344,12 @@
             <bird-icon :name="whatsNew.primary.type==='calm' ? 'check-circle' : wnIcon(whatsNew.primary.type)" :size="26"></bird-icon>
           </div>
           <div class="wn-primary-body">
-            <!-- 1. Badge -->
             <div class="wn-primary-badge" :class="'wn-primary-badge--'+(whatsNew.primary.level || 'calm')">
               {{t('wn_primary_badge_'+(whatsNew.primary.level || 'calm'))}}
             </div>
-            <!-- 2. Editorial title -->
             <div class="wn-primary-title">
               {{t('wn_primary_title_'+whatsNew.primary.type)}}
             </div>
-            <!-- 3. Sentence -->
             <div class="wn-primary-sentence" v-if="whatsNew.primary.type==='calm'">
               {{t('wn_primary_calm_sentence')}}
             </div>
@@ -382,17 +383,11 @@
                    sp: spName(whatsNew.primary.data.species[0].commonName),
                    count: whatsNew.primary.data.species[0].countThisWeek
                  }))"></div>
-            <!-- 4. Context line -->
             <div v-if="whatsNew.primary.type==='species_return' && whatsNew.primary.data" class="wn-primary-context">
-              {{t('wn_primary_ctx_species_return', {
-                date: fmtDate(whatsNew.primary.data.species[0].lastSeenDate)
-              })}}
+              {{t('wn_primary_ctx_species_return', { date: fmtDate(whatsNew.primary.data.species[0].lastSeenDate) })}}
             </div>
             <div v-else-if="whatsNew.primary.type==='activity_spike' && whatsNew.primary.data" class="wn-primary-context">
-              {{t('wn_primary_ctx_activity_spike', {
-                avg: whatsNew.primary.data.species[0].avg7d,
-                today: whatsNew.primary.data.species[0].countToday
-              })}}
+              {{t('wn_primary_ctx_activity_spike', { avg: whatsNew.primary.data.species[0].avg7d, today: whatsNew.primary.data.species[0].countToday })}}
             </div>
             <div v-else-if="whatsNew.primary.type==='out_of_season' && whatsNew.primary.data" class="wn-primary-context">
               {{t('wn_primary_ctx_out_of_season')}}
@@ -406,17 +401,12 @@
             <div v-else-if="whatsNew.primary.type==='seasonal_peak' && whatsNew.primary.data" class="wn-primary-context">
               {{t('wn_primary_ctx_seasonal_peak', { max: whatsNew.primary.data.species[0].maxEver })}}
             </div>
-            <!-- 5. CTA -->
             <div v-if="whatsNew.primary.link && whatsNew.primary.active" class="wn-primary-cta">
               {{t('wn_primary_cta')}} →
             </div>
           </div>
         </div>
 
-        <!-- ── Secondary signals (right column, up to 3, stacked) ──
-             Compact cards: uppercase mini-label + single rich line with
-             species + metric. No body, no expansion. Clearly subordinate
-             to the primary by size and information density. -->
         <div v-if="secondaryCards.length" class="wn-secondaries">
           <div v-for="card in secondaryCards" :key="card.type" class="wn-secondary"
                :class="{'wn-secondary--clickable': card.link}"
@@ -452,13 +442,7 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ═══ Dernière détection + Contexte du jour ═══ -->
-    <div class="grid-2" style="margin-bottom:1rem;">
-
-      <!-- Colonne gauche : dernière détection + activité -->
-      <div style="display:flex;flex-direction:column;gap:1rem;">
       <!-- Hero strip — compact: thumbnail + species + audio + mini-spectro.
            Was a 4:3 hero photo (~300px); shrunk because on an OVERVIEW the
            detection card competes with What's New for attention. The big
