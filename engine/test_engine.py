@@ -177,6 +177,64 @@ class TestReadAudio(unittest.TestCase):
         os.unlink(f.name)
 
 
+class TestWavHandler(unittest.TestCase):
+    """The watcher now uses on_closed (inotify IN_CLOSE_WRITE) instead of
+    the legacy "process previous on next" trick. on_created is no longer
+    wired — only on_closed and on_moved (rsync) dispatch to process_fn."""
+
+    def setUp(self):
+        from watcher import WavHandler  # noqa: F401
+        self.tmpdir = tempfile.mkdtemp()
+        self.processed = []
+        self.handler = WavHandler(lambda p: self.processed.append(p))
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _make_event(self, path, kind="closed", is_dir=False, dest=None):
+        """Build a minimal event-shaped object the handler can consume.
+        Avoid pulling watchdog event classes here — keeps the test
+        independent of watchdog internals."""
+        class _E:
+            pass
+        e = _E()
+        e.is_directory = is_dir
+        e.src_path = path
+        e.dest_path = dest or path
+        return e
+
+    def test_on_closed_dispatches(self):
+        """The new fast path: on_closed → process immediately."""
+        wav = os.path.join(self.tmpdir, 'a.wav')
+        open(wav, 'wb').close()
+        self.handler.on_closed(self._make_event(wav))
+        self.assertEqual(self.processed, [wav])
+
+    def test_on_closed_ignores_directories(self):
+        self.handler.on_closed(self._make_event(self.tmpdir, is_dir=True))
+        self.assertEqual(self.processed, [])
+
+    def test_on_closed_ignores_non_wav(self):
+        path = os.path.join(self.tmpdir, 'note.txt')
+        open(path, 'wb').close()
+        self.handler.on_closed(self._make_event(path))
+        self.assertEqual(self.processed, [])
+
+    def test_on_closed_skips_missing_file(self):
+        """File deleted between event and dispatch — silent skip, no crash."""
+        self.handler.on_closed(self._make_event(os.path.join(self.tmpdir, 'gone.wav')))
+        self.assertEqual(self.processed, [])
+
+    def test_on_moved_dispatches_dest(self):
+        """rsync from another Pi: atomic rename creates an on_moved event."""
+        wav = os.path.join(self.tmpdir, 'a.wav')
+        open(wav, 'wb').close()
+        e = self._make_event('/tmp/somewhere.wav', dest=wav)
+        self.handler.on_moved(e)
+        self.assertEqual(self.processed, [wav])
+
+
 class TestFindOrphans(unittest.TestCase):
     """Regression tests for the watcher-orphan pickup helper.
 

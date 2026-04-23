@@ -919,16 +919,37 @@ class BirdEngine:
             self._secondary_thread.start()
             log.info("Secondary model worker started")
 
-        # Process any existing files first — walks subdirs (multi-source layout).
-        # If the most recent file in any source was modified within the last
-        # few seconds, arecord is probably still writing it; seed the watcher
-        # with it so it gets picked up on the next rotation.
+        # Start the watcher BEFORE the initial scan. The old order (scan
+        # then start) had a fatal race: any WAV created during the scan
+        # (typically minutes long for a fresh restart) was invisible to
+        # both the snapshot and the not-yet-running observer, and stayed
+        # stranded in incoming/ forever. Reversing the order means the
+        # observer buffers events from T0; the scan happens at T1; and
+        # any file in both is harmless because process_file is idempotent
+        # via the processed_files set (engine.py line ~467).
+        #
+        # Watcher uses on_closed (inotify IN_CLOSE_WRITE) so we no longer
+        # need the "process previous on next" trick — files are processed
+        # the moment arecord finishes writing them. Files mid-write at
+        # startup will fire on_closed when arecord rotates them next; until
+        # then, _pickup_orphans (every 5 min) is the safety net.
+        observer = Observer()
+        observer.schedule(handler, incoming_dir, recursive=True)
+        observer.start()
+        log.info("Watching %s for new WAV files (recursive — multi-source aware)", incoming_dir)
+
+        # Initial scan: process anything already on disk that arecord finished
+        # before the engine started. Files arecord is still writing get a
+        # mtime-fresh check so we don't grab a half-written WAV; on_closed
+        # will pick those up on the next rotation.
         existing = []
         for root, _dirs, files in os.walk(incoming_dir):
             for fname in files:
                 if fname.endswith(".wav"):
                     existing.append(os.path.join(root, fname))
         existing.sort()
+        # Skip the most recent file if it's < 3 s old — arecord is probably
+        # still writing it. on_closed will fire when the next rotation closes it.
         if existing:
             last_path = existing[-1]
             try:
@@ -936,7 +957,6 @@ class BirdEngine:
             except OSError:
                 last_age = 999
             if last_age < 3.0:
-                handler._pending = last_path
                 log.info("Deferring in-progress file: %s (age=%.1fs)",
                          os.path.relpath(last_path, incoming_dir), last_age)
                 existing = existing[:-1]
@@ -946,15 +966,6 @@ class BirdEngine:
                 if self.shutdown:
                     return
                 self.process_file(fpath)
-
-        # Start file watcher — recursive=True so per-source subdirectories
-        # (incoming/garden/, incoming/feeder/) are picked up automatically.
-        # Legacy single-source captures dropped directly in incoming/ keep
-        # working unchanged.
-        observer = Observer()
-        observer.schedule(handler, incoming_dir, recursive=True)
-        observer.start()
-        log.info("Watching %s for new WAV files (recursive — multi-source aware)", incoming_dir)
 
         # Main loop
         rsync_interval = self.config["audio"].get("rsync_interval", 30)
