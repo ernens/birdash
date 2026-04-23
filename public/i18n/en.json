@@ -1971,5 +1971,17 @@
   "wn_sec_out_of_season": "<strong>{sp}</strong>, detected out of season ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, first of the year",
   "wn_sec_species_streak": "<strong>{sp}</strong>, {days} days in a row",
-  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, seasonal high ({count} this week)"
+  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, seasonal high ({count} this week)",
+  "today_kpi_species_tooltip": "Distinct species detected today (above the selected confidence threshold).",
+  "today_kpi_new_tooltip": "Species detected for the first time on this station.",
+  "today_kpi_rare": "Rare",
+  "today_kpi_rare_tooltip": "Species not in the regional eBird checklist (~25 km, last 30 days), or local statistical fallback.",
+  "today_kpi_to_review": "To review",
+  "today_kpi_to_review_human": "{count} marked as doubtful",
+  "today_kpi_to_review_auto": "{count} flagged automatically (≥3 detections, max confidence < 75%)",
+  "today_kpi_to_review_empty": "No species needs review today.",
+  "today_kpi_strong": "Strong signal",
+  "today_kpi_strong_tooltip": "Species with ≥5 detections today and average confidence > 85%.",
+  "today_bandeau_select": "Pick a species in the list to open its workspace.",
+  "today_bandeau_n_today": "{n} detections today"
 }

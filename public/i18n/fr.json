@@ -1966,5 +1966,17 @@
   "wn_sec_out_of_season": "<strong>{sp}</strong>, détectée hors saison ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, première de l'année",
   "wn_sec_species_streak": "<strong>{sp}</strong>, {days} jours d'affilée",
-  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, plus haut niveau saisonnier ({count} cette semaine)"
+  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, plus haut niveau saisonnier ({count} cette semaine)",
+  "today_kpi_species_tooltip": "Espèces distinctes détectées aujourd'hui (avec la confiance minimum sélectionnée).",
+  "today_kpi_new_tooltip": "Espèces détectées pour la première fois sur cette station.",
+  "today_kpi_rare": "Rares",
+  "today_kpi_rare_tooltip": "Espèces hors check-list régionale eBird (~25 km, 30 derniers jours), ou fallback statistique local.",
+  "today_kpi_to_review": "À revoir",
+  "today_kpi_to_review_human": "{count} marquées « à revoir »",
+  "today_kpi_to_review_auto": "{count} signalées automatiquement (≥3 détections, conf. max < 75 %)",
+  "today_kpi_to_review_empty": "Aucune espèce ne nécessite de revue aujourd'hui.",
+  "today_kpi_strong": "Signal solide",
+  "today_kpi_strong_tooltip": "Espèces avec ≥5 détections aujourd'hui et confiance moyenne > 85 %.",
+  "today_bandeau_select": "Sélectionne une espèce dans la liste pour ouvrir son atelier.",
+  "today_bandeau_n_today": "{n} détections aujourd'hui"
 }

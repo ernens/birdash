@@ -1971,5 +1971,17 @@
   "wn_sec_out_of_season": "<strong>{sp}</strong>, außerhalb der Saison erkannt ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, erste des Jahres",
   "wn_sec_species_streak": "<strong>{sp}</strong>, {days} Tage in Folge",
-  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, Saisonhoch ({count} diese Woche)"
+  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, Saisonhoch ({count} diese Woche)",
+  "today_kpi_species_tooltip": "Heute erkannte unterschiedliche Arten (oberhalb des gewählten Konfidenzschwellwerts).",
+  "today_kpi_new_tooltip": "Erstmals an dieser Station erkannte Arten.",
+  "today_kpi_rare": "Selten",
+  "today_kpi_rare_tooltip": "Arten außerhalb der regionalen eBird-Liste (~25 km, letzte 30 Tage) oder lokaler statistischer Fallback.",
+  "today_kpi_to_review": "Zu prüfen",
+  "today_kpi_to_review_human": "{count} als zweifelhaft markiert",
+  "today_kpi_to_review_auto": "{count} automatisch gemeldet (≥3 Erkennungen, max. Konfidenz < 75 %)",
+  "today_kpi_to_review_empty": "Keine Art benötigt heute eine Überprüfung.",
+  "today_kpi_strong": "Starkes Signal",
+  "today_kpi_strong_tooltip": "Arten mit ≥5 Erkennungen heute und durchschnittlicher Konfidenz > 85 %.",
+  "today_bandeau_select": "Wähle eine Art in der Liste, um ihren Arbeitsbereich zu öffnen.",
+  "today_bandeau_n_today": "{n} Erkennungen heute"
 }

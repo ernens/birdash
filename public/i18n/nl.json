@@ -1971,5 +1971,17 @@
   "wn_sec_out_of_season": "<strong>{sp}</strong>, buiten het seizoen gedetecteerd ({conf})",
   "wn_sec_first_of_year": "<strong>{sp}</strong>, eerste van het jaar",
   "wn_sec_species_streak": "<strong>{sp}</strong>, {days} dagen op rij",
-  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, seizoenshoogtepunt ({count} deze week)"
+  "wn_sec_seasonal_peak": "<strong>{sp}</strong>, seizoenshoogtepunt ({count} deze week)",
+  "today_kpi_species_tooltip": "Vandaag gedetecteerde unieke soorten (boven de geselecteerde betrouwbaarheidsdrempel).",
+  "today_kpi_new_tooltip": "Soorten voor het eerst gedetecteerd op dit station.",
+  "today_kpi_rare": "Zeldzaam",
+  "today_kpi_rare_tooltip": "Soorten buiten de regionale eBird-checklist (~25 km, afgelopen 30 dagen), of lokale statistische fallback.",
+  "today_kpi_to_review": "Te beoordelen",
+  "today_kpi_to_review_human": "{count} als twijfelachtig gemarkeerd",
+  "today_kpi_to_review_auto": "{count} automatisch gesignaleerd (≥3 detecties, max betrouwbaarheid < 75%)",
+  "today_kpi_to_review_empty": "Geen soort vereist vandaag een beoordeling.",
+  "today_kpi_strong": "Sterk signaal",
+  "today_kpi_strong_tooltip": "Soorten met ≥5 detecties vandaag en gemiddelde betrouwbaarheid > 85%.",
+  "today_bandeau_select": "Kies een soort in de lijst om zijn werkruimte te openen.",
+  "today_bandeau_n_today": "{n} detecties vandaag"
 }

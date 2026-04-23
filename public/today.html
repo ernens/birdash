@@ -23,6 +23,15 @@
   <script src="js/bird-weather-chip.js"></script>
   <script src="js/bird-setup-wizard.js"></script>
   <style>
+    /* Bandeau contextuel sous la date — opérationnel, pas narratif. */
+    .today-bandeau {
+      display: flex; align-items: center; gap: .35rem;
+      font-size: .82rem; color: var(--text-main);
+      margin-top: .35rem;
+    }
+    .today-bandeau strong { color: var(--accent); font-weight: 600; }
+    .today-bandeau-tag { color: var(--text-muted); font-size: .78rem; }
+
     .td-summary {
       padding: .7rem .9rem;
       border-top: 1px solid var(--border);
@@ -72,9 +81,17 @@
 <div id="app" v-cloak>
   <birdash-shell page="today" :title="t('nav_today')">
 
-    <!-- ── Titre + date + navigation ──────────────────────────────── -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-      <div>
+    <!-- ═══ Today — workspace du jour, espèce par espèce ═══
+         FRONTIÈRES PRODUIT (à respecter dans toutes les itérations) :
+           overview.html  = lecture de la journée   (synthesis, what's new, contexte)
+           today.html     = travail sur la journée  (sélection, écoute, validation)
+           detections.html = recherche / liste générale multi-jour
+         Ne PAS recréer ici une mini-overview (synthesis globale, top espèces 7j,
+         baseline, etc.) — tout cela vit déjà sur overview. -->
+
+    <!-- ── Titre + date + navigation + bandeau contextuel ──────────────── -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+      <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:.5rem;">
           <button v-if="!isToday" class="btn btn-secondary" style="padding:.3rem .6rem;font-size:.78rem;"
                   @click="navDay(-1)"><bird-icon name="chevron-left" :size="14"></bird-icon></button>
@@ -91,7 +108,23 @@
             <bird-icon name="calendar" :size="13"></bird-icon>
           </a>
         </div>
-        <div style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.4rem;">
+        <!-- Bandeau contextuel : opérationnel, pas narratif. Sans sélection,
+             invite au workflow. Avec sélection, rappelle le contexte courant.
+             (Volontairement PAS de "44 espèces · 4 nouvelles · ..." ici — ce
+             serait un doublon des KPI cards juste en dessous.) -->
+        <div class="today-bandeau">
+          <template v-if="selected">
+            <bird-icon name="play" :size="13"></bird-icon>
+            <strong>{{spName(selected.Com_Name, selected.sci)}}</strong>
+            <span v-if="speciesTagLabel" class="today-bandeau-tag">· {{speciesTagLabel}}</span>
+            <span>· {{t('today_bandeau_n_today', { n: selected.n })}}</span>
+          </template>
+          <template v-else>
+            <bird-icon name="target" :size="13"></bird-icon>
+            {{t('today_bandeau_select')}}
+          </template>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.4rem;margin-top:.3rem;">
           {{t('filter_confidence')}} :
           <input type="range" :min="0" :max="99" :value="Math.round(minConf*100)"
                  @input="minConf = $event.target.value / 100"
@@ -102,29 +135,35 @@
       </div>
     </div>
 
-    <!-- ── KPIs ─────────────────────────────────────────────────── -->
+    <!-- ── KPIs work-oriented (Phase 1) ────────────────────────────
+         5 KPI alignés sur le workflow de validation du jour. Volontairement
+         pas de "Détections" / "Dernière heure" / "Confiance moyenne" qui
+         existaient avant — ils répétaient overview/dashboard sans servir
+         le poste de travail. -->
     <div class="kpi-strip">
-      <div class="kpi-card" style="cursor:pointer;" @click="newSpOnly = false"
-           :style="{ borderColor: !newSpOnly ? 'var(--accent)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }">
+      <div class="kpi-card" style="cursor:pointer;" @click="newSpOnly = false; sortMode = 'count'"
+           :style="{ borderColor: !newSpOnly ? 'var(--accent)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
+           :title="t('today_kpi_species_tooltip')">
         <div class="kpi-value amber">{{kpis.sp}}</div>
         <div class="kpi-label">{{t('species')}}</div>
       </div>
-      <div class="kpi-card" style="cursor:pointer;" @click="newSpOnly = !newSpOnly"
-           :style="{ borderColor: newSpOnly ? 'var(--danger)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }">
+      <div class="kpi-card" style="cursor:pointer;" @click="toggleNewOnly"
+           :style="{ borderColor: newSpOnly ? 'var(--danger)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
+           :title="t('today_kpi_new_tooltip')">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
         <div class="kpi-label">{{t('new_species')}}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-value">{{kpis.det}}</div>
-        <div class="kpi-label">{{t('detections')}}</div>
+      <div class="kpi-card" :title="t('today_kpi_rare_tooltip')">
+        <div class="kpi-value" style="color:var(--accent);">{{rareCount}}</div>
+        <div class="kpi-label">{{t('today_kpi_rare')}}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-value">{{kpis.lastHour}}</div>
-        <div class="kpi-label">{{t('last_hour')}}</div>
+      <div class="kpi-card" :title="toReviewTooltip">
+        <div class="kpi-value" style="color:#f59e0b;">{{toReviewCount}}</div>
+        <div class="kpi-label">{{t('today_kpi_to_review')}}</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-value blue">{{kpis.conf}}</div>
-        <div class="kpi-label">{{t('avg_confidence')}}</div>
+      <div class="kpi-card" :title="t('today_kpi_strong_tooltip')">
+        <div class="kpi-value blue">{{strongCount}}</div>
+        <div class="kpi-label">{{t('today_kpi_strong')}}</div>
       </div>
     </div>
 
@@ -500,7 +539,7 @@ const app = createApp({
     const newSpOnly = ref(false);
     const newSpeciesSet = ref(new Set());
 
-    const kpis     = ref({ det:'—', sp:'—', conf:'—', lastHour:'—', newSp:'—' });
+    const kpis     = ref({ sp:'—', newSp:'—' });
     const freshness = ref('—');
 
     const loadingList   = ref(true);
@@ -509,6 +548,52 @@ const app = createApp({
     const selectedDets  = ref([]);
     const currentDetIdx = ref(0);
     const sortMode      = ref('count'); // count | first | conf | new
+
+    // Side-loaded sources for work KPIs (populated by loadRareToday +
+    // loadDoubtfulToday in loadKpis flow).
+    const rareTodaySet  = ref(new Set());
+    const doubtfulCount = ref(0);
+
+    // Phase 1 work-oriented KPIs — computed from species list + side queries.
+    // Locked sémantique:
+    //   Signal solide  = ≥5 détections ET avg conf > 0.85
+    //                   (mêmes seuils que la règle interp `high_confidence`)
+    //   À revoir       = doubtful explicites + heuristique
+    //                    (≥3 détections, conf max < 75 %, dédupliqué)
+    //   Rares          = même définition qu'overview (eBird checklist)
+    const strongCount = computed(() =>
+      speciesList.value.filter(s => s.n >= 5 && s.avg_conf > 0.85).length
+    );
+    const needsReviewSet = computed(() =>
+      new Set(
+        speciesList.value
+          .filter(s => s.n >= 3 && s.max_conf < 0.75)
+          .map(s => s.Com_Name)
+      )
+    );
+    const toReviewCount = computed(() =>
+      doubtfulCount.value + needsReviewSet.value.size
+    );
+    const toReviewTooltip = computed(() => {
+      const d = doubtfulCount.value;
+      const a = needsReviewSet.value.size;
+      const auto = t('today_kpi_to_review_auto', { count: a });
+      const human = t('today_kpi_to_review_human', { count: d });
+      if (d > 0 && a > 0) return `${human} + ${auto}`;
+      if (d > 0) return human;
+      if (a > 0) return auto;
+      return t('today_kpi_to_review_empty');
+    });
+    const rareCount = computed(() => rareTodaySet.value.size);
+
+    // Bandeau contextuel — short label of the selected species' interpretive
+    // status (Signal solide / À revoir / Activité matinale / etc.). Derived
+    // from the existing interpretiveSummary computed (declared further down).
+    const speciesTagLabel = computed(() => {
+      const sum = interpretiveSummary?.value;
+      return sum ? t('td_sum_' + sum.key) : null;
+    });
+    function toggleNewOnly() { newSpOnly.value = !newSpOnly.value; }
     const freqOverlayOn = ref(localStorage.getItem('birdash_freq_overlay') !== '0');
     function toggleFreqOverlay() {
       freqOverlayOn.value = !freqOverlayOn.value;
@@ -665,20 +750,50 @@ const app = createApp({
 
     async function loadKpis() {
       try {
+        // Total + species count still queried for sp KPI; det/lastHour/conf
+        // dropped from the top strip (overview/dashboard cover those, didn't
+        // serve the today workspace mission).
         const [d] = await birdQuery(...Q.todayStatsExtended(today, minConf.value));
-        const [lh] = await birdQuery(...Q.lastHourCount(today, minConf.value));
         const nsRows = await birdQuery(...Q.newSpeciesForDate(today, minConf.value));
         newSpeciesSet.value = new Set(nsRows.map(r => r.Com_Name));
-        const ns = { n: nsRows.length };
         kpis.value = {
-          det: d ? d.n.toLocaleString() : '0',
           sp:  d ? d.sp : '0',
-          conf: d && d.conf ? d.conf+'%' : '—',
-          lastHour: lh ? lh.n.toLocaleString() : '0',
-          newSp: ns ? ns.n : '0',
+          newSp: nsRows.length,
         };
         if (d?.last_date) freshness.value = freshnessLabel(d.last_date, d.last_time, t);
+        // Rare + doubtful are loaded in parallel — independent of species list
+        loadRareToday();
+        loadDoubtfulToday();
       } catch(e) { console.error('kpis:', e); }
+    }
+
+    // Rares — same definition as overview (eBird checklist, with local
+    // statistical fallback). Reuses /api/rare-today so cross-page numbers
+    // stay consistent.
+    async function loadRareToday() {
+      try {
+        const resp = await fetch(`${BIRD_CONFIG.apiUrl}/rare-today?date=${today}`);
+        const rows = await resp.json();
+        if (Array.isArray(rows)) {
+          rareTodaySet.value = new Set(rows.map(r => r.Com_Name));
+        } else {
+          rareTodaySet.value = new Set();
+        }
+      } catch(e) { rareTodaySet.value = new Set(); }
+    }
+
+    // À revoir = doubtful explicites (validations.status='doubtful' du jour)
+    // PLUS heuristique "needs review" (≥3 détections, max conf < 75 %).
+    // Le tooltip explicite la composition pour ne pas confondre jugement
+    // humain et signalement automatique.
+    async function loadDoubtfulToday() {
+      try {
+        const rows = await birdQuery(
+          `SELECT COUNT(DISTINCT sci_name) AS n FROM vdb.validations
+           WHERE date=? AND status='doubtful'`, [today]
+        );
+        doubtfulCount.value = rows[0]?.n || 0;
+      } catch(e) { doubtfulCount.value = 0; }
     }
 
     async function loadSpecies() {
@@ -687,7 +802,7 @@ const app = createApp({
         const rows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n,
                   MIN(Time) as first_time, MAX(Time) as last_time,
-                  MAX(Confidence) as max_conf
+                  MAX(Confidence) as max_conf, AVG(Confidence) as avg_conf
            FROM active_detections WHERE Date=? AND Confidence>=?
            GROUP BY Com_Name ORDER BY n DESC`, [today, minConf.value]);
         speciesList.value = rows.map(r => ({
@@ -939,6 +1054,9 @@ const app = createApp({
       lang, t, spName, favorites, toggleFavorite, isFavorite,
       today, isToday, localDateStr, navDay, minConf, searchQ, newSpOnly, newSpeciesSet,
       kpis, freshness,
+      // Phase 1 work-oriented KPIs + bandeau context
+      rareCount, toReviewCount, toReviewTooltip, strongCount, speciesTagLabel,
+      toggleNewOnly,
       loadingList, speciesList, filteredSpecies, sortMode,
       freqOverlayOn, toggleFreqOverlay,
       selected, selectedDets, currentDet, currentDetIdx, nextAudioIdx, selectedHourly,
