@@ -1945,5 +1945,15 @@
   "page_title_weather": "Wetter & Vögel",
   "header_subtitle": "Bioakustische Station",
   "header_skip_to_content": "Zum Inhalt springen",
-  "header_alt": "Höhe"
+  "header_alt": "Höhe",
+  "overview_kpi_delta": "vs. 30-Tage-Schnitt",
+  "overview_delta_tooltip": "Heutige Artenzahl im Vergleich zum 30-Tage-Median",
+  "overview_first_at": "Erste um",
+  "overview_synth_rare": "Bemerkenswerter Tag — {count} seltene Arten heute gemeldet",
+  "overview_synth_rare_one": "Eine seltene Art heute erkannt",
+  "overview_synth_diverse_high": "Hohe Vielfalt — {sp} Arten (+{pct} % vs. Schnitt)",
+  "overview_synth_diverse_low": "Geringere Vielfalt — {sp} Arten (−{pct} % vs. Schnitt)",
+  "overview_synth_busy": "Lebhafte Stunde — {count} Erkennungen in der letzten Stunde",
+  "overview_synth_normal": "Ruhiger Tag — {sp} Arten, {det} Erkennungen",
+  "spectro_open": "Vollständiges Spektrogramm öffnen"
 }

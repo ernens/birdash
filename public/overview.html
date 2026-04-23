@@ -27,6 +27,61 @@
     }
     .featured-tab:hover { color: var(--text); }
     .featured-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Synthèse + secondary KPIs (Phase 1 cockpit refactor) ─────── */
+    .overview-synthesis {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .65rem .9rem; margin: .35rem 0 .35rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: 8px;
+      font-size: .92rem; font-family: var(--font-display);
+      color: var(--text-main); line-height: 1.4;
+    }
+    .overview-kpi-secondary {
+      display: flex; gap: .5rem; align-items: center;
+      font-size: .76rem; color: var(--text-muted);
+      margin: 0 0 .9rem .25rem;
+    }
+    .overview-kpi-secondary strong { color: var(--text-main); font-weight: 600; }
+    .overview-kpi-sep { opacity: .55; }
+
+    /* ── Hero strip — compact replacement for the 4:3 photo block ─── */
+    .overview-hero-strip { padding: 1rem; }
+    .hero-strip-row {
+      display: flex; gap: .85rem; align-items: stretch;
+    }
+    .hero-strip-thumb {
+      flex: 0 0 110px; width: 110px; height: 110px;
+      border-radius: 8px; overflow: hidden;
+      background: var(--bg-deep); cursor: pointer;
+      transition: transform .12s;
+    }
+    .hero-strip-thumb:hover { transform: scale(1.02); }
+    .hero-strip-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center top;
+      display: block;
+    }
+    .hero-strip-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .hero-strip-line {
+      display: flex; align-items: baseline; gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .hero-strip-name {
+      font-size: 1rem; font-family: var(--font-display); font-weight: 600;
+      color: var(--text-main); cursor: pointer;
+    }
+    .hero-strip-name:hover { color: var(--accent); }
+    .hero-strip-sci {
+      font-size: .75rem; color: var(--text-muted); font-style: italic;
+      margin-top: .15rem;
+    }
+    .hero-strip-spectro { height: 48px !important; }
+
+    @media (max-width: 540px) {
+      .hero-strip-row { flex-direction: column; }
+      .hero-strip-thumb { width: 100%; height: 160px; flex: none; }
+    }
   </style>
   <script src="js/vue.global.prod.min.js"></script>
   <script src="js/chart.umd.min.js"></script>
@@ -49,7 +104,8 @@
       <div class="load-progress-fill" :style="{width: Math.round(loadProgress.done / loadProgress.total * 100) + '%'}"></div>
     </div>
 
-    <!-- KPIs -->
+    <!-- KPI strip — primary tier: "what should I understand right now". -->
+    <!-- "first_detection" and "total detections" demoted below, in the secondary line. -->
     <div class="kpi-strip">
       <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
         <div class="kpi-value amber">{{kpis.sp || '—'}}</div>
@@ -73,22 +129,37 @@
           </div>
         </div>
       </div>
-      <div v-if="!isMultiModel" class="kpi-card">
-        <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
-        <div class="kpi-label">{{t('avg_confidence')}}</div>
-      </div>
-      <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
-        <div class="kpi-value">{{kpis.det || '—'}}</div>
-        <div class="kpi-label">{{t('detections')}}</div>
-      </a>
       <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
         <div class="kpi-value" style="color:var(--accent);">{{kpis.lastHour || '—'}}</div>
         <div class="kpi-label">{{t('last_hour')}}</div>
       </a>
-      <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
-        <div class="kpi-value" style="color:#f59e0b;">{{kpis.firstDet || '—'}}</div>
-        <div class="kpi-label">{{t('first_detection')}}</div>
-      </a>
+      <div v-if="!isMultiModel" class="kpi-card">
+        <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
+        <div class="kpi-label">{{t('avg_confidence')}}</div>
+      </div>
+      <div v-if="kpis.deltaPct !== null && kpis.deltaPct !== undefined" class="kpi-card"
+           :title="t('overview_delta_tooltip')">
+        <div class="kpi-value" :style="{color: kpis.deltaPct > 0 ? 'var(--accent)' : kpis.deltaPct < 0 ? 'var(--text-muted)' : 'var(--text-main)'}">
+          {{kpis.deltaPct > 0 ? '+' : ''}}{{kpis.deltaPct}}%
+        </div>
+        <div class="kpi-label">{{t('overview_kpi_delta')}}</div>
+      </div>
+    </div>
+
+    <!-- Synthèse — rule-based one-liner above What's New. Garde-fou: this
+         is a global day reading (volume/diversity tier); What's New primary
+         (Phase 2) will carry the editorial event of the day, not a copy. -->
+    <div class="overview-synthesis">
+      <bird-icon :name="synthesis.icon" :size="16"></bird-icon>
+      <span>{{synthesis.text}}</span>
+    </div>
+
+    <!-- Secondary KPIs — kept for users who want raw volume/timing context,
+         demoted here so they don't compete with the primary tier. -->
+    <div class="overview-kpi-secondary">
+      <span><strong>{{kpis.det || '—'}}</strong> {{t('detections').toLowerCase()}}</span>
+      <span class="overview-kpi-sep">·</span>
+      <span>{{t('overview_first_at')}} <strong>{{kpis.firstDet || '—'}}</strong></span>
     </div>
 
     <!-- ═══ What's New — alertes + phénologie ═══ -->
@@ -208,7 +279,12 @@
 
       <!-- Colonne gauche : dernière détection + activité -->
       <div style="display:flex;flex-direction:column;gap:1rem;">
-      <div class="card">
+      <!-- Hero strip — compact: thumbnail + species + audio + mini-spectro.
+           Was a 4:3 hero photo (~300px); shrunk because on an OVERVIEW the
+           detection card competes with What's New for attention. The big
+           photo + interactive spectro live on today.html / detections modal.
+           Click the photo or species to open the full spectrogram modal. -->
+      <div class="card overview-hero-strip">
         <div class="featured-tabs">
           <button class="featured-tab" :class="{active: featuredTab==='latest'}"
                   @click="selectFeaturedTab('latest')">{{t('last_detection')}}</button>
@@ -217,38 +293,29 @@
         </div>
         <div v-if="currentFeatured.loading" class="spinner"><div></div><div></div><div></div></div>
         <div v-else-if="!currentFeatured.row" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
-        <div v-else>
-          <div class="last-det-photo-wrap">
+        <div v-else class="hero-strip-row">
+          <!-- Thumbnail (clickable → full spectrogram modal) -->
+          <div class="hero-strip-thumb" @click="openSpectroModal(currentFeatured.row)" :title="t('spectro_open')">
             <bird-img v-if="currentFeatured.photoUrl" :src="currentFeatured.photoUrl" :alt="currentFeatured.row.Com_Name"></bird-img>
           </div>
-          <div style="display:flex;align-items:flex-start;gap:.75rem;">
-            <div style="flex:1;">
-              <div style="font-size:1.05rem;font-family:var(--font-display);font-weight:600;">
-                <a class="species-link" @click="navigateTo('species.html',{species:currentFeatured.row.Com_Name})">{{spName(currentFeatured.row.Com_Name, currentFeatured.row.Sci_Name)}}</a>
-              </div>
-              <div style="font-size:.8rem;color:var(--text-muted);font-style:italic;">{{currentFeatured.row.Sci_Name}}</div>
-              <div style="font-size:.72rem;color:var(--text-faint);margin-top:.2rem;">{{fmtDate(currentFeatured.row.Date)}} · {{fmtTime(currentFeatured.row.Time)}}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:.3rem;">
-              <span v-if="currentFeatured.row.Model" class="model-tag">{{shortModel(currentFeatured.row.Model)}}</span>
+          <!-- Meta + player + mini-spectro stack -->
+          <div class="hero-strip-meta">
+            <div class="hero-strip-line">
+              <a class="hero-strip-name species-link" @click="navigateTo('species.html',{species:currentFeatured.row.Com_Name})">
+                {{spName(currentFeatured.row.Com_Name, currentFeatured.row.Sci_Name)}}
+              </a>
               <span :class="'conf-badge '+(parseFloat(currentFeatured.row.Confidence)>=0.8?'conf-high':parseFloat(currentFeatured.row.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(currentFeatured.row.Confidence)}}</span>
-              <weather-chip :date="currentFeatured.row.Date" :time="currentFeatured.row.Time" :detailed="true"></weather-chip>
             </div>
-          </div>
-          <div v-if="currentFeatured.row.File_Name" class="idx-player">
-            <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(currentFeatured.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
-            <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
-            <span class="idx-duration">{{richDuration}}</span>
-            <button class="rv-mini" style="margin-left:.3rem;font-size:.65rem;" @click="openSpectroModal(currentFeatured.row)" title="Spectrogramme"><bird-icon name="maximize-2" :size="14"></bird-icon></button>
-          </div>
-          <div v-if="currentFeatured.row.File_Name" class="idx-spectro-wrap">
-            <div class="idx-spectro-freqs">
-              <span class="idx-spectro-freq">12k</span>
-              <span class="idx-spectro-freq">6k</span>
-              <span class="idx-spectro-freq">0</span>
+            <div class="hero-strip-sci">{{currentFeatured.row.Sci_Name}} · {{fmtTime(currentFeatured.row.Time)}}</div>
+            <div v-if="currentFeatured.row.File_Name" class="idx-player" style="margin-top:.4rem;">
+              <button class="idx-play-btn" :class="{playing: richPlaying}" @click="toggleRichPlay(currentFeatured.row.File_Name)">{{richPlaying ? '⏹' : '▶'}}</button>
+              <div class="idx-progress" @click="seekRich"><div class="idx-progress-fill" :style="{width: richProgress+'%'}"></div></div>
+              <span class="idx-duration">{{richDuration}}</span>
             </div>
-            <canvas ref="spectroCanvas" class="idx-spectro-canvas" :height="80"></canvas>
-            <div v-if="spectroState==='loading'" class="idx-spectro-loading"><div class="spinner" style="transform:scale(.5)"></div></div>
+            <div v-if="currentFeatured.row.File_Name" class="idx-spectro-wrap" style="margin-top:.3rem;">
+              <canvas ref="spectroCanvas" class="idx-spectro-canvas hero-strip-spectro" :height="48"></canvas>
+              <div v-if="spectroState==='loading'" class="idx-spectro-loading"><div class="spinner" style="transform:scale(.4)"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -388,6 +455,36 @@ const app = createApp({
     const currentFeatured = computed(() =>
       featuredTab.value === 'best' ? bestDet.value : lastDet.value
     );
+
+    // Synthèse — rule-based one-liner. First match wins. Garde-fou: this
+    // is the GLOBAL day reading (volume / diversity / activity tier);
+    // What's New primary (Phase 2) carries the editorial event of the day.
+    // The two must complement, not duplicate. Keep this side focused on
+    // counts and tendencies, not on a specific species event.
+    const synthesis = computed(() => {
+      const sp = parseInt(kpis.value?.sp || '0', 10);
+      const det = parseInt((kpis.value?.det || '0').replace(/[^\d]/g, ''), 10);
+      const lastH = parseInt((kpis.value?.lastHour || '0').replace(/[^\d]/g, ''), 10);
+      const rareN = rareSpeciesToday.value?.length || 0;
+      const dPct = kpis.value?.deltaPct;
+
+      if (rareN >= 2) {
+        return { icon: 'gem', text: t('overview_synth_rare', { count: rareN }) };
+      }
+      if (typeof dPct === 'number' && dPct >= 30) {
+        return { icon: 'trending-up', text: t('overview_synth_diverse_high', { sp, pct: dPct }) };
+      }
+      if (typeof dPct === 'number' && dPct <= -30) {
+        return { icon: 'trending-down', text: t('overview_synth_diverse_low', { sp, pct: Math.abs(dPct) }) };
+      }
+      if (lastH >= 50) {
+        return { icon: 'activity', text: t('overview_synth_busy', { count: lastH }) };
+      }
+      if (rareN === 1) {
+        return { icon: 'gem', text: t('overview_synth_rare_one') };
+      }
+      return { icon: 'check-circle', text: t('overview_synth_normal', { sp, det: det.toLocaleString() }) };
+    });
     const rareSpeciesToday = ref([]);
     const whatsNew = ref({
       loaded: false, alerts: [], phenology: [],
@@ -422,6 +519,12 @@ const app = createApp({
           phenology: d.phenology || [],
           context: d.context || whatsNew.value.context
         };
+        // Backfill the deltaPct KPI from species_richness (already computed
+        // server-side as today vs 30d-median) — saves us a separate query.
+        const sr = whatsNew.value.context?.species_richness?.data;
+        if (sr && typeof sr.deltaPct === 'number') {
+          kpis.value = { ...kpis.value, deltaPct: sr.deltaPct };
+        }
       } catch(e) {
         console.error('whatsNew:', e);
         whatsNew.value = { ...whatsNew.value, loaded: true, error: true };
@@ -490,7 +593,10 @@ const app = createApp({
           conf: td&&td.conf?td.conf+'%':'—',
           firstDet: td?.first_time ? td.first_time.slice(0, 5) : '—',
           lastHour: lh?lh.n.toLocaleString():'0',
-          rareToday: String(rareSpeciesToday.value.length)
+          rareToday: String(rareSpeciesToday.value.length),
+          // deltaPct populated later, once whatsNew context is available.
+          // species_richness.deltaPct = (today species count − 30d-median) / median.
+          deltaPct: kpis.value?.deltaPct ?? null,
         };
       } catch(e) { console.error(e); }
     }
@@ -712,7 +818,7 @@ const app = createApp({
 
     return {
       lang, t, spName, photoUrl, daysAgo, weatherToday,
-      today, kpis, lastDet, bestDet, currentFeatured, featuredTab, selectFeaturedTab,
+      today, kpis, synthesis, lastDet, bestDet, currentFeatured, featuredTab, selectFeaturedTab,
       rareSpeciesToday, rarePanelOpen, toggleRarePanel, isMultiModel, loadProgress,
       whatsNew, wnIcon, wnMoonIcon,
       playingFile, toggleAudio,

@@ -1945,5 +1945,15 @@
   "page_title_weather": "Weather & birds",
   "header_subtitle": "Bioacoustic station",
   "header_skip_to_content": "Skip to content",
-  "header_alt": "Elev."
+  "header_alt": "Elev.",
+  "overview_kpi_delta": "vs 30-day avg",
+  "overview_delta_tooltip": "Today's species count compared to the 30-day median",
+  "overview_first_at": "First at",
+  "overview_synth_rare": "Notable day — {count} rare species flagged today",
+  "overview_synth_rare_one": "One rare species detected today",
+  "overview_synth_diverse_high": "High diversity — {sp} species (+{pct}% vs avg)",
+  "overview_synth_diverse_low": "Low diversity — {sp} species (−{pct}% vs avg)",
+  "overview_synth_busy": "Busy hour — {count} detections in the last hour",
+  "overview_synth_normal": "Steady day — {sp} species, {det} detections",
+  "spectro_open": "Open the full spectrogram"
 }

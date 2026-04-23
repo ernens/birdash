@@ -1940,5 +1940,15 @@
   "page_title_weather": "Météo & Oiseaux",
   "header_subtitle": "Poste bioacoustique",
   "header_skip_to_content": "Aller au contenu",
-  "header_alt": "Alt."
+  "header_alt": "Alt.",
+  "overview_kpi_delta": "vs moyenne 30 j",
+  "overview_delta_tooltip": "Variation du nombre d'espèces aujourd'hui par rapport à la médiane des 30 derniers jours",
+  "overview_first_at": "1ʳᵉ détection à",
+  "overview_synth_rare": "Journée notable — {count} espèces rares signalées aujourd'hui",
+  "overview_synth_rare_one": "Une espèce rare détectée aujourd'hui",
+  "overview_synth_diverse_high": "Diversité élevée — {sp} espèces (+{pct} % vs moyenne)",
+  "overview_synth_diverse_low": "Diversité en retrait — {sp} espèces (−{pct} % vs moyenne)",
+  "overview_synth_busy": "Activité dense — {count} détections sur la dernière heure",
+  "overview_synth_normal": "Journée régulière — {sp} espèces, {det} détections",
+  "spectro_open": "Ouvrir le spectrogramme complet"
 }
