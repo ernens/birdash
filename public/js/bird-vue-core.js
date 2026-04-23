@@ -150,6 +150,7 @@
       _lang.value = code;
       localStorage.setItem('birdash_lang', code);
       document.documentElement.lang = code;
+      _applyPageTitle();
     }
 
     const langs = _AVAILABLE_LANGS.filter(code => _TRANSLATIONS[code]).map(code => ({
@@ -391,8 +392,7 @@
     fetch(BIRD_CONFIG.apiUrl + '/settings').then(r => r.ok ? r.json() : {}).then(conf => {
       if (conf.SITE_NAME) {
         _siteName.value = conf.SITE_NAME;
-        const pageTitle = document.title.replace(/^[^—]+—/, _siteName.value + ' —');
-        if (pageTitle !== document.title) document.title = pageTitle;
+        _applyPageTitle();
       }
       if (conf.SITE_BRAND) _brandName.value = conf.SITE_BRAND;
       if (conf.ELEVATION != null && conf.ELEVATION !== '') {
@@ -406,11 +406,61 @@
   function updateSiteIdentity(name, brand) {
     if (name != null) {
       _siteName.value = name;
-      const pageTitle = document.title.replace(/^[^—]+—/, name + ' —');
-      if (pageTitle !== document.title) document.title = pageTitle;
+      _applyPageTitle();
     }
     if (brand != null) _brandName.value = brand;
   }
+
+  // ── Page title localisation ──────────────────────────────────────────────
+  // Map URL filename → i18n key. Pages omitted here keep their static
+  // <title> (test pages, redirects, anything not user-facing). The site
+  // name prefix is _siteName (settable by the user); the suffix is the
+  // localised page label.
+  const _PAGE_TITLE_KEYS = {
+    'analyses':         'page_title_analyses',
+    'biodiversity':     'page_title_biodiversity',
+    'calendar':         'page_title_calendar',
+    'compare':          'page_title_compare',
+    'comparison':       'page_title_comparison',
+    'dashboard':        'page_title_dashboard',
+    'dashboard-kiosk':  'page_title_dashboard_kiosk',
+    'detections':       'page_title_detections',
+    'favorites':        'page_title_favorites',
+    'gallery':          'page_title_gallery',
+    'liveboard':        'page_title_liveboard',
+    'log':              'page_title_log',
+    'login':            'page_title_login',
+    'models':           'page_title_models',
+    'overview':         'page_title_overview',
+    'phenology':        'page_title_phenology',
+    'purge':            'page_title_purge',
+    'quality':          'page_title_quality',
+    'rarities':         'page_title_rarities',
+    'recent':           'page_title_recent',
+    'recordings':       'page_title_recordings',
+    'review':           'page_title_review',
+    'settings':         'page_title_settings',
+    'species':          'page_title_species',
+    'spectrogram':      'page_title_spectrogram',
+    'stats':            'page_title_stats',
+    'system':           'page_title_system',
+    'timeline':         'page_title_timeline',
+    'today':            'page_title_today',
+    'weather':          'page_title_weather',
+  };
+  function _applyPageTitle() {
+    const m = (location.pathname || '').match(/\/([^\/]+?)\.html?$/i);
+    const slug = m ? m[1].toLowerCase() : '';
+    const key = _PAGE_TITLE_KEYS[slug];
+    if (!key) return;  // unknown page — leave the static <title> alone
+    const dict = _TRANSLATIONS[_lang.value] || _TRANSLATIONS['fr'];
+    const fb   = _TRANSLATIONS['fr'];
+    const suffix = (dict[key] !== undefined ? dict[key] : (fb[key] !== undefined ? fb[key] : '')) || '';
+    if (!suffix) return;  // i18n not loaded yet
+    document.title = `${_siteName.value || 'BirdStation'} — ${suffix}`;
+  }
+  // Apply once the i18n dicts have loaded.
+  _i18nLoaded.then(_applyPageTitle);
 
   // ── useNav ────────────────────────────────────────────────────────────────
   const NAV_KEYS = {
