@@ -205,12 +205,21 @@ if [ -d "$HOME/birdengine" ] && [ "$HOME/birdengine" != "$REPO_DIR/engine" ]; th
     if grep -q "$HOME/birdengine/engine.py" /etc/systemd/system/birdengine.service 2>/dev/null \
        || systemctl show birdengine.service -p ExecStart 2>/dev/null | grep -q "$HOME/birdengine/engine.py"; then
         info "Syncing engine files to $HOME/birdengine (legacy runtime path)..."
-        for f in engine.py range_filter_cli.py filter_preview.py yamnet_filter.py record.sh; do
-            if [ -f "$REPO_DIR/engine/$f" ]; then
-                cp -f "$REPO_DIR/engine/$f" "$HOME/birdengine/$f"
-                # Preserve executable bit for shell scripts
-                case "$f" in *.sh) chmod +x "$HOME/birdengine/$f" ;; esac
-            fi
+        # Sync every .py + record.sh under engine/ (excluding tests). Hard-coding
+        # the file list bit us in 1.44.0 when engine.py was split into focused
+        # modules (audio.py, db.py, models.py, clips.py, birdweather.py,
+        # watcher.py): only engine.py was synced, the new imports failed at
+        # boot, and birdengine refused to start until the missing modules were
+        # copied over by hand. A glob keeps future splits from breaking us
+        # again.
+        for src in "$REPO_DIR"/engine/*.py "$REPO_DIR"/engine/record.sh; do
+            [ -f "$src" ] || continue
+            base=$(basename "$src")
+            case "$base" in
+                test_*.py) continue ;;     # don't ship test files to prod
+            esac
+            cp -f "$src" "$HOME/birdengine/$base"
+            case "$base" in *.sh) chmod +x "$HOME/birdengine/$base" ;; esac
         done
         # Bundled models: YAMNet (4 MB) + real BirdNET FP16 (26 MB).
         # The FP16 dst may exist as a symlink to FP32 from a previous
