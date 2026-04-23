@@ -1997,5 +1997,6 @@
   "wn_primary_ctx_activity_spike": "Vandaag: {today} · gemiddelde 7 d: {avg}",
   "wn_primary_ctx_first_of_year": "Eerste detectie om {time}",
   "wn_primary_ctx_species_streak": "Onafgebroken aanwezigheid dag na dag.",
-  "wn_primary_ctx_seasonal_peak": "Vorig record in dezelfde periode: {max}"
+  "wn_primary_ctx_seasonal_peak": "Vorig record in dezelfde periode: {max}",
+  "overview_top_subtitle": "Laatste 7 dagen · verschil t.o.v. 7 dagen ervoor"
 }

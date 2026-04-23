@@ -91,13 +91,23 @@
        matches Hero strip and Activity. Internal layout: primary takes
        the column's full width, the 3 secondaries sit underneath as a
        3-column grid (single column on narrow viewports). */
+    /* Slightly more breathing room between the section title and the
+       primary card — user noted the block felt vertically tight. */
+    .wn-card-wrap .card-title { margin-bottom: 1rem; }
+
+    /* Card subtitle — small framing line under a card-title. Currently
+       used by Top espèces to explicitly say "vs 7j précédents" so the
+       ×N badges aren't read as magic numbers. */
+    .card-subtitle {
+      font-size: .72rem; color: var(--text-muted);
+      margin: -.45rem 0 .6rem; line-height: 1.3;
+    }
     .wn-primary {
-      display: flex; gap: 1.15rem; align-items: flex-start;
-      padding: 1.25rem 1.35rem;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--bg-card)) 0%, var(--bg-card) 60%);
+      display: flex; gap: 1.25rem; align-items: flex-start;
+      padding: 1.4rem 1.45rem;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 11%, var(--bg-card)) 0%, color-mix(in srgb, var(--accent) 3%, var(--bg-card)) 100%);
       border: 1px solid var(--border);
       border-left: 5px solid var(--accent); border-radius: 12px;
-      min-height: 100%;
     }
     .wn-primary--clickable { cursor: pointer; transition: transform .12s, box-shadow .12s; }
     .wn-primary--clickable:hover {
@@ -111,7 +121,7 @@
     .wn-primary-icon,
     .wn-primary-thumb {
       flex: 0 0 auto;
-      width: 64px; height: 64px; border-radius: 10px;
+      width: 72px; height: 72px; border-radius: 10px;
       overflow: hidden;
     }
     .wn-primary-icon {
@@ -147,13 +157,13 @@
     }
     /* 2. Editorial title — the strong line */
     .wn-primary-title {
-      font-size: 1.18rem; font-family: var(--font-display);
-      color: var(--text-main); font-weight: 600; line-height: 1.25;
+      font-size: 1.32rem; font-family: var(--font-display);
+      color: var(--text-main); font-weight: 600; line-height: 1.2;
     }
     /* 3. Sentence — species + metric, slightly lighter */
     .wn-primary-sentence {
-      font-size: .94rem; color: var(--text-main); line-height: 1.4;
-      margin-top: .15rem;
+      font-size: .96rem; color: var(--text-main); line-height: 1.45;
+      margin-top: .25rem;
     }
     .wn-primary-sentence strong { color: var(--accent); font-weight: 600; }
     /* 4. Context — small gray, supporting info */
@@ -168,35 +178,47 @@
       font-size: .78rem; color: var(--accent); font-weight: 600;
     }
 
-    /* Secondaries — under the primary now, as a 3-column grid (one row
-       of three). Compact structured cards: uppercase mini-label on top,
-       species + metric on the second line. Single column on narrow. */
+    /* Secondaries — explicitly NOT cards. Per product feedback the
+       previous bordered cards still read as "3 sister cards" with
+       similar weight to the primary. v6 strips the chrome: no border,
+       no background, just a subtle top divider. They read as "other
+       facts" supporting the primary, not as alternative headlines.
+       Pulled tight under the primary by reducing top margin. */
     .wn-secondaries {
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: .55rem; margin-top: .8rem;
+      gap: 0; margin-top: 1rem;
+      border-top: 1px solid var(--border);
     }
     @media (max-width: 700px) {
       .wn-secondaries { grid-template-columns: 1fr; }
     }
     .wn-secondary {
-      padding: .65rem .85rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border); border-radius: 8px;
+      padding: .7rem .85rem;
+      background: transparent;
+      border: none; border-radius: 0;
       transition: background .12s;
+      position: relative;
+    }
+    /* Vertical divider between secondaries on desktop */
+    .wn-secondary + .wn-secondary {
+      border-left: 1px solid var(--border);
+    }
+    @media (max-width: 700px) {
+      .wn-secondary + .wn-secondary { border-left: none; border-top: 1px solid var(--border); }
     }
     .wn-secondary--clickable { cursor: pointer; }
-    .wn-secondary--clickable:hover { background: var(--bg-card2); }
+    .wn-secondary--clickable:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
     .wn-sec-header {
-      display: flex; align-items: center; gap: .4rem;
-      margin-bottom: .2rem; color: var(--text-muted);
+      display: flex; align-items: center; gap: .35rem;
+      margin-bottom: .25rem; color: var(--text-muted);
     }
     .wn-sec-label {
-      font-size: .66rem; letter-spacing: .08em; text-transform: uppercase;
+      font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
       font-weight: 600;
     }
     .wn-sec-line {
       display: flex; justify-content: space-between; align-items: baseline;
-      gap: .5rem; font-size: .88rem;
+      gap: .5rem; font-size: .82rem;
     }
     .wn-sec-sp {
       color: var(--text-main); font-weight: 500;
@@ -204,7 +226,7 @@
       min-width: 0; flex: 1;
     }
     .wn-sec-val {
-      color: var(--accent); font-weight: 700; font-size: .92rem;
+      color: var(--accent); font-weight: 700; font-size: .88rem;
       flex: 0 0 auto;
     }
 
@@ -331,7 +353,7 @@
              3. sentence (species + key metric)
              4. context (last seen / vs avg / record)  — light gray
              5. CTA (discreet accent link) -->
-      <div v-if="whatsNew.loaded" class="card">
+      <div v-if="whatsNew.loaded" class="card wn-card-wrap">
         <div class="card-title">{{t('wn_title')}}</div>
         <div v-if="whatsNew.primary" class="wn-primary"
              :class="{'wn-primary--calm': whatsNew.primary.type==='calm',
@@ -582,6 +604,10 @@
       <!-- Top espèces — flex:1 so it fills remaining height -->
       <div class="card" style="flex:1;display:flex;flex-direction:column;">
         <div class="card-title" :title="t('top_species_tooltip')">{{t('top_species')}}</div>
+        <!-- Subtitle explicitly frames what the trend badges (×N, +N%)
+             compare against — without it the multipliers can look like
+             magic numbers ("multiplied by what, vs when?"). -->
+        <div class="card-subtitle">{{t('overview_top_subtitle')}}</div>
         <div class="chart-wrap" style="flex:1;"><canvas ref="canvasTop"></canvas></div>
       </div>
       </div>

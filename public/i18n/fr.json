@@ -1992,5 +1992,6 @@
   "wn_primary_ctx_activity_spike": "Aujourd'hui : {today} · moyenne 7 j : {avg}",
   "wn_primary_ctx_first_of_year": "Première détection à {time}",
   "wn_primary_ctx_species_streak": "Présence ininterrompue jour après jour.",
-  "wn_primary_ctx_seasonal_peak": "Record précédent à la même période : {max}"
+  "wn_primary_ctx_seasonal_peak": "Record précédent à la même période : {max}",
+  "overview_top_subtitle": "7 derniers jours · variation vs 7 jours précédents"
 }

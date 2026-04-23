@@ -1997,5 +1997,6 @@
   "wn_primary_ctx_activity_spike": "Today: {today} · 7-day avg: {avg}",
   "wn_primary_ctx_first_of_year": "First detection at {time}",
   "wn_primary_ctx_species_streak": "Uninterrupted presence day after day.",
-  "wn_primary_ctx_seasonal_peak": "Previous record at the same period: {max}"
+  "wn_primary_ctx_seasonal_peak": "Previous record at the same period: {max}",
+  "overview_top_subtitle": "Last 7 days · change vs the 7 days before"
 }
