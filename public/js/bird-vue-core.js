@@ -101,7 +101,21 @@
     localStorage.removeItem('birdash-theme');
   }
 
-  const _lang  = ref(localStorage.getItem('birdash_lang')  || 'fr');
+  // First-visit lang: honour the browser's preference (navigator.language)
+  // if it matches a supported lang, else fall back to French. Persisted
+  // explicit choices in localStorage always win.
+  function _detectInitialLang() {
+    const stored = localStorage.getItem('birdash_lang');
+    if (stored && _AVAILABLE_LANGS.includes(stored)) return stored;
+    const langs = (navigator.languages && navigator.languages.length)
+      ? navigator.languages : [navigator.language || ''];
+    for (const l of langs) {
+      const code = (l || '').toLowerCase().split('-')[0];
+      if (_AVAILABLE_LANGS.includes(code)) return code;
+    }
+    return 'fr';
+  }
+  const _lang  = ref(_detectInitialLang());
   const _theme = ref(localStorage.getItem('birdash_theme') || 'forest');
 
   // Appliquer le thème et la langue immédiatement au chargement

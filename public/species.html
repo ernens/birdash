@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
@@ -864,14 +864,16 @@ const app = createApp({
           } else {
             photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
           }
-          // Show both FR and EN summaries
-          if (data.summaryFr && data.summary) {
-            wikiSummary.value = data.summaryFr;
-            wikiSummaryAlt.value = data.summary;
+          // Pick the summary in the UI's language. data.summaryFr is the
+          // localized Wikipedia extract (FR/DE/NL — variable name is legacy).
+          // data.summary is always English. Backend may return both due to
+          // cross-lang cache reuse, so we must select explicitly.
+          if (lang.value === 'en') {
+            wikiSummary.value = data.summary || data.summaryFr || '';
           } else {
             wikiSummary.value = data.summaryFr || data.summary || '';
-            wikiSummaryAlt.value = '';
           }
+          wikiSummaryAlt.value = '';
           conservationRaw.value = data.conservation || '';
           // Structured info
           // Only override taxonomy if the API provides more specific data
