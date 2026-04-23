@@ -1972,5 +1972,8 @@
   "overview_baseline_vs_avg": "vs moyenne",
   "overview_ctx_family_conditions": "Conditions",
   "overview_ctx_family_ecological": "Lecture écologique",
-  "overview_ctx_family_editorial": "Signal éditorial"
+  "overview_ctx_family_editorial": "Signal éditorial",
+  "overview_top_recent": "base récente",
+  "overview_kpi_quality": "Qualité du jour",
+  "overview_kpi_quality_tooltip": "Niveau de qualité acoustique du jour (basé sur le ratio de détections fortes)"
 }

@@ -83,60 +83,92 @@
       .hero-strip-thumb { width: 100%; height: 160px; flex: none; }
     }
 
-    /* ── What's New primary (Phase 2/4 editorial pole position) ────
-       Pushed harder than the original Phase 2 styling — secondary cards
-       were too close in weight, so the user's eye couldn't pick out the
-       day's signal at a glance. Now: 48 px icon, 1.15rem headline, more
-       padding, subtle accent background tint. The neighbouring secondary
-       cards get a compact treatment (see .wn-card--compact below) so
-       the contrast becomes obvious. */
+    /* ── What's New primary (pole position, v3) ───────────────────
+       Push 3: bigger still. Adds a species thumbnail when the primary's
+       leading species has a resolvable sci_name — makes the primary
+       visually "a photograph + a headline", not "another tile". The
+       secondary pills below lose their card chrome entirely so the
+       primary reads as a different object, not a bigger sibling. */
     .wn-primary {
-      display: flex; gap: 1.1rem; align-items: flex-start;
-      padding: 1.15rem 1.25rem; margin-bottom: 1rem;
-      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, var(--bg-card)) 0%, var(--bg-card) 60%);
+      display: flex; gap: 1.15rem; align-items: center;
+      padding: 1.2rem 1.3rem; margin-bottom: .85rem;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, var(--bg-card)) 0%, var(--bg-card) 55%);
       border: 1px solid var(--border);
-      border-left: 5px solid var(--accent); border-radius: 10px;
+      border-left: 5px solid var(--accent); border-radius: 12px;
     }
-    .wn-primary--clickable { cursor: pointer; transition: background .12s, transform .12s; }
-    .wn-primary--clickable:hover { transform: translateY(-1px); }
+    .wn-primary--clickable { cursor: pointer; transition: transform .12s, box-shadow .12s; }
+    .wn-primary--clickable:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
     .wn-primary--calm {
       background: var(--bg-card);
       border-left-color: var(--text-muted);
       opacity: .85;
     }
+    .wn-primary-icon,
+    .wn-primary-thumb {
+      flex: 0 0 auto;
+      width: 60px; height: 60px; border-radius: 10px;
+      overflow: hidden;
+    }
     .wn-primary-icon {
-      flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-      width: 48px; height: 48px; border-radius: 50%;
-      background: color-mix(in srgb, var(--accent) 12%, var(--bg-card2));
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--accent) 14%, var(--bg-card2));
       color: var(--accent);
     }
     .wn-primary--calm .wn-primary-icon {
       background: var(--bg-card2);
       color: var(--text-muted);
     }
-    .wn-primary-body { flex: 1; min-width: 0; padding-top: .15rem; }
+    .wn-primary-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .wn-primary-body { flex: 1; min-width: 0; }
     .wn-primary-eyebrow {
-      font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+      font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
       color: var(--accent); font-weight: 700; margin-bottom: .3rem;
     }
     .wn-primary--calm .wn-primary-eyebrow { color: var(--text-muted); }
     .wn-primary-headline {
-      font-size: 1.15rem; font-family: var(--font-display);
-      color: var(--text-main); line-height: 1.35;
+      font-size: 1.22rem; font-family: var(--font-display);
+      color: var(--text-main); line-height: 1.3;
+      font-weight: 500;
     }
     .wn-primary-headline strong { color: var(--accent); font-weight: 700; }
     .wn-primary-cta {
-      display: inline-block; margin-top: .55rem;
+      display: inline-block; margin-top: .5rem;
       font-size: .78rem; color: var(--accent); font-weight: 600;
     }
-    /* Compact treatment for secondary What's New cards — smaller padding,
-       no big body, just type + first species line. Visually clearly subordinate. */
-    .wn-trio-grid .wn-card { padding: .55rem .7rem; min-height: 0; }
-    .wn-trio-grid .wn-card-header { gap: .35rem; margin-bottom: .25rem; }
-    .wn-trio-grid .wn-card-icon { transform: scale(.85); }
-    .wn-trio-grid .wn-card-title { font-size: .72rem; }
-    .wn-trio-grid .wn-species-row { font-size: .76rem; }
-    .wn-trio-grid .wn-species-meta { font-size: .68rem; }
+    /* Secondary signals — stripped down to a dense row of pills with just
+       type label + first species + single metric. No border box, no body
+       panel. Reads as "other signals worth noting" without competing. */
+    .wn-trio-grid {
+      display: flex !important; flex-wrap: wrap; gap: .5rem;
+    }
+    .wn-trio-grid .wn-card {
+      display: flex; align-items: center; gap: .45rem;
+      padding: .4rem .65rem; min-height: 0;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 999px;
+      font-size: .78rem;
+    }
+    .wn-trio-grid .wn-card--clickable { cursor: pointer; }
+    .wn-trio-grid .wn-card--clickable:hover { background: var(--bg-card2); }
+    .wn-trio-grid .wn-card-header { margin: 0; gap: .3rem; flex: 0 0 auto; }
+    .wn-trio-grid .wn-card-icon {
+      display: inline-flex; transform: scale(.8); color: var(--text-muted);
+    }
+    .wn-trio-grid .wn-card-title {
+      font-size: .7rem; color: var(--text-muted); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .wn-trio-grid .wn-species-row {
+      display: inline-flex; gap: .35rem; align-items: center;
+      font-size: .78rem; margin: 0;
+    }
+    .wn-trio-grid .wn-species-row + .wn-species-row { display: none; } /* only first */
+    .wn-trio-grid .wn-species-name { font-weight: 500; color: var(--text-main); }
+    .wn-trio-grid .wn-species-meta { font-size: .7rem; color: var(--text-muted); }
+    .wn-trio-grid .wn-badge { display: none; } /* "+N more" hidden in pill mode */
+    .wn-trio-sep { display: none; } /* no vertical separator in pill mode */
 
     /* ── Context cards regrouped by family (Phase 4 hierarchy polish) ─ */
     .ctx-family { margin-bottom: .9rem; }
@@ -203,6 +235,17 @@
         <div class="kpi-value blue">{{kpis.conf || '—'}}</div>
         <div class="kpi-label">{{t('avg_confidence')}}</div>
       </div>
+      <!-- Acoustic quality KPI promoted to the top strip — Birdash's most
+           differentiating metric (most stations don't have one). Reuses
+           context.acoustic_quality from /api/whats-new (no extra query). -->
+      <div v-if="whatsNew.context?.acoustic_quality?.data" class="kpi-card"
+           :title="t('overview_kpi_quality_tooltip')">
+        <div class="kpi-value" style="font-size:1.05rem;display:flex;align-items:center;gap:.4rem;justify-content:center;">
+          <span class="wn-quality-dot" :class="'wn-quality-dot--'+whatsNew.context.acoustic_quality.data.qualityLevel" style="width:10px;height:10px;display:inline-block;"></span>
+          {{t('wn_quality_'+whatsNew.context.acoustic_quality.data.qualityLevel)}}
+        </div>
+        <div class="kpi-label">{{t('overview_kpi_quality')}}</div>
+      </div>
       <div v-if="kpis.deltaPct !== null && kpis.deltaPct !== undefined" class="kpi-card"
            :title="t('overview_delta_tooltip')">
         <div class="kpi-value" :style="{color: kpis.deltaPct > 0 ? 'var(--accent)' : kpis.deltaPct < 0 ? 'var(--text-muted)' : 'var(--text-main)'}">
@@ -245,8 +288,15 @@
            :class="{'wn-primary--calm': whatsNew.primary.type==='calm',
                     'wn-primary--clickable': whatsNew.primary.link && whatsNew.primary.active}"
            @click="whatsNew.primary.link && whatsNew.primary.active && navigateTo(whatsNew.primary.link)">
-        <div class="wn-primary-icon">
-          <bird-icon :name="whatsNew.primary.type==='calm' ? 'check-circle' : wnIcon(whatsNew.primary.type)" :size="22"></bird-icon>
+        <!-- Thumbnail when the primary's first species has a sci_name we can
+             resolve to a photo. Falls back to the type icon disc otherwise.
+             Adds the visual richness the secondaries don't get — reinforces
+             pole position. -->
+        <div v-if="primaryThumbSci" class="wn-primary-thumb">
+          <bird-img :src="photoUrl(primaryThumbSci)" :alt="primaryThumbSci"></bird-img>
+        </div>
+        <div v-else class="wn-primary-icon">
+          <bird-icon :name="whatsNew.primary.type==='calm' ? 'check-circle' : wnIcon(whatsNew.primary.type)" :size="24"></bird-icon>
         </div>
         <div class="wn-primary-body">
           <div class="wn-primary-eyebrow">{{t('wn_primary_eyebrow_'+whatsNew.primary.type) || t('wn_primary_eyebrow_default')}}</div>
@@ -296,18 +346,18 @@
       </div>
 
       <!-- ── Alertes + Phénologie : header commun + grille unique ── -->
-      <div v-if="(whatsNew.alerts.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type)) || (whatsNew.phenology.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type))"
+      <div v-if="(whatsNew.alerts.some(c => c.active && c.type !== whatsNew.primary?.type)) || (whatsNew.phenology.some(c => c.active && c.type !== whatsNew.primary?.type))"
            class="wn-level">
 
         <!-- Header commun sur une ligne — exclude primary so the header
              label matches what's actually rendered below. -->
         <div class="wn-duo-header">
-          <span v-if="whatsNew.alerts.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type)" class="wn-duo-label">
+          <span v-if="whatsNew.alerts.some(c => c.active && c.type !== whatsNew.primary?.type)" class="wn-duo-label">
             <span class="wn-level-dot wn-level-dot--alert"></span> {{t('wn_level_alerts')}}
           </span>
-          <span v-if="whatsNew.alerts.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type) && whatsNew.phenology.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type)"
+          <span v-if="whatsNew.alerts.some(c => c.active && c.type !== whatsNew.primary?.type) && whatsNew.phenology.some(c => c.active && c.type !== whatsNew.primary?.type)"
                 class="wn-duo-header-sep"></span>
-          <span v-if="whatsNew.phenology.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type)" class="wn-duo-label">
+          <span v-if="whatsNew.phenology.some(c => c.active && c.type !== whatsNew.primary?.type)" class="wn-duo-label">
             <span class="wn-level-dot wn-level-dot--phenology"></span> {{t('wn_level_phenology')}}
           </span>
         </div>
@@ -316,7 +366,7 @@
         <div class="wn-trio-grid">
           <!-- Alert cards -->
           <template v-for="card in whatsNew.alerts" :key="card.type">
-            <div v-if="(card.active || card.insufficientData) && card.type !== whatsNew.primary?.type"
+            <div v-if="card.active && card.type !== whatsNew.primary?.type"
                  class="wn-card"
                  :class="{'wn-card--insufficient': card.insufficientData, 'wn-card--clickable': card.link && card.active}"
                  @click="card.link && card.active && navigateTo(card.link)">
@@ -353,12 +403,12 @@
           </template>
 
           <!-- Séparateur vertical entre alertes et phénologie -->
-          <div v-if="whatsNew.alerts.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type) && whatsNew.phenology.some(c => (c.active || c.insufficientData) && c.type !== whatsNew.primary?.type)"
+          <div v-if="whatsNew.alerts.some(c => c.active && c.type !== whatsNew.primary?.type) && whatsNew.phenology.some(c => c.active && c.type !== whatsNew.primary?.type)"
                class="wn-trio-sep"></div>
 
           <!-- Phenology cards -->
           <template v-for="card in whatsNew.phenology" :key="card.type">
-            <div v-if="(card.active || card.insufficientData) && card.type !== whatsNew.primary?.type"
+            <div v-if="card.active && card.type !== whatsNew.primary?.type"
                  class="wn-card"
                  :class="{'wn-card--insufficient': card.insufficientData}">
               <div class="wn-card-header">
@@ -596,6 +646,17 @@ const app = createApp({
     const currentFeatured = computed(() =>
       featuredTab.value === 'best' ? bestDet.value : lastDet.value
     );
+
+    // Resolve the sci_name of the primary card's leading species so the
+    // primary block can render a thumbnail. Only types whose data carries
+    // a sci_name qualify (species_return, out_of_season, first_of_year);
+    // the others fall back to the type icon disc.
+    const primaryThumbSci = computed(() => {
+      const p = whatsNew.value?.primary;
+      if (!p || !p.active) return null;
+      const sp = (p.data?.species || [])[0];
+      return sp?.sciName || null;
+    });
 
     // Synthèse — rule-based one-liner. First match wins. Garde-fou: this
     // is the GLOBAL day reading (volume / diversity / activity tier);
@@ -898,24 +959,47 @@ const app = createApp({
       const cs = getComputedStyle(document.documentElement);
       const gridC = cs.getPropertyValue('--border').trim() + '40';
       const txtC  = cs.getPropertyValue('--text-muted').trim();
-      // Phase 3: bar opacity modulated by trend vs prev 7d.
-      //   ↑ ≥ 20% → full opacity (rising species stand out)
-      //   ↓ ≤ 20% → muted (faded — declining)
-      //   else    → default
+      // Trend display reworked after user feedback: raw "+1692%" labels
+      // were visually overheating the whole chart (small-base species
+      // produce huge %s that aren't really informative). Now: qualitative
+      // badges only on the Y-axis, exact % stays in the tooltip.
+      //
+      //   ✦       → new species (no prior 7d)
+      //   ↑↑      → surge (≥ 100%)
+      //   ↑       → rise   (30–99%)
+      //   (none)  → stable (−29 to +29)
+      //   ↓       → decline (≤ −30%)
+      //   ↓↓      → strong decline (≤ −60%)
+      //
+      // Opacity stays as a secondary cue but only for clearly rising
+      // species — declines no longer fade (was too noisy for "normal"
+      // seasonal pulses).
       const baseColors = BIRD_CONFIG.chartColors;
-      const opacityFor = (pct, isNew) => {
-        if (isNew) return 'cc';                     // new species: default weight
-        if (pct === null || pct === undefined) return 'cc';
-        if (pct >= 20) return 'ff';
-        if (pct <= -20) return '66';
+      const isNoisyBase = (r) => r.n_prev > 0 && r.n_prev < 5;
+      const opacityFor = (r) => {
+        if (r.n_prev === 0 || isNoisyBase(r)) return 'cc';
+        const p = r.pct_change;
+        if (p == null) return 'cc';
+        if (p >= 30) return 'ff';
         return 'cc';
       };
-      const trendLabel = (pct, isNew) => {
-        if (isNew) return ' · ' + t('overview_top_new');
-        if (pct === null || pct === undefined) return '';
-        if (pct >= 20) return ` · ↑ ${pct}%`;
-        if (pct <= -20) return ` · ↓ ${Math.abs(pct)}%`;
-        return ' · ≈';
+      const trendBadge = (r) => {
+        if (r.n_prev === 0) return '✦';
+        if (isNoisyBase(r)) return '✦';   // small base — can't trust the %
+        const p = r.pct_change;
+        if (p == null) return '';
+        if (p >= 100) return '↑↑';
+        if (p >= 30)  return '↑';
+        if (p <= -60) return '↓↓';
+        if (p <= -30) return '↓';
+        return '';
+      };
+      const trendTooltip = (r) => {
+        if (r.n_prev === 0) return ' · ' + t('overview_top_new');
+        if (isNoisyBase(r)) return ' · ' + t('overview_top_recent');
+        if (r.pct_change == null) return '';
+        if (r.pct_change >= 0) return ` · ↑ ${r.pct_change}%`;
+        return ` · ↓ ${Math.abs(r.pct_change)}%`;
       };
       mountTop(canvasTop, () => ({
         type: 'bar',
@@ -925,7 +1009,7 @@ const app = createApp({
             label: t('detections'),
             data: d.map(r => r.n),
             backgroundColor: d.map((r, i) =>
-              baseColors[i % baseColors.length] + opacityFor(r.pct_change, r.n_prev === 0)
+              baseColors[i % baseColors.length] + opacityFor(r)
             ),
             borderColor: baseColors,
             borderWidth: 0,
@@ -944,7 +1028,7 @@ const app = createApp({
                 title: i => i[0].label,
                 label: i => {
                   const r = d[i.dataIndex];
-                  return ` ${r.n} ${t('detections')}${trendLabel(r.pct_change, r.n_prev === 0)}`;
+                  return ` ${r.n} ${t('detections')}${trendTooltip(r)}`;
                 },
               },
             },
@@ -961,11 +1045,8 @@ const app = createApp({
                   const r = d[index];
                   if (!r) return '';
                   const name = spName(r.Com_Name, r.Sci_Name);
-                  if (r.n_prev === 0) return name + '  ✦';
-                  if (r.pct_change == null) return name;
-                  if (r.pct_change >= 20) return name + `  ↑${r.pct_change}%`;
-                  if (r.pct_change <= -20) return name + `  ↓${Math.abs(r.pct_change)}%`;
-                  return name + '  ≈';
+                  const badge = trendBadge(r);
+                  return badge ? `${name}  ${badge}` : name;
                 },
               },
               grid: { display: false }
@@ -1107,7 +1188,7 @@ const app = createApp({
 
     return {
       lang, t, spName, photoUrl, daysAgo, weatherToday,
-      today, kpis, synthesis, safeHtml, lastDet, bestDet, currentFeatured, featuredTab, selectFeaturedTab,
+      today, kpis, synthesis, safeHtml, primaryThumbSci, lastDet, bestDet, currentFeatured, featuredTab, selectFeaturedTab,
       rareSpeciesToday, rarePanelOpen, toggleRarePanel, isMultiModel, loadProgress,
       whatsNew, wnIcon, wnMoonIcon,
       playingFile, toggleAudio,

@@ -1977,5 +1977,8 @@
   "overview_baseline_vs_avg": "vs gem.",
   "overview_ctx_family_conditions": "Omstandigheden",
   "overview_ctx_family_ecological": "Ecologische lezing",
-  "overview_ctx_family_editorial": "Redactioneel signaal"
+  "overview_ctx_family_editorial": "Redactioneel signaal",
+  "overview_top_recent": "recente basis",
+  "overview_kpi_quality": "Kwaliteit vandaag",
+  "overview_kpi_quality_tooltip": "Akoestische kwaliteit vandaag (op basis van het aandeel sterke detecties)"
 }

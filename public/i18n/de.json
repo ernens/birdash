@@ -1977,5 +1977,8 @@
   "overview_baseline_vs_avg": "vs. Schnitt",
   "overview_ctx_family_conditions": "Bedingungen",
   "overview_ctx_family_ecological": "Ökologische Lesart",
-  "overview_ctx_family_editorial": "Redaktionelles Signal"
+  "overview_ctx_family_editorial": "Redaktionelles Signal",
+  "overview_top_recent": "junge Basis",
+  "overview_kpi_quality": "Tagesqualität",
+  "overview_kpi_quality_tooltip": "Akustische Qualität heute (basiert auf dem Anteil starker Erkennungen)"
 }

@@ -1977,5 +1977,8 @@
   "overview_baseline_vs_avg": "vs avg",
   "overview_ctx_family_conditions": "Conditions",
   "overview_ctx_family_ecological": "Ecological reading",
-  "overview_ctx_family_editorial": "Editorial signal"
+  "overview_ctx_family_editorial": "Editorial signal",
+  "overview_top_recent": "recent base",
+  "overview_kpi_quality": "Today's quality",
+  "overview_kpi_quality_tooltip": "Acoustic quality level today (based on the share of strong detections)"
 }
