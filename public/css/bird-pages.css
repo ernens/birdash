@@ -216,18 +216,34 @@
     }
     .audio-time { font-size: .72rem; font-family: monospace; color: var(--text-muted); }
 
-    /* ── Feed détections de l'espèce ────────────────────────────────── */
+    /* ── Feed détections de l'espèce — workspace bottom panel ──────────
+       Bumped 180 → 500 px so the right column "descends" properly and
+       balances the long left list. Stays a SCROLL within a fixed cap
+       (not a free-flow) so the whole page doesn't grow uncontrollably
+       on huge-detection days. */
     .det-scroll {
-      max-height: 180px; overflow-y: auto;
+      max-height: 500px; overflow-y: auto;
     }
     .det-row {
       display: flex; align-items: center; gap: .5rem;
-      padding: .35rem .75rem; font-size: .8rem; cursor: pointer;
+      padding: .4rem .85rem; font-size: .8rem; cursor: pointer;
       border-bottom: 1px solid var(--border); transition: background .1s;
     }
     .det-row:hover { background: var(--bg-card2); }
     .det-row.active { background: var(--bg-card2); color: var(--accent); }
     .det-row:last-child { border-bottom: none; }
+    /* Section header — clear title + small "see multi-day" link */
+    .td-dets-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .55rem .85rem; font-size: .76rem;
+      color: var(--text-muted); font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .td-dets-link {
+      font-size: .7rem; font-weight: 500; color: var(--accent);
+      text-decoration: none;
+    }
+    .td-dets-link:hover { text-decoration: underline; }
 
     /* ── KPI strip ──────────────────────────────────────────────────── */
     .kpi-strip {
@@ -374,18 +390,34 @@
     }
     .audio-time { font-size: .72rem; font-family: monospace; color: var(--text-muted); }
 
-    /* ── Feed détections de l'espèce ────────────────────────────────── */
+    /* ── Feed détections de l'espèce — workspace bottom panel ──────────
+       Bumped 180 → 500 px so the right column "descends" properly and
+       balances the long left list. Stays a SCROLL within a fixed cap
+       (not a free-flow) so the whole page doesn't grow uncontrollably
+       on huge-detection days. */
     .det-scroll {
-      max-height: 180px; overflow-y: auto;
+      max-height: 500px; overflow-y: auto;
     }
     .det-row {
       display: flex; align-items: center; gap: .5rem;
-      padding: .35rem .75rem; font-size: .8rem; cursor: pointer;
+      padding: .4rem .85rem; font-size: .8rem; cursor: pointer;
       border-bottom: 1px solid var(--border); transition: background .1s;
     }
     .det-row:hover { background: var(--bg-card2); }
     .det-row.active { background: var(--bg-card2); color: var(--accent); }
     .det-row:last-child { border-bottom: none; }
+    /* Section header — clear title + small "see multi-day" link */
+    .td-dets-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .55rem .85rem; font-size: .76rem;
+      color: var(--text-muted); font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .td-dets-link {
+      font-size: .7rem; font-weight: 500; color: var(--accent);
+      text-decoration: none;
+    }
+    .td-dets-link:hover { text-decoration: underline; }
 
     /* ── KPI strip ──────────────────────────────────────────────────── */
     .kpi-strip {

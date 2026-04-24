@@ -1983,5 +1983,7 @@
   "td_filter_new": "Nouvelles",
   "td_filter_rare": "Rares",
   "td_filter_review": "À revoir",
-  "td_filter_strong": "Signal solide"
+  "td_filter_strong": "Signal solide",
+  "today_dets_full_link": "Voir multi-jour",
+  "today_dets_full_title": "Voir la liste complète multi-jour pour cette espèce"
 }

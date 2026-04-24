@@ -1988,5 +1988,7 @@
   "td_filter_new": "New",
   "td_filter_rare": "Rare",
   "td_filter_review": "To review",
-  "td_filter_strong": "Strong signal"
+  "td_filter_strong": "Strong signal",
+  "today_dets_full_link": "Multi-day view",
+  "today_dets_full_title": "See the full multi-day list for this species"
 }

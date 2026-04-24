@@ -1988,5 +1988,7 @@
   "td_filter_new": "Nieuw",
   "td_filter_rare": "Zeldzaam",
   "td_filter_review": "Te beoordelen",
-  "td_filter_strong": "Sterk signaal"
+  "td_filter_strong": "Sterk signaal",
+  "today_dets_full_link": "Meerdaagse weergave",
+  "today_dets_full_title": "Volledige meerdaagse lijst voor deze soort bekijken"
 }

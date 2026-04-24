@@ -1988,5 +1988,7 @@
   "td_filter_new": "Neu",
   "td_filter_rare": "Selten",
   "td_filter_review": "Zu prüfen",
-  "td_filter_strong": "Starkes Signal"
+  "td_filter_strong": "Starkes Signal",
+  "today_dets_full_link": "Mehrtägige Ansicht",
+  "today_dets_full_title": "Vollständige mehrtägige Liste für diese Art anzeigen"
 }
