@@ -873,6 +873,12 @@ const app = createApp({
         // — l'éditorial garde ses marqueurs riches photo+label, le brut est
         // présent mais discret pour ne pas transformer la frise en table.
         if (ev.isRaw) {
+          // À zoom complet (24h), la rangée de points devient bruit visuel et
+          // dit la même chose que la couche densité en plus dur. On ne révèle
+          // les détections individuelles qu'à partir d'un zoom partiel — c'est
+          // le même seuil que le basculement de la liste vers "Détections dans
+          // la fenêtre", donc frise et liste passent ensemble en mode inspection.
+          if (_viewStart === 0 && _viewEnd === 24) return;
           const dot = document.createElement('div');
           dot.className = 'tl-raw-dot';
           dot.style.left = x + 'px';
