@@ -90,7 +90,7 @@
 
 
       <!-- ── ZONE 3: DETECTION ────────────────────────────────── -->
-      <div class="bf-zone bf-zone-det" :class="{pulse:detPulse}">
+      <div class="bf-zone bf-zone-det" :class="{pulse:detPulse, fresh:detFresh}">
         <div class="bf-zone-hdr"><span class="bf-dot" :class="lastDet?'live':''"></span>{{t('dash_latest')}}</div>
         <div v-if="lastDet" class="bf-det-main" :class="{['bf-det-enter']:detEnter}">
           <div class="bf-det-photo-wrap">
@@ -122,8 +122,8 @@
 
     <!-- ════ KPIs ═══════════════════════════════════════════════ -->
     <div class="bf-kpis">
-      <a href="today.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{kpi.total}}</div><div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div></div></a>
-      <a href="today.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{kpi.species}}</div><div class="bf-kpi-label">{{t('dash_kpi_species')}}</div></div></a>
+      <a href="today.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.total}">{{tweenedTotal}}</div><div class="bf-kpi-label">{{t('dash_kpi_detections')}}</div></div></a>
+      <a href="today.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon"><bird-icon name="bird" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :class="{bump:kpiBump.species}">{{tweenedSpecies}}</div><div class="bf-kpi-label">{{t('dash_kpi_species')}}</div></div></a>
       <a href="review.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon" :style="kpi.review>0?'background:rgba(255,152,0,.12)':''"><bird-icon name="check-circle" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.review>0?'color:#ff9800':''">{{kpi.review}}</div><div class="bf-kpi-label">{{t('dash_kpi_review')}}</div></div></a>
       <a href="system.html" class="bf-kpi" style="text-decoration:none;color:inherit;"><div class="bf-kpi-icon"><bird-icon name="activity" :size="20"></bird-icon></div><div class="bf-kpi-body"><div class="bf-kpi-val" :style="kpi.healthStyle">{{kpi.healthLabel}}</div><div class="bf-kpi-label">{{t('dash_kpi_health')}}</div><div class="bf-kpi-sub" v-if="kpi.healthDetail">{{kpi.healthDetail}}</div></div></a>
     </div>
@@ -133,7 +133,7 @@
       <div class="bf-card">
         <div class="bf-card-hdr"><span>{{t('dash_key_events')}}</span><span style="font-size:.58rem">{{keyEvents.length}}</span></div>
         <div v-if="keyEvents.length===0" style="padding:.5rem;text-align:center;color:var(--text-muted);font-size:.75rem">{{t('dash_waiting')}}</div>
-        <div v-for="ev in keyEvents" :key="ev.id" class="bf-evt">
+        <div v-for="ev in keyEvents" :key="ev.id" class="bf-evt" :class="{fresh: ev._fresh}">
           <div class="bf-evt-dot" :class="ev.dotClass"></div>
           <span class="bf-evt-msg">{{ev.msg}}</span>
           <span class="bf-evt-time">{{ev.ts}}</span>
@@ -285,6 +285,11 @@ BIRDASH.ready.then(() => {
       // ── Logs SSE ───────────────────────────────────────────
       const keyEvents=ref([]); let tickId=0;
       const enginePulse=ref(false), detPulse=ref(false), detEnter=ref(false);
+      // Phase 2 — accent +1.5s on the detection card when a new detection
+      // becomes the latest one. More eventful than detPulse alone (which
+      // only scales the photo); detFresh adds a clear accent border + glow
+      // so the user perceives "something just happened" at a glance.
+      const detFresh = ref(false);
       let logSource=null;
       let _refreshTimer = null;
       let _lastSpecies = "";
@@ -365,8 +370,15 @@ BIRDASH.ready.then(() => {
             if(/GET |POST |DELETE |api\//i.test(d.msg))return;
             if(EVT_CLASS[d.cat]){
               tickId++;
-              keyEvents.value.unshift({id:tickId,ts:d.ts,msg:simplifyMsg(d.msg,d.cat),dotClass:EVT_CLASS[d.cat]});
+              const evId = tickId;
+              keyEvents.value.unshift({id:evId,ts:d.ts,msg:simplifyMsg(d.msg,d.cat),dotClass:EVT_CLASS[d.cat],_fresh:true});
               if(keyEvents.value.length>20)keyEvents.value.length=20;
+              // Freshness decay (Phase 2): the new event keeps a sustained
+              // accent for 3 s, then fades back to the regular row style.
+              setTimeout(()=>{
+                const idx = keyEvents.value.findIndex(x => x.id === evId);
+                if (idx >= 0) keyEvents.value[idx] = { ...keyEvents.value[idx], _fresh: false };
+              }, 3000);
             }
             if(d.cat==='recording'){
               enginePulse.value=true;
@@ -402,7 +414,7 @@ BIRDASH.ready.then(() => {
             const r=rows[0],row=[r.Date,r.Time,r.Sci_Name,r.Com_Name,r.Confidence,r.Model,r.File_Name],key=row[0]+row[1]+row[3],isNew=key!==lastDetKey;
             lastDetKey=key;
             lastDet.value={date:row[0],time:row[1],sciName:row[2],comName:row[3],confidence:row[4],model:row[5],fileName:row[6],modelShort:MODEL_SHORT[row[5]]||row[5]};
-            if(isNew){detEnter.value=false;await nextTick();detEnter.value=true;detPulse.value=true;setTimeout(()=>{detPulse.value=false;},2200);setTimeout(()=>{detEnter.value=false;},700);}
+            if(isNew){detEnter.value=false;await nextTick();detEnter.value=true;detPulse.value=true;detFresh.value=true;setTimeout(()=>{detPulse.value=false;},2200);setTimeout(()=>{detEnter.value=false;},700);setTimeout(()=>{detFresh.value=false;},1500);}
           }
         }catch(e){}
       }
@@ -423,6 +435,25 @@ BIRDASH.ready.then(() => {
       // ── KPIs ───────────────────────────────────────────────
       const kpi=ref({total:0,species:0,review:0,healthLabel:'...',healthStyle:'',healthDetail:''});
       const kpiBump=ref({total:false,species:false}); let prevTotal=-1;
+      // Phase 2 — animated displays for numeric KPIs. Smooth easeOutCubic
+      // tween over 600 ms so the change is perceived as a "value moving"
+      // rather than as a jump cut, but stays well below the slot-machine
+      // territory the user warned against.
+      const tweenedTotal = ref(0);
+      const tweenedSpecies = ref(0);
+      function animateNumber(refVal, target, duration = 600) {
+        const start = refVal.value || 0;
+        const delta = target - start;
+        if (delta === 0) { refVal.value = target; return; }
+        const startTime = performance.now();
+        const tick = () => {
+          const t = Math.min((performance.now() - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          refVal.value = Math.round(start + delta * eased);
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
       async function fetchKpis(){
         try{const today=new Date().toISOString().slice(0,10);
         const[statsR,reviewR]=await Promise.all([
@@ -431,8 +462,11 @@ BIRDASH.ready.then(() => {
         ]);
         const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value;
         const nT=stats.rows?.[0]?.[0]||0,nS=stats.rows?.[0]?.[1]||0;
-        if(prevTotal>=0&&nT>prevTotal){kpiBump.value.total=true;setTimeout(()=>{kpiBump.value.total=false;},500);}
-        if(prevTotal>=0&&nS>kpi.value.species){kpiBump.value.species=true;setTimeout(()=>{kpiBump.value.species=false;},500);}
+        if(prevTotal>=0&&nT>prevTotal){kpiBump.value.total=true;setTimeout(()=>{kpiBump.value.total=false;},800);}
+        if(prevTotal>=0&&nS>kpi.value.species){kpiBump.value.species=true;setTimeout(()=>{kpiBump.value.species=false;},800);}
+        // Phase 2 — tween the displayed values toward the new ones.
+        animateNumber(tweenedTotal, nT);
+        animateNumber(tweenedSpecies, nS);
         prevTotal=nT;
         let hL,hS,hD;
         if(anlys.lagSecs>300){hL=t('dash_health_delayed');hS='color:#ff9800';hD=t('dash_lag')+': '+fmtLag(anlys.lagSecs);}
@@ -462,6 +496,8 @@ BIRDASH.ready.then(() => {
         pipeStages,pipelineDotClass,pipeFillPct,
         // Phase 1 — pipeline transit + IA states + consensus bridge
         pipePulseClass, bnAnalyzing, p2Analyzing, consensusBridge,
+        // Phase 2 — événementialisation
+        detFresh, tweenedTotal, tweenedSpecies,
         lastDet,detStatus,detStatusLabel,confClass,photoUrl,
         kpi,kpiBump,keyEvents,recentSpecies,fmtLag,
       };

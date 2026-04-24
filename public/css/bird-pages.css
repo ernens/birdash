@@ -2267,6 +2267,17 @@
       transform: scale(1.05);
       box-shadow: 0 4px 24px rgba(0,0,0,.18);
     }
+    /* Phase 2 — accent +1.5 s when a NEW detection lands. Reads as
+       "something just arrived" without disrupting the photo crossfade. */
+    .bf-zone-det.fresh {
+      box-shadow:
+        inset 0 0 0 1px var(--accent, #66bb6a),
+        0 0 22px -4px rgba(102,187,106,.45);
+      transition: box-shadow .4s ease-out;
+    }
+    .bf-zone-det:not(.fresh) {
+      transition: box-shadow .8s ease-in;
+    }
     .bf-det-enter { animation: bfDetIn .6s cubic-bezier(.22,1,.36,1); }
     @keyframes bfDetIn { from{opacity:0;transform:scale(.88) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
     .bf-det-conf {
@@ -2331,8 +2342,11 @@
     }
     .bf-kpi-icon { font-size:1.15rem; flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--bg-card2,rgba(0,0,0,.05)); }
     .bf-kpi-body{flex:1;min-width:0}
-    .bf-kpi-val { font-size:1.3rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
-    .bf-kpi-val.bump{transform:scale(1.25)}
+    .bf-kpi-val { font-size:1.3rem; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; transition:transform .3s cubic-bezier(.34,1.56,.64,1), color .4s; }
+    /* Phase 2 — bump now adds a brief accent colour on top of the scale,
+       so an incoming detection or species reads as a real event, not a
+       silent number swap. Tween of the value itself is handled in JS. */
+    .bf-kpi-val.bump{transform:scale(1.25); color: var(--accent, #66bb6a);}
     .bf-kpi-label{font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
     .bf-kpi-sub{font-size:.55rem;color:var(--text-muted)}
 
@@ -2341,8 +2355,23 @@
     .bf-card { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; max-height:200px; overflow-y:auto; }
     .bf-card-hdr { font-size:.64rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.4rem; display:flex; justify-content:space-between; }
     /* Key events */
-    .bf-evt { display:flex; align-items:center; gap:.45rem; padding:.3rem .35rem; border-radius:5px; margin-bottom:.15rem; animation:bfEvt .35s cubic-bezier(.22,1,.36,1); }
+    .bf-evt {
+      display:flex; align-items:center; gap:.45rem;
+      padding:.3rem .35rem; border-radius:5px; margin-bottom:.15rem;
+      animation:bfEvt .35s cubic-bezier(.22,1,.36,1);
+      transition: background .8s ease-out, border-left-color .8s ease-out;
+      border-left: 2px solid transparent;
+      padding-left: calc(.35rem - 2px);
+    }
     @keyframes bfEvt{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+    /* Phase 2 — freshness 3 s on the latest inserted event. Sustained
+       accent left-border + tinted background, then transitions back to
+       the regular row style. Lets the user perceive the live ticker
+       is actually flowing, not just a static log. */
+    .bf-evt.fresh {
+      background: rgba(102,187,106,.08);
+      border-left-color: var(--accent, #66bb6a);
+    }
     .bf-evt-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
     .bf-evt-dot.det{background:#4caf50} .bf-evt-dot.rec{background:#42a5f5} .bf-evt-dot.bw{background:#7e57c2} .bf-evt-dot.err{background:#e53935}
     .bf-evt-msg { flex:1; font-size:.73rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
