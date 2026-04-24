@@ -137,9 +137,14 @@
         <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa"></div>{{t('tl_tag_best')}}</div>
       </div>
 
-      <!-- Chronological event list -->
+      <!-- Liste éditoriale assumée comme telle : titre + compteur honnête. -->
       <div class="tl-event-list" v-if="filteredEvents.length">
-        <h3>{{t('tl_chronology')}}</h3>
+        <h3>
+          {{t('tl_chronology')}}
+          <span v-if="totalDetectionsCount > 0" class="tl-list-counter">
+            — {{remarkableCount}} {{t('tl_of_total')}} {{totalDetectionsCount.toLocaleString()}} {{t('tl_detections')}}
+          </span>
+        </h3>
         <div v-for="ev in filteredEvents" :key="ev.id" class="tl-event-row" @click="openPopup(ev)">
           <div class="tl-er-time">{{ev.time}}</div>
           <div class="tl-er-photo">
@@ -403,6 +408,23 @@ const app = createApp({
         evts = evts.filter(e => e.timeDecimal >= vs && e.timeDecimal <= ve);
       }
       return evts.sort((a, b) => a.timeDecimal - b.timeDecimal);
+    });
+
+    // Phase 2 timeline : compteur "X moments marquants sur Y détections" — la
+    // liste assume désormais qu'elle est éditoriale, pas exhaustive.
+    // - remarkableCount = événements porteurs d'au moins un tag éditorial
+    //   (exclut les injections "top_species sans tag" du mode ALL).
+    // - totalDetectionsCount = somme des slots density (vérité chronologique
+    //   au-dessus du seuil de confiance, indépendant de toute sélection).
+    // Le compteur reste stable quand on zoome ou filtre — il décrit la journée
+    // entière, pas la sous-vue affichée.
+    const remarkableCount = computed(() => {
+      if (!data.value?.events) return 0;
+      return data.value.events.filter(e => !e.isAstro && e.tags && e.tags.length > 0).length;
+    });
+    const totalDetectionsCount = computed(() => {
+      if (!data.value?.density) return 0;
+      return data.value.density.reduce((sum, s) => sum + (s.count || 0), 0);
     });
 
     function formatDate(d) {
@@ -888,6 +910,7 @@ const app = createApp({
     return {
       lang, t, spName, data, loading, selectedDate, todayStr,
       popupEvent, clusterPopup, openPopup, activeFilters, eventTypes, toggleFilter, typeCounts, filteredEvents,
+      remarkableCount, totalDetectionsCount,
       formatDate, moonEmoji, navigateDay, load,
       viewStart, viewEnd, resetZoom, onZoneMousedown, dragSelect,
       confSlider, sliderLabel, sliderToConf, onSliderChange,

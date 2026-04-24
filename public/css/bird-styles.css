@@ -3065,6 +3065,10 @@ select, input[type="text"], input[type="number"], textarea {
 /* Event list */
 .tl-event-list { padding:1rem 2rem; }
 .tl-event-list h3 { font-size:.9rem; margin-bottom:.75rem; font-weight:600; }
+/* Compteur "X moments sur Y détections" — discret, en aplat de la même
+   ligne que le titre, pour clarifier honnêtement la nature éditoriale
+   de la liste sans surcharger visuellement. */
+.tl-list-counter { font-size:.78rem; font-weight:400; color:var(--text-muted); margin-left:.3rem; }
 .tl-event-row {
   display:flex; align-items:center; gap:1rem;
   padding:.65rem .75rem; border-radius:8px; cursor:pointer;
