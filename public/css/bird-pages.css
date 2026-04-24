@@ -2016,6 +2016,16 @@
       display: flex; align-items: flex-end; gap: 2px;
       height: 64px; margin: .3rem 0; flex: 1;
     }
+    /* Phase 1 — micro-respiration when no signal. Subliminal opacity
+       breathe so the mic feels "alive" even in silence. Only kicks in
+       when zone is NOT in pulse state (real signal would override). */
+    .bf-zone-mic:not(.pulse) .bf-mic-bars {
+      animation: bfMicBreath 4s ease-in-out infinite;
+    }
+    @keyframes bfMicBreath {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .92; }
+    }
     .bf-mic-bar {
       flex: 1; border-radius: 2px 2px 0 0; min-height: 2px;
       transition: height .15s ease-out, background .2s, opacity .2s;
@@ -2070,6 +2080,24 @@
     }
     .bf-pipe-dot.warn { background:#ff9800; box-shadow:0 0 8px rgba(255,152,0,.4); }
     .bf-pipe-lbl { font-size: .55rem; color: var(--text-muted); }
+    /* Pipeline transit pulse — small dot traveling between stages on real
+       state changes (recording → analyze → store). The 4 stages are at
+       12.5%/37.5%/62.5%/87.5% of the row width (flex:1 each). */
+    .bf-pipe-pulse {
+      position: absolute;
+      top: calc(.4rem + 0.5px);
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent, #5a9e3a);
+      box-shadow: 0 0 10px rgba(102,187,106,.7);
+      opacity: 0; pointer-events: none;
+      z-index: 2; transform: translateX(-5px);
+    }
+    .bf-pipe-pulse.transit-1 { animation: bfPipePulse1 700ms cubic-bezier(.4,.05,.2,1); }
+    .bf-pipe-pulse.transit-2 { animation: bfPipePulse2 700ms cubic-bezier(.4,.05,.2,1); }
+    .bf-pipe-pulse.transit-3 { animation: bfPipePulse3 500ms cubic-bezier(.4,.05,.2,1); }
+    @keyframes bfPipePulse1 { 0%{opacity:0;left:12.5%;} 20%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;left:37.5%;} }
+    @keyframes bfPipePulse2 { 0%{opacity:0;left:37.5%;} 20%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;left:62.5%;} }
+    @keyframes bfPipePulse3 { 0%{opacity:0;left:62.5%;} 20%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;left:87.5%;} }
 
     /* (.bf-engine-body wrapper was removed when the engine zone collapsed
        to a single column — dual-AI + stats are now siblings of .bf-zone-engine.) */
@@ -2116,6 +2144,58 @@
     .bf-core.perch.firing::before {
       opacity: 1; height: 4px;
       box-shadow: 0 0 8px #26a69a;
+    }
+    /* Phase 1 — IA states hierarchy: idle (subliminal) < analyzing
+       (retenu) < firing (existing strong). The analyzing state must
+       NEVER outshine the result; it's a "work in progress" hint, not
+       a celebration. */
+    .bf-core.idle::before {
+      animation: bfCoreBreath 3.5s ease-in-out infinite;
+    }
+    @keyframes bfCoreBreath {
+      0%, 100% { opacity: .35; }
+      50%      { opacity: .65; }
+    }
+    /* Analyzing — discreet horizontal scan band. Slower than firing,
+       lower opacity, no border highlight. */
+    .bf-core.analyzing { position: relative; overflow: hidden; }
+    .bf-core.analyzing::after {
+      content: ''; position: absolute; top: 0; bottom: 0; left: -40%;
+      width: 35%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+      animation: bfCoreScan 1.6s linear infinite;
+      pointer-events: none; z-index: 0;
+    }
+    .bf-core.birdnet.analyzing::after {
+      background: linear-gradient(90deg, transparent, rgba(66,165,245,.12), transparent);
+    }
+    .bf-core.perch.analyzing::after {
+      background: linear-gradient(90deg, transparent, rgba(38,166,154,.12), transparent);
+    }
+    @keyframes bfCoreScan {
+      0%   { left: -40%; }
+      100% { left: 100%; }
+    }
+
+    /* Consensus bridge — flashes briefly between the two IA cards when
+       they agree on the same species. Lives between .bf-core.birdnet
+       and .bf-core.perch in the .bf-cores flex row. */
+    .bf-consensus-bridge {
+      flex: 0 0 12px; align-self: center;
+      height: 2px; background: var(--accent, #66bb6a);
+      box-shadow: 0 0 8px rgba(102,187,106,.7);
+      opacity: 0; transform: scaleX(0);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+    }
+    .bf-consensus-bridge.show {
+      animation: bfBridge 1200ms ease-in-out;
+    }
+    @keyframes bfBridge {
+      0%   { opacity: 0; transform: scaleX(0); }
+      20%  { opacity: 1; transform: scaleX(1); }
+      75%  { opacity: 1; transform: scaleX(1); }
+      100% { opacity: 0; transform: scaleX(0); }
     }
     .bf-core-name {
       font-size: 1rem; font-weight: 800; line-height: 1.15;
