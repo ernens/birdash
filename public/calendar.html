@@ -65,6 +65,7 @@
         <bird-icon name="chevron-right" :size="16"></bird-icon>
       </button>
     </div>
+    <div class="cal-intensity-note">{{t('cal_intensity_note')}}</div>
 
     <!-- Day-of-week headers -->
     <div class="cal-grid">
@@ -76,10 +77,13 @@
     <div v-else class="cal-grid">
       <div v-for="(cell, i) in cells" :key="i"
            class="cal-cell"
-           :class="{ empty: !cell.day, today: cell.isToday, future: cell.isFuture, 'has-new': cell.newSp > 0, 'has-rare': cell.rareSp > 0 }"
+           :class="{ empty: !cell.day, today: cell.isToday, future: cell.isFuture }"
            @click="openPopover(cell, $event)">
         <template v-if="cell.day">
-          <div class="cal-day">{{cell.day}}</div>
+          <div class="cal-day">
+            <span>{{cell.day}}</span>
+            <span v-if="cell.isToday" class="cal-today-dot" :title="t('today')"></span>
+          </div>
           <div v-if="cell.sp > 0" class="cal-sp">
             <bird-icon name="bird" :size="12"></bird-icon> {{cell.sp}}
           </div>
@@ -319,7 +323,11 @@ const app = createApp({
           newSpeciesSet.add(r.Com_Name);
         }
 
-        // 3. Rare species (≤5 total detections ever) detected this month
+        // 3. Rare species (≤5 total detections ever) detected this month.
+        //    NOTE: cette définition de "rare" est LOCALE (≤5 détections lifetime sur cette
+        //    station) et diffère du "rare" d'overview.html qui s'appuie sur la fréquence
+        //    eBird régionale. Les deux signaux co-existent volontairement : le calendrier
+        //    raconte l'histoire de cette station, l'overview celle du contexte régional.
         const rareRows = await birdQuery(
           `SELECT d.Date as date, d.Com_Name, MAX(d.Sci_Name) as Sci_Name
            FROM active_detections d

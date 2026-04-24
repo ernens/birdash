@@ -2897,15 +2897,16 @@
       display:flex; flex-direction:column; gap:.15rem; position:relative; overflow:hidden;
     }
     .cal-cell:hover { border-color:var(--accent); transform:translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,.06); }
-    .cal-cell.today { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-dim); }
+    /* Hiérarchie visuelle : selected > remarkable (badges) > today (marqueur discret).
+       Today ne porte plus de bordure accent — seul le jour sélectionné peut en avoir une. */
+    .cal-cell.today { /* marqueur discret via .cal-today-dot ; pas de bordure */ }
+    .cal-cell.selected { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent), 0 4px 16px rgba(0,0,0,.12); }
     .cal-cell.empty { background:transparent; border-color:transparent; cursor:default; min-height:auto; }
     .cal-cell.empty:hover { transform:none; border-color:transparent; box-shadow:none; }
     .cal-cell.future { opacity:.35; cursor:default; }
     .cal-cell.future:hover { transform:none; border-color:var(--border); box-shadow:none; }
-    .cal-cell.has-new { border-left:3px solid #f59e0b; }
-    .cal-cell.has-rare { border-left:3px solid var(--danger); }
-    .cal-cell.has-new.has-rare { border-left:3px solid #f59e0b; border-right:3px solid var(--danger); }
-    .cal-day { font-size:1rem; font-weight:700; }
+    .cal-day { font-size:1rem; font-weight:700; display:flex; align-items:center; gap:.3rem; }
+    .cal-today-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); display:inline-block; flex-shrink:0; }
     .cal-sp { font-size:.78rem; color:var(--accent); display:flex; align-items:center; gap:.2rem; font-weight:500; }
     .cal-det { font-size:.72rem; color:var(--text-muted); }
     .cal-badges { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.1rem; }
@@ -2919,6 +2920,7 @@
     .cal-kpi-label { font-size:.72rem; color:var(--text-muted); }
     .cal-legend { display:flex; flex-wrap:wrap; gap:.8rem; justify-content:center; margin-top:.6rem; font-size:.7rem; color:var(--text-faint); align-items:center; }
     .cal-legend-swatch { width:12px; height:12px; border-radius:2px; }
+    .cal-intensity-note { font-size:.7rem; color:var(--text-faint); text-align:center; margin:-.4rem 0 .6rem; font-style:italic; }
     /* ── Calendar popover ──────────────────────────────────────── */
     .cal-popover-backdrop {
       position:fixed; inset:0; z-index:1000;

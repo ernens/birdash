@@ -805,6 +805,7 @@
   "cal_few": "Peu",
   "cal_moderate": "Modéré",
   "cal_many": "Beaucoup",
+  "cal_intensity_note": "Intensité des barres relative au mois affiché",
   "svc_engine": "Moteur de détection",
   "svc_recording": "Capture audio",
   "svc_web": "Serveur web",

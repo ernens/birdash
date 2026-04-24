@@ -805,6 +805,7 @@
   "cal_few": "Wenig",
   "cal_moderate": "Mäßig",
   "cal_many": "Viel",
+  "cal_intensity_note": "Balkenintensität relativ zum angezeigten Monat",
   "svc_engine": "Erkennungsmotor",
   "svc_recording": "Audioaufnahme",
   "svc_web": "Webserver",

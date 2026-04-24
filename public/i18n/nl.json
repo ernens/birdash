@@ -805,6 +805,7 @@
   "cal_few": "Weinig",
   "cal_moderate": "Matig",
   "cal_many": "Veel",
+  "cal_intensity_note": "Balkintensiteit relatief tot de getoonde maand",
   "svc_engine": "Detectiemotor",
   "svc_recording": "Audio-opname",
   "svc_web": "Webserver",
