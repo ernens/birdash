@@ -145,11 +145,17 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex: 1; min-width: 0;
     }
+    /* Count tiered — biggest volumes anchor the scan, weakest stay quiet
+       so the eye naturally stops where the action is. Tabular numerics
+       so digits align across rows. */
     .sp-count {
       flex: 0 0 auto; margin-left: auto;
-      font-size: .82rem; font-weight: 700; color: var(--accent);
+      font-size: .82rem; font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+    .sp-count--low  { color: var(--text-muted); font-weight: 500; }
+    .sp-count--mid  { color: var(--accent); font-weight: 600; }
+    .sp-count--high { color: var(--accent); font-weight: 700; }
     /* Row 2 — sci_name + time + fav (supporting, gray) */
     .sp-row2 {
       display: flex; align-items: baseline; gap: .35rem;
@@ -162,7 +168,7 @@
       flex: 1; min-width: 0;
     }
     .sp-time {
-      font-family: monospace; color: var(--text-faint);
+      font-family: monospace; color: var(--text-faint); opacity: .8;
       flex: 0 0 auto;
     }
 
@@ -347,11 +353,17 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex: 1; min-width: 0;
     }
+    /* Count tiered — biggest volumes anchor the scan, weakest stay quiet
+       so the eye naturally stops where the action is. Tabular numerics
+       so digits align across rows. */
     .sp-count {
       flex: 0 0 auto; margin-left: auto;
-      font-size: .82rem; font-weight: 700; color: var(--accent);
+      font-size: .82rem; font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+    .sp-count--low  { color: var(--text-muted); font-weight: 500; }
+    .sp-count--mid  { color: var(--accent); font-weight: 600; }
+    .sp-count--high { color: var(--accent); font-weight: 700; }
     /* Row 2 — sci_name + time + fav (supporting, gray) */
     .sp-row2 {
       display: flex; align-items: baseline; gap: .35rem;
@@ -364,7 +376,7 @@
       flex: 1; min-width: 0;
     }
     .sp-time {
-      font-family: monospace; color: var(--text-faint);
+      font-family: monospace; color: var(--text-faint); opacity: .8;
       flex: 0 0 auto;
     }
 
