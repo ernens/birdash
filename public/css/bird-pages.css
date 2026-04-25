@@ -618,6 +618,23 @@
       transition:color .12s;
     }
     .det-chip-clear-all:hover { color:var(--accent); text-decoration:underline; }
+    /* Phase 3 detections : signaux de ligne. ★ favoris, ✨ nouvelle espèce.
+       Discrets (ils ne doivent pas concurrencer le nom d'espèce) mais
+       reconnaissables au scan. */
+    .row-mark {
+      display:inline-flex; align-items:center;
+      margin-left:.4rem; font-size:.78rem; line-height:1;
+      vertical-align:middle;
+    }
+    .row-mark-fav { color:var(--accent); }
+    .row-mark-new { color:var(--danger); }
+    /* Pastilles modèle : couleurs distinctes par variante pour repérer au scan
+       quand un détecteur diffère. La famille BirdNET reste neutre, Perch
+       (famille différente) ressort, BirdNET v1 (legacy) reste discret. */
+    .model-tag-v24   { color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+    .model-tag-v1    { color:var(--text-muted); background:rgba(255,255,255,.06); }
+    .model-tag-perch { color:#a86bc7; background:color-mix(in srgb, #a86bc7 14%, transparent); }
+    .model-tag-other { /* fallback hérite du .model-tag de base (bleu --info) */ }
     .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
     .fp-quick-btns, .quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
     .quick-btns { flex-wrap:wrap; gap:.3rem; }

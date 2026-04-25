@@ -1099,6 +1099,8 @@
   "det_chip_clear_all": "Tout effacer",
   "det_chip_aria_remove": "Retirer ce filtre",
   "det_chip_species_count": "{n} espèces",
+  "det_row_fav": "Favori",
+  "det_row_new": "Nouvelle espèce",
   "guild_filter": "Guilde écologique",
   "guild_all": "Toutes les guildes",
   "guild_raptors": "Rapaces",

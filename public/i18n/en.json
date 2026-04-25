@@ -1099,6 +1099,8 @@
   "det_chip_clear_all": "Clear all",
   "det_chip_aria_remove": "Remove this filter",
   "det_chip_species_count": "{n} species",
+  "det_row_fav": "Favorite",
+  "det_row_new": "New species",
   "guild_filter": "Ecological guild",
   "guild_all": "All guilds",
   "guild_raptors": "Raptors",

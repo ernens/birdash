@@ -1099,6 +1099,8 @@
   "det_chip_clear_all": "Alles löschen",
   "det_chip_aria_remove": "Filter entfernen",
   "det_chip_species_count": "{n} Arten",
+  "det_row_fav": "Favorit",
+  "det_row_new": "Neue Art",
   "guild_filter": "Ökologische Gilde",
   "guild_all": "Alle Gilden",
   "guild_raptors": "Greifvögel",

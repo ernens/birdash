@@ -229,6 +229,9 @@
                 <td style="font-family:monospace;font-size:.8rem;">{{fmtTime(d.Time)}}</td>
                 <td>
                   <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">{{spName(d.Com_Name, d.Sci_Name)}}</a>
+                  <!-- Signaux de ligne : favori, nouvelle espèce, et compteur Unique. -->
+                  <span v-if="isFavorite(d.Com_Name)" class="row-mark row-mark-fav" :title="t('det_row_fav')">★</span>
+                  <span v-if="isNewSpecies(d.Com_Name)" class="row-mark row-mark-new" :title="t('det_row_new')">✨</span>
                   <span v-if="uniqueMode && d._count>1" class="det-count-badge">×{{d._count}}</span>
                 </td>
                 <td class="hide-sm" style="font-style:italic;font-size:.8rem;color:var(--text-muted);">{{d.Sci_Name}}</td>
@@ -238,7 +241,7 @@
                   </span>
                 </td>
                 <td class="hide-sm">
-                  <span v-if="d.Model" class="model-tag">{{shortModel(d.Model)}}</span>
+                  <span v-if="d.Model" :class="'model-tag model-tag-' + modelKey(d.Model)">{{shortModel(d.Model)}}</span>
                 </td>
               </tr>
             </tbody>
@@ -361,6 +364,37 @@ const app = createApp({
     const spDropdownOpen = ref(false);
     function closeSpDropdown() { spDropdownOpen.value = false; }
     function removeSpecies(s) { fSpecies.value = fSpecies.value.filter(x => x !== s); applyFilters(); }
+
+    // Phase 3 — signaux de ligne.
+    // isNewSpecies : "espèce dont la première détection est dans la fenêtre".
+    // newSpeciesSet est rechargé seulement quand dateFrom change (cache mémoïsé).
+    let _newSpCache = { dateFrom: null, set: null };
+    async function ensureNewSpeciesSet() {
+      const df = fp.dateFrom.value || '2000-01-01';
+      if (_newSpCache.dateFrom === df && _newSpCache.set) {
+        newSpeciesSet.value = _newSpCache.set;
+        return;
+      }
+      try {
+        const ns = await birdQuery(
+          `SELECT Com_Name FROM detections GROUP BY Com_Name HAVING MIN(Date) >= ?`,
+          [df]
+        );
+        const set = new Set(ns.map(r => r.Com_Name));
+        _newSpCache = { dateFrom: df, set };
+        newSpeciesSet.value = set;
+      } catch(e) { console.error('[newSpeciesSet]', e); }
+    }
+    function isNewSpecies(name) { return newSpeciesSet.value.has(name); }
+
+    // modelKey : map vers un suffixe court pour la pastille colorée.
+    function modelKey(m) {
+      const s = shortModel(m);
+      if (s === 'BirdNET')    return 'v24';
+      if (s === 'BirdNET v1') return 'v1';
+      if (s === 'Perch')      return 'perch';
+      return 'other';
+    }
 
     const filteredSpeciesList = computed(() => {
       let list = speciesList.value;
@@ -518,13 +552,10 @@ const app = createApp({
     async function loadDetections() {
       loading.value = true;
       spDropdownOpen.value = false;
-      // Load new species set for filter
-      if (newSpOnly.value && !newSpeciesSet.value.size) {
-        try {
-          const ns = await birdQuery(`SELECT Com_Name FROM detections GROUP BY Com_Name HAVING MIN(Date) >= ?`, [fp.dateFrom.value || '2000-01-01']);
-          newSpeciesSet.value = new Set(ns.map(r => r.Com_Name));
-        } catch(e) { console.error(e); }
-      }
+      // Charge le set "nouvelles espèces" — toujours, pour les pastilles ✨
+      // de chaque ligne. Mémoïsé par dateFrom : ne se relance que si la
+      // période change.
+      await ensureNewSpeciesSet();
       try {
         const { where, params } = buildWhere();
         if (uniqueMode.value) {
@@ -710,7 +741,8 @@ const app = createApp({
       page,total,rows,loading,totalPages,paginationPages,
       displayRows,displayTotal,activeChips,
       playingFile,toggleAudio, buildAudioUrl,
-      fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,
+      fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,modelKey,
+      isFavorite,isNewSpecies,
       applyFilters,resetFilters,goPage,exportCsv,exportEbird,openSpectro,deleteDet,
     };
   }

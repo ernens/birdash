@@ -1099,6 +1099,8 @@
   "det_chip_clear_all": "Alles wissen",
   "det_chip_aria_remove": "Filter verwijderen",
   "det_chip_species_count": "{n} soorten",
+  "det_row_fav": "Favoriet",
+  "det_row_new": "Nieuwe soort",
   "guild_filter": "Ecologische gilde",
   "guild_all": "Alle gilden",
   "guild_raptors": "Roofvogels",
