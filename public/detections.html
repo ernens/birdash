@@ -28,96 +28,114 @@
   <birdash-shell page="detections" :title="t('nav_detections')">
     <div class="det-layout">
 
-      <!-- Panneau filtres -->
+      <!-- Panneau filtres : 3 sections regroupées thématiquement
+           (Taxonomie / Statut / Temps & confiance), puis le mode Unique à part
+           en pied (cas spécial — sort à trancher en Phase 4), puis les actions. -->
       <div class="filter-panel">
-        <!-- Ecological guild filter -->
-        <div v-if="taxonomyOrders.length">
-          <span class="fp-label">{{t('guild_filter')}}</span>
-          <select class="fp-select" v-model="fGuild" @change="onGuildChange" :aria-label="t('guild_filter')">
-            <option value="">{{t('guild_all')}}</option>
-            <option v-for="g in guildOptions" :key="g.key" :value="g.key">{{g.icon}} {{g.label}}</option>
-          </select>
-        </div>
-        <!-- Taxonomy cascade -->
-        <div v-if="taxonomyOrders.length">
-          <span class="fp-label">{{t('filter_order')}}</span>
-          <select class="fp-select" v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')">
-            <option value="">{{t('all_orders')}}</option>
-            <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
-          </select>
-        </div>
-        <div v-if="taxonomyAllFamilies.length">
-          <span class="fp-label">{{t('filter_family')}}</span>
-          <select class="fp-select" v-model="fFamily" @change="onFamilyChange" :aria-label="t('filter_family')">
-            <option value="">{{t('all_families')}}</option>
-            <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
-          </select>
-        </div>
-        <!-- Favorites + New species toggles -->
-        <div style="display:flex;gap:.8rem;flex-wrap:wrap;">
-          <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-            <input type="checkbox" v-model="favOnly" @change="loadDetections" style="accent-color:var(--accent);">
-            ★ {{t('fav_only')}}
-          </label>
-          <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;">
-            <input type="checkbox" v-model="newSpOnly" @change="loadDetections" style="accent-color:var(--danger);">
-            <bird-icon name="sparkles" :size="12"></bird-icon> {{t('new_species')}}
-          </label>
-        </div>
-        <!-- Species picker filtered by taxonomy -->
-        <div>
-          <span class="fp-label">{{t('filter_species')}}</span>
-          <div class="ms-wrap" v-click-outside="closeSpDropdown">
-            <div class="ms-trigger" :class="{open:spDropdownOpen}"
-                 @click="spDropdownOpen=!spDropdownOpen">
-              <span v-if="!fSpecies.length" class="ms-placeholder">{{t('all_species_placeholder')}}</span>
-              <span v-for="s in fSpecies" :key="s" class="ms-tag">
-                {{s}}
-                <button class="ms-tag-x" @click.stop="removeSpecies(s)">×</button>
-              </span>
-              <span class="ms-caret">{{spDropdownOpen?'▲':'▼'}}</span>
-            </div>
-            <div v-if="spDropdownOpen" class="ms-dropdown">
-              <div class="ms-search-wrap">
-                <input ref="spSearchInput" class="ms-search" type="search"
-                       :placeholder="'🔍 '+t('search_species_ph')"
-                       v-model="spSearch" @click.stop>
-              </div>
-              <div class="ms-actions">
-                <button class="ms-action-btn"
-                        :style="allSpeciesSelected ? 'background:var(--accent);color:var(--on-accent);' : ''"
-                        @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))">
-                  {{allSpeciesSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
-                </button>
-              </div>
-              <div class="ms-list">
-                <label v-for="s in filteredSpeciesList" :key="s"
-                       class="ms-item" :class="{checked:fSpecies.includes(s)}"
-                       @click.stop>
-                  <input type="checkbox" :value="s" v-model="fSpecies">
+        <!-- ── TAXONOMIE ── -->
+        <div class="fp-group">
+          <h4 class="fp-section-title">{{t('det_section_taxonomy')}}</h4>
+          <!-- Ecological guild filter -->
+          <div v-if="taxonomyOrders.length">
+            <span class="fp-label">{{t('guild_filter')}}</span>
+            <select class="fp-select" v-model="fGuild" @change="onGuildChange" :aria-label="t('guild_filter')">
+              <option value="">{{t('guild_all')}}</option>
+              <option v-for="g in guildOptions" :key="g.key" :value="g.key">{{g.icon}} {{g.label}}</option>
+            </select>
+          </div>
+          <!-- Taxonomy cascade -->
+          <div v-if="taxonomyOrders.length">
+            <span class="fp-label">{{t('filter_order')}}</span>
+            <select class="fp-select" v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')">
+              <option value="">{{t('all_orders')}}</option>
+              <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
+            </select>
+          </div>
+          <div v-if="taxonomyAllFamilies.length">
+            <span class="fp-label">{{t('filter_family')}}</span>
+            <select class="fp-select" v-model="fFamily" @change="onFamilyChange" :aria-label="t('filter_family')">
+              <option value="">{{t('all_families')}}</option>
+              <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
+            </select>
+          </div>
+          <!-- Species picker filtered by taxonomy -->
+          <div>
+            <span class="fp-label">{{t('filter_species')}}</span>
+            <div class="ms-wrap" v-click-outside="closeSpDropdown">
+              <div class="ms-trigger" :class="{open:spDropdownOpen}"
+                   @click="spDropdownOpen=!spDropdownOpen">
+                <span v-if="!fSpecies.length" class="ms-placeholder">{{t('all_species_placeholder')}}</span>
+                <span v-for="s in fSpecies" :key="s" class="ms-tag">
                   {{s}}
-                </label>
+                  <button class="ms-tag-x" @click.stop="removeSpecies(s)">×</button>
+                </span>
+                <span class="ms-caret">{{spDropdownOpen?'▲':'▼'}}</span>
+              </div>
+              <div v-if="spDropdownOpen" class="ms-dropdown">
+                <div class="ms-search-wrap">
+                  <input ref="spSearchInput" class="ms-search" type="search"
+                         :placeholder="'🔍 '+t('search_species_ph')"
+                         v-model="spSearch" @click.stop>
+                </div>
+                <div class="ms-actions">
+                  <button class="ms-action-btn"
+                          :style="allSpeciesSelected ? 'background:var(--accent);color:var(--on-accent);' : ''"
+                          @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))">
+                    {{allSpeciesSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
+                  </button>
+                </div>
+                <div class="ms-list">
+                  <label v-for="s in filteredSpeciesList" :key="s"
+                         class="ms-item" :class="{checked:fSpecies.includes(s)}"
+                         @click.stop>
+                    <input type="checkbox" :value="s" v-model="fSpecies">
+                    {{s}}
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div>
-          <span class="fp-label">{{t('date_range')}}</span>
-          <filter-period
-            :period="fp.period.value" :quick-buttons="fp.quickButtons.value"
-            :date-from="fp.dateFrom.value" :date-to="fp.dateTo.value"
-            @set-period="fp.setPeriod" @set-custom="fp.setCustomRange">
-          </filter-period>
+
+        <!-- ── STATUT ── -->
+        <div class="fp-group">
+          <h4 class="fp-section-title">{{t('det_section_status')}}</h4>
+          <div style="display:flex;gap:.8rem;flex-wrap:wrap;">
+            <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:0;">
+              <input type="checkbox" v-model="favOnly" @change="loadDetections" style="accent-color:var(--accent);">
+              ★ {{t('fav_only')}}
+            </label>
+            <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:0;">
+              <input type="checkbox" v-model="newSpOnly" @change="loadDetections" style="accent-color:var(--danger);">
+              <bird-icon name="sparkles" :size="12"></bird-icon> {{t('new_species')}}
+            </label>
+          </div>
         </div>
-        <div>
-          <span class="fp-label">{{t('filter_confidence')}}</span>
-          <filter-confidence
-            :confidence="fc.confidence.value" :conf-editing="fc.confEditing.value" :conf-edit-val="fc.confEditVal.value"
-            @update:confidence="v => { fc.confidence.value = v; }"
-            @start-edit="fc.startEdit()" @commit-edit="fc.commitEdit()"
-            @update:conf-edit-val="v => fc.confEditVal.value = v">
-          </filter-confidence>
+
+        <!-- ── TEMPS & CONFIANCE ── -->
+        <div class="fp-group">
+          <h4 class="fp-section-title">{{t('det_section_time_conf')}}</h4>
+          <div>
+            <span class="fp-label">{{t('date_range')}}</span>
+            <filter-period
+              :period="fp.period.value" :quick-buttons="fp.quickButtons.value"
+              :date-from="fp.dateFrom.value" :date-to="fp.dateTo.value"
+              @set-period="fp.setPeriod" @set-custom="fp.setCustomRange">
+            </filter-period>
+          </div>
+          <div>
+            <span class="fp-label">{{t('filter_confidence')}}</span>
+            <filter-confidence
+              :confidence="fc.confidence.value" :conf-editing="fc.confEditing.value" :conf-edit-val="fc.confEditVal.value"
+              @update:confidence="v => { fc.confidence.value = v; }"
+              @start-edit="fc.startEdit()" @commit-edit="fc.commitEdit()"
+              @update:conf-edit-val="v => fc.confEditVal.value = v">
+            </filter-confidence>
+          </div>
         </div>
+
+        <!-- Mode Unique : kept en pied du panneau, hors groupe — c'est un mode
+             spécial de présentation, pas un filtre. Sort à trancher en Phase 4. -->
         <div>
           <span class="fp-label">{{t('mode')}}</span>
           <div class="fp-toggle-row" @click="uniqueMode=!uniqueMode">
@@ -128,8 +146,13 @@
             <div class="fp-toggle" :class="{on:uniqueMode}"></div>
           </div>
         </div>
-        <button class="btn btn-primary" style="width:100%;" @click="applyFilters">{{t('apply_filter')}}</button>
-        <button class="btn btn-secondary" style="width:100%;margin-top:-.4rem;" @click="resetFilters">{{t('reset_filter')}}</button>
+
+        <!-- Actions : Apply primaire évident, Reset secondaire calme.
+             Border-top dashed sépare clairement les actions des filtres. -->
+        <div class="fp-actions">
+          <button class="btn btn-primary fp-apply-btn" @click="applyFilters">{{t('apply_filter')}}</button>
+          <button class="btn btn-secondary fp-reset-btn" @click="resetFilters">{{t('reset_filter')}}</button>
+        </div>
       </div>
 
       <!-- Contenu -->

@@ -570,6 +570,25 @@
     .filter-panel { position:sticky; top:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; display:flex; flex-direction:column; gap:.85rem; min-width:0; overflow:hidden; box-sizing:border-box; }
     .filter-panel > * { min-width:0; max-width:100%; }
     .fp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:.35rem; display:block; }
+    /* Phase 1 detections : groupes thématiques (Taxonomie / Statut / Temps & confiance).
+       Le sous-titre est volontairement très sobre — typographie discrète qui structure
+       sans crier, plus un trait dashed pour ancrer chaque section. */
+    .fp-group { display:flex; flex-direction:column; gap:.7rem; }
+    .fp-section-title {
+      font-size:.65rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+      color:var(--text-faint); margin:0 0 .15rem;
+      padding-bottom:.3rem; border-bottom:1px dashed var(--border);
+    }
+    /* Actions : Apply primaire évident, Reset secondaire calme. Trait dashed
+       au-dessus pour bien séparer les actions des filtres. */
+    .fp-actions {
+      display:flex; flex-direction:column; gap:.5rem;
+      margin-top:.4rem; padding-top:.7rem;
+      border-top:1px dashed var(--border);
+    }
+    .fp-apply-btn { width:100%; padding:.55rem; font-weight:600; }
+    .fp-reset-btn { width:100%; font-size:.78rem; padding:.4rem; opacity:.78; }
+    .fp-reset-btn:hover { opacity:1; }
     .fp-date-input { width:100%; box-sizing:border-box; background:var(--bg-deep); border:1px solid var(--border); color:var(--text-main); border-radius:4px; padding:.3rem .45rem; font-size:.8rem; margin-bottom:.3rem; }
     .fp-quick-btns, .quick-btns { display:flex; flex-wrap:nowrap; gap:.25rem; }
     .quick-btns { flex-wrap:wrap; gap:.3rem; }
