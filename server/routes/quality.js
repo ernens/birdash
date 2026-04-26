@@ -67,6 +67,18 @@ async function reviewOutcomes(db, birdashDb, days) {
     'SELECT COUNT(*) AS n FROM detections WHERE Date >= ?'
   ).get(fromDate).n;
 
+  // birdashDb is null on environments where birdash.db couldn't be opened
+  // (CI, fresh installs). Match the "honest labelling" pattern used by
+  // prefilterFromEvents: return a not_instrumented payload rather than 5xx.
+  if (!birdashDb) {
+    return {
+      source: 'not_instrumented',
+      total, reviewed: 0, unreviewed: total,
+      confirmed: 0, doubtful: 0, rejected: 0,
+      quality: null,
+    };
+  }
+
   const valRows = birdashDb.prepare(
     'SELECT status FROM validations WHERE date >= ?'
   ).all(fromDate);
