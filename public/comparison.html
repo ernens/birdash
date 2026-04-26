@@ -107,6 +107,19 @@
         </div>
       </div>
 
+      <!-- Évolution inter-annuelle : centre de gravité de la page.
+           Le seul bloc qui répond vraiment à "comment cette saison se situe
+           sur la durée". Promu en premier rôle, hauteur portée à 320px pour
+           que le récit comparatif respire. -->
+      <div class="card" style="margin-bottom:1.2rem;" v-if="data.evolution.length > 1">
+        <div class="card-title">
+          <bird-icon name="trending-up" :size="16"></bird-icon> {{t('ssn_evolution_title')}}
+        </div>
+        <div style="height:320px;"><canvas ref="chartEl"></canvas></div>
+      </div>
+
+      <!-- Arrivées / Départs : binôme analytique year-over-year.
+           Lecture événementielle (espèces qui marquent la saison). -->
       <div class="grid-2" style="margin-bottom:1.2rem;">
         <!-- Migratory arrivals -->
         <div class="card">
@@ -161,29 +174,6 @@
         </div>
       </div>
 
-      <!-- Multi-year evolution chart -->
-      <div class="card" style="margin-bottom:1.2rem;" v-if="data.evolution.length > 1">
-        <div class="card-title">
-          <bird-icon name="trending-up" :size="16"></bird-icon> {{t('ssn_evolution_title')}}
-        </div>
-        <div style="height:220px;"><canvas ref="chartEl"></canvas></div>
-      </div>
-
-      <!-- Best days -->
-      <div class="card" style="margin-bottom:1.2rem;" v-if="data.bestDays && data.bestDays.length">
-        <div class="card-title">
-          <bird-icon name="award" :size="16"></bird-icon> {{t('ssn_best_days')}}
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-          <a v-for="d in data.bestDays" :key="d.Date"
-             :href="'today.html?date='+d.Date"
-             class="ssn-best-day">
-            <div class="ssn-best-day-date">{{fmtDate(d.Date)}}</div>
-            <div style="font-size:.75rem;"><bird-icon name="bird" :size="11"></bird-icon> {{d.species}} · {{d.detections}} det.</div>
-          </a>
-        </div>
-      </div>
-
       <!-- Top species table -->
       <div class="card" v-if="data.topSpecies.length">
         <div class="card-title">
@@ -223,6 +213,24 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Best days : appendice de navigation. Élargit le KPI "best day"
+           à plusieurs jours et offre des raccourcis vers today.html.
+           Sorti du récit principal pour ne pas concurrencer le triptyque
+           évolution / arrivées-départs / table. -->
+      <div class="card" style="margin-top:1.2rem;" v-if="data.bestDays && data.bestDays.length">
+        <div class="card-title">
+          <bird-icon name="award" :size="16"></bird-icon> {{t('ssn_best_days')}}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+          <a v-for="d in data.bestDays" :key="d.Date"
+             :href="'today.html?date='+d.Date"
+             class="ssn-best-day">
+            <div class="ssn-best-day-date">{{fmtDate(d.Date)}}</div>
+            <div style="font-size:.75rem;"><bird-icon name="bird" :size="11"></bird-icon> {{d.species}} · {{d.detections}} det.</div>
+          </a>
         </div>
       </div>
 
