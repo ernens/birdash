@@ -249,6 +249,11 @@ try {
 }
 let birdashDb;
 try {
+  // better-sqlite3 will create the file if missing, but NOT the parent
+  // directory. On CI / fresh installs where $HOME/birdash/ doesn't exist
+  // yet, that throws ENOENT and birdashDb stays null — which then makes
+  // every validations/weather/quality_events route 500. mkdirSync first.
+  fs.mkdirSync(path.dirname(BIRDASH_DB_PATH), { recursive: true });
   birdashDb = new Database(BIRDASH_DB_PATH);
   dbPragmas.applyWritePragmas(birdashDb);
   birdashDb.exec(`CREATE TABLE IF NOT EXISTS validations (
