@@ -216,22 +216,20 @@
         </div>
       </div>
 
-      <!-- Best days : appendice de navigation. Élargit le KPI "best day"
-           à plusieurs jours et offre des raccourcis vers today.html.
-           Sorti du récit principal pour ne pas concurrencer le triptyque
-           évolution / arrivées-départs / table. -->
-      <div class="card" style="margin-top:1.2rem;" v-if="data.bestDays && data.bestDays.length">
-        <div class="card-title">
-          <bird-icon name="award" :size="16"></bird-icon> {{t('ssn_best_days')}}
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-          <a v-for="d in data.bestDays" :key="d.Date"
-             :href="'today.html?date='+d.Date"
-             class="ssn-best-day">
-            <div class="ssn-best-day-date">{{fmtDate(d.Date)}}</div>
-            <div style="font-size:.75rem;"><bird-icon name="bird" :size="11"></bird-icon> {{d.species}} · {{d.detections}} det.</div>
-          </a>
-        </div>
+      <!-- Best days : bande de raccourcis vers today.html. Pas une card —
+           juste un petit label utilitaire suivi des chips, pour que le
+           poids visuel corresponde à la fonction (navigation, pas analyse). -->
+      <div v-if="data.bestDays && data.bestDays.length"
+           style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-top:1.2rem;padding:0 .25rem;">
+        <span style="font-size:.72rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;">
+          {{t('ssn_best_days')}} →
+        </span>
+        <a v-for="d in data.bestDays" :key="d.Date"
+           :href="'today.html?date='+d.Date"
+           class="ssn-best-day">
+          <div class="ssn-best-day-date">{{fmtDate(d.Date)}}</div>
+          <div style="font-size:.75rem;"><bird-icon name="bird" :size="11"></bird-icon> {{d.species}} · {{d.detections}} det.</div>
+        </a>
       </div>
 
     </template>
