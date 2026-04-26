@@ -150,6 +150,10 @@ function execCmd(cmd, args) {
     let stdout = '', stderr = '';
     proc.stdout.on('data', d => stdout += d);
     proc.stderr.on('data', d => stderr += d);
+    // 'error' fires for ENOENT (binary missing) and EACCES. Without this
+    // listener the event bubbles up as an unhandledException and kills
+    // the whole server — caught us in CI when arecord wasn't installed.
+    proc.on('error', reject);
     proc.on('close', code => code === 0 ? resolve(stdout.trim()) : reject(new Error(stderr.trim() || `exit ${code}`)));
   });
 }
