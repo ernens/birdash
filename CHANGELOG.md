@@ -2,6 +2,81 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.45.0] — 2026-04-26
+
+### UX refactor pass — phased multi-page orchestration
+
+Eight pages went through the same workflow: diagnostic → A→D
+cadrage → ship phase → "let it rest, observe usage" closure.
+The discipline was to ship narrow, high-leverage gestures rather
+than open broad refactors, and to recognize when a page no longer
+needed work. Phases tagged "optional" stayed dormant when phase 1
+already cleared the friction.
+
+No data, query, or schema changes — pure HTML/CSS/JS reorganization
+plus a few targeted i18n cleanups for orphan keys.
+
+**today.html** — workspace breathing, lighter sidebar, compact left
+list with index hierarchy by glance (count = scan signal). Filter
+pills + per-row badges + density level 2. Final polish: row
+micro-detail (tiered count, hover-only ★, quieter time), workspace
+breathing + active-detection row distinct.
+
+**dashboard.html** — Phase 1 live cœur (pipeline transit + IA states
++ mic respiration). Phase 2 événementialisation (last det + events +
+KPI). Phase 3 strict reduced-motion accord. Pipeline pulse +
+analyzing presence calmed to "presence, not spectacle".
+
+**calendar.html** — Phase 1 hierarchy + clean borders + intensity
+legend. Phase 2 mini-panneau jour sélectionné persistant. Phase 3
+hover/transitions/navigation polish + reduced-motion. Anti-flicker
+fix on day transitions.
+
+**timeline.html** — Phase 1 density layer in main frise (vérité
+visuelle). Phase 2 rename list to "Moments marquants" + counter X/Y.
+Phase 3 toggle Moments marquants / Toutes détections. Phase 4
+suppression of the redundant density bar above the frise (drag-to-zoom
+already lives on `.tp-scroll`). Density floor calibration. Raw points
+gated by zoom (24h view = synthesis, zoom = inspection).
+
+**detections.html** — Phase 1 filter panel hierarchy (3 groups +
+clean Apply/Reset). Phase 2 chips de filtres actifs au-dessus du
+tableau. Phase 2.5 (pivot during review) auto-apply everywhere,
+suppression of the Apply button + sync watcher pattern with
+suppression flag. Phase 3 row signals (★ favoris, ✨ nouvelles,
+pastille modèle).
+
+**species.html** — Phase 1 hiérarchie visuelle des graphes. Activity
+by hour promoted to full-width hero (`chart-wrap-hero` 360px) as
+premier rôle. Heatmap day×hour reads as natural extension. Monthly
+/ 30d / Confidence collapse into a `.grid-3` secondary row. Phases
+2–3 dormant — Phase 1 cleared the friction.
+
+**rarities.html** — Phase 1 supprimer le card "Vues une seule fois"
+du haut (duplication fonctionnelle avec `tableFilter='once'`).
+"Dernières détections rares" full-width premier rôle. KPI 'once'
+rebrancher pour piloter la table. Bonus : harmonisation des handlers
+KPI (corrige un bug latent où le KPI 'new' highlightait 'rare').
+
+**comparison.html** — Phase 1 évolution inter-annuelle promue en
+premier rôle (full-width 320px) — c'est elle qui répond à "comment
+cette saison se situe sur la durée". Arrivées/Départs reste en
+grid-2 (binôme YoY). Best days sorti du récit principal en bande
+inline discrète (label uppercase + chips), forme-fonction enfin
+alignées avec sa nature de raccourci de navigation.
+
+### Cleanups
+
+- `i18n` orphan keys removed (4 langs each):
+  - `tl_density_label`, `tl_drag_hint` (timeline density bar suppr.)
+  - `rarity_show_all` (rarities once-card suppr.)
+- Service worker bumped 8× through the series (v208 → v216).
+- New CSS utilities: `.grid-3`, `.chart-wrap-hero`.
+- Dead code removed: `buildDensityBar` inline (timeline),
+  `loadOnce` + `once` ref + `onceSection` (rarities). Note:
+  `bird-timeline.js` still exports a `buildDensityBar` that is
+  unused anywhere — left for a future cleanup pass, out of scope.
+
 ## [1.44.0] — 2026-04-23
 
 ### Feat: Quality page Phase B — engine instrumentation
