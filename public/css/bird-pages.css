@@ -3188,6 +3188,13 @@
        (default CSS grid) → trio Layer 1 et duo Layer 2 ont des bords
        inférieurs alignés au lieu de bottoms en escalier */
     .grid-3.sys-layer, .grid-2.sys-layer { align-items: stretch; }
+    /* Force les cards des couches à remplir la hauteur de leur cellule
+       (align-items:stretch tout seul ne suffit pas dans certains contextes
+       à cause d'un conflit de display sur .card) */
+    .grid-3.sys-layer > .card, .grid-2.sys-layer > .card {
+      height: 100%; margin-bottom: 0;
+      display: flex; flex-direction: column;
+    }
 
     /* Sous-bloc Audio fusionné dans la card Hardware (Layer 3).
        Audio n'avait plus assez de poids pour mériter sa propre carte —
