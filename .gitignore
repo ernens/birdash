@@ -39,3 +39,7 @@ config/github-token.txt
 config/bug-reports.json
 config/telemetry.json
 config/noise_profile.wav
+
+# Auto-screenshot hook artifacts
+screenshots/.auto-capture.log
+screenshots/.auto-capture.lock

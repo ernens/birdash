@@ -1,0 +1,66 @@
+#!/bin/bash
+# post-commit hook : auto-screenshot des pages dont le HTML a changé.
+#
+# Détecte les *.html modifiés dans le dernier commit (pas les CSS — trop
+# large), lance la capture EN BACKGROUND pour ne pas bloquer le terminal,
+# et laisse l'utilisateur stager les PNG résultants à sa convenance via
+# 'git add screenshots/' + commit séparé.
+#
+# Logs : screenshots/.auto-capture.log (gitignored)
+#
+# Active via : git config core.hooksPath scripts/hooks
+# Désactive : git config --unset core.hooksPath
+#
+# Auto-skip si :
+#   - aucun *.html modifié dans le commit
+#   - le serveur localhost ne répond pas
+#   - une capture est déjà en cours (lockfile)
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+# Détecte les *.html modifiés dans le dernier commit (HEAD)
+changed_html=$(git diff-tree --no-commit-id --name-only -r HEAD -- 'public/*.html' 2>/dev/null || true)
+
+if [ -z "$changed_html" ]; then
+  exit 0  # rien de pertinent à recapturer
+fi
+
+# Liste des basenames séparés par virgule, ex: "stats.html,favorites.html"
+files=$(echo "$changed_html" | xargs -n1 basename | paste -sd, -)
+
+# Lockfile pour éviter overlap si plusieurs commits enchaînés
+LOCK="screenshots/.auto-capture.lock"
+LOG="screenshots/.auto-capture.log"
+
+if [ -e "$LOCK" ]; then
+  echo "[post-commit] Capture déjà en cours (lock $LOCK), skip pour: $files" >> "$LOG"
+  exit 0
+fi
+
+# Vérification rapide que le serveur répond avant de fork
+if ! curl -fsS -o /dev/null -m 2 http://localhost/birds/overview.html 2>/dev/null; then
+  echo "[$(date '+%H:%M:%S')] localhost not reachable, skip auto-screenshot for: $files" >> "$LOG"
+  exit 0
+fi
+
+echo "[post-commit] auto-screenshot en arrière-plan pour: $files (log: $LOG)"
+
+# Fork + detach. Le shell parent retourne immédiatement → git ne bloque pas.
+(
+  trap 'rm -f "$LOCK"' EXIT
+  touch "$LOCK"
+  {
+    echo ""
+    echo "=========================================================="
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Capturing: $files"
+    echo "=========================================================="
+    node scripts/screenshots-changed.mjs "$files" 2>&1
+    echo ""
+    echo "→ Stage + commit les PNG via :"
+    echo "    git add screenshots/ && git commit -m 'screenshots: refresh after $files changes'"
+  } >> "$LOG" 2>&1
+) </dev/null >/dev/null 2>&1 &
+disown 2>/dev/null || true
+
+exit 0
