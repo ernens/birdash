@@ -1169,13 +1169,15 @@
        élimine le désalignement causé par les v-if conditionnels. */
     .svc-row {
       display:grid;
-      grid-template-columns: auto 1fr auto auto;
-      gap:.65rem; align-items:center;
-      padding:.5rem .75rem;
+      grid-template-columns: auto 1fr 96px auto;
+      gap:.7rem; align-items:center;
+      padding:.55rem 1rem;
       border:1px solid var(--border); border-radius:var(--radius);
       margin-bottom:.4rem; cursor:pointer;
+      box-sizing:border-box;
       transition:background .12s, border-color .12s;
     }
+    .svc-row:last-child { margin-bottom:0; }   /* évite la marge orpheline qui faisait paraître le bord du bas absent */
     .svc-row:hover { background:var(--bg-card2); border-color:var(--accent-dim); }
     .svc-row-text { min-width:0; line-height:1.2; }
     .svc-row-label { font-size:.82rem; font-weight:500; color:var(--text-main); }
@@ -1183,8 +1185,15 @@
       font-size:.65rem; color:var(--text-faint); font-family:monospace;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
+    /* Badge dans la row : largeur fixe + centrage → tous les badges
+       (active/inactive/activating/...) s'alignent verticalement */
+    .svc-row > .svc-state-badge {
+      min-width:80px; text-align:center;
+      padding:.18rem .4rem;
+    }
     .svc-row-chevron {
       font-size:1rem; color:var(--text-faint); line-height:1;
+      padding-left:.15rem;
     }
 
     /* ── Service detail modal ─────────────────────────────────────── */
