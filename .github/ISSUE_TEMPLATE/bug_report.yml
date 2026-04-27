@@ -1,0 +1,90 @@
+name: 🐛 Bug report
+description: Something is broken or behaves unexpectedly
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. The more specific you can be,
+        the faster the fix. If you have a screenshot or a server log, attach it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. What did you expect? What did you see instead?
+      placeholder: e.g. "After clicking Start on the Detection engine service, the page shows 'active' but the engine is not actually running — backlog keeps growing."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps so someone else can hit the same bug.
+      placeholder: |
+        1. Open system.html#health
+        2. Click on the Detection engine row
+        3. Click Restart in the modal
+        4. Wait 10s
+        5. Notice the badge stays "activating" forever
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: BirdStation version
+      description: Visible in the header next to the brand name (e.g. "v1.45.0"), or run `git describe --tags`.
+      placeholder: v1.45.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pi-model
+    attributes:
+      label: Raspberry Pi model
+      options:
+        - Pi 5
+        - Pi 4
+        - Pi 3
+        - Other (specify in "Additional context")
+        - Not on a Raspberry Pi
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: e.g. Raspberry Pi OS Bookworm, Ubuntu 24.04, …
+      placeholder: Raspberry Pi OS Bookworm 64-bit
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser (if UI bug)
+      description: Name + version. Bugs that only happen in one browser need this.
+      placeholder: Chrome 142, Firefox 124, Safari 18, …
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server log (`journalctl -u birdash`), browser console errors, or anything from the Logs section of the failing service modal. Use code blocks (```).
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, config peculiarities, anything else.
+    validations:
+      required: false

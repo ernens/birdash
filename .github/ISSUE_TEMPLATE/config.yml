@@ -1,0 +1,16 @@
+# Disable blank issues — force everyone through a template OR Discussions.
+# Questions / "show and tell" / ideas don't belong in Issues.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question / Help
+    url: https://github.com/ernens/birdash/discussions/categories/general
+    about: Got a usage question or need help getting BirdStation running on your Pi? Ask in Discussions — it's where the community helps each other.
+
+  - name: Show your station
+    url: https://github.com/ernens/birdash/discussions/categories/show-and-tell
+    about: Share screenshots of your detections, your setup, or interesting birds you've recorded.
+
+  - name: Idea / Feature suggestion (open-ended)
+    url: https://github.com/ernens/birdash/discussions/categories/ideas
+    about: Got a vague idea you'd like to discuss before opening a structured feature request? Ideas live in Discussions.

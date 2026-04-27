@@ -1,0 +1,59 @@
+name: ✨ Feature request
+description: Concrete, scoped feature with a clear use case
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For open-ended ideas or "wouldn't it be nice if…", please use
+        [Discussions → Ideas](https://github.com/ernens/birdash/discussions/categories/ideas)
+        instead. This template is for feature requests with a clear use case
+        and a concrete shape.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain point does this address? Avoid jumping to a solution.
+      placeholder: e.g. "I want to compare two of my favorite species side-by-side over the same period, but currently I have to switch back and forth between species pages."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would the feature look like? UI sketch, page name, behavior. Be specific.
+      placeholder: e.g. "On the species page, add a Compare button that lets me pick a 2nd species. The page splits into 2 columns showing the same charts side by side."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why this one is better.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Honest estimate — affects how this is prioritized.
+      options:
+        - Small (one page, no schema change)
+        - Medium (multiple pages or new API endpoint)
+        - Large (new tab, new feature surface)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links to similar features elsewhere, related discussions.
+    validations:
+      required: false
