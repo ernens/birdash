@@ -63,19 +63,27 @@
 
       <!-- ── Main content ───────────────────────────────────────── -->
       <div>
-        <!-- Shannon diversity KPIs -->
+        <!-- Diversity KPIs : richness, Shannon, evenness, Simpson, top-1 -->
         <div v-if="shannonH !== null" class="kpi-strip" style="margin-bottom:.75rem;">
-          <div class="kpi-card">
-            <div class="kpi-value" style="color:var(--accent);">{{shannonH}}</div>
-            <div class="kpi-label">{{t('shannon_index')}} (H')</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-value amber">{{shannonJ}}</div>
-            <div class="kpi-label">{{t('shannon_evenness')}} (J')</div>
-          </div>
-          <div class="kpi-card">
+          <div class="kpi-card" :title="t('bio_kpi_species_tip')">
             <div class="kpi-value blue">{{shannonS}}</div>
             <div class="kpi-label">{{t('species')}}</div>
+          </div>
+          <div class="kpi-card" :title="t('bio_kpi_shannon_tip')">
+            <div class="kpi-value" style="color:var(--accent);">{{shannonH}}</div>
+            <div class="kpi-label">{{t('shannon_index')}}</div>
+          </div>
+          <div class="kpi-card" :title="t('bio_kpi_evenness_tip')">
+            <div class="kpi-value amber">{{shannonJ}}</div>
+            <div class="kpi-label">{{t('shannon_evenness')}}</div>
+          </div>
+          <div class="kpi-card" :title="t('bio_kpi_dominance_tip')">
+            <div class="kpi-value" style="color:#d96b4a;">{{simpsonD}}</div>
+            <div class="kpi-label">{{t('bio_dominance')}}</div>
+          </div>
+          <div class="kpi-card" :title="t('bio_kpi_top1_tip')">
+            <div class="kpi-value" style="color:#9b59b6;">{{top1Pct}}%</div>
+            <div class="kpi-label">{{t('bio_top1')}}</div>
           </div>
         </div>
 
@@ -170,34 +178,44 @@ const app = createApp({
     const richnessData = ref(null);
     const matrix   = ref({ loading:true, error:null, html:'' });
 
-    // Shannon diversity index
+    // Diversity KPIs : richness (S), Shannon (H'), evenness (J'),
+    // Simpson dominance (D = Σpi²), top-1 species share (%).
     const shannonH = ref(null);
     const shannonJ = ref(null);
     const shannonS = ref(null);
+    const simpsonD = ref(null);
+    const top1Pct  = ref(null);
 
-    async function loadShannon() {
+    async function loadDiversity() {
       try {
         const from = fp.dateFrom.value || '2000-01-01';
         const rows = await birdQuery(
-          `SELECT Com_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name`,
+          `SELECT Com_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC`,
           [from, fp.dateTo.value || localDateStr(), fc.confidence.value]);
-        if (!rows.length) { shannonH.value = null; shannonJ.value = null; shannonS.value = null; return; }
+        if (!rows.length) {
+          shannonH.value = null; shannonJ.value = null; shannonS.value = null;
+          simpsonD.value = null; top1Pct.value = null;
+          return;
+        }
         const total = rows.reduce((s, r) => s + r.n, 0);
         const S = rows.length;
-        let H = 0;
+        let H = 0, D = 0;
         for (const r of rows) {
           const pi = r.n / total;
           if (pi > 0) H -= pi * Math.log(pi);
+          D += pi * pi;
         }
         const J = S > 1 ? H / Math.log(S) : 1;
         shannonH.value = H.toFixed(3);
         shannonJ.value = J.toFixed(3);
         shannonS.value = S;
-      } catch(e) { console.error('[shannon]', e); }
+        simpsonD.value = D.toFixed(3);
+        top1Pct.value  = Math.round(rows[0].n / total * 100);
+      } catch(e) { console.error('[diversity]', e); }
     }
 
     async function loadAll() {
-      await Promise.all([loadRichnessData(), loadMatrix(), loadShannon()]);
+      await Promise.all([loadRichnessData(), loadMatrix(), loadDiversity()]);
     }
 
     async function loadRichnessData() {
@@ -404,7 +422,7 @@ const app = createApp({
 
     return {
       lang, t, safeHtml,
-      shannonH, shannonJ, shannonS,
+      shannonH, shannonJ, shannonS, simpsonD, top1Pct,
       matrix,
       canvasRichness, elTaxOrders, taxFamilies,
       fp, fc, resetDefaults, loadAll,
