@@ -3087,8 +3087,15 @@
     .cmp-stat .label { font-size:.78rem; opacity:.6; }
     .cmp-table { width:100%; border-collapse:collapse; font-size:.82rem; }
     .cmp-table th { text-align:left; padding:.4rem .6rem; border-bottom:2px solid var(--border); font-size:.72rem; text-transform:uppercase; opacity:.6; }
-    .cmp-table td { padding:.4rem .6rem; border-bottom:1px solid var(--border); }
+    .cmp-table td { padding:.4rem .6rem; border-bottom:1px solid var(--border); vertical-align:middle; }
     .cmp-table tr:hover { background:var(--bg-card2); }
+    /* Right-align all but first column + tabular digits → values stack vertically */
+    .cmp-table th + th, .cmp-table td + td { text-align:right; font-variant-numeric:tabular-nums; }
+    /* Fixed-width track + fill replaces variable inline conf-bar (see exclusive tables) */
+    .cmp-conf-cell { display:inline-flex; align-items:center; gap:.45rem; justify-content:flex-end; }
+    .cmp-conf-pct { min-width:2.4rem; text-align:right; font-variant-numeric:tabular-nums; }
+    .cmp-conf-track { width:48px; height:6px; background:var(--bg-deep); border-radius:3px; overflow:hidden; flex-shrink:0; }
+    .cmp-conf-fill  { height:100%; background:var(--accent); border-radius:3px; }
     .conf-bar { display:inline-block; height:6px; border-radius:3px; vertical-align:middle; margin-left:.3rem; }
     .model-color-1 { color:#5a9e3a; } .model-color-2 { color:#4a7eb5; } .model-color-3 { color:#c8a84b; }
     .pill { display:inline-block; padding:.15rem .5rem; border-radius:1rem; font-size:.72rem; font-weight:600; }

@@ -237,7 +237,12 @@
                   </a>
                 </td>
                 <td>{{ s.n }}</td>
-                <td>{{ (s.avg_conf * 100).toFixed(0) }}% <span class="conf-bar" :style="{width:(s.avg_conf*60)+'px',background:'var(--accent)'}"></span></td>
+                <td>
+                  <span class="cmp-conf-cell">
+                    <span class="cmp-conf-pct">{{ (s.avg_conf * 100).toFixed(0) }}%</span>
+                    <span class="cmp-conf-track"><span class="cmp-conf-fill" :style="{width:(s.avg_conf*100)+'%'}"></span></span>
+                  </span>
+                </td>
               </tr>
             </table>
           </div>
