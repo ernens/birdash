@@ -1171,7 +1171,7 @@
       display:grid;
       grid-template-columns: auto 1fr 96px auto;
       gap:.7rem; align-items:center;
-      padding:.55rem 1rem;
+      padding:.6rem 1.25rem;
       border:1px solid var(--border); border-radius:var(--radius);
       margin-bottom:.4rem; cursor:pointer;
       box-sizing:border-box;
@@ -1179,21 +1179,28 @@
     }
     .svc-row:last-child { margin-bottom:0; }   /* évite la marge orpheline qui faisait paraître le bord du bas absent */
     .svc-row:hover { background:var(--bg-card2); border-color:var(--accent-dim); }
-    .svc-row-text { min-width:0; line-height:1.2; }
-    .svc-row-label { font-size:.82rem; font-weight:500; color:var(--text-main); }
+    .svc-row-text { min-width:0; line-height:1.2; text-align:left; }
+    .svc-row-label { font-size:.82rem; font-weight:500; color:var(--text-main); text-align:left; }
     .svc-row-name {
       font-size:.65rem; color:var(--text-faint); font-family:monospace;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      text-align:left;
     }
     /* Badge dans la row : largeur fixe + centrage → tous les badges
-       (active/inactive/activating/...) s'alignent verticalement */
+       (active/inactive/activating/...) s'alignent verticalement.
+       display:inline-block est REQUIS car .svc-state-badge est un <span>
+       (donc inline par défaut), et min-width n'a aucun effet sur un
+       élément inline — c'est ça qui faisait paraître les badges
+       désalignés malgré le min-width. */
     .svc-row > .svc-state-badge {
+      display:inline-block;
       min-width:80px; text-align:center;
       padding:.18rem .4rem;
+      box-sizing:border-box;
     }
     .svc-row-chevron {
       font-size:1rem; color:var(--text-faint); line-height:1;
-      padding-left:.15rem;
+      padding-left:.4rem;
     }
 
     /* ── Service detail modal ─────────────────────────────────────── */
@@ -2897,14 +2904,11 @@
     .save-msg { font-size:.9rem; padding:.4rem .8rem; border-radius:6px; }
     .save-ok { background:rgba(90,158,58,.12); color:var(--accent); }
     .save-err { background:rgba(200,60,60,.12); color:#c84b4b; }
-    .svc-row { display:flex; align-items:center; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid var(--border); }
-    .svc-row:last-child { border-bottom:none; }
-    .svc-name { font-family:monospace; font-size:.88rem; }
-    .svc-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:.5rem; }
-    .svc-active { background:var(--success); }
-    .svc-inactive { background:var(--danger); }
-    .svc-btn { background:transparent; border:1px solid var(--border); border-radius:5px; padding:.3rem .7rem; font-size:.8rem; cursor:pointer; color:var(--text-secondary); }
-    .svc-btn:hover { border-color:var(--accent); color:var(--accent); }
+    /* Bloc dead-code .svc-* supprimé : c'était l'ancienne version flex
+       qui overridait par cascade les nouvelles règles .svc-row grid
+       (causes de l'alignement cassé : display:flex remplaçait grid,
+       border-bottom:1px remplaçait border:1px sur 4 côtés,
+       :last-child{border-bottom:none} masquait la dernière ligne). */
     .section-title { font-size:1.1rem; font-weight:700; margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
     textarea.set-textarea { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:.5rem; color:var(--text); font-size:.85rem; font-family:monospace; width:100%; min-height:120px; resize:vertical; }
     textarea.set-textarea:focus { outline:none; border-color:var(--accent); }
@@ -2981,26 +2985,12 @@
     .health-fill.bar-danger{background:var(--danger);}
     .health-pct{font-size:.75rem;font-family:monospace;min-width:36px;text-align:right;}
 
-    .svc-card{border:1px solid var(--border);border-radius:.4rem;margin-bottom:.5rem;overflow:hidden;}
-    .svc-header{display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;cursor:pointer;transition:background .15s;}
-    .svc-header:hover{background:var(--bg-card2);}
-    .svc-name{flex:1;font-size:.82rem;font-weight:600;color:var(--text-main);}
-    .svc-state-badge{font-size:.68rem;padding:.12rem .4rem;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
-    .svc-active{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);}
-    .svc-failed{background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger);}
-    .svc-inactive,.svc-dead,.svc-stopped{background:var(--bg-card2);color:var(--text-faint);}
-    .svc-chevron{font-size:.6rem;color:var(--text-faint);transition:transform .2s;display:inline-block;}
-    .svc-chevron.open{transform:rotate(90deg);}
-    .svc-detail{padding:.65rem;border-top:1px solid var(--border);background:var(--bg-deep);}
-    .svc-info-grid{display:flex;flex-wrap:wrap;gap:.75rem;font-size:.78rem;color:var(--text-muted);margin-bottom:.65rem;}
-    .svc-actions{display:flex;gap:.4rem;margin-bottom:.65rem;}
-    .svc-btn{padding:.25rem .55rem;border:1px solid var(--border);border-radius:.3rem;font-size:.72rem;font-family:inherit;cursor:pointer;background:var(--bg-card);color:var(--text-main);transition:all .15s;}
-    .svc-btn:disabled{opacity:.4;cursor:not-allowed;}
-    .svc-btn-start:not(:disabled):hover{border-color:var(--accent);color:var(--accent);}
-    .svc-btn-stop:not(:disabled):hover{border-color:var(--danger);color:var(--danger);}
-    .svc-btn-restart:not(:disabled):hover{border-color:var(--warning);color:var(--warning);}
-    .svc-logs{max-height:200px;overflow-y:auto;}
-    .svc-logs pre{font-size:.68rem;line-height:1.45;color:var(--text-muted);margin:0;white-space:pre-wrap;word-break:break-all;}
+    /* Bloc dead-code .svc-card / .svc-header / .svc-state-badge / .svc-active /
+       .svc-failed / .svc-inactive / .svc-chevron / .svc-detail / .svc-info-grid /
+       .svc-actions / .svc-btn / .svc-logs supprimé : ancien système d'expansion
+       inline remplacé par .svc-row grid + .svc-modal. Ces règles overridaient
+       par cascade les nouvelles définitions (lignes 1166+) — c'est ce qui
+       faisait paraître les badges désalignés malgré display:inline-block + min-width:80px. */
 
 /* ── log.html */
     .log-kpis { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:.75rem; }
