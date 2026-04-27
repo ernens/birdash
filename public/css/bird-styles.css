@@ -1083,11 +1083,68 @@ select, input[type="text"], input[type="number"], textarea {
 .update-modal-backdrop,
 .share-modal-backdrop,
 .tl-popup-overlay,
-.sp-modal-overlay {
+.sp-modal-overlay,
+.bio-info-overlay {
   position: fixed; inset: 0;
   background: var(--overlay-scrim);
   display: flex; align-items: center; justify-content: center;
   padding: 1rem;
+}
+
+/* ── Bio info modal + KPI hint (biodiversity.html Phase 1.5) ─────────── */
+.bio-info-overlay { z-index: 9000; }
+.bio-info-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 480px; width: 100%;
+  max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.bio-info-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.1rem; border-bottom: 1px solid var(--border);
+}
+.bio-info-header h3 {
+  margin: 0; font-size: 1rem; font-family: var(--font-display);
+  color: var(--text-main); font-weight: 600;
+}
+.bio-info-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; color: var(--text-muted); padding: .2rem .4rem;
+  line-height: 1;
+}
+.bio-info-close:hover { color: var(--text-main); }
+.bio-info-body {
+  padding: 1rem 1.1rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.bio-info-section { font-size: .85rem; line-height: 1.5; color: var(--text-main); }
+.bio-info-section-label {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-faint); margin-bottom: .25rem; font-weight: 600;
+}
+.bio-info-formula {
+  margin-top: .4rem; padding: .35rem .6rem;
+  background: var(--bg-card2); border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace; font-size: .78rem;
+  color: var(--accent); display: inline-block;
+}
+.kpi-card { position: relative; }
+.bio-info-btn {
+  position: absolute; top: .35rem; right: .4rem;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--bg-card2); border: 1px solid var(--border);
+  color: var(--text-faint); font-size: .68rem; font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer; padding: 0; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.bio-info-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+.bio-kpi-hint {
+  font-size: .65rem; color: var(--text-faint);
+  margin-top: .25rem; font-style: italic; line-height: 1.3;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

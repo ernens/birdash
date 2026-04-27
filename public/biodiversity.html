@@ -66,24 +66,59 @@
         <!-- Diversity KPIs : richness, Shannon, evenness, Simpson, top-1 -->
         <div v-if="shannonH !== null" class="kpi-strip" style="margin-bottom:.75rem;">
           <div class="kpi-card" :title="t('bio_kpi_species_tip')">
+            <button class="bio-info-btn" @click="openInfo('species')" :aria-label="t('bio_info_btn_aria')">i</button>
             <div class="kpi-value blue">{{shannonS}}</div>
             <div class="kpi-label">{{t('species')}}</div>
+            <div class="bio-kpi-hint">{{t('bio_hint_species')}}</div>
           </div>
           <div class="kpi-card" :title="t('bio_kpi_shannon_tip')">
+            <button class="bio-info-btn" @click="openInfo('shannon')" :aria-label="t('bio_info_btn_aria')">i</button>
             <div class="kpi-value" style="color:var(--accent);">{{shannonH}}</div>
             <div class="kpi-label">{{t('shannon_index')}}</div>
+            <div class="bio-kpi-hint">{{t('bio_hint_shannon')}}</div>
           </div>
           <div class="kpi-card" :title="t('bio_kpi_evenness_tip')">
+            <button class="bio-info-btn" @click="openInfo('evenness')" :aria-label="t('bio_info_btn_aria')">i</button>
             <div class="kpi-value amber">{{shannonJ}}</div>
             <div class="kpi-label">{{t('shannon_evenness')}}</div>
+            <div class="bio-kpi-hint">{{t('bio_hint_evenness')}}</div>
           </div>
           <div class="kpi-card" :title="t('bio_kpi_dominance_tip')">
+            <button class="bio-info-btn" @click="openInfo('dominance')" :aria-label="t('bio_info_btn_aria')">i</button>
             <div class="kpi-value" style="color:#d96b4a;">{{simpsonD}}</div>
             <div class="kpi-label">{{t('bio_dominance')}}</div>
+            <div class="bio-kpi-hint">{{t('bio_hint_dominance')}}</div>
           </div>
           <div class="kpi-card" :title="t('bio_kpi_top1_tip')">
+            <button class="bio-info-btn" @click="openInfo('top1')" :aria-label="t('bio_info_btn_aria')">i</button>
             <div class="kpi-value" style="color:#9b59b6;">{{top1Pct}}%</div>
             <div class="kpi-label">{{t('bio_top1')}}</div>
+            <div class="bio-kpi-hint">{{t('bio_hint_top1')}}</div>
+          </div>
+        </div>
+
+        <!-- KPI info modal -->
+        <div v-if="infoModalKey" class="bio-info-overlay" @click="closeInfo">
+          <div class="bio-info-modal" @click.stop>
+            <div class="bio-info-header">
+              <h3>{{infoModalData.title}}</h3>
+              <button class="bio-info-close" @click="closeInfo" aria-label="Close">✕</button>
+            </div>
+            <div class="bio-info-body">
+              <div class="bio-info-section">
+                <div class="bio-info-section-label">{{t('bio_info_section_what')}}</div>
+                <div>{{infoModalData.what}}</div>
+                <div v-if="infoModalData.formula" class="bio-info-formula">{{infoModalData.formula}}</div>
+              </div>
+              <div class="bio-info-section">
+                <div class="bio-info-section-label">{{t('bio_info_section_read')}}</div>
+                <div>{{infoModalData.read}}</div>
+              </div>
+              <div class="bio-info-section">
+                <div class="bio-info-section-label">{{t('bio_info_section_notsay')}}</div>
+                <div>{{infoModalData.notsay}}</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -217,6 +252,50 @@ const app = createApp({
     async function loadAll() {
       await Promise.all([loadRichnessData(), loadMatrix(), loadDiversity()]);
     }
+
+    // ── KPI info modal (Phase 1.5) ───────────────────────────────────────
+    const infoModalKey = ref(null);
+    function openInfo(key) { infoModalKey.value = key; }
+    function closeInfo()   { infoModalKey.value = null; }
+
+    const KPI_INFO = computed(() => ({
+      species: {
+        title:   t('species'),
+        what:    t('bio_info_species_what'),
+        formula: 'S = nb d’espèces distinctes',
+        read:    t('bio_info_species_read'),
+        notsay:  t('bio_info_species_notsay'),
+      },
+      shannon: {
+        title:   t('shannon_index'),
+        what:    t('bio_info_shannon_what'),
+        formula: 'H′ = −Σ(pᵢ · ln pᵢ)',
+        read:    t('bio_info_shannon_read'),
+        notsay:  t('bio_info_shannon_notsay'),
+      },
+      evenness: {
+        title:   t('shannon_evenness'),
+        what:    t('bio_info_evenness_what'),
+        formula: 'J′ = H′ / ln(S)',
+        read:    t('bio_info_evenness_read'),
+        notsay:  t('bio_info_evenness_notsay'),
+      },
+      dominance: {
+        title:   t('bio_dominance'),
+        what:    t('bio_info_dominance_what'),
+        formula: 'D = Σ(pᵢ²)',
+        read:    t('bio_info_dominance_read'),
+        notsay:  t('bio_info_dominance_notsay'),
+      },
+      top1: {
+        title:   t('bio_top1'),
+        what:    t('bio_info_top1_what'),
+        formula: 'n₁ / total × 100',
+        read:    t('bio_info_top1_read'),
+        notsay:  t('bio_info_top1_notsay'),
+      },
+    }));
+    const infoModalData = computed(() => infoModalKey.value ? KPI_INFO.value[infoModalKey.value] : null);
 
     async function loadRichnessData() {
       try {
@@ -427,6 +506,7 @@ const app = createApp({
       canvasRichness, elTaxOrders, taxFamilies,
       fp, fc, resetDefaults, loadAll,
       navigateTo, spName, exportCsv,
+      infoModalKey, infoModalData, openInfo, closeInfo,
     };
   }
 });
