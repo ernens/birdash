@@ -2,6 +2,27 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.46.3] — 2026-04-27
+
+### Improved
+
+- Service modal start/stop/restart now show visible feedback during
+  the operation. While the action runs, the three buttons are
+  disabled and a status banner with a mini spinner appears below
+  ("Démarrage en cours…", "Redémarrage en cours…"). On success, the
+  banner switches to a green "✓ Service redémarré" toast that
+  fades after 3 seconds. Previously the buttons fired silently and
+  there was no way to tell whether anything had happened.
+
+  For birdash self-restart, the deferred response (1.46.2) now
+  triggers a polling loop on `/services/birdash/status` that waits
+  up to 30s for the service to come back active before declaring
+  success. This means the UI accurately reflects when birdash has
+  actually finished restarting, not just when systemctl was kicked
+  off.
+
+i18n FR/EN/DE/NL · SW v238 → v239
+
 ## [1.46.2] — 2026-04-27
 
 ### Fixed

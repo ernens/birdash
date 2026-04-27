@@ -926,19 +926,28 @@
         <div class="svc-modal-actions">
           <button class="svc-btn svc-btn-start"
                   @click="svcAction(svcModal,'start')"
-                  :disabled="svcModalState==='active' || svcModalState==='activating'">
+                  :disabled="!!svcActionInProgress || svcModalState==='active' || svcModalState==='activating'">
             &#9654; Start
           </button>
           <button class="svc-btn svc-btn-restart"
                   @click="svcAction(svcModal,'restart')"
-                  :disabled="svcModalState==='activating' || svcModalState==='deactivating'">
+                  :disabled="!!svcActionInProgress || svcModalState==='activating' || svcModalState==='deactivating'">
             &#10227; Restart
           </button>
           <button class="svc-btn svc-btn-stop"
                   @click="confirmStop(svcModal)"
-                  :disabled="svcModalState!=='active'">
+                  :disabled="!!svcActionInProgress || svcModalState!=='active'">
             &#9209; Stop
           </button>
+        </div>
+
+        <div v-if="svcActionInProgress" class="svc-action-status">
+          <span class="svc-mini-spinner"></span>
+          <span>{{ t('sys_svc_' + svcActionInProgress.action + 'ing') }}</span>
+        </div>
+        <div v-else-if="svcActionDone" class="svc-action-status is-success">
+          <span style="color:var(--accent);font-weight:600;">✓</span>
+          <span>{{ svcActionDone }}</span>
         </div>
 
         <div v-if="svcError" style="font-size:.78rem;color:var(--danger);margin-bottom:.8rem;">
@@ -1156,15 +1165,25 @@ const app = createApp({
     }
 
     const svcError = ref('');
+    const svcActionInProgress = ref(null); // { name, action } pendant l'opération
+    const svcActionDone = ref('');         // message de succès, vidé après 3s
+
     async function svcAction(name, action) {
       svcError.value = '';
+      svcActionDone.value = '';
+      svcActionInProgress.value = { name, action };
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/${action}`, { method: 'POST', headers: authHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+        // Self-restart birdash : la réponse est immédiate (deferred), il faut
+        // attendre que le service revienne en ligne avant de signaler le succès.
+        if (data.deferred && name === 'birdash') {
+          await waitForBirdashBack(action);
+        }
+
         await loadServices();
-        // Si la modal est ouverte sur ce service, on rafraîchit les détails
-        // pour que PID/RAM/Uptime/logs reflètent le nouvel état.
         if (svcModal.value === name) {
           svcDetail.value = null;
           try {
@@ -1172,10 +1191,36 @@ const app = createApp({
             svcDetail.value = await r.json();
           } catch(e) {}
         }
+
+        const doneLabel = { start: t('sys_svc_started'), stop: t('sys_svc_stopped'), restart: t('sys_svc_restarted') };
+        svcActionDone.value = doneLabel[action] || action;
+        setTimeout(() => { svcActionDone.value = ''; }, 3000);
       } catch(e) {
         svcError.value = `${name} ${action}: ${e.message}`;
         console.error('svcAction:', e);
+      } finally {
+        svcActionInProgress.value = null;
       }
+    }
+
+    // Pour birdash self-restart : poller le status jusqu'au retour (timeout 30s).
+    // Pour stop : on attend juste un court délai (le service est censé être down).
+    async function waitForBirdashBack(action) {
+      if (action === 'stop') {
+        await new Promise(r => setTimeout(r, 1500));
+        return;
+      }
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          const r = await fetch(`${BIRD_CONFIG.apiUrl}/services/birdash/status`);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.state === 'active') return;
+          }
+        } catch(e) { /* serveur pas encore revenu, on poursuit */ }
+      }
+      throw new Error('birdash did not come back within 30s');
     }
 
     function confirmStop(name) {
@@ -1816,7 +1861,7 @@ const app = createApp({
       tabs, activeTab, tabLoaded, switchTab,
       // Health tab
       api, health, services, svcModal, svcModalState, svcDetail, confirmAction, analysis, audio, backup, network, hw, fresh,
-      loadHealth, loadServices, openSvcModal, closeSvcModal, svcAction, svcError, confirmStop, svcLabel, svcDotClass, terminalKey,
+      loadHealth, loadServices, openSvcModal, closeSvcModal, svcAction, svcError, svcActionInProgress, svcActionDone, confirmStop, svcLabel, svcDotClass, terminalKey,
       loadApi, loadFresh, fmtBytes,
       // Model tab
       mod, modPeriod, modPeriods, loadModelMonitor,

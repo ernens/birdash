@@ -1280,6 +1280,30 @@
     .svc-btn-restart { border-color:#e8a040; color:#e8a040; }
     .svc-btn-restart:hover:not(:disabled) { background:color-mix(in srgb,#e8a040 12%,transparent); }
 
+    /* Action feedback (spinner banner + success toast) */
+    .svc-action-status {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .55rem .8rem; margin-bottom: .8rem;
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      border-radius: 6px;
+      font-size: .82rem; color: var(--text-main);
+    }
+    .svc-action-status.is-success {
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      border-color: var(--accent);
+      animation: svc-toast-fadein .3s ease;
+    }
+    @keyframes svc-toast-fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .svc-mini-spinner {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-top-color: var(--accent);
+      animation: svc-mini-spin .8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes svc-mini-spin { to { transform: rotate(360deg); } }
+
     /* ── Status dots (color-coded per user request) ────────────────────
        active → vert / failed → rouge / inactive → orange (était gris) /
        activating, deactivating → vert clignotant en onde douce 1.8s */
