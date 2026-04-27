@@ -3091,12 +3091,66 @@
     .cmp-table tr:hover { background:var(--bg-card2); }
     /* Right-align all but first column + tabular digits → values stack vertically */
     .cmp-table th + th, .cmp-table td + td { text-align:right; font-variant-numeric:tabular-nums; }
-    /* Fixed-width track + fill replaces variable inline conf-bar (see exclusive tables) */
-    .cmp-conf-cell { display:inline-flex; align-items:center; gap:.45rem; justify-content:flex-end; }
+    /* Conf cell : track fixe + fill % (utilisé dans .cmp-row aussi) */
+    .cmp-conf-cell { display:flex; align-items:center; gap:.45rem; justify-content:flex-end; }
     .cmp-conf-pct { min-width:2.4rem; text-align:right; font-variant-numeric:tabular-nums; }
     .cmp-conf-track { width:48px; height:6px; background:var(--bg-deep); border-radius:3px; overflow:hidden; flex-shrink:0; }
     .cmp-conf-fill  { height:100%; background:var(--accent); border-radius:3px; }
     .conf-bar { display:inline-block; height:6px; border-radius:3px; vertical-align:middle; margin-left:.3rem; }
+
+    /* ── cmp-list : grille tabulaire stricte (stats.html models tab) ──
+       Remplace les <table class="cmp-table"> de stats.html pour rigidifier
+       l'alignement des 3 listes d'espèces. cmp-table reste pour system.html. */
+    .cmp-list { display:flex; flex-direction:column; }
+    .cmp-row {
+      display:grid; align-items:center; gap:.6rem;
+      padding:.5rem .6rem; border-bottom:1px solid var(--border);
+      font-size:.82rem; min-height:48px;
+    }
+    .cmp-row:not(.cmp-row--head):hover { background:var(--bg-card2); }
+    .cmp-row--head {
+      border-bottom:2px solid var(--border);
+      font-size:.72rem; text-transform:uppercase; font-weight:500;
+      color:var(--text-faint); min-height:32px;
+    }
+    .cmp-row--head .pill { opacity:1; }
+    .cmp-row--3col { grid-template-columns: 1fr 56px 110px; }
+    .cmp-row--4col { grid-template-columns: 1fr 80px 80px 56px; }
+
+    .cmp-species {
+      display:grid; grid-template-columns:32px 1fr;
+      gap:.55rem; align-items:center; min-width:0;
+      color:inherit; text-decoration:none;
+    }
+    .cmp-species:hover .cmp-species-name { color:var(--accent); }
+    .cmp-species img {
+      width:32px; height:32px; border-radius:50%; object-fit:cover;
+      flex-shrink:0; background:var(--bg-card2);
+    }
+    .cmp-species-text { min-width:0; line-height:1.2; }
+    .cmp-species-name {
+      font-weight:600; color:var(--text-main);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      transition:color .15s;
+    }
+    .cmp-species-sci {
+      font-size:.68rem; color:var(--text-faint); font-style:italic;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      margin-top:.1rem;
+    }
+    .cmp-num {
+      text-align:right; font-variant-numeric:tabular-nums;
+      color:var(--text-main);
+    }
+    .cmp-num-stack {
+      display:flex; flex-direction:column; align-items:flex-end;
+      gap:.05rem;
+    }
+    .cmp-num-main { font-variant-numeric:tabular-nums; }
+    .cmp-num-sub  {
+      font-size:.66rem; color:var(--text-faint);
+      font-variant-numeric:tabular-nums;
+    }
     .model-color-1 { color:#5a9e3a; } .model-color-2 { color:#4a7eb5; } .model-color-3 { color:#c8a84b; }
     .pill { display:inline-block; padding:.15rem .5rem; border-radius:1rem; font-size:.72rem; font-weight:600; }
     .pill-1 { background:rgba(90,158,58,.15); color:#5a9e3a; }

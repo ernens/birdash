@@ -227,52 +227,62 @@
               — {{t('models_exclusive')}} ({{ (mData.unique[m] || []).length }})
             </div>
             <div v-if="!mData.unique[m]?.length" style="font-size:.82rem;opacity:.5;padding:.5rem;">{{t('models_none')}}</div>
-            <table v-else class="cmp-table">
-              <tr><th>{{t('species')}}</th><th>N</th><th>Conf.</th></tr>
-              <tr v-for="s in mData.unique[m]" :key="s.Sci_Name">
-                <td>
-                  <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;">
-                    <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.src='img/robin-logo.svg';this.onerror=null;">
-                    <div><strong>{{ spName(s.Com_Name, s.Sci_Name) }}</strong><div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div></div>
-                  </a>
-                </td>
-                <td>{{ s.n }}</td>
-                <td>
-                  <span class="cmp-conf-cell">
-                    <span class="cmp-conf-pct">{{ (s.avg_conf * 100).toFixed(0) }}%</span>
-                    <span class="cmp-conf-track"><span class="cmp-conf-fill" :style="{width:(s.avg_conf*100)+'%'}"></span></span>
-                  </span>
-                </td>
-              </tr>
-            </table>
+            <div v-else class="cmp-list">
+              <div class="cmp-row cmp-row--head cmp-row--3col">
+                <span>{{t('species')}}</span>
+                <span class="cmp-num">N</span>
+                <span class="cmp-num">Conf.</span>
+              </div>
+              <div v-for="s in mData.unique[m]" :key="s.Sci_Name" class="cmp-row cmp-row--3col">
+                <a class="cmp-species" :href="'species.html?species='+encodeURIComponent(s.Com_Name)">
+                  <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" loading="lazy" onerror="this.src='img/robin-logo.svg';this.onerror=null;" :alt="s.Com_Name">
+                  <div class="cmp-species-text">
+                    <div class="cmp-species-name">{{ spName(s.Com_Name, s.Sci_Name) }}</div>
+                    <div class="cmp-species-sci">{{ s.Sci_Name }}</div>
+                  </div>
+                </a>
+                <span class="cmp-num">{{ s.n }}</span>
+                <span class="cmp-conf-cell">
+                  <span class="cmp-conf-pct">{{ (s.avg_conf * 100).toFixed(0) }}%</span>
+                  <span class="cmp-conf-track"><span class="cmp-conf-fill" :style="{width:(s.avg_conf*100)+'%'}"></span></span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div v-if="mData.overlap?.length" class="card">
           <div class="section-title">{{t('models_overlap')}}</div>
-          <table class="cmp-table">
-            <tr>
-              <th>{{t('species')}}</th>
-              <th><span class="pill pill-1">{{ modelLabel(mData.models[0]) }}</span></th>
-              <th><span class="pill pill-2">{{ modelLabel(mData.models[1]) }}</span></th>
-              <th>{{t('models_ratio')}}</th>
-            </tr>
-            <tr v-for="s in mData.overlap" :key="s.Sci_Name">
-              <td>
-                <a :href="'species.html?species='+encodeURIComponent(s.Com_Name)" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;color:inherit;">
-                  <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy" onerror="this.src='img/robin-logo.svg';this.onerror=null;">
-                  <div><strong>{{ spName(s.Com_Name, s.Sci_Name) }}</strong><div style="font-size:.7rem;opacity:.5;">{{ s.Sci_Name }}</div></div>
-                </a>
-              </td>
-              <td>{{ s.n1 }} <span style="font-size:.75rem;opacity:.6;">({{ (s.conf1*100).toFixed(0) }}%)</span></td>
-              <td>{{ s.n2 }} <span style="font-size:.75rem;opacity:.6;">({{ (s.conf2*100).toFixed(0) }}%)</span></td>
-              <td>
+          <div class="cmp-list">
+            <div class="cmp-row cmp-row--head cmp-row--4col">
+              <span>{{t('species')}}</span>
+              <span class="cmp-num"><span class="pill pill-1">{{ modelLabel(mData.models[0]) }}</span></span>
+              <span class="cmp-num"><span class="pill pill-2">{{ modelLabel(mData.models[1]) }}</span></span>
+              <span class="cmp-num">{{t('models_ratio')}}</span>
+            </div>
+            <div v-for="s in mData.overlap" :key="s.Sci_Name" class="cmp-row cmp-row--4col">
+              <a class="cmp-species" :href="'species.html?species='+encodeURIComponent(s.Com_Name)">
+                <img :src="'api/photo?sci='+encodeURIComponent(s.Sci_Name)" loading="lazy" onerror="this.src='img/robin-logo.svg';this.onerror=null;" :alt="s.Com_Name">
+                <div class="cmp-species-text">
+                  <div class="cmp-species-name">{{ spName(s.Com_Name, s.Sci_Name) }}</div>
+                  <div class="cmp-species-sci">{{ s.Sci_Name }}</div>
+                </div>
+              </a>
+              <span class="cmp-num cmp-num-stack">
+                <span class="cmp-num-main">{{ s.n1 }}</span>
+                <span class="cmp-num-sub">{{ (s.conf1*100).toFixed(0) }}%</span>
+              </span>
+              <span class="cmp-num cmp-num-stack">
+                <span class="cmp-num-main">{{ s.n2 }}</span>
+                <span class="cmp-num-sub">{{ (s.conf2*100).toFixed(0) }}%</span>
+              </span>
+              <span class="cmp-num">
                 <span v-if="s.n2 > s.n1" class="model-color-2">{{ (s.n2/s.n1).toFixed(1) }}x</span>
                 <span v-else-if="s.n1 > s.n2" class="model-color-1">{{ (s.n1/s.n2).toFixed(1) }}x</span>
                 <span v-else style="opacity:.5;">=</span>
-              </td>
-            </tr>
-          </table>
+              </span>
+            </div>
+          </div>
         </div>
       </template>
     </div>
