@@ -233,8 +233,8 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
-  // ── Route : POST /api/services/:name/:action (start|stop) ────────────────────
-  const svcActionMatch = pathname.match(/^\/api\/services\/([^/]+)\/(start|stop)$/);
+  // ── Route : POST /api/services/:name/:action (start|stop|restart) ────────────
+  const svcActionMatch = pathname.match(/^\/api\/services\/([^/]+)\/(start|stop|restart)$/);
   if (req.method === 'POST' && svcActionMatch) {
     if (!requireAuth(req, res)) return true;
     const svcName = svcActionMatch[1];

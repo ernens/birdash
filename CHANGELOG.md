@@ -2,6 +2,18 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.46.1] — 2026-04-27
+
+### Fixed
+
+- Service restart from system.html now works. The UI was sending
+  `POST /api/services/{name}/restart` but the server route regex
+  only matched `start|stop` — the request fell through to "Route
+  inconnue". Added `restart` to the regex; systemctl already
+  accepts the verb so no other change was needed. The legacy
+  `POST /api/services/restart` endpoint stays in place because
+  settings.html still uses it for config-change reloads.
+
 ## [1.46.0] — 2026-04-27
 
 ### Species videos — Wikimedia Commons integration
