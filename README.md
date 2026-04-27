@@ -633,6 +633,10 @@ Both layers use Supabase with a public anon key (write-only RLS). No data is col
 - **[Report a bug](https://github.com/ernens/birdash/issues)** — or use the in-app bug report button (red bug icon in header)
 - **[Discussions](https://github.com/ernens/birdash/discussions)** — questions, ideas, show your setup
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ernens/birdash&type=Date)](https://star-history.com/#ernens/birdash&Date)
+
 ## License
 
 [MIT](LICENSE)
