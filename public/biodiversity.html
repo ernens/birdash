@@ -141,10 +141,22 @@
           </div>
         </div>
 
-        <!-- Répartition taxonomique — pie chart ECharts -->
+        <!-- Répartition taxonomique — pie chart + side legend -->
         <div class="card">
           <div class="card-title">{{t('bio_taxonomy_orders')}}</div>
-          <div ref="elTaxOrders" style="width:100%;height:420px;"></div>
+          <div class="bio-tax-row">
+            <div class="bio-tax-chart" ref="elTaxOrders" style="height:420px;"></div>
+            <div v-if="taxOrdersSorted.length" class="bio-tax-legend">
+              <div v-for="o in taxOrdersSorted" :key="o.name"
+                   class="bio-tax-legend-row"
+                   @click="navigateTo('detections.html',{order:o.name})">
+                <span class="bio-tax-legend-color" :style="{background:o.color}"></span>
+                <span class="bio-tax-legend-name" :title="o.name">{{o.name}}</span>
+                <span class="bio-tax-legend-count">{{o.value}} {{t('species').toLowerCase()}}</span>
+                <span class="bio-tax-legend-pct">{{o.pct}}%</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Familles détectées -->
@@ -195,6 +207,11 @@ const app = createApp({
     const canvasRichness = ref(null);
     const elTaxOrders = ref(null);
     const taxFamilies = ref([]);
+    const taxOrdersSorted = ref([]);
+
+    // Palette partagée donut + légende (orders only — donut & legend stay in sync).
+    const TAX_PALETTE = ['#5a9e3a','#c8a84b','#4a90d9','#d96b4a','#9b59b6','#1abc9c','#e67e22','#e74c3c',
+                          '#3498db','#2ecc71','#f39c12','#8e44ad','#16a085','#d35400','#c0392b','#2980b9','#27ae60'];
     // ── Filtres (composables partagés) ────────────────────────────
     const fp = useFilterPeriod({
       default: '1d',
@@ -414,8 +431,12 @@ const app = createApp({
 
       const orders = Object.entries(tax.orders).sort((a, b) => b[1] - a[1]);
       const totalSp = orders.reduce((s, [, n]) => s + n, 0);
-      const palette = ['#5a9e3a','#c8a84b','#4a90d9','#d96b4a','#9b59b6','#1abc9c','#e67e22','#e74c3c',
-                        '#3498db','#2ecc71','#f39c12','#8e44ad','#16a085','#d35400','#c0392b','#2980b9','#27ae60'];
+      // Build sorted orders with color + pct — shared between donut & side legend.
+      taxOrdersSorted.value = orders.map(([name, value], i) => ({
+        name, value,
+        pct: totalSp ? +(value / totalSp * 100).toFixed(1) : 0,
+        color: TAX_PALETTE[i % TAX_PALETTE.length],
+      }));
 
       _echartsOrders.setOption({
         backgroundColor: 'transparent',
@@ -441,29 +462,30 @@ const app = createApp({
         },
         series: [{
           type: 'pie',
-          radius: ['30%', '70%'],
+          radius: ['38%', '72%'],
           center: ['50%', '50%'],
           avoidLabelOverlap: true,
           itemStyle: { borderRadius: 4, borderColor: 'var(--bg-card)', borderWidth: 2 },
+          // Top 3 only — autres ordres se lisent dans la légende latérale.
           label: {
             show: true,
             formatter: function(p) {
-              if (p.percent < 3) return '';
-              return '{name|' + p.name + '}\n{val|' + p.value + ' sp · ' + p.percent + '%}';
+              if (p.dataIndex >= 3) return '';
+              return '{name|' + p.name + '}\n{val|' + p.percent + '%}';
             },
             rich: {
-              name: { fontSize: 11, fontFamily: 'Lora, serif', color: '#c8e6c0', lineHeight: 16 },
-              val:  { fontSize: 10, fontFamily: 'Lora, serif', color: '#8a9a8a', lineHeight: 14 },
+              name: { fontSize: 13, fontFamily: 'Lora, serif', color: '#c8e6c0', lineHeight: 18 },
+              val:  { fontSize: 12, fontFamily: 'Lora, serif', color: '#8a9a8a', lineHeight: 16 },
             }
           },
-          labelLine: { length: 12, length2: 8, lineStyle: { color: 'rgba(255,255,255,.15)' } },
+          labelLine: { show: true, length: 14, length2: 10, lineStyle: { color: 'rgba(255,255,255,.18)' } },
           emphasis: {
-            label: { show: true, fontSize: 12, fontWeight: 'bold' },
+            label: { show: true, fontSize: 14, fontWeight: 'bold' },
             itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.3)' }
           },
-          data: orders.map(([name, value], i) => ({
-            name, value,
-            itemStyle: { color: palette[i % palette.length] }
+          data: taxOrdersSorted.value.map(o => ({
+            name: o.name, value: o.value,
+            itemStyle: { color: o.color }
           }))
         }]
       });
@@ -503,7 +525,7 @@ const app = createApp({
       lang, t, safeHtml,
       shannonH, shannonJ, shannonS, simpsonD, top1Pct,
       matrix,
-      canvasRichness, elTaxOrders, taxFamilies,
+      canvasRichness, elTaxOrders, taxFamilies, taxOrdersSorted,
       fp, fc, resetDefaults, loadAll,
       navigateTo, spName, exportCsv,
       infoModalKey, infoModalData, openInfo, closeInfo,
