@@ -1163,67 +1163,145 @@
     .health-detail { font-size:.7rem;color:var(--text-faint);min-width:90px; }
 
     /* Service manager */
-    .svc-card {
-      border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.5rem;
-      overflow:hidden;
+    /* ── Services row (Phase B 2026-04-27) ────────────────────────────
+       Grille fixe : dot · label/nom · badge · chevron. PID/RAM/Uptime
+       sont passés dans la modale dédiée, plus dans la row, ce qui
+       élimine le désalignement causé par les v-if conditionnels. */
+    .svc-row {
+      display:grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap:.65rem; align-items:center;
+      padding:.5rem .75rem;
+      border:1px solid var(--border); border-radius:var(--radius);
+      margin-bottom:.4rem; cursor:pointer;
+      transition:background .12s, border-color .12s;
     }
-    .svc-header {
-      display:flex;align-items:center;gap:.5rem;padding:.55rem .75rem;
-      cursor:pointer;transition:background .12s;
+    .svc-row:hover { background:var(--bg-card2); border-color:var(--accent-dim); }
+    .svc-row-text { min-width:0; line-height:1.2; }
+    .svc-row-label { font-size:.82rem; font-weight:500; color:var(--text-main); }
+    .svc-row-name {
+      font-size:.65rem; color:var(--text-faint); font-family:monospace;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
-    .svc-header:hover { background:var(--bg-card2); }
-    .svc-name { flex:1;font-size:.82rem;font-weight:500;font-family:monospace; }
-    .svc-state-badge {
-      font-size:.65rem;font-weight:600;padding:.1rem .4rem;border-radius:10px;
-      text-transform:uppercase;letter-spacing:.04em;
+    .svc-row-chevron {
+      font-size:1rem; color:var(--text-faint); line-height:1;
     }
-    .svc-active { background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent); }
-    .svc-inactive { background:var(--bg-card2);color:var(--text-faint); }
-    .svc-failed { background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger); }
-    .svc-chevron {
-      font-size:.6rem;color:var(--text-faint);transition:transform .2s;
+
+    /* ── Service detail modal ─────────────────────────────────────── */
+    .svc-modal-overlay { z-index:9000; }
+    .svc-modal {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:12px; max-width:520px; width:100%;
+      max-height:85vh; overflow-y:auto;
+      box-shadow:0 8px 32px rgba(0,0,0,.4);
+      position:relative; padding:1.25rem 1.5rem;
     }
-    .svc-chevron.open { transform:rotate(90deg); }
-    .svc-detail { padding:.5rem .75rem;border-top:1px solid var(--border);background:var(--bg-deep); }
-    .svc-info-grid {
-      display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;font-size:.78rem;color:var(--text-muted);
-      margin-bottom:.65rem;
+    .svc-modal-close {
+      position:absolute; top:.6rem; right:.7rem;
+      background:none; border:none; cursor:pointer;
+      font-size:1.1rem; color:var(--text-muted); padding:.25rem .4rem;
+      line-height:1;
     }
-    .svc-info-grid span { font-family:monospace;color:var(--text-main); }
-    .svc-actions { display:flex;gap:.4rem;margin-bottom:.65rem; }
+    .svc-modal-close:hover { color:var(--text-main); }
+    .svc-modal-status {
+      display:flex; align-items:center; gap:.5rem;
+      margin-bottom:.4rem;
+    }
+    .svc-modal-title {
+      margin:0 0 .15rem 0; font-size:1.05rem; font-weight:600;
+      font-family:var(--font-display); color:var(--text-main);
+    }
+    .svc-modal-sub {
+      font-size:.72rem; color:var(--text-faint); font-family:monospace;
+      margin-bottom:1rem;
+    }
+    .svc-modal-info {
+      display:grid; grid-template-columns:repeat(3, 1fr);
+      gap:.6rem; margin-bottom:1.1rem;
+      padding:.7rem .85rem; background:var(--bg-deep); border-radius:6px;
+    }
+    .svc-modal-info > div {
+      display:flex; flex-direction:column; gap:.15rem;
+    }
+    .svc-modal-info-lbl {
+      font-size:.62rem; text-transform:uppercase; letter-spacing:.05em;
+      color:var(--text-faint); font-weight:600;
+    }
+    .svc-modal-info > div > span:last-child {
+      font-family:monospace; font-size:.85rem; color:var(--text-main);
+      font-variant-numeric:tabular-nums;
+    }
+    .svc-modal-actions {
+      display:flex; gap:.5rem; margin-bottom:1rem;
+    }
+    .svc-modal-actions .svc-btn {
+      flex:1; padding:.45rem .6rem; font-size:.78rem;
+    }
+    .svc-modal-logs-title {
+      font-size:.66rem; text-transform:uppercase; letter-spacing:.06em;
+      color:var(--text-faint); margin-bottom:.4rem; font-weight:600;
+    }
+    .svc-modal-logs pre {
+      margin:0; font-size:.7rem; line-height:1.5; white-space:pre-wrap;
+      word-break:break-all; color:var(--text-muted); font-family:monospace;
+      max-height:240px; overflow-y:auto;
+      background:var(--bg-deep); border:1px solid var(--border);
+      border-radius:6px; padding:.5rem .65rem;
+    }
+
+    /* Action buttons (réutilisables row + modal) */
     .svc-btn {
-      font-size:.72rem;padding:.25rem .55rem;border-radius:var(--radius);
-      border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);
-      cursor:pointer;transition:all .12s;
+      font-size:.72rem; padding:.25rem .55rem; border-radius:var(--radius);
+      border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);
+      cursor:pointer; transition:all .12s;
     }
     .svc-btn:hover:not(:disabled) { background:var(--bg-card2); }
-    .svc-btn:disabled { opacity:.4;cursor:not-allowed; }
-    .svc-btn-stop { border-color:var(--danger);color:var(--danger); }
-    .svc-btn-stop:hover:not(:disabled) { background:color-mix(in srgb,var(--danger) 10%,transparent); }
-    .svc-btn-restart { border-color:var(--warning);color:var(--warning); }
-    .svc-logs {
-      max-height:200px;overflow-y:auto;
-      background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-      padding:.4rem .5rem;
-    }
-    .svc-logs pre {
-      margin:0;font-size:.65rem;line-height:1.5;white-space:pre-wrap;
-      word-break:break-all;color:var(--text-muted);font-family:monospace;
-    }
-    .dot-warn {background:var(--warning);box-shadow:0 0 6px var(--warning);}
-    .dot-grey {background:var(--text-faint);}
+    .svc-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .svc-btn-start { border-color:#3a9; color:#3a9; }
+    .svc-btn-start:hover:not(:disabled) { background:color-mix(in srgb,#3a9 12%,transparent); }
+    .svc-btn-stop { border-color:var(--danger); color:var(--danger); }
+    .svc-btn-stop:hover:not(:disabled) { background:color-mix(in srgb,var(--danger) 12%,transparent); }
+    .svc-btn-restart { border-color:#e8a040; color:#e8a040; }
+    .svc-btn-restart:hover:not(:disabled) { background:color-mix(in srgb,#e8a040 12%,transparent); }
 
+    /* ── Status dots (color-coded per user request) ────────────────────
+       active → vert / failed → rouge / inactive → orange (était gris) /
+       activating, deactivating → vert clignotant en onde douce 1.8s */
     .status-dot {
-      display:inline-block;width:10px;height:10px;
-      border-radius:50%;margin-right:.4rem;flex-shrink:0;
+      display:inline-block; width:10px; height:10px;
+      border-radius:50%; margin-right:.4rem; flex-shrink:0;
     }
-    .dot-ok  {background:#3a9;box-shadow:0 0 6px #3a9;}
-    .dot-err {background:var(--danger);box-shadow:0 0 6px var(--danger);}
-    .dot-warn {background:#e8a92e;box-shadow:0 0 6px #e8a92e;}
-    .dot-off {background:#aaa;box-shadow:none;}
-    .svc-state-badge { font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
-    .svc-active   {color:#3a9;} .svc-failed   {color:var(--danger);}
-    .svc-inactive {color:#aaa;} .svc-activating,.svc-deactivating {color:#e8a92e;}
+    .dot-ok      { background:#3a9; box-shadow:0 0 6px #3a9; }
+    .dot-err     { background:var(--danger); box-shadow:0 0 6px var(--danger); }
+    .dot-stop    { background:#e8a040; box-shadow:0 0 6px #e8a040; }
+    .dot-restart { background:#3a9; animation:svc-wave 1.8s ease-in-out infinite; }
+    /* Anciennes classes conservées pour compat (dot-warn/dot-off/dot-grey) */
+    .dot-warn    { background:#e8a92e; box-shadow:0 0 6px #e8a92e; }
+    .dot-off     { background:#aaa; box-shadow:none; }
+    .dot-grey    { background:var(--text-faint); }
+
+    @keyframes svc-wave {
+      0%, 100% { box-shadow:0 0 4px rgba(58,153,153,.4); transform:scale(1); }
+      50%      { box-shadow:0 0 14px rgba(58,153,153,1); transform:scale(1.18); }
+    }
+
+    /* ── State badges (couleurs alignées sur les dots) ─────────────── */
+    .svc-state-badge {
+      font-size:.65rem; font-weight:600; padding:.12rem .45rem; border-radius:10px;
+      text-transform:uppercase; letter-spacing:.04em;
+    }
+    .svc-active       { background:color-mix(in srgb,#3a9 15%,transparent); color:#3a9; }
+    .svc-failed       { background:color-mix(in srgb,var(--danger) 15%,transparent); color:var(--danger); }
+    .svc-inactive     { background:color-mix(in srgb,#e8a040 15%,transparent); color:#e8a040; }
+    .svc-activating,
+    .svc-deactivating {
+      background:color-mix(in srgb,#3a9 15%,transparent); color:#3a9;
+      animation:svc-wave-badge 1.8s ease-in-out infinite;
+    }
+    @keyframes svc-wave-badge {
+      0%, 100% { opacity:.7; }
+      50%      { opacity:1; }
+    }
     .hw-item { display:flex;align-items:center;gap:.5rem;padding:.45rem 0;border-bottom:1px solid var(--bg-card2); }
     .hw-item:last-child { border-bottom:none; }
     .hw-icon { font-size:1.1rem;flex-shrink:0;width:1.6rem;text-align:center; }

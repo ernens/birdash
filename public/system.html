@@ -58,33 +58,17 @@
           <div v-else-if="services.error" class="error-msg">{{services.error}}</div>
           <div v-else-if="!services.list.length" style="font-size:.82rem;color:var(--text-muted);">{{t('sys_no_data')}}</div>
           <div v-else>
-            <div v-for="svc in services.list" :key="svc.name" class="svc-card">
-              <div class="svc-header" @click="toggleSvc(svc.name)">
-                <span class="status-dot" :class="svcDotClass(svc.state)"></span>
-                <span class="svc-name">{{svcLabel(svc.name)}}</span>
-                <span style="font-size:.62rem;color:var(--text-faint);margin-left:.3rem;">{{svc.name}}</span>
-                <span v-if="svc.pid" style="font-size:.62rem;color:var(--text-faint);font-family:monospace;">PID {{svc.pid}}</span>
-                <span v-if="svc.memory > 0" style="font-size:.62rem;color:var(--text-faint);font-family:monospace;">{{fmtBytes(svc.memory)}}</span>
-                <span v-if="svc.uptime > 0" style="font-size:.62rem;color:var(--text-faint);font-family:monospace;">{{fmtUptime(svc.uptime)}}</span>
-                <span class="svc-state-badge" :class="'svc-'+svc.state">{{svc.state}}</span>
-                <span class="svc-chevron" :class="{open: svcExpanded===svc.name}">&#9654;</span>
+            <!-- Row simplifiée : grille fixe (dot · label/nom · badge · chevron).
+                 Détails et actions se passent dans la modale qui s'ouvre au clic. -->
+            <div v-for="svc in services.list" :key="svc.name" class="svc-row"
+                 @click="openSvcModal(svc.name)">
+              <span class="status-dot" :class="svcDotClass(svc.state)"></span>
+              <div class="svc-row-text">
+                <div class="svc-row-label">{{svcLabel(svc.name)}}</div>
+                <div class="svc-row-name">{{svc.name}}</div>
               </div>
-              <div v-if="svcExpanded===svc.name && svcDetail" class="svc-detail">
-                <div class="svc-info-grid">
-                  <div>PID: {{svcDetail.pid || '—'}}</div>
-                  <div>RAM: {{fmtBytes(svcDetail.memory)}}</div>
-                  <div>Uptime: {{fmtUptime(svcDetail.uptime)}}</div>
-                </div>
-                <div class="svc-actions">
-                  <button class="svc-btn svc-btn-start" @click.stop="svcAction(svc.name,'start')" :disabled="svc.state==='active'">&#9654; Start</button>
-                  <button class="svc-btn svc-btn-stop" @click.stop="confirmStop(svc.name)" :disabled="svc.state!=='active'">&#9209; Stop</button>
-                  <button class="svc-btn svc-btn-restart" @click.stop="svcAction(svc.name,'restart')">&#128260; Restart</button>
-                </div>
-                <div v-if="svcDetail.logs && svcDetail.logs.length" class="svc-logs">
-                  <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-faint);margin-bottom:.3rem;">{{t('sys_svc_logs')}}</div>
-                  <pre>{{svcDetail.logs.join('\n')}}</pre>
-                </div>
-              </div>
+              <span class="svc-state-badge" :class="'svc-'+svc.state">{{svc.state}}</span>
+              <span class="svc-row-chevron">&#8250;</span>
             </div>
           </div>
         </div>
@@ -913,8 +897,64 @@
 
     </div>
 
-    <!-- ── Confirmation Modal ────────────────────────────────────── -->
-    <div v-if="confirmAction" class="info-overlay" @click.self="confirmAction=null">
+    <!-- ── Service Detail Modal (Phase B 2026-04-27) ─────────────── -->
+    <div v-if="svcModal" class="svc-modal-overlay" @click.self="closeSvcModal">
+      <div class="svc-modal">
+        <button class="svc-modal-close" @click="closeSvcModal" aria-label="Close">&#x2715;</button>
+        <div class="svc-modal-status">
+          <span class="status-dot" :class="svcDotClass(svcModalState)"></span>
+          <span class="svc-state-badge" :class="'svc-'+svcModalState">{{svcModalState}}</span>
+        </div>
+        <h3 class="svc-modal-title">{{svcLabel(svcModal)}}</h3>
+        <div class="svc-modal-sub">{{svcModal}}</div>
+
+        <div class="svc-modal-info">
+          <div>
+            <span class="svc-modal-info-lbl">PID</span>
+            <span>{{svcDetail && svcDetail.pid ? svcDetail.pid : '—'}}</span>
+          </div>
+          <div>
+            <span class="svc-modal-info-lbl">RAM</span>
+            <span>{{svcDetail ? fmtBytes(svcDetail.memory) : '—'}}</span>
+          </div>
+          <div>
+            <span class="svc-modal-info-lbl">Uptime</span>
+            <span>{{svcDetail ? fmtUptime(svcDetail.uptime) : '—'}}</span>
+          </div>
+        </div>
+
+        <div class="svc-modal-actions">
+          <button class="svc-btn svc-btn-start"
+                  @click="svcAction(svcModal,'start')"
+                  :disabled="svcModalState==='active' || svcModalState==='activating'">
+            &#9654; Start
+          </button>
+          <button class="svc-btn svc-btn-restart"
+                  @click="svcAction(svcModal,'restart')"
+                  :disabled="svcModalState==='activating' || svcModalState==='deactivating'">
+            &#10227; Restart
+          </button>
+          <button class="svc-btn svc-btn-stop"
+                  @click="confirmStop(svcModal)"
+                  :disabled="svcModalState!=='active'">
+            &#9209; Stop
+          </button>
+        </div>
+
+        <div v-if="svcError" style="font-size:.78rem;color:var(--danger);margin-bottom:.8rem;">
+          {{svcError}}
+        </div>
+
+        <div v-if="svcDetail && svcDetail.logs && svcDetail.logs.length" class="svc-modal-logs-section">
+          <div class="svc-modal-logs-title">{{t('sys_svc_logs')}}</div>
+          <div class="svc-modal-logs"><pre>{{svcDetail.logs.join('\n')}}</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Confirmation Modal (Stop) ─────────────────────────────── -->
+    <div v-if="confirmAction" class="info-overlay" @click.self="confirmAction=null"
+         style="display:flex;z-index:9100;">
       <div class="info-modal">
         <div class="info-modal-title">&#9888;&#65039; {{t('sys_confirm_stop')}}</div>
         <p style="font-size:.85rem;color:var(--text-muted);margin:.75rem 0;">
@@ -1042,8 +1082,8 @@ const app = createApp({
     function svcDotClass(state) {
       if (state === 'active') return 'dot-ok';
       if (state === 'failed') return 'dot-err';
-      if (state === 'activating' || state === 'deactivating') return 'dot-warn';
-      return 'dot-off';
+      if (state === 'activating' || state === 'deactivating') return 'dot-restart';
+      return 'dot-stop';   // inactive (et tout autre état non-running)
     }
 
     // ── Health tab state ──────────────────────────────────────────
@@ -1051,8 +1091,13 @@ const app = createApp({
     const health = ref({ loading:true, error:null, cpu:{usage:0,cores:0}, ram:{used:0,total:0,pct:0}, disk:{used:0,total:0,pct:0}, temp:0, fan:null, uptime:0, loadAvg:'' });
     const services = ref({ loading:true, error:null, list:[], refreshAt:'' });
     const hw = ref({ loading:true, error:null, piModel:'', cpuFreq:0, ramTotal:0, disks:[], soundCards:[], usbDevices:[] });
-    const svcExpanded = ref(null);
+    const svcModal = ref(null);   // service name when modal open, null when closed
     const svcDetail = ref(null);
+    const svcModalState = computed(() => {
+      if (!svcModal.value) return null;
+      const svc = services.value.list.find(s => s.name === svcModal.value);
+      return svc ? svc.state : 'unknown';
+    });
     const terminalKey = ref(0);
     const confirmAction = ref(null);
     const analysis = ref({ loading:true, error:null, modelLabel:'', backlog:0, lag:0, inferenceSpeed:'', confidenceThreshold:'', sensitivity:'', sfThresh:'' });
@@ -1094,18 +1139,20 @@ const app = createApp({
       } catch(e) { services.value = { ...services.value, loading:false, error:e.message }; }
     }
 
-    async function toggleSvc(name) {
-      if (svcExpanded.value === name) {
-        svcExpanded.value = null;
-        svcDetail.value = null;
-        return;
-      }
-      svcExpanded.value = name;
+    async function openSvcModal(name) {
+      svcModal.value = name;
       svcDetail.value = null;
+      svcError.value = '';
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/status`);
         svcDetail.value = await res.json();
       } catch(e) { svcDetail.value = { pid: null, memory: 0, uptime: 0, logs: ['Error: ' + e.message] }; }
+    }
+
+    function closeSvcModal() {
+      svcModal.value = null;
+      svcDetail.value = null;
+      svcError.value = '';
     }
 
     const svcError = ref('');
@@ -1116,10 +1163,14 @@ const app = createApp({
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
         await loadServices();
-        if (svcExpanded.value === name) {
-          svcExpanded.value = null;
-          await nextTick();
-          toggleSvc(name);
+        // Si la modal est ouverte sur ce service, on rafraîchit les détails
+        // pour que PID/RAM/Uptime/logs reflètent le nouvel état.
+        if (svcModal.value === name) {
+          svcDetail.value = null;
+          try {
+            const r = await fetch(`${BIRD_CONFIG.apiUrl}/services/${encodeURIComponent(name)}/status`);
+            svcDetail.value = await r.json();
+          } catch(e) {}
         }
       } catch(e) {
         svcError.value = `${name} ${action}: ${e.message}`;
@@ -1764,8 +1815,8 @@ const app = createApp({
       // Tabs
       tabs, activeTab, tabLoaded, switchTab,
       // Health tab
-      api, health, services, svcExpanded, svcDetail, confirmAction, analysis, audio, backup, network, hw, fresh,
-      loadHealth, loadServices, toggleSvc, svcAction, svcError, confirmStop, svcLabel, svcDotClass, terminalKey,
+      api, health, services, svcModal, svcModalState, svcDetail, confirmAction, analysis, audio, backup, network, hw, fresh,
+      loadHealth, loadServices, openSvcModal, closeSvcModal, svcAction, svcError, confirmStop, svcLabel, svcDotClass, terminalKey,
       loadApi, loadFresh, fmtBytes,
       // Model tab
       mod, modPeriod, modPeriods, loadModelMonitor,

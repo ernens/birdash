@@ -1084,7 +1084,8 @@ select, input[type="text"], input[type="number"], textarea {
 .share-modal-backdrop,
 .tl-popup-overlay,
 .sp-modal-overlay,
-.bio-info-overlay {
+.bio-info-overlay,
+.svc-modal-overlay {
   position: fixed; inset: 0;
   background: var(--overlay-scrim);
   display: flex; align-items: center; justify-content: center;
