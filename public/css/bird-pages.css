@@ -1550,6 +1550,37 @@
     .sp-thumb.active { border-color: var(--accent); transform: scale(1.05); }
     .sp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+    /* Vidéos Wikimedia Commons (bouton-miniature + modale) */
+    .sp-video-thumb { width: 56px; height: 56px; border-radius: 6px; flex-shrink: 0; cursor: pointer;
+      border: 2px solid var(--accent); background: var(--bg-deep); color: var(--accent);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0;
+      transition: transform .1s ease, background .15s, color .15s; }
+    .sp-video-thumb:hover { transform: scale(1.05); background: var(--accent); color: #fff; }
+    .sp-video-thumb-icon { font-size: 1.5rem; line-height: 1; margin-left: 3px; }
+    .sp-video-thumb-count { font-size: .66rem; font-weight: 600; line-height: 1; }
+    .sp-videos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8rem; }
+    @media (max-width: 640px) { .sp-videos-grid { grid-template-columns: 1fr; } }
+    .sp-video-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .sp-video-poster { position: relative; aspect-ratio: 16/9; background: #000; cursor: pointer; overflow: hidden; }
+    .sp-video-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sp-video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.15); transition: background .15s ease; }
+    .sp-video-poster:hover .sp-video-overlay { background: rgba(0,0,0,.05); }
+    .sp-video-play { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,.4); }
+    .sp-video-play::before { content: ''; width: 0; height: 0; border-left: 16px solid #111; border-top: 11px solid transparent; border-bottom: 11px solid transparent; margin-left: 4px; }
+    .sp-video-dur { position: absolute; bottom: .35rem; right: .4rem; background: rgba(0,0,0,.75); color: #fff; font-size: .72rem; padding: .1rem .35rem; border-radius: 3px; font-variant-numeric: tabular-nums; }
+    .sp-video-card video { width: 100%; aspect-ratio: 16/9; background: #000; display: block; }
+    .sp-video-meta { padding: .5rem .7rem .55rem; font-size: .78rem; display: flex; flex-direction: column; gap: .2rem; }
+    .sp-video-title { color: var(--text-main); line-height: 1.25; max-height: 2.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .sp-video-credit { display: flex; gap: .5rem; align-items: center; color: var(--text-muted); font-size: .72rem; flex-wrap: wrap; }
+    .sp-video-credit a { color: var(--accent); text-decoration: none; }
+    .sp-video-overlay-bd { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 9100; display: flex; align-items: center; justify-content: center; padding: 2vh 2vw; }
+    .sp-video-modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; max-width: 1100px; width: 100%; max-height: 96vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+    .sp-video-modal-hdr { display: flex; align-items: center; justify-content: space-between; padding: .7rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .sp-video-modal-title { font-size: .95rem; font-weight: 600; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+    .sp-video-modal-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: .2rem .5rem; border-radius: 4px; }
+    .sp-video-modal-close:hover { background: var(--card-alt-bg); color: var(--text-main); }
+    .sp-video-modal-body { padding: 1rem; overflow-y: auto; }
+
     /* Info panel */
     .sp-info-panel { display: flex; flex-direction: column; }
 

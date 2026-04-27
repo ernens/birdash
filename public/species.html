@@ -91,12 +91,19 @@
               {{photos[photoIdx].attr}}
             </div>
           </div>
-          <!-- Thumbnails -->
-          <div v-if="photos.length>1" class="sp-thumbs">
-            <div v-for="(p,i) in photos" :key="i" class="sp-thumb" :class="{active:i===photoIdx}"
-                 @click="photoIdx=i">
-              <img :src="p.url" :alt="'photo '+(i+1)" loading="lazy">
-            </div>
+          <!-- Thumbnails (+ bouton vidéo intégré) -->
+          <div v-if="photos.length>1 || videos.length" class="sp-thumbs">
+            <template v-if="photos.length>1">
+              <div v-for="(p,i) in photos" :key="i" class="sp-thumb" :class="{active:i===photoIdx}"
+                   @click="photoIdx=i">
+                <img :src="p.url" :alt="'photo '+(i+1)" loading="lazy">
+              </div>
+            </template>
+            <button v-if="videos.length" class="sp-video-thumb" @click="videoModalOpen = true"
+                    :title="t('sp_videos')">
+              <span class="sp-video-thumb-icon">▶</span>
+              <span class="sp-video-thumb-count">{{Math.min(videos.length, 4)}}</span>
+            </button>
           </div>
         </div>
 
@@ -491,6 +498,45 @@
       </div>
     </div>
 
+    <!-- ── Video modal (Wikimedia Commons) ──────────────────────── -->
+    <div v-if="videoModalOpen" class="sp-video-overlay-bd" @click.self="videoModalOpen = false">
+      <div class="sp-video-modal">
+        <div class="sp-video-modal-hdr">
+          <div class="sp-video-modal-title">
+            <bird-icon name="play" :size="14"></bird-icon>
+            {{t('sp_videos')}}
+            <span style="color:var(--text-muted);font-weight:400;">({{Math.min(videos.length, 4)}})</span>
+            <span style="margin-left:.6rem;font-size:.72rem;color:var(--text-muted);font-weight:400;">
+              {{t('sp_videos_source')}} <a href="https://commons.wikimedia.org" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">Wikimedia Commons</a>
+            </span>
+          </div>
+          <button class="sp-video-modal-close" @click="videoModalOpen = false" aria-label="Close">✕</button>
+        </div>
+        <div class="sp-video-modal-body">
+          <div class="sp-videos-grid">
+            <div v-for="v in videos.slice(0, 4)" :key="v.pageTitle" class="sp-video-card">
+              <div v-if="!v._playing" class="sp-video-poster" @click="v._playing = true">
+                <img v-if="v.posterUrl" :src="v.posterUrl" :alt="v.title" loading="lazy">
+                <div v-else style="position:absolute;inset:0;background:#222;"></div>
+                <div class="sp-video-overlay"><div class="sp-video-play"></div></div>
+                <div v-if="v.duration" class="sp-video-dur">{{fmtVideoDur(v.duration)}}</div>
+              </div>
+              <video v-else :src="v.url" controls autoplay preload="metadata"></video>
+              <div class="sp-video-meta">
+                <div class="sp-video-title" :title="v.title">{{cleanVideoTitle(v.title)}}</div>
+                <div class="sp-video-credit">
+                  <span v-if="v.author">{{v.author}}</span>
+                  <span v-if="v.license">· {{v.license}}</span>
+                  <a :href="'https://commons.wikimedia.org/wiki/' + encodeURIComponent(v.pageTitle)"
+                     target="_blank" rel="noopener" style="margin-left:auto;">↗</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Share modal ──────────────────────────────────────────── -->
     <div v-if="shareModalOpen" class="share-modal-backdrop" @click.self="closeShareModal">
       <div class="share-modal">
@@ -560,6 +606,10 @@ const app = createApp({
     const photos   = ref([]);
     const photoIdx = ref(0);
     const photosLoading = ref(false);
+    // Vidéos Wikimedia Commons (V1)
+    const videos = ref([]);
+    const videosLoading = ref(false);
+    const videoModalOpen = ref(false);
     const wikiSummary    = ref('');
     const wikiSummaryAlt = ref('');  // second language summary
     const conservationRaw = ref('');
@@ -795,6 +845,8 @@ const app = createApp({
       photos.value = [];
       photoIdx.value = 0;
       photosLoading.value = true;
+      videos.value = [];
+      videoModalOpen.value = false;
       wikiSummary.value = '';
       wikiSummaryAlt.value = '';
       conservationRaw.value = '';
@@ -845,6 +897,7 @@ const app = createApp({
 
         // Load photos FIRST (user sees them immediately), then charts in parallel
         loadSpeciesInfo(stats.sci || speciesName);
+        loadVideos(stats.sci || speciesName);
         await Promise.all([
           loadHourlyData(speciesName),
           loadMonthlyData(speciesName),
@@ -899,6 +952,31 @@ const app = createApp({
       } finally {
         photosLoading.value = false;
       }
+    }
+
+    async function loadVideos(sciName) {
+      if (!sciName) return;
+      videosLoading.value = true;
+      videos.value = [];
+      try {
+        const res = await fetch(BIRD_CONFIG.apiUrl + '/species-videos?sci=' + encodeURIComponent(sciName));
+        if (!res.ok) return;
+        const data = await res.json();
+        videos.value = (data.videos || []).map(v => ({ ...v, _playing: false }));
+      } catch (e) {
+        console.warn('[species-videos]', e);
+      } finally {
+        videosLoading.value = false;
+      }
+    }
+    function fmtVideoDur(s) {
+      if (!s) return '';
+      const m = Math.floor(s / 60);
+      const sec = Math.round(s % 60);
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+    function cleanVideoTitle(title) {
+      return title.replace(/\.(webm|ogv|ogg|mp4|mov)$/i, '').replace(/_/g, ' ');
     }
 
     async function loadHourlyData(name) {
@@ -1642,6 +1720,7 @@ const app = createApp({
       isFav, onToggleFav, banCurrentPhoto, setPreferredPhoto,
       photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,
+      videos, videosLoading, videoModalOpen, fmtVideoDur, cleanVideoTitle,
       playingFile, toggleAudio,
       fmtDate, fmtTime, fmtConf, navigateTo, shortModel,
       canvasHourly, canvasMonthly, canvas30d, canvasConf, canvasDayHour, exportChart,

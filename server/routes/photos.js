@@ -535,6 +535,84 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/species-videos?sci=Pica+pica ───────────────────────────
+  // Wikimedia Commons (search + imageinfo) — cache disque metadata 30j.
+  // Réponse : { videos: [{ url, posterUrl, duration, size, mime, license, author, title, pageTitle }], cached_at }
+  if (req.method === 'GET' && pathname === '/api/species-videos') {
+    const sciName = new URL(req.url, 'http://localhost').searchParams.get('sci');
+    if (!sciName || !/^[a-zA-Z ]+$/.test(sciName)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'sci param required' })); return true;
+    }
+    const VIDEOS_TTL = 30 * 24 * 60 * 60 * 1000;
+    const vKey = photoCacheKey(sciName);
+    const vCachePath = path.join(PHOTO_CACHE_DIR, `_videos_${vKey}.json`);
+
+    (async () => {
+      try {
+        // Cache disque
+        try {
+          const raw = await fsp.readFile(vCachePath, 'utf8');
+          const entry = JSON.parse(raw);
+          if (entry && Date.now() - entry.ts < VIDEOS_TTL) {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' });
+            res.end(JSON.stringify({ videos: entry.videos, cached_at: entry.ts }));
+            return;
+          }
+        } catch {}
+
+        // Fetch Wikimedia Commons
+        const sn = encodeURIComponent(sciName + ' filetype:video');
+        const searchData = await fetchJson(
+          `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${sn}&srnamespace=6&srlimit=10&format=json`
+        );
+        const hits = searchData?.query?.search || [];
+        let videos = [];
+        if (hits.length) {
+          const titles = hits.map(h => h.title).join('|');
+          const infoData = await fetchJson(
+            `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(titles)}&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=480&format=json`
+          );
+          const pages = Object.values(infoData?.query?.pages || {});
+          videos = pages
+            .filter(p => p.imageinfo?.[0]?.mime?.startsWith('video/'))
+            .map(p => {
+              const ii = p.imageinfo[0];
+              const ext = ii.extmetadata || {};
+              const rawAuthor = ext.Artist?.value || '';
+              const author = rawAuthor.replace(/<[^>]+>/g, '').trim().slice(0, 80);
+              return {
+                title: p.title.replace(/^File:/, ''),
+                pageTitle: p.title,
+                url: ii.url,
+                posterUrl: ii.thumburl || null,
+                size: ii.size,
+                mime: ii.mime,
+                duration: ii.duration || null,
+                license: ext.LicenseShortName?.value || '',
+                author,
+              };
+            });
+        }
+
+        try {
+          await fsp.writeFile(vCachePath, JSON.stringify({ ts: Date.now(), videos }));
+        } catch (e) { console.warn('[species-videos] cache write failed:', e.message); }
+
+        console.log(`[species-videos] ${sciName} → ${videos.length} videos`);
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' });
+        res.end(JSON.stringify({ videos, cached_at: Date.now() }));
+      } catch (e) {
+        console.error('[species-videos]', e.message);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      }
+    })();
+    return true;
+  }
+
 
   return false;
 }

@@ -2,6 +2,37 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.46.0] — 2026-04-27
+
+### Species videos — Wikimedia Commons integration
+
+A new "Vidéos" mini-thumb appears alongside the photo thumbnails on
+species.html when Wikimedia Commons has matching footage. Click opens
+a modal with up to 4 videos in a 2×2 grid, click-to-play (poster
+first, then native player), with attribution and license per clip.
+
+POC measured 99% coverage on the top-100 detected species, with ~3.6
+videos available per species on average — solid enough to ship.
+
+**Server** — new `/api/species-videos?sci=X` endpoint proxying
+Wikimedia Commons (search + imageinfo). Metadata-only disk cache
+with 30-day TTL, mirroring the photos cache pattern. No video
+blobs cached server-side; everything streams from Commons CDN at
+playback time. Click-to-play means the page costs nothing in
+bandwidth until a user actually opens the modal.
+
+**UI** — bouton-miniature 56×56 integrated in `.sp-thumbs` row
+(only renders when videos exist; row also renders for single-photo
+species so the button has a home). Modal capped at 4 videos, no
+"Voir plus" — bonus content, not primary content.
+
+**i18n** — 3 new keys × 4 languages (FR/EN/DE/NL).
+
+**Internal** — `public/video-poc.html` retained as a coverage-scan
+tool: select an espèce to preview the modal in isolation, or run a
+batch scan over the top-N species to measure Wikimedia coverage
+after taxonomy changes.
+
 ## [1.45.0] — 2026-04-26
 
 ### UX refactor pass — phased multi-page orchestration

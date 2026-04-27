@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>BirdStation — POC Vidéos</title>
+  <link rel="stylesheet" href="css/bird-styles.css">
+  <link rel="stylesheet" href="css/bird-pages.css">
+  <script src="js/vue.global.prod.min.js"></script>
+  <script src="js/birdash-local.js" onerror=""></script>
+  <script src="js/bird-config.js"></script>
+  <script src="js/bird-shared.js"></script>
+  <script src="js/bird-icons.js"></script>
+  <script src="js/bird-vue-core.js"></script>
+  <script src="js/bird-queries.js"></script>
+  <style>
+    /* POC — styles propres au preview species.html */
+    .vp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .8rem;
+    }
+    @media (max-width: 640px) {
+      .vp-grid { grid-template-columns: 1fr; }
+    }
+    .vp-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .vp-poster {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .vp-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .vp-play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.15);
+      transition: background .15s ease;
+    }
+    .vp-poster:hover .vp-play-overlay {
+      background: rgba(0,0,0,.05);
+    }
+    .vp-play-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+    }
+    .vp-play-btn::before {
+      content: '';
+      width: 0;
+      height: 0;
+      border-left: 16px solid #111;
+      border-top: 11px solid transparent;
+      border-bottom: 11px solid transparent;
+      margin-left: 4px;
+    }
+    .vp-duration {
+      position: absolute;
+      bottom: .35rem;
+      right: .4rem;
+      background: rgba(0,0,0,.75);
+      color: #fff;
+      font-size: .72rem;
+      padding: .1rem .35rem;
+      border-radius: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+    .vp-card video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      display: block;
+    }
+    .vp-meta {
+      padding: .5rem .7rem .55rem;
+      font-size: .78rem;
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+    }
+    .vp-meta-title {
+      color: var(--text-main);
+      line-height: 1.25;
+      max-height: 2.5em;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .vp-meta-row {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: .72rem;
+      flex-wrap: wrap;
+    }
+    .vp-meta-row a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .vp-skeleton {
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(90deg, var(--card-alt-bg) 0%, var(--card-bg) 50%, var(--card-alt-bg) 100%);
+      background-size: 200% 100%;
+      animation: vp-shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes vp-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <birdash-shell page="video-poc" title="POC — Vidéos d'oiseaux (Wikimedia Commons)">
+
+    <!-- Bandeau d'intention -->
+    <div class="card" style="padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;border-left:3px solid var(--accent);">
+      <strong>Aperçu UX :</strong> ce qui apparaîtra sous le carousel photos dans <code>species.html</code>.
+      Choisis une espèce pour valider rendu et qualité avant d'attaquer l'intégration prod.
+    </div>
+
+    <!-- Sélecteur d'espèce -->
+    <div class="card" style="display:flex;gap:.8rem;align-items:center;padding:.7rem 1rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <label style="font-size:.85rem;font-weight:600;">Espèce :</label>
+      <select v-model="selectedSci" :disabled="loadingSpecies || loadingVideos"
+              style="flex:1;min-width:200px;padding:.35rem .5rem;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text-main);font-size:.85rem;">
+        <option v-if="loadingSpecies" value="">Chargement…</option>
+        <option v-for="sp in topSpecies" :key="sp.Sci_Name" :value="sp.Sci_Name">
+          {{ spName(sp.Sci_Name) || sp.Com_Name }} — {{ sp.n }} dét.
+        </option>
+      </select>
+      <span v-if="loadingVideos" style="font-size:.78rem;color:var(--text-muted);">chargement vidéos…</span>
+      <span v-if="loadError" style="font-size:.78rem;color:var(--red);">{{ loadError }}</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SECTION "Vidéos" — exactement le rendu cible pour species.html
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="card" style="padding:1rem 1.1rem;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin-bottom:.8rem;">
+        <h3 style="margin:0;font-size:1rem;font-weight:600;">
+          Vidéos
+          <span v-if="videos.length" style="color:var(--text-muted);font-weight:400;">({{ videos.length }})</span>
+        </h3>
+        <span v-if="videos.length" style="font-size:.72rem;color:var(--text-muted);">
+          Source : <a href="https://commons.wikimedia.org" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">Wikimedia Commons</a>
+        </span>
+      </div>
+
+      <!-- Loading skeleton -->
+      <div v-if="loadingVideos" class="vp-grid">
+        <div v-for="i in 4" :key="'sk'+i" class="vp-skeleton"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="!videos.length" style="padding:2rem 1rem;text-align:center;color:var(--text-muted);font-size:.85rem;">
+        Aucune vidéo Wikimedia Commons trouvée pour cette espèce.
+      </div>
+
+      <!-- Grid de cards -->
+      <div v-else class="vp-grid">
+        <div v-for="(v, idx) in displayedVideos" :key="v.pageTitle" class="vp-card">
+          <!-- Poster (avant clic) -->
+          <div v-if="!v._playing" class="vp-poster" @click="v._playing = true">
+            <img v-if="v.posterUrl" :src="v.posterUrl" :alt="v.title" loading="lazy">
+            <div v-else style="position:absolute;inset:0;background:#222;"></div>
+            <div class="vp-play-overlay">
+              <div class="vp-play-btn"></div>
+            </div>
+            <div v-if="v.duration" class="vp-duration">{{ formatDuration(v.duration) }}</div>
+          </div>
+          <!-- Player (après clic) -->
+          <video v-else :src="v.url" controls autoplay preload="metadata"></video>
+
+          <div class="vp-meta">
+            <div class="vp-meta-title" :title="v.title">{{ cleanTitle(v.title) }}</div>
+            <div class="vp-meta-row">
+              <span v-if="v.author">{{ v.author }}</span>
+              <span v-if="v.license">· {{ v.license }}</span>
+              <a :href="'https://commons.wikimedia.org/wiki/' + encodeURIComponent(v.pageTitle)"
+                 target="_blank" rel="noopener" style="margin-left:auto;">↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- "Voir plus" -->
+      <div v-if="videos.length > visibleLimit" style="text-align:center;margin-top:.8rem;">
+        <button class="btn btn-secondary" @click="visibleLimit += 4" style="font-size:.82rem;">
+          Voir plus ({{ videos.length - visibleLimit }} restantes)
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         Scan de couverture (outil interne, replié par défaut)
+         ═══════════════════════════════════════════════════════════ -->
+    <details class="card" style="padding:.6rem 1rem;">
+      <summary style="cursor:pointer;font-weight:600;font-size:.88rem;">
+        🔍 Scan de couverture (outil interne)
+      </summary>
+      <div style="padding-top:.8rem;font-size:.8rem;color:var(--text-muted);">
+        Mesure le taux de couverture vidéo Wikimedia sur ton top espèces.
+        Utile après ajout d'espèces, ou pour vérifier qu'on n'a pas régressé.
+      </div>
+
+      <div style="display:flex;gap:1rem;align-items:center;padding:.6rem 0;flex-wrap:wrap;">
+        <label style="font-size:.82rem;">
+          Top N :
+          <select v-model.number="scanLimit" :disabled="scanRunning"
+                  style="margin-left:.4rem;padding:.2rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text-main);">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+          </select>
+        </label>
+        <button class="btn btn-secondary" @click="runScan" :disabled="scanRunning" style="font-size:.82rem;">
+          {{ scanRunning ? 'Scan…' : 'Lancer le scan' }}
+        </button>
+        <span v-if="scanRunning" style="font-size:.78rem;color:var(--text-muted);">
+          {{ scanned }} / {{ scanTotal }}
+        </span>
+      </div>
+
+      <div v-if="scanResults.length && !scanRunning" style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.82rem;margin:.5rem 0;">
+        <span><strong>{{ scanResults.length }}</strong> espèces</span>
+        <span style="color:var(--accent);"><strong>{{ scanWithVideo }}</strong> avec vidéo</span>
+        <span><strong>{{ scanCoverage }}%</strong> de couverture</span>
+        <span><strong>{{ scanTotalVideos }}</strong> vidéos cumulées</span>
+      </div>
+    </details>
+
+  </birdash-shell>
+</div>
+
+<script>
+const { createApp, ref, computed, watch } = Vue;
+const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery } = BIRDASH;
+
+const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
+
+async function fetchVideosForSci(sci) {
+  const searchUrl = `${COMMONS_API}?action=query&list=search` +
+    `&srsearch=${encodeURIComponent(sci + ' filetype:video')}` +
+    `&srnamespace=6&srlimit=10&format=json&origin=*`;
+  const sr = await fetch(searchUrl);
+  if (!sr.ok) throw new Error('search HTTP ' + sr.status);
+  const sdata = await sr.json();
+  const hits = sdata?.query?.search || [];
+  if (!hits.length) return [];
+
+  const titles = hits.map(h => h.title).join('|');
+  const infoUrl = `${COMMONS_API}?action=query` +
+    `&titles=${encodeURIComponent(titles)}` +
+    `&prop=imageinfo&iiprop=url|size|mime|extmetadata` +
+    `&iiurlwidth=480` +
+    `&format=json&origin=*`;
+  const ir = await fetch(infoUrl);
+  if (!ir.ok) throw new Error('imageinfo HTTP ' + ir.status);
+  const idata = await ir.json();
+  const pages = Object.values(idata?.query?.pages || {});
+
+  return pages
+    .filter(p => p.imageinfo?.[0]?.mime?.startsWith('video/'))
+    .map(p => {
+      const ii = p.imageinfo[0];
+      const ext = ii.extmetadata || {};
+      // Strip HTML from author field (Wikimedia returns rich HTML)
+      const rawAuthor = ext.Artist?.value || '';
+      const author = rawAuthor.replace(/<[^>]+>/g, '').trim().slice(0, 60);
+      return {
+        title: p.title.replace(/^File:/, ''),
+        pageTitle: p.title,
+        url: ii.url,
+        posterUrl: ii.thumburl || null,
+        size: ii.size,
+        mime: ii.mime,
+        duration: ii.duration || null,
+        license: ext.LicenseShortName?.value || '',
+        author,
+        _playing: false,
+      };
+    });
+}
+
+const app = createApp({
+  setup() {
+    const { t, lang } = useI18n();
+    useTheme();
+    useNav('video-poc');
+    const { spName } = useSpeciesNames();
+
+    // ── Aperçu UX ────────────────────────────────────────────────
+    const topSpecies = ref([]);
+    const loadingSpecies = ref(true);
+    const selectedSci = ref('');
+    const videos = ref([]);
+    const loadingVideos = ref(false);
+    const loadError = ref('');
+    const visibleLimit = ref(4);
+
+    async function loadTopSpecies() {
+      loadingSpecies.value = true;
+      try {
+        const rows = await birdQuery(
+          'SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n FROM active_detections WHERE Confidence>=? GROUP BY Com_Name ORDER BY n DESC LIMIT ?',
+          [0.7, 100]
+        );
+        topSpecies.value = rows;
+        if (rows.length && !selectedSci.value) selectedSci.value = rows[0].Sci_Name;
+      } finally {
+        loadingSpecies.value = false;
+      }
+    }
+
+    async function loadVideosForSelected() {
+      if (!selectedSci.value) return;
+      loadingVideos.value = true;
+      loadError.value = '';
+      videos.value = [];
+      visibleLimit.value = 4;
+      try {
+        videos.value = await fetchVideosForSci(selectedSci.value);
+      } catch (e) {
+        loadError.value = e.message || 'Erreur';
+      } finally {
+        loadingVideos.value = false;
+      }
+    }
+
+    watch(selectedSci, loadVideosForSelected);
+    loadTopSpecies();
+
+    const displayedVideos = computed(() => videos.value.slice(0, visibleLimit.value));
+
+    // ── Scan de couverture (outil interne) ───────────────────────
+    const scanLimit = ref(20);
+    const scanRunning = ref(false);
+    const scanned = ref(0);
+    const scanTotal = ref(0);
+    const scanResults = ref([]);
+
+    async function runScan() {
+      scanRunning.value = true;
+      scanResults.value = [];
+      scanned.value = 0;
+      try {
+        const topRows = await birdQuery(
+          'SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n FROM active_detections WHERE Confidence>=? GROUP BY Com_Name ORDER BY n DESC LIMIT ?',
+          [0.7, scanLimit.value]
+        );
+        scanTotal.value = topRows.length;
+        const chunkSize = 5;
+        for (let i = 0; i < topRows.length; i += chunkSize) {
+          const chunk = topRows.slice(i, i + chunkSize);
+          const chunkResults = await Promise.all(chunk.map(async row => {
+            try {
+              const v = await fetchVideosForSci(row.Sci_Name);
+              return { sci: row.Sci_Name, com: row.Com_Name, videos: v };
+            } catch {
+              return { sci: row.Sci_Name, com: row.Com_Name, videos: [] };
+            }
+          }));
+          scanResults.value.push(...chunkResults);
+          scanned.value = scanResults.value.length;
+          if (i + chunkSize < topRows.length) await new Promise(r => setTimeout(r, 200));
+        }
+      } finally {
+        scanRunning.value = false;
+      }
+    }
+
+    const scanWithVideo = computed(() => scanResults.value.filter(r => r.videos.length).length);
+    const scanTotalVideos = computed(() => scanResults.value.reduce((s, r) => s + r.videos.length, 0));
+    const scanCoverage = computed(() =>
+      scanResults.value.length ? Math.round(100 * scanWithVideo.value / scanResults.value.length) : 0
+    );
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function formatDuration(s) {
+      if (!s) return '';
+      const m = Math.floor(s / 60);
+      const sec = Math.round(s % 60);
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+    function cleanTitle(title) {
+      return title.replace(/\.(webm|ogv|ogg|mp4|mov)$/i, '').replace(/_/g, ' ');
+    }
+
+    return {
+      t, lang, spName,
+      topSpecies, loadingSpecies, selectedSci,
+      videos, loadingVideos, loadError, visibleLimit, displayedVideos,
+      scanLimit, scanRunning, scanned, scanTotal, scanResults,
+      scanWithVideo, scanTotalVideos, scanCoverage,
+      runScan, formatDuration, cleanTitle,
+    };
+  }
+});
+BIRDASH.ready.then(() => { BIRDASH.registerComponents(app); app.mount('#app'); });
+</script>
+</body>
+</html>
