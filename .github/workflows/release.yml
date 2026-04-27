@@ -1,0 +1,56 @@
+name: Auto-publish GitHub Release on tag push
+
+# Triggered by `git push origin vX.Y.Z`. Extracts the matching section
+# from CHANGELOG.md and creates a GitHub Release with that content.
+# Uses the standard GITHUB_TOKEN — no extra secrets needed.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version + changelog section
+        id: extract
+        run: |
+          # Strip leading "v" from refs/tags/vX.Y.Z
+          version="${GITHUB_REF##*/v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Extract from "## [VERSION]" until next "## [" — handles both
+          # ASCII hyphen and em-dash in the date separator.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found=1; print; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+
+          # Verify we extracted something
+          if [ ! -s release_notes.md ]; then
+            echo "::error::No CHANGELOG section found for v${version}"
+            exit 1
+          fi
+
+          echo "Extracted $(wc -l < release_notes.md) lines for v${version}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.extract.outputs.version }}"
+          # --notes-file accepts the full markdown including the "## [vX]"
+          # header for clarity in the release body.
+          gh release create "v${version}" \
+            --title "BirdStation v${version}" \
+            --notes-file release_notes.md \
+            --verify-tag
