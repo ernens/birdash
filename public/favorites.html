@@ -26,23 +26,23 @@
 <div id="app" v-cloak>
   <birdash-shell page="favorites" :title="t('nav_favorites')">
 
-    <!-- KPI cards -->
+    <!-- KPI cards : recentrés sur l'usage watchlist (Phase 1) -->
     <div class="kpi-grid" style="margin-bottom:1rem;">
       <div class="kpi-card">
         <div class="kpi-value">{{stats.total || 0}}</div>
         <div class="kpi-label">{{t('fav_total')}}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value">{{stats.active_today || 0}}</div>
+        <div class="kpi-value" style="color:var(--accent);">{{stats.active_today || 0}}</div>
         <div class="kpi-label">{{t('fav_active_today')}}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value">{{stats.today_detections || 0}}</div>
-        <div class="kpi-label">{{t('fav_today_dets')}}</div>
+        <div class="kpi-value amber">{{dormantCount}}</div>
+        <div class="kpi-label">{{t('fav_dormant_label')}}</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-value">{{stats.total_detections || 0}}</div>
-        <div class="kpi-label">{{t('fav_total_dets')}}</div>
+        <div class="kpi-value blue" style="font-size:1.1rem;">{{lastActivityLabel}}</div>
+        <div class="kpi-label">{{t('fav_last_activity')}}</div>
       </div>
     </div>
 
@@ -58,16 +58,10 @@
       </button>
     </div>
 
-    <!-- Sort + search bar -->
-    <div class="card" style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem .8rem;">
+    <!-- Search bar (le tri primaire est désormais le bucket d'activité) -->
+    <div class="card" style="display:flex;gap:.6rem;align-items:center;padding:.6rem .8rem;">
       <input v-model="searchQ" type="search" :placeholder="t('search')+'…'"
              style="flex:1;min-width:120px;padding:.35rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text-main);font-size:.82rem;">
-      <div style="display:flex;gap:.3rem;">
-        <button v-for="s in sortOptions" :key="s.key" @click="sortBy=s.key"
-                :style="{padding:'.3rem .6rem',borderRadius:'6px',border:'1px solid var(--border)',cursor:'pointer',fontSize:'.78rem',background:sortBy===s.key?'var(--accent)':'var(--bg-card)',color:sortBy===s.key?'#fff':'var(--text-muted)'}">
-          {{s.label}}
-        </button>
-      </div>
     </div>
 
     <!-- Empty state -->
@@ -88,39 +82,134 @@
       </div>
     </div>
 
-    <!-- Favorites list -->
-    <div v-if="!loading && favList.length" class="species-list" style="margin-top:.6rem;">
-      <div v-for="f in filteredFavs" :key="f.com_name" class="sp-item"
-           @click="navigateTo('species.html', {species: f.com_name})"
-           style="cursor:pointer;">
-        <div class="sp-thumb">
-          <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
-          <span v-else><bird-icon name="bird" :size="16" ></bird-icon></span>
-        </div>
-        <div class="sp-info" style="flex:1;min-width:0;">
-          <div class="sp-name-row">
-            {{spName(f.com_name, f.sci_name)}}
-            <span v-if="f.today_detections" style="font-size:.65rem;color:var(--accent);vertical-align:middle;margin-left:.3rem;">
-              {{f.today_detections}}× {{t('today_label')}}
-            </span>
+    <!-- Favorites organisés en 4 buckets (Phase 1 = option C) -->
+    <template v-if="!loading && favList.length">
+      <!-- Section 1 : Actifs aujourd'hui -->
+      <section v-if="buckets.active.length" class="fav-section">
+        <h2 class="fav-section-title">
+          <span class="fav-section-dot fav-dot-active"></span>
+          {{t('fav_section_active')}}
+          <span class="fav-section-count">{{buckets.active.length}}</span>
+        </h2>
+        <div class="species-list">
+          <div v-for="f in buckets.active" :key="f.com_name" class="sp-item"
+               @click="navigateTo('species.html', {species: f.com_name})">
+            <div class="sp-thumb">
+              <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
+              <span v-else><bird-icon name="bird" :size="16"></bird-icon></span>
+            </div>
+            <div class="sp-info">
+              <div class="sp-name-row">
+                {{spName(f.com_name, f.sci_name)}}
+                <span style="font-size:.65rem;color:var(--accent);vertical-align:middle;margin-left:.3rem;">
+                  {{f.today_detections}}× {{t('today_label')}}
+                </span>
+              </div>
+              <div class="sp-sci-row">
+                {{f.sci_name}}
+                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
+                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+              </div>
+            </div>
+            <div class="sp-meta" style="text-align:right;">
+              <span class="conf-badge" :class="f.avg_conf>=0.8?'conf-high':'conf-mid'" style="font-size:.7rem;">{{f.total_detections}}×</span>
+              <span v-if="f.last_date" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">{{fmtDateShort(f.last_date)}}</span>
+              <weather-chip v-if="f.last_date && f.last_time" :date="f.last_date" :time="f.last_time"></weather-chip>
+            </div>
           </div>
-          <div class="sp-sci-row">
-            {{f.sci_name}}
-            <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
-                    style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+        </div>
+      </section>
+
+      <!-- Section 2 : Récents (1–30 jours) -->
+      <section v-if="buckets.recent.length" class="fav-section">
+        <h2 class="fav-section-title">
+          <span class="fav-section-dot fav-dot-recent"></span>
+          {{t('fav_section_recent')}}
+          <span class="fav-section-count">{{buckets.recent.length}}</span>
+        </h2>
+        <div class="species-list">
+          <div v-for="f in buckets.recent" :key="f.com_name" class="sp-item"
+               @click="navigateTo('species.html', {species: f.com_name})">
+            <div class="sp-thumb">
+              <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
+              <span v-else><bird-icon name="bird" :size="16"></bird-icon></span>
+            </div>
+            <div class="sp-info">
+              <div class="sp-name-row">{{spName(f.com_name, f.sci_name)}}</div>
+              <div class="sp-sci-row">
+                {{f.sci_name}}
+                <span class="fav-status-text">{{statusFor(f)}}</span>
+                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
+                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+              </div>
+            </div>
+            <div class="sp-meta" style="text-align:right;">
+              <span class="conf-badge" :class="f.avg_conf>=0.8?'conf-high':'conf-mid'" style="font-size:.7rem;">{{f.total_detections}}×</span>
+              <span v-if="f.last_date" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">{{fmtDateShort(f.last_date)}}</span>
+              <weather-chip v-if="f.last_date && f.last_time" :date="f.last_date" :time="f.last_time"></weather-chip>
+            </div>
           </div>
         </div>
-        <div class="sp-meta" style="text-align:right;">
-          <span class="conf-badge" :class="f.avg_conf>=0.8?'conf-high':'conf-mid'" style="font-size:.7rem;">
-            {{f.total_detections}}×
-          </span>
-          <span v-if="f.last_date" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">
-            {{fmtDateShort(f.last_date)}}
-          </span>
-          <weather-chip v-if="f.last_date && f.last_time" :date="f.last_date" :time="f.last_time"></weather-chip>
+      </section>
+
+      <!-- Section 3 : Dormants (>30 jours) — repliée par défaut -->
+      <details v-if="buckets.dormant.length" class="fav-section fav-section--collapsible">
+        <summary class="fav-section-title">
+          <span class="fav-section-dot fav-dot-dormant"></span>
+          {{t('fav_section_dormant')}}
+          <span class="fav-section-count">{{buckets.dormant.length}}</span>
+        </summary>
+        <div class="species-list">
+          <div v-for="f in buckets.dormant" :key="f.com_name" class="sp-item fav-row-faded"
+               @click="navigateTo('species.html', {species: f.com_name})">
+            <div class="sp-thumb">
+              <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
+              <span v-else><bird-icon name="bird" :size="16"></bird-icon></span>
+            </div>
+            <div class="sp-info">
+              <div class="sp-name-row">{{spName(f.com_name, f.sci_name)}}</div>
+              <div class="sp-sci-row">
+                {{f.sci_name}}
+                <span class="fav-status-text">{{statusFor(f)}}</span>
+                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
+                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+              </div>
+            </div>
+            <div class="sp-meta" style="text-align:right;">
+              <span class="conf-badge" :class="f.avg_conf>=0.8?'conf-high':'conf-mid'" style="font-size:.7rem;">{{f.total_detections}}×</span>
+              <span v-if="f.last_date" style="font-size:.68rem;color:var(--text-faint);font-family:monospace;">{{fmtDateShort(f.last_date)}}</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </details>
+
+      <!-- Section 4 : Jamais détectés (sémantique distincte des dormants) — repliée par défaut -->
+      <details v-if="buckets.never.length" class="fav-section fav-section--collapsible">
+        <summary class="fav-section-title">
+          <span class="fav-section-dot fav-dot-never"></span>
+          {{t('fav_section_never')}}
+          <span class="fav-section-count">{{buckets.never.length}}</span>
+        </summary>
+        <div class="species-list">
+          <div v-for="f in buckets.never" :key="f.com_name" class="sp-item fav-row-faded"
+               @click="navigateTo('species.html', {species: f.com_name})">
+            <div class="sp-thumb">
+              <bird-img v-if="f.photoUrl" :src="f.photoUrl" :alt="f.com_name"></bird-img>
+              <span v-else><bird-icon name="bird" :size="16"></bird-icon></span>
+            </div>
+            <div class="sp-info">
+              <div class="sp-name-row">{{spName(f.com_name, f.sci_name)}}</div>
+              <div class="sp-sci-row">
+                {{f.sci_name}}
+                <span class="fav-status-text">{{statusFor(f)}}</span>
+                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
+                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </template>
 
   </birdash-shell>
 </div>
@@ -160,15 +249,74 @@ const app = Vue.createApp({
           spName(f.com_name, f.sci_name).toLowerCase().includes(q)
         );
       }
-      if (sortBy.value === 'name') list.sort((a, b) => spName(a.com_name, a.sci_name).localeCompare(spName(b.com_name, b.sci_name)));
-      else if (sortBy.value === 'count') list.sort((a, b) => b.total_detections - a.total_detections);
-      // 'recent' = default order from API (added_at DESC)
+      // Pas de tri ici : le bucket fait le tri primaire (état d'activité),
+      // chaque bucket trie ensuite par récence/fréquence pertinente.
       return list;
     });
 
     function fmtDateShort(d) {
       if (!d) return '';
       return new Date(d + 'T12:00:00').toLocaleDateString(lang.value, { day: 'numeric', month: 'short' });
+    }
+
+    function daysSince(dateStr) {
+      if (!dateStr) return Infinity;
+      return Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000);
+    }
+
+    // ── Buckets par état d'activité (Phase 1 = option C) ──────────────────
+    // Règles de classement explicites :
+    //   Actifs     : détecté aujourd'hui (today_detections > 0)
+    //   Récents    : last_date dans les 30 derniers jours, mais pas aujourd'hui
+    //   Dormants   : last_date > 30 jours
+    //   Jamais vus : aucune détection (séparé des dormants — sémantique différente)
+    const buckets = computed(() => {
+      const active = [], recent = [], dormant = [], never = [];
+      for (const f of filteredFavs.value) {
+        if (f.today_detections > 0)      active.push(f);
+        else if (!f.last_date)           never.push(f);
+        else if (daysSince(f.last_date) <= 30) recent.push(f);
+        else                             dormant.push(f);
+      }
+      active.sort((a,b)  => b.today_detections - a.today_detections);
+      recent.sort((a,b)  => daysSince(a.last_date) - daysSince(b.last_date));
+      dormant.sort((a,b) => daysSince(a.last_date) - daysSince(b.last_date));
+      never.sort((a,b)   => (b.added_at || '').localeCompare(a.added_at || ''));
+      return { active, recent, dormant, never };
+    });
+
+    const dormantCount = computed(() => {
+      // Compte sur la liste complète (pas filtrée) : signal global, pas dépendant de la recherche
+      return favList.value.filter(f => f.last_date && daysSince(f.last_date) > 30).length;
+    });
+
+    const lastActivityLabel = computed(() => {
+      if (!favList.value.length) return '—';
+      let mostRecent = null;
+      for (const f of favList.value) {
+        if (!f.last_date) continue;
+        if (!mostRecent || f.last_date > mostRecent) mostRecent = f.last_date;
+      }
+      if (!mostRecent) return '—';
+      const d = daysSince(mostRecent);
+      if (d === 0) return t('fav_la_today');
+      if (d === 1) return t('fav_la_yesterday');
+      return t('fav_la_days', { n: d });
+    });
+
+    function statusFor(f) {
+      // Pour les actifs : déjà rendu via le badge "{N}× today" inline → rien à ajouter
+      if (f.today_detections > 0) return '';
+      if (!f.last_date) {
+        if (f.added_at) {
+          const d = daysSince((f.added_at || '').substring(0, 10));
+          return t('fav_status_never_added', { n: d });
+        }
+        return t('fav_status_never');
+      }
+      const days = daysSince(f.last_date);
+      if (days === 1) return t('fav_status_yesterday');
+      return t('fav_status_days_ago', { n: days });
     }
 
     async function loadFavorites() {
@@ -236,10 +384,11 @@ const app = Vue.createApp({
 
     return {
       t, lang, theme, spName,
-      loading, favList, stats, searchQ, sortBy, sortOptions,
+      loading, favList, stats, searchQ,
       filteredFavs, fmtDateShort,
       navigateTo, removeFav,
       syncMissing, syncing, syncNow,
+      buckets, dormantCount, lastActivityLabel, statusFor,
     };
   }
 });
