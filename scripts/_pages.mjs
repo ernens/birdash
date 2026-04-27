@@ -82,6 +82,9 @@ export const pages = [
   // Indicators
   { name: 'weather',     path: '/birds/weather.html',     wait: 6000, ready: '.chart-wrap canvas, .kpi-card .kpi-value' },
   { name: 'stats',       path: '/birds/stats.html',       wait: 4000 },
+  // Onglet Models — cmp-list grid + chart journalier compact (différent du tab Stats principal)
+  { name: 'stats-models', path: '/birds/stats.html?tab=models#models', wait: 6000,
+                          ready: '.cmp-row, .cmp-stat .big' },
   // Analyses needs species selected. The Top-N button picks the N most
   // detected species (default N=10) and triggers all charts to render.
   { name: 'analyses',    path: '/birds/analyses.html',    wait: 2000, action: async (page) => {
