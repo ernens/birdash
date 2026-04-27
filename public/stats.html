@@ -217,7 +217,7 @@
 
         <div class="card" style="margin-bottom:1.2rem;">
           <div class="section-title">{{t('models_daily')}}</div>
-          <canvas ref="mDailyChart" height="200"></canvas>
+          <div class="chart-wrap" style="height:180px;"><canvas ref="mDailyChart"></canvas></div>
         </div>
 
         <div class="cmp-grid" style="margin-bottom:1.2rem;">
@@ -430,7 +430,7 @@ const app = createApp({
         const byDate = {}; mData.value.daily.filter(d=>d.Model===m).forEach(d=>byDate[d.Date]=d.n);
         return { label:modelLabel(m), data:dates.map(d=>byDate[d]||0), borderColor:M_COLORS[i], backgroundColor:M_COLORS[i]+'33', fill:true, tension:0.3 };
       });
-      mChartInstance = new Chart(mDailyChart.value, { type:'line', data:{labels:dates,datasets}, options:{ responsive:true, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true,title:{display:true,text:t('detections')}}}} });
+      mChartInstance = new Chart(mDailyChart.value, { type:'line', data:{labels:dates,datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}}, scales:{y:{beginAtZero:true,title:{display:true,text:t('detections'),font:{size:10}},ticks:{font:{size:9}}},x:{ticks:{maxTicksLimit:12,font:{size:9}}}}} });
     }
 
     watch([mData,lang], async()=>{ if(tab.value==='models') { await nextTick(); drawModelChart(); } });
