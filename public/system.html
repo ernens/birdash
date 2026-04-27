@@ -168,14 +168,14 @@
       </div>
 
       <!-- ──────────────────────────────────────────────────────────────
-           Couche 2 : Santé machine — composition asymétrique
-           Sys Health large à gauche, Network + Backup empilés à droite
+           Couche 2 : Santé machine
+           System Health = carte maître fullwidth.
+           Network + Backup = sous-cartes co-égales en grid-2 dessous.
            ────────────────────────────────────────────────────────────── -->
       <h2 class="sys-section-title">{{t('sys_layer_machine')}}</h2>
-      <div class="sys-layer-asym">
 
-        <!-- System Health -->
-        <div class="card">
+      <!-- System Health (carte maître pleine largeur) -->
+      <div class="card" style="margin-bottom:1rem;">
           <div class="card-title">{{t('sys_health_title')}}</div>
           <div v-if="health.loading" class="spinner"><div></div><div></div><div></div></div>
           <div v-else-if="health.error" class="error-msg">{{health.error}}</div>
@@ -255,8 +255,8 @@
           </template>
         </div>
 
-        <!-- Right column : Network + Backup stackés (sous-cartes secondaires) -->
-        <div class="sys-stack">
+      <!-- Sous-cartes co-égales : Network + Backup -->
+      <div class="grid-2 sys-layer">
 
         <!-- Network -->
         <div class="card">
@@ -325,18 +325,17 @@
           </template>
         </div>
 
-        </div><!-- /sys-stack (Network + Backup) -->
-
-      </div><!-- /sys-layer-asym -->
+      </div><!-- /grid-2 sys-layer (Network + Backup) -->
 
       <!-- ──────────────────────────────────────────────────────────────
-           Couche 3 : Contexte matériel — stack vertical
-           Hardware fullwidth, Audio en sous-carte secondaire dessous
+           Couche 3 : Contexte matériel
+           Hardware = carte maître fullwidth. Audio fusionné comme
+           sous-bloc interne en bas de la carte (pas une carte autonome
+           avec 3 lignes pauvres).
            ────────────────────────────────────────────────────────────── -->
       <h2 class="sys-section-title">{{t('sys_layer_context')}}</h2>
-      <div class="sys-stack">
 
-        <!-- Hardware -->
+        <!-- Hardware (carte maître pleine largeur, Audio fusionné dedans) -->
         <div class="card">
           <div class="card-title">{{t('sys_hardware_title')}}</div>
           <div v-if="hw.loading" class="spinner"><div></div><div></div><div></div></div>
@@ -377,31 +376,18 @@
                 <div class="hw-detail">{{u.id}} · Bus {{u.bus}}</div>
               </div>
             </div>
-          </template>
-        </div>
 
-        <!-- Audio Device -->
-        <div class="card">
-          <div class="card-title">{{t('sys_audio_title')}}</div>
-          <div v-if="audio.loading" class="spinner"><div></div><div></div><div></div></div>
-          <div v-else-if="audio.error" class="error-msg">{{audio.error}}</div>
-          <template v-else>
-            <div class="sys-row">
-              <span class="sys-label">{{t('sys_rec_card')}}</span>
-              <span class="sys-value">{{audio.card || '—'}}</span>
-            </div>
-            <div class="sys-row">
-              <span class="sys-label">{{t('sys_channels')}}</span>
-              <span class="sys-value">{{audio.channels || '—'}}</span>
-            </div>
-            <div class="sys-row">
-              <span class="sys-label">{{t('sys_format')}}</span>
-              <span class="sys-value">{{audio.format || '—'}}</span>
+            <!-- Audio capture configuration : sous-bloc interne (fusion de l'ex card Audio) -->
+            <div class="hw-audio-block" v-if="!audio.loading && !audio.error">
+              <div class="hw-audio-title">{{t('sys_audio_title')}}</div>
+              <div class="hw-audio-grid">
+                <span><span class="hw-audio-lbl">{{t('sys_rec_card')}}</span> {{audio.card || '—'}}</span>
+                <span><span class="hw-audio-lbl">{{t('sys_channels')}}</span> {{audio.channels || '—'}}</span>
+                <span><span class="hw-audio-lbl">{{t('sys_format')}}</span> {{audio.format || '—'}}</span>
+              </div>
             </div>
           </template>
         </div>
-
-      </div>
 
     </div>
 

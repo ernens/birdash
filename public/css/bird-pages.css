@@ -3107,22 +3107,29 @@
       padding: 0;
     }
     .sys-section-title:first-child { margin-top: 0; }
-    /* Top-align cards in the same layer so heights asymétriques
-       (System Health + Network + Backup) restent propres */
-    .grid-3.sys-layer, .grid-2.sys-layer { align-items: start; }
+    /* Cards d'une même couche s'étirent à la hauteur de la plus grande
+       (default CSS grid) → trio Layer 1 et duo Layer 2 ont des bords
+       inférieurs alignés au lieu de bottoms en escalier */
+    .grid-3.sys-layer, .grid-2.sys-layer { align-items: stretch; }
 
-    /* Layer 2 asymétrique : 1 bloc principal + colonne de sous-cartes
-       Évite la grille symétrique 3 colonnes qui donnait l'impression
-       "grand bloc à côté de deux mini blocs vides" */
-    .sys-layer-asym {
-      display: grid; grid-template-columns: 3fr 2fr;
-      gap: 1rem; margin-bottom: 1rem; align-items: start;
+    /* Sous-bloc Audio fusionné dans la card Hardware (Layer 3).
+       Audio n'avait plus assez de poids pour mériter sa propre carte —
+       devient une rangée "Capture audio" en bas de Hardware. */
+    .hw-audio-block {
+      margin-top: .9rem; padding-top: .8rem;
+      border-top: 1px solid var(--border);
     }
-    .sys-stack {
-      display: flex; flex-direction: column; gap: 1rem;
+    .hw-audio-title {
+      font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-faint); margin-bottom: .45rem; font-weight: 600;
     }
-    @media (max-width: 900px) {
-      .sys-layer-asym { grid-template-columns: 1fr; }
+    .hw-audio-grid {
+      display: flex; flex-wrap: wrap; gap: 1.2rem;
+      font-size: .82rem; color: var(--text-main);
+    }
+    .hw-audio-lbl {
+      color: var(--text-muted); font-size: .72rem;
+      margin-right: .25rem;
     }
 
     /* ── favorites.html — sections par état d'activité (Phase 1) ─────── */
