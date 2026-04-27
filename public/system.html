@@ -168,10 +168,11 @@
       </div>
 
       <!-- ──────────────────────────────────────────────────────────────
-           Couche 2 : Santé machine
+           Couche 2 : Santé machine — composition asymétrique
+           Sys Health large à gauche, Network + Backup empilés à droite
            ────────────────────────────────────────────────────────────── -->
       <h2 class="sys-section-title">{{t('sys_layer_machine')}}</h2>
-      <div class="grid-3 sys-layer">
+      <div class="sys-layer-asym">
 
         <!-- System Health -->
         <div class="card">
@@ -254,6 +255,9 @@
           </template>
         </div>
 
+        <!-- Right column : Network + Backup stackés (sous-cartes secondaires) -->
+        <div class="sys-stack">
+
         <!-- Network -->
         <div class="card">
           <div class="card-title">{{t('sys_network_title')}}</div>
@@ -321,13 +325,16 @@
           </template>
         </div>
 
-      </div>
+        </div><!-- /sys-stack (Network + Backup) -->
+
+      </div><!-- /sys-layer-asym -->
 
       <!-- ──────────────────────────────────────────────────────────────
-           Couche 3 : Contexte matériel
+           Couche 3 : Contexte matériel — stack vertical
+           Hardware fullwidth, Audio en sous-carte secondaire dessous
            ────────────────────────────────────────────────────────────── -->
       <h2 class="sys-section-title">{{t('sys_layer_context')}}</h2>
-      <div class="grid-2 sys-layer">
+      <div class="sys-stack">
 
         <!-- Hardware -->
         <div class="card">
