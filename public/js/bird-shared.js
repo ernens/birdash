@@ -617,6 +617,7 @@
 
   async function toggleFavorite(comName, sciName) {
     const isNowFav = !isFavorite(comName);
+    let serverErr = null;
     try {
       const res = await fetch(BIRD_CONFIG.apiUrl + '/favorites', {
         method: 'POST',
@@ -629,12 +630,22 @@
         localStorage.setItem(_FAV_KEY, JSON.stringify(_favCache.map(f => f.com_name)));
         return isNowFav;
       }
-    } catch(e) {}
-    // Fallback: toggle in localStorage
+      serverErr = 'HTTP ' + res.status;
+    } catch(e) {
+      serverErr = e.message || 'network error';
+    }
+    // Fallback: toggle in localStorage (cause de desync visible sur favorites.html).
+    // L'event birdash:error est capturé par le toast system pour rendre l'erreur
+    // visible plutôt que silencieuse — la cause #1 du bug de couverture des favoris.
     const favs = getFavorites();
     if (isNowFav) favs.push(comName); else favs.splice(favs.indexOf(comName), 1);
     localStorage.setItem(_FAV_KEY, JSON.stringify(favs));
     _favCache = favs.map(n => ({ com_name: n }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('birdash:error', {
+        detail: 'Favori non synchronisé avec le serveur (' + serverErr + ') — visible localement uniquement. Synchroniser depuis la page Favoris.',
+      }));
+    }
     return isNowFav;
   }
 

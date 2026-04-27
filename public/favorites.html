@@ -46,6 +46,18 @@
       </div>
     </div>
 
+    <!-- Desync banner: localStorage has favorites the server doesn't know about -->
+    <div v-if="syncMissing.length" class="card"
+         style="border:1px solid var(--amber);background:rgba(200,168,75,.08);padding:.7rem .9rem;margin-bottom:.8rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:1.1rem;">⚠</span>
+      <span style="flex:1;min-width:180px;font-size:.85rem;">
+        {{t('fav_sync_warning', {n: syncMissing.length})}}
+      </span>
+      <button class="btn btn-secondary" @click="syncNow" :disabled="syncing" style="font-size:.78rem;">
+        {{syncing ? t('fav_sync_progress') : t('fav_sync_btn')}}
+      </button>
+    </div>
+
     <!-- Sort + search bar -->
     <div class="card" style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.6rem .8rem;">
       <input v-model="searchQ" type="search" :placeholder="t('search')+'…'"
@@ -129,6 +141,8 @@ const app = Vue.createApp({
     const stats   = ref({});
     const searchQ = ref('');
     const sortBy  = ref('recent');
+    const syncMissing = ref([]);   // favoris en localStorage non présents côté serveur
+    const syncing     = ref(false);
 
     const sortOptions = computed(() => [
       { key: 'name',   label: t('fav_sort_name') },
@@ -168,6 +182,12 @@ const app = Vue.createApp({
             photoUrl: photoUrl(f.sci_name),
           }));
           stats.value = data.stats || {};
+          // Detect desync: favoris en localStorage non présents côté serveur
+          // (cause #1 du bug — POST échoué + fallback localStorage silencieux).
+          const serverNames = new Set(favList.value.map(f => f.com_name));
+          let localNames = [];
+          try { localNames = JSON.parse(localStorage.getItem('birdash_favorites') || '[]'); } catch {}
+          syncMissing.value = localNames.filter(n => n && !serverNames.has(n));
           // Pre-fetch weather for last detection dates so chips populate
           if (BIRDASH.loadWeatherRange) {
             const dates = favList.value.map(f => f.last_date).filter(Boolean).sort();
@@ -178,6 +198,29 @@ const app = Vue.createApp({
         console.warn('[favorites]', e);
       }
       loading.value = false;
+    }
+
+    async function syncNow() {
+      if (!syncMissing.value.length || syncing.value) return;
+      syncing.value = true;
+      let okCount = 0, failCount = 0;
+      for (const name of syncMissing.value) {
+        try {
+          const res = await fetch(BIRD_CONFIG.apiUrl + '/favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', com_name: name, sci_name: '' }),
+          });
+          if (res.ok) okCount++; else failCount++;
+        } catch (e) { failCount++; }
+      }
+      syncing.value = false;
+      window.dispatchEvent(new CustomEvent(failCount ? 'birdash:error' : 'birdash:success', {
+        detail: failCount
+          ? `${okCount} favori(s) synchronisé(s), ${failCount} échec(s).`
+          : `${okCount} favori(s) synchronisé(s) avec le serveur.`,
+      }));
+      await loadFavorites();
     }
 
     async function removeFav(comName) {
@@ -196,6 +239,7 @@ const app = Vue.createApp({
       loading, favList, stats, searchQ, sortBy, sortOptions,
       filteredFavs, fmtDateShort,
       navigateTo, removeFav,
+      syncMissing, syncing, syncNow,
     };
   }
 });
