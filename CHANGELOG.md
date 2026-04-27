@@ -2,6 +2,21 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.46.2] — 2026-04-27
+
+### Fixed
+
+- Birdash self-restart actually works now. 1.46.1 fixed the route
+  regex but the deeper bug remained: `await execCmd('sudo
+  systemctl restart birdash')` killed the running birdash process
+  before the HTTP response could flush — the client saw a
+  connection drop on every restart attempt, and stop+start was
+  unreachable because nothing was alive to receive the start.
+  When the target is birdash itself (restart or stop), respond
+  200 immediately, then spawn `systemctl` detached after a 200ms
+  delay so the child outlives the parent. Other services keep
+  the synchronous behavior.
+
 ## [1.46.1] — 2026-04-27
 
 ### Fixed

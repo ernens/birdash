@@ -6,7 +6,20 @@
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
+const { spawn } = require('child_process');
 const safeConfig = require('../lib/safe-config');
+
+// Self-restart helper: if birdash systemctl-restarts itself, the parent
+// dies before the HTTP response can flush. Respond first, then spawn
+// the systemctl call detached so the child survives the parent's death.
+function deferredSelfAction(action, res) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ ok: true, service: 'birdash', action, deferred: true }));
+  setTimeout(() => {
+    const child = spawn('sudo', ['systemctl', action, 'birdash'], { detached: true, stdio: 'ignore' });
+    child.unref();
+  }, 200);
+}
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
@@ -78,6 +91,11 @@ function handle(req, res, pathname, ctx) {
           if (!ALLOWED_SERVICES.includes(service)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: `Service not allowed: ${service}` }));
+            return;
+          }
+          if (service === 'birdash') {
+            console.log(`[services] self-restart (deferred, legacy route)`);
+            deferredSelfAction('restart', res);
             return;
           }
           await execCmd('sudo', ['systemctl', 'restart', service]);
@@ -243,6 +261,11 @@ function handle(req, res, pathname, ctx) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: `Service not allowed: ${svcName}` }));
       return;
+    }
+    if (svcName === 'birdash' && (action === 'restart' || action === 'stop')) {
+      console.log(`[services] self-${action} (deferred)`);
+      deferredSelfAction(action, res);
+      return true;
     }
     (async () => {
       try {
