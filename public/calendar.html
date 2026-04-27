@@ -89,9 +89,8 @@
           </div>
           <div v-if="cell.det > 0" class="cal-det">{{cell.det.toLocaleString()}} det.</div>
           <div v-else-if="!cell.isFuture" class="cal-det" style="opacity:.3;">—</div>
-          <div v-if="cell.newSp > 0 || cell.rareSp > 0" class="cal-badges">
-            <span v-if="cell.newSp > 0" class="cal-badge cal-badge-new">★ {{cell.newSp}}</span>
-            <span v-if="cell.rareSp > 0" class="cal-badge cal-badge-rare">◆ {{cell.rareSp}}</span>
+          <div v-if="cellBadges(cell).length" class="cal-badges">
+            <span v-for="(b, i) in cellBadges(cell)" :key="i" class="cal-badge" :class="b.cls" :title="b.tip">{{b.sym}} {{b.n}}</span>
           </div>
           <div class="cal-bar" :style="{ background: cell.det > 0 ? barColor(cell.det) : 'transparent', width: barWidth(cell.det) + '%' }"></div>
         </template>
@@ -103,8 +102,10 @@
       <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-legend-swatch" style="background:rgba(52,211,153,.3);"></span> {{t('cal_few')}}</span>
       <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-legend-swatch" style="background:rgba(52,211,153,.6);"></span> {{t('cal_moderate')}}</span>
       <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-legend-swatch" style="background:rgba(52,211,153,1);"></span> {{t('cal_many')}}</span>
-      <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-new" style="font-size:.65rem;">★</span> {{t('cal_legend_new')}}</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-veryrare" style="font-size:.65rem;">◆</span> {{t('cal_legend_very_rare')}}</span>
       <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-rare" style="font-size:.65rem;">◆</span> {{t('cal_legend_rare')}}</span>
+      <span v-if="stationMatured" style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-new" style="font-size:.65rem;">★</span> {{t('cal_legend_new')}}</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span class="cal-badge cal-badge-return" style="font-size:.65rem;">↺</span> {{t('cal_legend_return')}}</span>
     </div>
 
     <!-- Day panel: persistant, montre le jour sélectionné. Garde-fou : compact —
@@ -117,14 +118,74 @@
           <div class="cal-panel-stats">
             <bird-icon name="bird" :size="13"></bird-icon>
             <span>{{selectedDayData.sp}} {{t('species')}} · {{selectedDayData.det.toLocaleString()}} det.</span>
-            <span v-if="selectedDayData.newSp > 0" class="cal-badge cal-badge-new">★ {{selectedDayData.newSp}}</span>
-            <span v-if="selectedDayData.rareSp > 0" class="cal-badge cal-badge-rare">◆ {{selectedDayData.rareSp}}</span>
+            <span v-if="selectedDayData.very_rare_count > 0" class="cal-badge cal-badge-veryrare">◆ {{selectedDayData.very_rare_count}}</span>
+            <span v-if="selectedDayData.rare_count > 0" class="cal-badge cal-badge-rare">◆ {{selectedDayData.rare_count}}</span>
+            <span v-if="stationMatured && selectedDayData.new_count > 0" class="cal-badge cal-badge-new">★ {{selectedDayData.new_count}}</span>
+            <span v-if="selectedDayData.return_90_count > 0" class="cal-badge cal-badge-return-big">↺ {{selectedDayData.return_30_count + selectedDayData.return_90_count}}</span>
+            <span v-else-if="selectedDayData.return_30_count > 0" class="cal-badge cal-badge-return">↺ {{selectedDayData.return_30_count}}</span>
           </div>
         </div>
         <a :href="'today.html?date='+selectedDate" class="btn btn-primary" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.3rem;">
           {{t('cal_view_day')}} <bird-icon name="chevron-right" :size="14"></bird-icon>
         </a>
       </div>
+      <!-- Signaux remarquables (Phase 4 V1) — détail explicite de chaque catégorie.
+           Affiché uniquement si au moins une catégorie est non-vide.
+           Inclut "Peu fréquent" qui est calculé en data mais pas badgé en cellule. -->
+      <div v-if="hasRemarkableSignals" class="cal-panel-section cal-panel-signals">
+        <div class="cal-panel-section-title">{{t('cal_remarkable_signals')}}</div>
+
+        <div v-if="selectedDayData.very_rare_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-veryrare">◆ {{t('cal_label_very_rare')}}</span>
+          <a v-for="s in selectedDayData.very_rare_names" :key="'vr'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+
+        <div v-if="selectedDayData.rare_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-rare">◆ {{t('cal_label_rare')}}</span>
+          <a v-for="s in selectedDayData.rare_names" :key="'r'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+
+        <div v-if="selectedDayData.uncommon_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-uncommon">◇ {{t('cal_label_uncommon')}}</span>
+          <a v-for="s in selectedDayData.uncommon_names" :key="'uc'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+
+        <div v-if="stationMatured && selectedDayData.new_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-new">★ {{t('cal_label_new')}}</span>
+          <a v-for="s in selectedDayData.new_names" :key="'n'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+
+        <div v-if="selectedDayData.return_90_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-return-big">↺ {{t('cal_label_return_big')}}</span>
+          <a v-for="s in selectedDayData.return_90_names" :key="'r90'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})"
+             :title="t('cal_tip_return_gap', {n:s.gap})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+
+        <div v-if="selectedDayData.return_30_names.length" class="cal-signal-group">
+          <span class="cal-signal-label cal-signal-label-return">↺ {{t('cal_label_return')}}</span>
+          <a v-for="s in selectedDayData.return_30_names" :key="'r30'+s.com"
+             class="cal-signal-chip" @click.prevent="navigateTo('species.html',{species:s.com})"
+             :title="t('cal_tip_return_gap', {n:s.gap})">
+            {{spName(s.com, s.sci)}}
+          </a>
+        </div>
+      </div>
+
       <!-- Section toujours rendue (hauteur réservée par .cal-panel-section min-height)
            pour éviter tout shift de layout entre deux clics. -->
       <div class="cal-panel-section">
@@ -219,11 +280,30 @@ const app = createApp({
         date: selectedDate.value,
         det: data.det || 0,
         sp: data.sp || 0,
-        newSp: data.newSp || 0,
-        rareSp: data.rareSp || 0,
+        new_count:        data.new_count        || 0,
+        very_rare_count:  data.very_rare_count  || 0,
+        rare_count:       data.rare_count       || 0,
+        uncommon_count:   data.uncommon_count   || 0,
+        return_30_count:  data.return_30_count  || 0,
+        return_90_count:  data.return_90_count  || 0,
+        new_names:        data.new_names        || [],
+        very_rare_names:  data.very_rare_names  || [],
+        rare_names:       data.rare_names       || [],
+        uncommon_names:   data.uncommon_names   || [],
+        return_30_names:  data.return_30_names  || [],
+        return_90_names:  data.return_90_names  || [],
       };
     });
     const selectedDayTopSpecies = computed(() => dayTopSpecies.value[selectedDate.value] || []);
+    // True dès qu'une catégorie remarquable a au moins un nom — pilote l'affichage
+    // de la nouvelle section "Signaux remarquables" du panneau (Phase 4 V1).
+    const hasRemarkableSignals = computed(() => {
+      const d = selectedDayData.value;
+      if (!d) return false;
+      return (d.very_rare_names.length + d.rare_names.length + d.uncommon_names.length
+            + d.return_30_names.length + d.return_90_names.length
+            + (stationMatured.value ? d.new_names.length : 0)) > 0;
+    });
     // États possibles de la section "top espèces" :
     //   'idle'    → aucun jour sélectionné (panneau caché)
     //   'empty'   → jour sans détection (pas de fetch, message court)
@@ -273,9 +353,15 @@ const app = createApp({
       return labels;
     });
 
-    // Daily data from DB
-    const dailyData = ref({}); // { 'YYYY-MM-DD': { det, sp, newSp, rareSp } }
+    // Daily data from DB — schema enrichi en Phase 4 V1 :
+    //   { det, sp, new_count, very_rare_count, rare_count, uncommon_count,
+    //     return_30_count, return_90_count, *_names: [{com, sci}] }
+    const dailyData = ref({});
     const monthMeta = ref({ totalSpecies: 0, newSpecies: 0, rareSpecies: 0 });
+    // Garde-fou Phase 4 : ne badger ★ Nouvelle que si la station a au moins
+    // 30j de détections — sinon en début de vie tous les jours sont "nouveaux"
+    // et le signal disparaît dans le bruit.
+    const stationMatured = ref(true);
     let maxDet = 1;
 
     // Build calendar cells
@@ -297,18 +383,57 @@ const app = createApp({
         const date = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const data = dailyData.value[date] || {};
         result.push({
-          day: d,
-          date,
+          day: d, date,
           det: data.det || 0,
           sp: data.sp || 0,
-          newSp: data.newSp || 0,
-          rareSp: data.rareSp || 0,
+          new_count:        data.new_count        || 0,
+          very_rare_count:  data.very_rare_count  || 0,
+          rare_count:       data.rare_count       || 0,
+          uncommon_count:   data.uncommon_count   || 0,
+          return_30_count:  data.return_30_count  || 0,
+          return_90_count:  data.return_90_count  || 0,
           isToday: date === todayStr,
           isFuture: date > todayStr,
         });
       }
       return result;
     });
+
+    /**
+     * Badges affichés en cellule : top 3 par priorité.
+     * Priorité (Phase 4 V1) :
+     *   1. ◆ Très rare (lifetime = 1) — rouge fort
+     *   2. ◆ Rare      (lifetime 2-5) — rouge léger
+     *   3. ★ Nouvelle  (first_date == today, station ≥ 30j sinon masqué)
+     *   4. ↺ Retour    (un seul slot ; intensité plus forte si ≥ 1 grand retour 90j)
+     * "Peu fréquent" (lifetime 6-12) reste calculé en data mais visible
+     * uniquement dans le panneau du jour, pour ne pas saturer la grille.
+     */
+    function cellBadges(cell) {
+      const out = [];
+      if (cell.very_rare_count > 0) {
+        out.push({ cls:'cal-badge-veryrare', sym:'◆', n: cell.very_rare_count,
+                   tip: t('cal_tip_very_rare', {n: cell.very_rare_count}) });
+      }
+      if (cell.rare_count > 0) {
+        out.push({ cls:'cal-badge-rare', sym:'◆', n: cell.rare_count,
+                   tip: t('cal_tip_rare', {n: cell.rare_count}) });
+      }
+      if (stationMatured.value && cell.new_count > 0) {
+        out.push({ cls:'cal-badge-new', sym:'★', n: cell.new_count,
+                   tip: t('cal_tip_new', {n: cell.new_count}) });
+      }
+      const retTotal = cell.return_30_count + cell.return_90_count;
+      if (retTotal > 0) {
+        const big = cell.return_90_count > 0;
+        out.push({
+          cls: big ? 'cal-badge-return-big' : 'cal-badge-return',
+          sym: '↺', n: retTotal,
+          tip: t(big ? 'cal_tip_return_big' : 'cal_tip_return', {n: retTotal}),
+        });
+      }
+      return out.slice(0, 3);
+    }
 
     // Monthly KPIs
     const monthKpis = computed(() => {
@@ -354,11 +479,19 @@ const app = createApp({
         const map = {};
         let mx = 1;
         for (const r of rows) {
-          map[r.date] = { det: r.det, sp: r.sp, newSp: 0, rareSp: 0, newNames: [], rareNames: [] };
+          map[r.date] = {
+            det: r.det, sp: r.sp,
+            new_count: 0,
+            very_rare_count: 0, rare_count: 0, uncommon_count: 0,
+            return_30_count: 0, return_90_count: 0,
+            new_names: [],
+            very_rare_names: [], rare_names: [], uncommon_names: [],
+            return_30_names: [], return_90_names: [],
+          };
           if (r.det > mx) mx = r.det;
         }
 
-        // 2. New species: first-ever detection date per species, keep those in this month
+        // 2. New species : first detection lifetime tombée dans ce mois
         const newRows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as Sci_Name, MIN(Date) as first_date
            FROM active_detections WHERE Confidence >= ?
@@ -369,47 +502,109 @@ const app = createApp({
         const newSpeciesSet = new Set();
         for (const r of newRows) {
           if (map[r.first_date]) {
-            map[r.first_date].newSp++;
-            map[r.first_date].newNames.push({ com: r.Com_Name, sci: r.Sci_Name });
+            map[r.first_date].new_count++;
+            map[r.first_date].new_names.push({ com: r.Com_Name, sci: r.Sci_Name });
           }
           newSpeciesSet.add(r.Com_Name);
         }
 
-        // 3. Rare species (≤5 total detections ever) detected this month.
-        //    NOTE: cette définition de "rare" est LOCALE (≤5 détections lifetime sur cette
-        //    station) et diffère du "rare" d'overview.html qui s'appuie sur la fréquence
-        //    eBird régionale. Les deux signaux co-existent volontairement : le calendrier
-        //    raconte l'histoire de cette station, l'overview celle du contexte régional.
-        const rareRows = await birdQuery(
-          `SELECT d.Date as date, d.Com_Name, MAX(d.Sci_Name) as Sci_Name
-           FROM active_detections d
-           INNER JOIN (
-             SELECT Com_Name FROM active_detections WHERE Confidence >= ?
-             GROUP BY Com_Name HAVING COUNT(*) <= 5
-           ) rare ON d.Com_Name = rare.Com_Name
-           WHERE d.Date >= ? AND d.Date <= ? AND d.Confidence >= ?
-           GROUP BY d.Date, d.Com_Name`,
-          [conf, from, to, conf]
+        // 3. Lifetime counts par espèce — base de la gradation très rare/rare/peu fréquent.
+        //    Cette définition est LOCALE (sur cette station) — distincte du "rare régional"
+        //    d'overview.html qui s'appuie sur la fréquence eBird régionale.
+        const lifetimeRows = await birdQuery(
+          `SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as lc
+           FROM active_detections WHERE Confidence >= ?
+           GROUP BY Com_Name`,
+          [conf]
         );
-        const rareSpeciesSet = new Set();
-        for (const r of rareRows) {
-          if (map[r.date]) {
-            map[r.date].rareSp++;
-            map[r.date].rareNames.push({ com: r.Com_Name, sci: r.Sci_Name });
+        const lifetimeMap = {};
+        for (const r of lifetimeRows) lifetimeMap[r.Com_Name] = { sci: r.Sci_Name, count: r.lc };
+
+        // 4. Détections (date, species) du mois, classées par bucket lifetime.
+        //    Très rare = 1, Rare = 2-5, Peu fréquent = 6-12. Au-delà de 12 → ignoré.
+        const detRows = await birdQuery(
+          `SELECT Date as date, Com_Name, MAX(Sci_Name) as Sci_Name
+           FROM active_detections WHERE Date >= ? AND Date <= ? AND Confidence >= ?
+           GROUP BY Date, Com_Name`,
+          [from, to, conf]
+        );
+        const veryRareSet = new Set(), rareSet = new Set();
+        for (const r of detRows) {
+          if (!map[r.date]) continue;
+          const lc = lifetimeMap[r.Com_Name]?.count || 0;
+          const item = { com: r.Com_Name, sci: r.Sci_Name };
+          if (lc === 1) {
+            map[r.date].very_rare_count++;
+            map[r.date].very_rare_names.push(item);
+            veryRareSet.add(r.Com_Name);
+          } else if (lc <= 5) {
+            map[r.date].rare_count++;
+            map[r.date].rare_names.push(item);
+            rareSet.add(r.Com_Name);
+          } else if (lc <= 12) {
+            map[r.date].uncommon_count++;
+            map[r.date].uncommon_names.push(item);
           }
-          rareSpeciesSet.add(r.Com_Name);
         }
 
-        // 4. Distinct species for the month KPI
+        // 5. Retours après absence (≥30j ou ≥90j depuis la détection précédente).
+        //    LAG window function sur l'ensemble des détections par espèce, puis
+        //    on filtre sur le mois affiché. Performance OK pour SQLite jusqu'à
+        //    quelques 100k détections — instrumentation à mettre en place si on
+        //    voit le calendrier ralentir sur grosse station.
+        const returnRows = await birdQuery(
+          `WITH all_dets AS (
+             SELECT DISTINCT Date, Com_Name FROM active_detections WHERE Confidence >= ?
+           ),
+           ranked AS (
+             SELECT Date, Com_Name,
+                    LAG(Date) OVER (PARTITION BY Com_Name ORDER BY Date) AS prev_date
+             FROM all_dets
+           )
+           SELECT Date as date, Com_Name, prev_date,
+                  CAST(julianday(Date) - julianday(prev_date) AS INTEGER) as gap
+           FROM ranked
+           WHERE Date >= ? AND Date <= ?
+             AND prev_date IS NOT NULL
+             AND julianday(Date) - julianday(prev_date) >= 30`,
+          [conf, from, to]
+        );
+        for (const r of returnRows) {
+          if (!map[r.date]) continue;
+          const sci = lifetimeMap[r.Com_Name]?.sci || '';
+          const item = { com: r.Com_Name, sci, gap: r.gap, prev_date: r.prev_date };
+          if (r.gap >= 90) {
+            map[r.date].return_90_count++;
+            map[r.date].return_90_names.push(item);
+          } else {
+            map[r.date].return_30_count++;
+            map[r.date].return_30_names.push(item);
+          }
+        }
+
+        // 6. Distinct species du mois (KPI principal)
         const spRows = await birdQuery(
           `SELECT DISTINCT Com_Name FROM active_detections WHERE Date >= ? AND Date <= ? AND Confidence >= ?`,
           [from, to, conf]
         );
 
+        // 7. Âge de la station : on masque le badge ★ Nouvelle si <30j de détections,
+        //    pour éviter que le badge soit partout en début de vie de la station.
+        const ageRows = await birdQuery(
+          `SELECT MIN(Date) as first_date FROM active_detections WHERE Confidence >= ?`,
+          [conf]
+        );
+        const firstEverDate = ageRows.length ? ageRows[0].first_date : null;
+        const ageDays = firstEverDate
+          ? Math.floor((Date.now() - new Date(firstEverDate + 'T12:00:00').getTime()) / 86400000)
+          : 0;
+        stationMatured.value = ageDays >= 30;
+
         monthMeta.value = {
           totalSpecies: spRows.length,
           newSpecies: newSpeciesSet.size,
-          rareSpecies: rareSpeciesSet.size,
+          // KPI "rare" du haut de page = très rare + rare (compat visuelle avec V0)
+          rareSpecies: veryRareSet.size + rareSet.size,
         };
         dailyData.value = map;
         maxDet = mx;
@@ -449,6 +644,7 @@ const app = createApp({
       barColor, barWidth,
       prevMonth, nextMonth,
       selectedDate, selectDay, selectedDayData, selectedDayTopSpecies, selectedDayDetailsState, formattedSelectedDate,
+      cellBadges, stationMatured, hasRemarkableSignals,
       spName, navigateTo, photoUrl,
     };
   }

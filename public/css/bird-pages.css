@@ -3060,8 +3060,15 @@
     .cal-det { font-size:.82rem; color:var(--text-main); font-weight:500; line-height:1.2; }
     .cal-badges { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.1rem; }
     .cal-badge { font-size:.62rem; font-weight:600; padding:.1rem .35rem; border-radius:3px; line-height:1.2; white-space:nowrap; }
-    .cal-badge-new { background:rgba(245,158,11,.15); color:#b45309; }
-    .cal-badge-rare { background:rgba(239,68,68,.12); color:var(--danger); }
+    /* ── Phase 4 V1 — palette sémantique ──────────────────────────────
+       rouge   = rareté locale (très rare > rare en intensité)
+       orange  = nouveauté
+       bleu    = retour après absence (foncé si grand retour ≥ 90j) */
+    .cal-badge-veryrare    { background:rgba(220,38,38,.20); color:#991b1b; font-weight:700; }
+    .cal-badge-rare        { background:rgba(239,68,68,.12); color:var(--danger); }
+    .cal-badge-new         { background:rgba(245,158,11,.15); color:#b45309; }
+    .cal-badge-return      { background:rgba(74,144,217,.14); color:#3a78b8; }
+    .cal-badge-return-big  { background:rgba(74,144,217,.24); color:#1e4870; font-weight:700; }
     .cal-bar { height:4px; border-radius:2px; margin-top:auto; }
     .cal-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.6rem; margin-bottom:1rem; }
     .cal-kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:.6rem .8rem; text-align:center; }
@@ -3095,6 +3102,39 @@
     .cal-panel-skel-line { height:10px; background:var(--bg-deep); border-radius:3px; margin-bottom:6px; width:55%; }
     .cal-panel-skel-line.short { width:30%; height:8px; margin-bottom:0; }
     .cal-panel-no-data { padding:1.5rem .5rem; color:var(--text-faint); font-style:italic; font-size:.82rem; text-align:center; }
+
+    /* ── Phase 4 V1 — Section "Signaux remarquables" du panneau ─────── */
+    .cal-panel-signals {
+      padding:.7rem 1.1rem .9rem;
+      border-bottom:1px solid var(--border);
+      min-height:auto;   /* override du min-height des autres sections */
+    }
+    .cal-signal-group {
+      display:flex; flex-wrap:wrap; align-items:center; gap:.4rem;
+      margin-bottom:.5rem;
+    }
+    .cal-signal-group:last-child { margin-bottom:0; }
+    .cal-signal-label {
+      font-size:.7rem; font-weight:600;
+      padding:.15rem .45rem; border-radius:4px;
+      white-space:nowrap; flex-shrink:0;
+    }
+    .cal-signal-label-veryrare    { background:rgba(220,38,38,.18); color:#991b1b; }
+    .cal-signal-label-rare        { background:rgba(239,68,68,.12); color:var(--danger); }
+    .cal-signal-label-uncommon    { background:rgba(244,114,103,.12); color:#c44a3a; }
+    .cal-signal-label-new         { background:rgba(245,158,11,.15); color:#b45309; }
+    .cal-signal-label-return-big  { background:rgba(74,144,217,.22); color:#1e4870; }
+    .cal-signal-label-return      { background:rgba(74,144,217,.14); color:#3a78b8; }
+    .cal-signal-chip {
+      font-size:.78rem; color:var(--text-main);
+      background:var(--bg-card2); border:1px solid var(--border);
+      padding:.18rem .55rem; border-radius:12px;
+      cursor:pointer; transition:border-color .12s, color .12s;
+      text-decoration:none;
+    }
+    .cal-signal-chip:hover {
+      color:var(--accent); border-color:var(--accent-dim);
+    }
     .cal-panel-species {
       display:flex; align-items:center; gap:.65rem; padding:.4rem .35rem;
       cursor:pointer; border-radius:6px; transition:background .12s;
