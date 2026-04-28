@@ -2,6 +2,47 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.46.4] — 2026-04-28
+
+### Fixed
+
+- **Backup DB step was silently no-oping for weeks.** `scripts/backup.sh`
+  iterated over hardcoded paths under `$HOME/birdash/engine/scripts/`
+  (`birds.db`, `detections.db`, `flickr.db`) — none of which exist
+  on a current install. The for-loop's `[ -f "$db" ]` filter quietly
+  produced an empty `DB_LIST`, the script logged "Databases OK" in
+  one second, and no actual `.backup` ever ran. On the affected
+  station the on-NFS `birds.db` was a month stale before the audit
+  caught it. The DB step now targets the real paths
+  (`$HOME/BirdNET-Pi/scripts/birds.db`, `$BIRDASH_DIR/birdash.db`,
+  `$BIRDASH_DIR/config/taxonomy.db`), warns when any expected DB
+  is missing, and aborts the step (not the run) if `DB_LIST` ends
+  up empty — so the silent failure mode can never come back.
+
+- **Backup projects step had no rsync excludes**, so it would
+  faithfully sync `node_modules/`, `photo-cache/`, `data/cleanup-backup/`,
+  `test-results/`, log files, and SQLite WAL/journal sidecars to
+  the backup destination. On one station an old `data/cleanup-backup/`
+  dump had grown to 243 GB and turned each "projects" step into a
+  multi-day rsync — the daily cron then cascaded into flock-blocked
+  runs. Added a curated exclude list so the projects step transfers
+  only the source code and config that actually need backing up.
+
+### Added
+
+- **Optional nightly window mode** for slow uplinks. New
+  `scripts/backup-window-start.sh` (SIGCONT a paused backup or
+  launch a fresh one) and `scripts/backup-window-stop.sh` (SIGSTOP
+  the running rsync, mark status as `paused`). Pair them in cron
+  (e.g. `0 22` start / `0 5` stop) when the first full sync over
+  a slow link would otherwise exceed 24 h and cascade into
+  flock-blocked daily runs. `rsync --partial` (already in the
+  script) plus SIGSTOP/SIGCONT preserve in-flight state so the
+  same first sync can span multiple nights without re-scanning.
+  Set `backup.json` `schedule` to `"manual"` so the UI cron
+  manager doesn't compete with the window crons (the window
+  crons use a distinct `# BIRDASH_BACKUP_WINDOW` tag).
+
 ## [1.46.3] — 2026-04-27
 
 ### Improved

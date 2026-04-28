@@ -312,12 +312,19 @@ if should_backup "db"; then
   log "Step 1: Database dump..."
 
   DB_LIST=()
-  for db in "$BIRDNET_DIR/scripts/birds.db" \
-            "$BIRDNET_DIR/scripts/detections.db" \
-            "$BIRDNET_DIR/scripts/flickr.db" \
-            "$BIRDNET_DIR/birds.db"; do
-    [ -f "$db" ] && DB_LIST+=("$db")
+  for db in "$HOME/BirdNET-Pi/scripts/birds.db" \
+            "$BIRDASH_DIR/birdash.db" \
+            "$BIRDASH_DIR/config/taxonomy.db"; do
+    if [ -f "$db" ]; then
+      DB_LIST+=("$db")
+    else
+      log "  WARN: DB introuvable: $db"
+    fi
   done
+  if [ "${#DB_LIST[@]}" -eq 0 ]; then
+    log "  ERROR: Aucune DB trouvée à dumper — abort step db"
+    exit 1
+  fi
 
   DB_TOTAL=${#DB_LIST[@]}
   DB_IDX=0
@@ -410,7 +417,16 @@ if should_backup "projects"; then
       sub_pct=$(( PCT_START + (PCT_END - PCT_START) * PROJECT_IDX / PROJECT_TOTAL ))
       progress "running" "$sub_pct" "projects" "Sync $dir ($PROJECT_IDX/$PROJECT_TOTAL)"
       log "  Sync $dir..."
-      $RSYNC $RSYNC_OPTS "$src" "$BACKUP_BASE/data/$dir/" 2>> "$LOG_FILE" || \
+      $RSYNC $RSYNC_OPTS \
+        --exclude='node_modules/' \
+        --exclude='photo-cache/' \
+        --exclude='data/cleanup-backup/' \
+        --exclude='test-results/' \
+        --exclude='*.log' \
+        --exclude='*.db-journal' \
+        --exclude='*.db-wal' \
+        --exclude='*.db-shm' \
+        "$src" "$BACKUP_BASE/data/$dir/" 2>> "$LOG_FILE" || \
       log "  WARN: rsync $dir had errors (continuing)"
     fi
   done
