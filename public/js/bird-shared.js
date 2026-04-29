@@ -43,7 +43,14 @@
     });
     if (!res.ok) { _apiFailCount++; if (_apiFailCount >= 3) _showApiBanner(); const err = new Error(`HTTP ${res.status}`); if (res.status !== 429) window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'API error: ' + res.status })); throw err; }
     _clearApiBanner();
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); }
+    catch (e) {
+      // Empty/invalid body — typical during a service restart. Treat as transient.
+      _apiFailCount++;
+      if (_apiFailCount >= 3) _showApiBanner();
+      throw new Error('API unavailable');
+    }
     if (data.error) { window.dispatchEvent(new CustomEvent('birdash:error', { detail: data.error })); throw new Error(data.error); }
     return data.rows.map(row => {
       const obj = {};

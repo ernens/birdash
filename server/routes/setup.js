@@ -289,7 +289,11 @@ function handle(req, res, pathname, ctx) {
     (async () => {
       const flag = await readSetupFlag();
       const gaps = await detectGaps(parseBirdnetConf);
-      const needed = !flag || gaps.location || gaps.audio_device;
+      // Once the user has completed the wizard, trust the flag and never
+      // auto-reopen — transient read failures (service restart, concurrent
+      // writes) used to surface as false-positive gaps and re-pop the modal.
+      // Gaps stay in the response for Settings to surface as warnings.
+      const needed = !flag;
       res.writeHead(200, JSON_CT);
       res.end(JSON.stringify({
         needed,
