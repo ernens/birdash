@@ -2,6 +2,44 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.47.0] — 2026-04-29
+
+### Added
+
+- **Detection profiles.** Named bundles of the nine detection-tuning
+  parameters — BirdNET / Perch confidence + margin, dual-confirm
+  thresholds, sensitivity, overlap, sf_thresh — selectable from a
+  dropdown at the top of Settings → Detection. Three built-ins ship
+  out of the box (*Permissif*, *Balancé*, *Rigoureux*); save the
+  current form as a custom profile via "Sauvegarder l'actuel sous…",
+  delete custom profiles, builtins are protected. Loading a profile
+  fills the form in memory, the user still clicks Save to persist
+  into `birdnet.conf` (same staged-edit pattern as the existing
+  Reset-defaults button — protects against accidental writes during
+  exploratory tweaking). The "active profile" label tracks dirty
+  state and shows "(modifié)" as soon as any of the nine fields
+  drifts from the loaded values, so it's obvious when the saved
+  profile no longer reflects what's in the form.
+
+  - Storage: `config/detection-profiles.json`, atomic writes via
+    `safe-config.writeRaw`. Server reuses `SETTINGS_VALIDATORS` so
+    invalid values are rejected at the same boundary as direct
+    settings POSTs.
+  - Endpoints: `GET /api/detection-profiles`,
+    `POST /api/detection-profiles` (create/overwrite custom),
+    `POST /api/detection-profiles/apply` (mark active),
+    `DELETE /api/detection-profiles/:id` (custom only — 409 on builtin).
+  - i18n: 14 new `set_profile_*` keys symmetric across fr/en/nl/de.
+  - Tests: `tests/e2e/detection-profiles.spec.js` covers list, save,
+    apply, delete, builtin-protection, invalid-value rejection, and
+    a UI flow loading the *Rigoureux* preset.
+
+  Why: after extended manual calibration the sweet-spot settings
+  were a single Reset-defaults click away from being lost, with no
+  named alternative for A/B comparison. Profiles let the user keep
+  their tuned config safe and switch presets to evaluate trade-offs
+  without re-typing nine numbers.
+
 ## [1.46.4] — 2026-04-28
 
 ### Fixed

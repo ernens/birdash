@@ -2145,6 +2145,125 @@ const app = createApp({
     }
 
 
+    // ── Detection profiles ─────────────────────────────────────────
+    // The 9 detection-tuning keys covered by a profile. Must mirror
+    // PROFILE_KEYS in server/routes/detection-profiles.js.
+    const DETECTION_PROFILE_KEYS = [
+      'BIRDNET_CONFIDENCE', 'PERCH_CONFIDENCE', 'PERCH_MIN_MARGIN',
+      'DUAL_CONFIRM_ENABLED', 'PERCH_STANDALONE_CONFIDENCE', 'BIRDNET_ECHO_CONFIDENCE',
+      'SENSITIVITY', 'OVERLAP', 'SF_THRESH',
+    ];
+    const detectionProfiles = ref({});
+    const activeDetectionProfileId = ref(null);
+    const detectionProfileDropdown = ref('');
+    const detectionProfileMsg = ref('');
+    const detectionProfileErr = ref(false);
+    let _profileLoadedSnapshot = null;
+
+    function _snapshotProfileValues() {
+      const snap = {};
+      for (const k of DETECTION_PROFILE_KEYS) snap[k] = String(conf[k]);
+      return JSON.stringify(snap);
+    }
+    const detectionProfileModified = computed(() => {
+      if (!activeDetectionProfileId.value || !_profileLoadedSnapshot) return false;
+      return _snapshotProfileValues() !== _profileLoadedSnapshot;
+    });
+
+    async function loadDetectionProfiles() {
+      try {
+        const r = await fetch(API + '/detection-profiles');
+        const d = await r.json();
+        detectionProfiles.value = d.profiles || {};
+        activeDetectionProfileId.value = d.active || null;
+        detectionProfileDropdown.value = d.active || '';
+      } catch (e) {
+        detectionProfileMsg.value = e.message;
+        detectionProfileErr.value = true;
+      }
+    }
+
+    async function applyDetectionProfile(id) {
+      const p = detectionProfiles.value[id];
+      if (!p) return;
+      // Fill in-memory form (user must click Save to persist), same
+      // pattern as resetDefaults().
+      for (const k of DETECTION_PROFILE_KEYS) {
+        if (k in p.values) conf[k] = p.values[k];
+      }
+      activeDetectionProfileId.value = id;
+      _profileLoadedSnapshot = _snapshotProfileValues();
+      detectionProfileMsg.value = (t('set_profile_loaded') || 'Profile loaded') + ' — ' + (t('set_click_save_to_persist') || 'click Save to persist');
+      detectionProfileErr.value = false;
+      // Persist "active" marker (informational; doesn't write birdnet.conf).
+      try {
+        await fetch(API + '/detection-profiles/apply', {
+          method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+      } catch (e) { /* non-fatal */ }
+    }
+
+    async function saveAsDetectionProfile() {
+      const label = prompt(t('set_profile_save_prompt') || 'Profile name:');
+      if (!label) return;
+      const trimmed = label.trim();
+      if (!trimmed) return;
+      // Slug: lowercase, [a-z0-9_-], max 32. Server enforces same regex.
+      const id = trimmed.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+      if (!id) {
+        detectionProfileMsg.value = t('set_profile_invalid_name') || 'Invalid name';
+        detectionProfileErr.value = true;
+        return;
+      }
+      const values = {};
+      for (const k of DETECTION_PROFILE_KEYS) values[k] = conf[k];
+      try {
+        const r = await fetch(API + '/detection-profiles', {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, label: trimmed, values }),
+        });
+        const d = await r.json();
+        if (!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
+        detectionProfiles.value = { ...detectionProfiles.value, [id]: d.profile };
+        activeDetectionProfileId.value = id;
+        detectionProfileDropdown.value = id;
+        _profileLoadedSnapshot = _snapshotProfileValues();
+        detectionProfileMsg.value = t('set_profile_saved') || 'Profile saved';
+        detectionProfileErr.value = false;
+      } catch (e) {
+        detectionProfileMsg.value = e.message;
+        detectionProfileErr.value = true;
+      }
+    }
+
+    async function deleteDetectionProfile(id) {
+      const p = detectionProfiles.value[id];
+      if (!p || p.builtin) return;
+      if (!confirm((t('set_profile_delete_confirm') || 'Delete profile') + ' "' + p.label + '" ?')) return;
+      try {
+        const r = await fetch(API + '/detection-profiles/' + encodeURIComponent(id), {
+          method: 'DELETE', headers: authHeaders(),
+        });
+        const d = await r.json();
+        if (!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
+        const next = { ...detectionProfiles.value };
+        delete next[id];
+        detectionProfiles.value = next;
+        if (activeDetectionProfileId.value === id) {
+          activeDetectionProfileId.value = null;
+          detectionProfileDropdown.value = '';
+          _profileLoadedSnapshot = null;
+        }
+        detectionProfileMsg.value = t('set_profile_deleted') || 'Profile deleted';
+        detectionProfileErr.value = false;
+      } catch (e) {
+        detectionProfileMsg.value = e.message;
+        detectionProfileErr.value = true;
+      }
+    }
+
     // ── Lazy-loaded tab components ──────────────────────────────────
     const _tabTemplateCache = {};
     function _makeTabComponent(tabId) {
@@ -2168,7 +2287,7 @@ const app = createApp({
     });
 
     onMounted(() => {
-      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState();
+      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles();
       if (activeTab.value === 'station') setTimeout(initStationMap, 500);
     });
 
@@ -2347,6 +2466,9 @@ const app = createApp({
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,
       saveAll, resetDefaults, restartService, saveSpeciesLists, isDirty,
+      detectionProfiles, activeDetectionProfileId, detectionProfileDropdown,
+      detectionProfileMsg, detectionProfileErr, detectionProfileModified,
+      applyDetectionProfile, saveAsDetectionProfile, deleteDetectionProfile,
       helpKey, helpTitle, helpBody,
       bkp, backupDests, savingBkp, runningBkp, bkpProgress,
       toggleBackupContent, saveBackupConfig, runBackup,

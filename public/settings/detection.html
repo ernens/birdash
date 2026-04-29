@@ -91,6 +91,43 @@
         </div>
       </div>
 
+      <!-- ═══ Detection Profiles ═══ -->
+      <div class="card" data-test="detection-profiles">
+        <div class="section-title"><bird-icon name="bookmark" :size="14"></bird-icon> {{t('set_profile_title')}}</div>
+        <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">{{t('set_profile_desc')}}</p>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;">
+          <select v-model="detectionProfileDropdown" class="set-select" data-test="profile-select" style="min-width:180px;">
+            <option value="">{{t('set_profile_choose')}}</option>
+            <option v-for="(p, id) in detectionProfiles" :key="id" :value="id">
+              {{ p.label }}{{ p.builtin ? '' : ' ✎' }}
+            </option>
+          </select>
+          <button class="btn btn-primary" data-test="profile-load"
+                  :disabled="!detectionProfileDropdown"
+                  @click="applyDetectionProfile(detectionProfileDropdown)">
+            {{t('set_profile_load')}}
+          </button>
+          <button class="btn-outline" data-test="profile-save-as" @click="saveAsDetectionProfile">
+            {{t('set_profile_save_as')}}
+          </button>
+          <button class="btn-outline" data-test="profile-delete"
+                  v-if="detectionProfileDropdown && detectionProfiles[detectionProfileDropdown] && !detectionProfiles[detectionProfileDropdown].builtin"
+                  @click="deleteDetectionProfile(detectionProfileDropdown)">
+            {{t('set_profile_delete')}}
+          </button>
+          <span v-if="activeDetectionProfileId && detectionProfiles[activeDetectionProfileId]"
+                style="font-size:.78rem;color:var(--text-muted);">
+            <bird-icon name="check-circle" :size="12" style="vertical-align:-1px;color:var(--accent);"></bird-icon>
+            {{t('set_profile_active')}} :
+            <strong>{{ detectionProfiles[activeDetectionProfileId].label }}</strong>
+            <span v-if="detectionProfileModified" style="color:var(--warning);">({{t('set_profile_modified')}})</span>
+          </span>
+        </div>
+        <p v-if="detectionProfileMsg" :style="{margin:'.5rem 0 0',fontSize:'.78rem',color: detectionProfileErr ? 'var(--warning)' : 'var(--accent)'}">
+          {{detectionProfileMsg}}
+        </p>
+      </div>
+
       <div class="settings-grid">
 
         <!-- ═══ BirdNET Parameters ═══ -->
