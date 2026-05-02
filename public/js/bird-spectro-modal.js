@@ -44,6 +44,15 @@
       let pcmData = null;
       let sampleRate = 0;
 
+      // Clean (denoise) state — mirrors today.html. _rawPcm/_rawSr/_rawAudioBuf
+      // keep the untouched signal so the user can switch back without re-fetching.
+      const cleanMode = ref(false);
+      const cleanStrength = ref(0.75);
+      const processingClean = ref(false);
+      let _rawPcm = null;
+      let _rawSr = 0;
+      let _rawAudioBuf = null;
+
       // Loop selection
       const loopStart = ref(null); // 0-1 fraction
       const loopEnd = ref(null);
@@ -112,6 +121,11 @@
           pcmData = audioBuf.getChannelData(0);
           duration.value = fmtSec(audioBuf.duration);
           await ctx.close();
+          // Snapshot the raw signal so toggleClean() can revert without
+          // re-fetching from the server.
+          _rawPcm = pcmData;
+          _rawSr = sampleRate;
+          _rawAudioBuf = audioBuf;
           // Render spectrogram
           if (canvas.value) {
             U.renderSpectrogram(pcmData, sampleRate, canvas.value, { fftSize: 1024, maxHz: 12000 });
@@ -301,6 +315,8 @@
         if (sourceNode) { try { sourceNode.stop(); } catch(e) {} sourceNode = null; }
         if (audioCtx && audioCtx.state !== 'closed') { audioCtx.close().catch(() => {}); }
         audioCtx = null; audioBuf = null; pcmData = null;
+        _rawPcm = null; _rawSr = 0; _rawAudioBuf = null;
+        cleanMode.value = false; processingClean.value = false;
         isPlaying.value = false;
         progress.value = 0;
         currentTime.value = '0:00';
@@ -309,6 +325,61 @@
         filters.gain = 0; filters.highpass = 0; filters.lowpass = 0;
         loopStart.value = null; loopEnd.value = null; loopActive.value = false;
         cancelAnimationFrame(rafId);
+      }
+
+      // ── Audio cleaning (denoise) ─────────────────────────────────────────
+      // Reuses U.cleanAudioPipeline (highpass + spectral subtraction) from
+      // bird-shared.js. Builds a fresh AudioBuffer from the cleaned PCM so
+      // playback uses the cleaned signal too — the existing filter chain
+      // (gain/HP/LP) keeps working untouched on top of it.
+      async function toggleClean() {
+        if (!cleanMode.value) {
+          cleanMode.value = true;
+          await applyClean();
+        } else {
+          cleanMode.value = false;
+          if (_rawPcm && canvas.value) {
+            U.renderSpectrogram(_rawPcm, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
+          }
+          const wasPlaying = isPlaying.value;
+          if (wasPlaying) stopPlay();
+          if (_rawAudioBuf) { audioBuf = _rawAudioBuf; pcmData = _rawPcm; }
+          if (wasPlaying) startPlay();
+        }
+      }
+
+      async function applyClean() {
+        if (!_rawPcm || !U.cleanAudioPipeline) { cleanMode.value = false; return; }
+        processingClean.value = true;
+        const wasPlaying = isPlaying.value;
+        if (wasPlaying) stopPlay();
+        try {
+          // Yield so Vue can paint the spinner before the FFT-heavy pipeline runs.
+          await new Promise(r => setTimeout(r, 30));
+          const cleaned = U.cleanAudioPipeline(_rawPcm, _rawSr, cleanStrength.value);
+          if (canvas.value) {
+            U.renderSpectrogram(cleaned, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
+          }
+          // Build a new AudioBuffer so playback uses the cleaned signal.
+          const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const newBuf = tmpCtx.createBuffer(1, cleaned.length, _rawSr);
+          newBuf.copyToChannel(cleaned, 0);
+          await tmpCtx.close();
+          audioBuf = newBuf;
+          pcmData = cleaned;
+          if (wasPlaying) startPlay();
+        } catch (e) {
+          console.error('[spectro-modal clean]', e);
+          cleanMode.value = false;
+          if (_rawAudioBuf) { audioBuf = _rawAudioBuf; pcmData = _rawPcm; }
+          if (wasPlaying) startPlay();
+        } finally {
+          processingClean.value = false;
+        }
+      }
+
+      async function reapplyClean() {
+        if (cleanMode.value) await applyClean();
       }
 
       function onKeydown(e) {
@@ -344,8 +415,10 @@
         canvas, audioUrl, downloadName,
         loopStart, loopEnd, loopActive,
         weather, wmoIcon, wmoLabel,
+        cleanMode, cleanStrength, processingClean,
         togglePlay, seek, setFilter, close, t,
-        onCanvasMousedown, onCanvasMousemove, onCanvasMouseup, clearLoop
+        onCanvasMousedown, onCanvasMousemove, onCanvasMouseup, clearLoop,
+        toggleClean, reapplyClean
       };
     },
     template: `
@@ -378,7 +451,13 @@
     <div class="spectro-modal-canvas-wrap" style="position:relative;user-select:none;"
          @mousedown="onCanvasMousedown" @mousemove="onCanvasMousemove" @mouseup="onCanvasMouseup">
       <canvas ref="canvas" :width="800" :height="200"></canvas>
-      <div v-if="loading" class="spectro-modal-loading">Loading...</div>
+      <div v-if="loading || processingClean" class="spectro-modal-loading">{{processingClean ? t('audio_cleaning') : 'Loading...'}}</div>
+      <div v-if="cleanMode && !processingClean"
+           style="position:absolute;top:8px;left:10px;z-index:3;background:var(--success,#16a34a);
+                  color:#fff;font-size:.7rem;font-weight:700;padding:.18rem .5rem;border-radius:3px;
+                  letter-spacing:.06em;pointer-events:none;">
+        ✨ CLEAN
+      </div>
       <div v-if="isPlaying" class="spectro-cursor" :style="{left: progress+'%'}"></div>
       <div v-if="loopStart != null && loopEnd != null && loopEnd > loopStart"
            class="spectro-loop-zone"
@@ -427,6 +506,28 @@
                   :class="{'stb-pill-active': filters.lowpass===l}"
                   @click="setFilter('lowpass',l)">{{l===0?'Off':l>=1000?(l/1000)+'kHz':l+'Hz'}}</button>
         </div>
+      </div>
+      <div class="spectro-modal-filter-group" style="border-top:1px solid var(--border);padding-top:.5rem;margin-top:.2rem;flex-wrap:wrap;gap:.5rem;">
+        <button @click="toggleClean" :disabled="processingClean || loading"
+                style="white-space:nowrap;padding:.3rem .8rem;border-radius:var(--radius);
+                       font-size:.78rem;font-weight:600;border:1px solid;cursor:pointer;
+                       transition:background .15s,color .15s;"
+                :style="cleanMode
+                  ? 'background:var(--accent);color:var(--on-accent);border-color:var(--accent);'
+                  : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+          <span v-if="processingClean">⏳ {{t('audio_clean_progress')}}</span>
+          <span v-else-if="cleanMode"><bird-icon name="sparkles" :size="14"></bird-icon> {{t('audio_clean_done')}}</span>
+          <span v-else><bird-icon name="sliders-horizontal" :size="14"></bird-icon> {{t('audio_clean_btn')}}</span>
+        </button>
+        <template v-if="cleanMode && !processingClean">
+          <span style="font-size:.72rem;color:var(--text-muted);align-self:center;white-space:nowrap;">Force</span>
+          <input type="range" min="0.2" max="1.0" step="0.05" v-model.number="cleanStrength"
+                 @change="reapplyClean" aria-label="Clean strength"
+                 style="flex:1;min-width:100px;accent-color:var(--accent);">
+          <span style="font-size:.72rem;font-family:monospace;color:var(--accent);min-width:38px;text-align:right;align-self:center;">
+            {{Math.round(cleanStrength*100)}}%
+          </span>
+        </template>
       </div>
     </div>
   </div>

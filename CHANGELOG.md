@@ -2,6 +2,20 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.47.1] — 2026-05-02
+
+### Added
+
+- **Audio cleaning in the spectrogram modal.** The full-screen
+  spectrogram (opened from any thumbnail across the app) now exposes
+  the same *Nettoyer le son* control that already lives on the inline
+  player in `today.html`: highpass + spectral subtraction with a
+  0.2→1.0 strength slider, a green "✨ CLEAN" badge on the canvas
+  while active, and the cleaned signal feeds both the redrawn
+  spectrogram and audio playback (the existing gain/HP/LP filter
+  chain keeps applying on top). Reverting the toggle restores the
+  untouched PCM without a re-fetch.
+
 ## [1.47.0] — 2026-04-29
 
 ### Added
