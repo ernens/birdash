@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-05-03T18:01:32.897943",
+  "n_sampled": 150,
+  "n_ok": 147,
+  "n_no_clip": 3,
+  "n_no_bbox": 1,
+  "n_decode_err": 0,
+  "elapsed_s": 78.6,
+  "latency_bbox_ms": {
+    "mean": 16.97,
+    "p50": 17.01,
+    "p95": 24.93,
+    "max": 83.87
+  },
+  "snr_estimate": {
+    "median": 7.6,
+    "p10": 3.01,
+    "p90": 18.96
+  },
+  "bands_used_per_order": {
+    "Passeriformes": 147
+  },
+  "seed": 42
+}
