@@ -183,6 +183,7 @@ const SETTINGS_VALIDATORS = {
   CHANNELS:        v => v == 1 || v == 2,
   DATABASE_LANG:   v => /^[a-z]{2}(_[A-Z]{2})?$/.test(v),
   BIRDWEATHER_ID:  v => typeof v === 'string' && v.length <= 64,
+  BIRDWEATHER_MIN_CONFIDENCE: v => v === '' || (!isNaN(v) && v >= 0 && v <= 1),
   EBIRD_API_KEY:   v => typeof v === 'string' && v.length <= 64,
   FULL_DISK:       v => ['purge','keep'].includes(v),
   PURGE_THRESHOLD: v => !isNaN(v) && v >= 50 && v <= 99,

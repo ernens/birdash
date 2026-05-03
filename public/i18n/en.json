@@ -357,6 +357,7 @@
   "set_exclude_list": "Exclude list",
   "set_whitelist": "Whitelist (bypass threshold)",
   "set_birdweather": "BirdWeather",
+  "set_birdweather_min_conf": "Upload threshold (min confidence)",
   "set_ebird": "eBird",
   "set_ebird_desc": "API key for regional rarity data (notable-species detection based on the local eBird checklist).",
   "set_ebird_placeholder": "Paste key here (leave empty to disable)",

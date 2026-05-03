@@ -2,6 +2,23 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.47.2] — 2026-05-03
+
+### Added
+
+- **BirdWeather upload threshold.** New `BIRDWEATHER_MIN_CONFIDENCE`
+  setting (Settings → Station → BirdWeather, only visible once a
+  Station ID is configured) — a confidence floor that applies
+  *only* to the BirdWeather upload, not to the local database. A
+  detection below the threshold is still stored, still notified,
+  still shown in the dashboard, but is silently dropped from the
+  upload payload (and the soundscape itself is skipped if no
+  detection clears the bar). Lets you keep an aggressive Perch
+  threshold locally without pushing low-confidence calls to your
+  public BirdWeather feed. Default empty/0 = disabled, same
+  behaviour as before. Engine reads `birdnet.conf` on every upload
+  so the value is hot-reloadable without a restart.
+
 ## [1.47.1] — 2026-05-02
 
 ### Added

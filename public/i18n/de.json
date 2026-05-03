@@ -357,6 +357,7 @@
   "set_exclude_list": "Ausschlussliste",
   "set_whitelist": "Whitelist (Schwelle umgehen)",
   "set_birdweather": "BirdWeather",
+  "set_birdweather_min_conf": "Upload-Schwelle (Min. Konfidenz)",
   "set_ebird": "eBird",
   "set_ebird_desc": "API-Schlüssel für regionale Seltenheitsdaten (bemerkenswerte Artenerkennung basierend auf lokaler eBird-Checkliste).",
   "set_ebird_placeholder": "Schlüssel hier einfügen (leer = deaktiviert)",

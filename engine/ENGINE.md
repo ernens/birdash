@@ -301,6 +301,8 @@ For each file with detections, the engine:
 
 Both primary and secondary model detections are uploaded separately.
 
+An optional `BIRDWEATHER_MIN_CONFIDENCE` (0–1) in `birdnet.conf` lets you set a confidence floor that applies *only* to the BirdWeather upload. Detections below it stay in the local DB but are dropped from the upload payload (and the soundscape is skipped if no detection clears the bar). Useful when the local Perch threshold is intentionally permissive but you don't want to publish low-confidence calls. Empty/0 = disabled (default).
+
 ## Smart Notifications
 
 The notification system reads rules from `/etc/birdnet/birdnet.conf`:

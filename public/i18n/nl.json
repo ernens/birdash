@@ -357,6 +357,7 @@
   "set_exclude_list": "Exclusielijst",
   "set_whitelist": "Whitelist (drempel omzeilen)",
   "set_birdweather": "BirdWeather",
+  "set_birdweather_min_conf": "Upload drempel (min betrouwbaarheid)",
   "set_ebird": "eBird",
   "set_ebird_desc": "API-sleutel voor regionale zeldzaamheidsdata (opvallende soortdetectie op basis van de lokale eBird-checklist).",
   "set_ebird_placeholder": "Plak sleutel hier (leeg = uitgeschakeld)",

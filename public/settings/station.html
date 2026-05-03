@@ -65,6 +65,15 @@
                style="display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--accent);text-decoration:none;margin-top:.2rem;">
               <bird-icon name="external-link" :size="13" ></bird-icon> app.birdweather.com/stations/{{conf.BIRDWEATHER_ID}}
             </a>
+            <div v-if="conf.BIRDWEATHER_ID" class="set-row" style="margin-top:.5rem;">
+              <span class="set-label">{{t('set_birdweather_min_conf')}} <button class="info-btn" @click="helpKey='birdweather_min_conf'">i</button></span>
+              <div style="display:flex;align-items:center;gap:.4rem;">
+                <input v-model="bwMinConfPct" class="set-input"
+                       type="number" min="0" max="100" step="5"
+                       style="width:5rem;" placeholder="0">
+                <span style="font-size:.78rem;color:var(--text-muted);">%</span>
+              </div>
+            </div>
             <div class="set-row" style="margin-top:.5rem;">
               <span class="set-label">{{t('set_rtsp_stream')}} <button class="info-btn" @click="helpKey='rtsp'">i</button></span>
               <input v-model="conf.RTSP_STREAM" class="set-input" style="width:100%;" placeholder="rtsp://...">

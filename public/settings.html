@@ -1009,6 +1009,13 @@ const app = createApp({
             <strong>Vide</strong> = désactivé.`,
           rec: 'Optionnel mais recommandé pour contribuer à la communauté scientifique.'
         },
+        birdweather_min_conf: {
+          title: 'Seuil de confiance BirdWeather',
+          body: `Seuil <strong>spécifique à l'upload BirdWeather</strong> — n'affecte pas le stockage local.<br><br>
+            Une détection en dessous de ce seuil est gardée dans votre base de données mais n'est <strong>pas</strong> envoyée à BirdWeather. Utile pour ne pas polluer votre flux public avec des détections incertaines (typiquement des prédictions Perch sous 50 %), tout en conservant l'historique localement pour analyse.<br><br>
+            <strong>Vide ou 0</strong> = désactivé (toutes les détections sont envoyées, comportement par défaut).`,
+          rec: '0.50 est un bon point de départ. Aucun effet sur le contenu de votre base locale ni sur les notifications.'
+        },
         ebird: {
           title: 'Clé API eBird',
           body: `Clé personnelle pour interroger l'API eBird et obtenir la <strong>check-list régionale</strong> autour de tes coordonnées GPS (rayon ~25 km, 30 derniers jours).<br><br>
@@ -1279,6 +1286,13 @@ const app = createApp({
           body: 'Your BirdWeather station ID to share detections on <a href="https://app.birdweather.com" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">birdweather.com</a>. Empty = disabled.',
           rec: 'Optional but recommended to contribute to citizen science.'
         },
+        birdweather_min_conf: {
+          title: 'BirdWeather confidence threshold',
+          body: `Threshold <strong>specific to the BirdWeather upload</strong> — does not affect local storage.<br><br>
+            Detections below this threshold are still kept in your database but <strong>not</strong> sent to BirdWeather. Useful to avoid polluting your public feed with low-confidence detections (typically Perch predictions under 50 %), while keeping the local history for analysis.<br><br>
+            <strong>Empty or 0</strong> = disabled (every detection is uploaded, default behaviour).`,
+          rec: '0.50 is a sensible starting point. Has no effect on your local database or notifications.'
+        },
         ebird: {
           title: 'eBird API key',
           body: `Personal key to query the eBird API for the <strong>regional checklist</strong> around your GPS coordinates (~25 km radius, last 30 days).<br><br>
@@ -1398,6 +1412,7 @@ const app = createApp({
         database_lang: { title:'Artensprache', body:'Sprache für die Artnamen in der Datenbank. Unabhängig von der Oberflächensprache.', rec:'Wählen Sie Ihre bevorzugte Sprache.' },
         image_provider: { title:'Bildquelle', body:'<strong>Wikipedia</strong>: kostenlos. <strong>Flickr</strong>: mehr Vielfalt, API-Schlüssel nötig.', rec:'Empfohlen: <strong>Flickr</strong>.' },
         birdweather: { title:'BirdWeather Station ID', body:'Ihre BirdWeather-Stations-ID. Leer = deaktiviert.', rec:'Optional aber empfohlen.' },
+        birdweather_min_conf: { title:'BirdWeather Konfidenzschwelle', body:'Schwelle nur für den BirdWeather-Upload — die lokale Datenbank ist nicht betroffen. Erkennungen unterhalb dieses Wertes werden gespeichert, aber nicht hochgeladen. Leer oder 0 = deaktiviert.', rec:'0.50 ist ein guter Ausgangspunkt.' },
         ebird: { title:'eBird API-Schlüssel', body:'Persönlicher Schlüssel zur Abfrage der eBird-Regionalliste (~25 km Radius, letzte 30 Tage). Wird für Seltenheitserkennung verwendet. Schlüssel holen: <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">ebird.org/api/keygen</a>. Leer = lokale Heuristik nach 30 Tagen Daten.', rec:'Empfohlen für genaue Seltenheitserkennung, besonders außerhalb Europas.' },
         rtsp: { title:'RTSP-Stream', body:'Externe RTSP-Audio-URL. Leer = lokales Mikrofon.', rec:'Leer lassen, außer bei Netzwerkmikrofon.' },
         full_disk: { title:'Festplatte voll', body:'<strong>Purge</strong>: älteste Aufnahmen automatisch löschen. <strong>Keep</strong>: Aufnahme stoppen.', rec:'Empfohlen: <strong>Purge</strong>.' },
@@ -1452,6 +1467,7 @@ const app = createApp({
         database_lang: { title:'Soortnaamtaal', body:'Taal voor soortnamen in de database. Onafhankelijk van de interfacetaal.', rec:'Kies uw voorkeurstaal.' },
         image_provider: { title:'Afbeeldingsbron', body:'<strong>Wikipedia</strong>: gratis. <strong>Flickr</strong>: meer variatie, API-sleutel nodig.', rec:'Aanbevolen: <strong>Flickr</strong>.' },
         birdweather: { title:'BirdWeather Station ID', body:'Uw BirdWeather station-ID. Leeg = uitgeschakeld.', rec:'Optioneel maar aanbevolen.' },
+        birdweather_min_conf: { title:'BirdWeather betrouwbaarheidsdrempel', body:'Drempel uitsluitend voor de BirdWeather upload — beïnvloedt de lokale database niet. Detecties onder deze waarde worden bewaard maar niet verzonden. Leeg of 0 = uitgeschakeld.', rec:'0.50 is een goed startpunt.' },
         ebird: { title:'eBird API-sleutel', body:'Persoonlijke sleutel om de eBird regionale checklist op te vragen (~25 km straal, laatste 30 dagen). Gebruikt voor zeldzaamheidsdetectie. Sleutel ophalen: <a href="https://ebird.org/api/keygen" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">ebird.org/api/keygen</a>. Leeg = lokale fallback na 30 dagen data.', rec:'Aanbevolen voor nauwkeurige zeldzaamheidsdetectie, vooral buiten Europa.' },
         rtsp: { title:'RTSP-stream', body:'Externe RTSP-audio-URL. Leeg = lokale microfoon.', rec:'Leeg laten tenzij netwerkmicrofoon.' },
         full_disk: { title:'Schijf vol', body:'<strong>Purge</strong>: oudste opnames verwijderen. <strong>Keep</strong>: opname stoppen.', rec:'Aanbevolen: <strong>Purge</strong>.' },
@@ -1801,6 +1817,22 @@ const app = createApp({
       set(val) {
         const n = parseInt(val, 10);
         conf.NOTIFY_MIN_CONFIDENCE = isNaN(n) ? '' : (Math.max(0, Math.min(100, n)) / 100).toFixed(2);
+      },
+    });
+
+    // BirdWeather upload min-confidence — independent floor that filters
+    // *only* the BirdWeather POST, not the local DB. Empty/0 = disabled.
+    // The form shows percent (0–100) but birdnet.conf stores 0–1 — same
+    // convention as notifyMinConfPct / mqttMinConfPct.
+    const bwMinConfPct = computed({
+      get() {
+        const v = parseFloat(conf.BIRDWEATHER_MIN_CONFIDENCE);
+        return isNaN(v) ? '' : Math.round(v * 100);
+      },
+      set(val) {
+        if (val === '' || val == null) { conf.BIRDWEATHER_MIN_CONFIDENCE = ''; return; }
+        const n = parseInt(val, 10);
+        conf.BIRDWEATHER_MIN_CONFIDENCE = isNaN(n) ? '' : (Math.max(0, Math.min(100, n)) / 100).toFixed(2);
       },
     });
 
@@ -2456,7 +2488,7 @@ const app = createApp({
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
       birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
-      appriseEnabled, toggleAllApprise, notifyMinConfPct,
+      appriseEnabled, toggleAllApprise, notifyMinConfPct, bwMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
@@ -2670,7 +2702,7 @@ const app = createApp({
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,
       birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
-      appriseEnabled, toggleAllApprise, notifyMinConfPct,
+      appriseEnabled, toggleAllApprise, notifyMinConfPct, bwMinConfPct,
       notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
       digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
       mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,

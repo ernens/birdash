@@ -357,6 +357,7 @@
   "set_exclude_list": "Liste d'exclusion",
   "set_whitelist": "Passe-droit (bypass seuil)",
   "set_birdweather": "BirdWeather",
+  "set_birdweather_min_conf": "Seuil upload (confiance min)",
   "set_ebird": "eBird",
   "set_ebird_desc": "Clé API pour les données régionales de rareté (détections marquantes basées sur la check-list locale eBird).",
   "set_ebird_placeholder": "Coller la clé ici (laisser vide pour désactiver)",

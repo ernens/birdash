@@ -23,6 +23,20 @@ def upload_to_birdweather(wav_path, detections, config):
     if not station_id or not bw.get("enabled", False) or not detections:
         return
 
+    # Per-upload confidence floor — read on each call so the user can tune
+    # it from the UI without restarting the engine. Independent of the
+    # local DB threshold (which determines what gets stored). Empty/0 = off.
+    min_conf_bw = _read_birdweather_min_conf()
+    if min_conf_bw > 0:
+        kept = [d for d in detections if float(d.get("confidence", 0)) >= min_conf_bw]
+        dropped = len(detections) - len(kept)
+        if dropped:
+            log.info("BirdWeather: dropped %d/%d detections below %.2f confidence",
+                     dropped, len(detections), min_conf_bw)
+        detections = kept
+        if not detections:
+            return
+
     lat = config["station"]["latitude"]
     lon = config["station"]["longitude"]
 
@@ -91,3 +105,25 @@ def upload_to_birdweather(wav_path, detections, config):
 
     except Exception as e:
         log.warning("BirdWeather upload failed: %s", e)
+
+
+def _read_birdweather_min_conf():
+    """Read BIRDWEATHER_MIN_CONFIDENCE from birdnet.conf. Returns 0.0 if
+    unset/empty/invalid (= no extra filtering). Cheap I/O — birdnet.conf
+    is a small file already in OS page cache."""
+    conf_path = "/etc/birdnet/birdnet.conf"
+    if not os.path.exists(conf_path):
+        return 0.0
+    try:
+        with open(conf_path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("BIRDWEATHER_MIN_CONFIDENCE="):
+                    raw = line.split("=", 1)[1].strip().strip('"')
+                    if raw == "":
+                        return 0.0
+                    val = float(raw)
+                    return val if 0 <= val <= 1 else 0.0
+    except Exception:
+        return 0.0
+    return 0.0
