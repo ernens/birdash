@@ -26,6 +26,7 @@ const _photoRoutes   = require('./routes/photos');
 const _externalRoutes = require('./routes/external');
 const _purgeRoutes   = require('./routes/purge');
 const _qualityRoutes = require('./routes/quality');
+const _refinementRoutes = require('./routes/refinement');
 const _settingsRoutes = require('./routes/settings');
 const _comparisonRoutes = require('./routes/comparison');
 const _updateRoutes  = require('./routes/updates');
@@ -311,6 +312,7 @@ const server = http.createServer((req, res) => {
   if (_externalRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_purgeRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_qualityRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_refinementRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_settingsRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_comparisonRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_updateRoutes.handle(req, res, pathname, _routeCtx)) return;
