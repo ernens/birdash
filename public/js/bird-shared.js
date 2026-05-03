@@ -836,6 +836,104 @@
     return spectralSubtract(highpassIIR(pcm, sr, 850), strength);
   }
 
+  // ── Bbox overlay (Detection Refinement Phase 1B) ────────────────────────
+  // The overlay is painted DIRECTLY on the spectrogram canvas (rather than on
+  // a sibling SVG) because Vue patches its component subtree and would strip
+  // any non-Vue siblings on re-render. Painting on the canvas trades a bit of
+  // coupling (re-call after every renderSpectrogram) for robustness against
+  // Vue's vdom and surrounding DOM lifecycle.
+  //
+  // Each consumer remembers the last bbox in a per-canvas WeakMap so the
+  // toggle (or a future setBboxOverlayEnabled call) can restore/clear without
+  // a network round-trip.
+  //
+  // Niveau 1 = trait pointillé ambre. Niveau 3 (later) sera trait plein.
+
+  const BBOX_OVERLAY_PREF_KEY = 'birdash:showBbox';
+  const _bboxByCanvas = new WeakMap();
+  const _bboxOptsByCanvas = new WeakMap();
+
+  function getBboxOverlayEnabled() {
+    try {
+      const v = localStorage.getItem(BBOX_OVERLAY_PREF_KEY);
+      return v === null ? true : v === '1';
+    } catch { return true; }
+  }
+  function setBboxOverlayEnabled(on) {
+    try { localStorage.setItem(BBOX_OVERLAY_PREF_KEY, on ? '1' : '0'); } catch {}
+    window.dispatchEvent(new CustomEvent('birdash:bbox-pref-changed', { detail: { enabled: !!on } }));
+  }
+
+  async function fetchBbox(fileName) {
+    if (!fileName) return null;
+    try {
+      const r = await fetch(BIRD_CONFIG.apiUrl + '/detections/bbox?file=' + encodeURIComponent(fileName));
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  }
+
+  /**
+   * Draw a dashed bbox directly on the spectrogram canvas. Idempotent —
+   * always reads the latest cached bbox + opts for the canvas. Pass bbox=null
+   * to forget the cached entry (the next renderSpectrogram call will clear it
+   * by virtue of overwriting the canvas).
+   *
+   * @param {HTMLCanvasElement} canvas
+   * @param {object|null} bbox — { t_min_s, t_max_s, f_min_hz, f_max_hz, snr_estimate, truncated, algorithm_version }
+   * @param {object} opts — { duration: total audio length s, maxHz: spectrogram max freq Hz (default 12000) }
+   */
+  function attachBboxOverlay(canvas, bbox, opts) {
+    if (!canvas) return;
+    if (!bbox) {
+      _bboxByCanvas.delete(canvas);
+      _bboxOptsByCanvas.delete(canvas);
+      return;
+    }
+    if (!getBboxOverlayEnabled()) {
+      _bboxByCanvas.set(canvas, bbox);
+      _bboxOptsByCanvas.set(canvas, opts || {});
+      return;
+    }
+    opts = opts || {};
+    const duration = opts.duration;
+    const maxHz = opts.maxHz || 12000;
+    if (!duration || duration <= 0) return;
+
+    _bboxByCanvas.set(canvas, bbox);
+    _bboxOptsByCanvas.set(canvas, opts);
+
+    const W = canvas.width, H = canvas.height;
+    const x = Math.max(0, Math.min(1, bbox.t_min_s / duration)) * W;
+    const y = Math.max(0, Math.min(1, 1 - bbox.f_max_hz / maxHz)) * H;
+    const w = Math.max(1, (Math.min(1, bbox.t_max_s / duration) - Math.max(0, bbox.t_min_s / duration)) * W);
+    const h = Math.max(1, (Math.min(1, 1 - bbox.f_min_hz / maxHz) - Math.max(0, 1 - bbox.f_max_hz / maxHz)) * H);
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#fbbf24'; // amber, contrasts with viridis
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    // Faint inner glow for readability over busy frames
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
+
+  /** Convenience: fetch bbox for a file and paint it on the canvas. Silent on failure. */
+  async function showBboxForFile(canvas, fileName, opts) {
+    if (!canvas) return;
+    if (!getBboxOverlayEnabled()) {
+      attachBboxOverlay(canvas, null);
+      return;
+    }
+    const bbox = await fetchBbox(fileName);
+    if (bbox) attachBboxOverlay(canvas, bbox, opts);
+  }
+
   /** Encode Float32 PCM → WAV mono 16-bit Blob. */
   function encodeWav(pcm, sr) {
     const ds = pcm.length * 2, buf = new ArrayBuffer(44 + ds), v = new DataView(buf);
@@ -894,6 +992,11 @@
     spectralSubtract: spectralSubtract,
     cleanAudioPipeline: cleanAudioPipeline,
     encodeWav: encodeWav,
+    getBboxOverlayEnabled: getBboxOverlayEnabled,
+    setBboxOverlayEnabled: setBboxOverlayEnabled,
+    fetchBbox: fetchBbox,
+    attachBboxOverlay: attachBboxOverlay,
+    showBboxForFile: showBboxForFile,
   };
 
 })(BIRD_CONFIG);

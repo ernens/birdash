@@ -608,6 +608,7 @@ const { useI18n, useTheme, useNav, useSpeciesNames, useFavorites,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
         localDateStr, buildAudioUrl, buildSpeciesLinks,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav,
+        showBboxForFile, attachBboxOverlay,
         navigateTo, useAudioPlayer } = BIRDASH;
       const Q = BIRDASH_QUERIES;
 
@@ -1036,6 +1037,7 @@ const app = createApp({
         _rawPcm = pcm; _rawSr = sr;
         audioDuration.value = duration;
         drawSpectrogramFromPcm(pcm, sr, spectroCanvas.value);
+        showBboxForFile(spectroCanvas.value, det.File_Name, { duration, maxHz: 12000 });
         spectro.value = { state:'ready', url, _origUrl: url };
       } catch(e) {
         console.error('[spectro]', e, '| url:', url);
@@ -1058,6 +1060,8 @@ const app = createApp({
         // Restaurer spectro et audio originaux
         if (_rawPcm && spectroCanvas.value) {
           drawSpectrogramFromPcm(_rawPcm, _rawSr, spectroCanvas.value);
+          const det = selectedDets.value[currentDetIdx.value];
+          if (det?.File_Name) showBboxForFile(spectroCanvas.value, det.File_Name, { duration: audioDuration.value, maxHz: 12000 });
         }
         stopAudio();
         if (_cleanBlobUrl) { URL.revokeObjectURL(_cleanBlobUrl); _cleanBlobUrl = null; }
@@ -1074,7 +1078,11 @@ const app = createApp({
         // Cède le thread un instant pour que Vue mette à jour l'UI (spinner)
         await new Promise(resolve => setTimeout(resolve, 30));
         const cleaned = cleanAudioPipeline(_rawPcm, _rawSr, cleanStrength.value);
-        if (spectroCanvas.value) drawSpectrogramFromPcm(cleaned, _rawSr, spectroCanvas.value);
+        if (spectroCanvas.value) {
+          drawSpectrogramFromPcm(cleaned, _rawSr, spectroCanvas.value);
+          const det = selectedDets.value[currentDetIdx.value];
+          if (det?.File_Name) showBboxForFile(spectroCanvas.value, det.File_Name, { duration: audioDuration.value, maxHz: 12000 });
+        }
         if (_cleanBlobUrl) { URL.revokeObjectURL(_cleanBlobUrl); _cleanBlobUrl = null; }
         const blob = encodeWav(cleaned, _rawSr);
         _cleanBlobUrl = URL.createObjectURL(blob);

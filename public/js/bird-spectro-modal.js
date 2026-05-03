@@ -53,6 +53,24 @@
       let _rawSr = 0;
       let _rawAudioBuf = null;
 
+      // Bbox overlay toggle (Phase 1B) — pref persisted globally via localStorage.
+      // Switching off re-renders the spectro without the bbox; switching on
+      // re-renders, then re-paints the bbox over the fresh pixels.
+      const bboxEnabled = ref(U.getBboxOverlayEnabled());
+      function toggleBbox() {
+        bboxEnabled.value = !bboxEnabled.value;
+        U.setBboxOverlayEnabled(bboxEnabled.value);
+        if (!canvas.value || !pcmData) return;
+        // Re-render the current pcmData (which is already cleaned if cleanMode is on)
+        // then re-paint or skip the bbox.
+        U.renderSpectrogram(pcmData, sampleRate, canvas.value, { fftSize: 1024, maxHz: 12000 });
+        if (bboxEnabled.value) {
+          U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
+        } else {
+          U.attachBboxOverlay(canvas.value, null);
+        }
+      }
+
       // Loop selection
       const loopStart = ref(null); // 0-1 fraction
       const loopEnd = ref(null);
@@ -129,6 +147,7 @@
           // Render spectrogram
           if (canvas.value) {
             U.renderSpectrogram(pcmData, sampleRate, canvas.value, { fftSize: 1024, maxHz: 12000 });
+            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf.duration, maxHz: 12000 });
           }
         } catch (e) {
           console.warn('SpectroModal: load error', e);
@@ -340,6 +359,7 @@
           cleanMode.value = false;
           if (_rawPcm && canvas.value) {
             U.renderSpectrogram(_rawPcm, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
+            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
           }
           const wasPlaying = isPlaying.value;
           if (wasPlaying) stopPlay();
@@ -359,6 +379,7 @@
           const cleaned = U.cleanAudioPipeline(_rawPcm, _rawSr, cleanStrength.value);
           if (canvas.value) {
             U.renderSpectrogram(cleaned, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
+            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
           }
           // Build a new AudioBuffer so playback uses the cleaned signal.
           const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -416,6 +437,7 @@
         loopStart, loopEnd, loopActive,
         weather, wmoIcon, wmoLabel,
         cleanMode, cleanStrength, processingClean,
+        bboxEnabled, toggleBbox,
         togglePlay, seek, setFilter, close, t,
         onCanvasMousedown, onCanvasMousemove, onCanvasMouseup, clearLoop,
         toggleClean, reapplyClean
@@ -528,6 +550,16 @@
             {{Math.round(cleanStrength*100)}}%
           </span>
         </template>
+        <button @click="toggleBbox" :title="t('bbox_toggle_title')"
+                style="white-space:nowrap;padding:.3rem .6rem;border-radius:var(--radius);
+                       font-size:.78rem;font-weight:600;border:1px solid;cursor:pointer;
+                       margin-left:auto;transition:background .15s,color .15s;"
+                :style="bboxEnabled
+                  ? 'background:#fbbf24;color:#1f2937;border-color:#fbbf24;'
+                  : 'background:transparent;color:var(--text-muted);border-color:var(--border);'">
+          <bird-icon name="target" :size="14"></bird-icon>
+          {{bboxEnabled ? t('bbox_on') : t('bbox_off')}}
+        </button>
       </div>
     </div>
   </div>

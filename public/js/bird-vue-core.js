@@ -2504,6 +2504,12 @@
     spectralSubtract:    U.spectralSubtract,
     cleanAudioPipeline:  U.cleanAudioPipeline,
     encodeWav:           U.encodeWav,
+    // Bbox overlay (Detection Refinement Phase 1B)
+    getBboxOverlayEnabled: U.getBboxOverlayEnabled,
+    setBboxOverlayEnabled: U.setBboxOverlayEnabled,
+    fetchBbox:             U.fetchBbox,
+    attachBboxOverlay:     U.attachBboxOverlay,
+    showBboxForFile:       U.showBboxForFile,
     // Spectrogram modal
     openSpectroModal: openSpectroModal,
     closeSpectroModal: closeSpectroModal,
