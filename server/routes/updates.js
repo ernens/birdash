@@ -345,7 +345,7 @@ function handle(req, res, pathname, ctx) {
             step: 'starting',
           }),
           null,
-          { label: 'POST /api/apply-update (init)', defaultValue: {} }
+          { label: 'POST /api/apply-update (init)', defaultValue: {}, tolerateParseError: true }
         );
 
         _statusCache = null;
@@ -398,7 +398,7 @@ function handle(req, res, pathname, ctx) {
             step: 'rollback',
           }),
           null,
-          { label: 'POST /api/rollback-update (init)', defaultValue: {} }
+          { label: 'POST /api/rollback-update (init)', defaultValue: {}, tolerateParseError: true }
         );
 
         _statusCache = null;

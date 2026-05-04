@@ -2,6 +2,28 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.50.4] — 2026-05-04
+
+### Fixed
+
+- **"Unexpected token '', "" is not valid JSON" in the update modal.**
+  When `config/update-progress.json` ended up corrupt or partially written
+  (race with `update.sh` shell writes, crash mid-write, etc.),
+  `safeConfig.updateConfig()` would `JSON.parse()` the existing body
+  before writing the new state, the parse would throw, and the route
+  serialised the error message back to the client where it surfaced as
+  the modal's failure detail. The mutator was returning a fresh object
+  anyway — the parse step was load-bearing for nothing.
+  - New `opts.tolerateParseError` option in `server/lib/safe-config.js`:
+    when set, a corrupt existing file is treated as missing (mutator runs
+    against `defaultValue`, file gets overwritten with a clean state, a
+    warning is logged). Strict parsing remains the default for user-data
+    files (birdnet.conf, profiles, etc.).
+  - `/api/apply-update` and `/api/rollback-update` opt in. The update
+    state file is transient — repairing it on the next write is the
+    correct behaviour. The user no longer sees an obscure JSON error
+    when they just want to install or roll back.
+
 ## [1.50.3] — 2026-05-04
 
 ### Fixed

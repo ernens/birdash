@@ -168,6 +168,10 @@ class StaleEtagError extends Error {
  * @param {string} [opts.label='updateConfig'] - log label, e.g. the route name
  * @param {string} [opts.ifMatch] - etag from a previous GET; if it doesn't
  *   match the current file etag, throws StaleEtagError without writing.
+ * @param {boolean} [opts.tolerateParseError=false] - when true, a corrupt
+ *   existing file is treated as missing (mutator runs against `defaultValue`
+ *   and the file gets overwritten). Use for transient-state files where
+ *   losing the previous content is acceptable.
  * @returns {Promise<{value:any, etag:string}>} persisted state + new etag
  */
 async function updateConfig(filePath, mutator, validator = null, opts = {}) {
@@ -187,8 +191,19 @@ async function updateConfig(filePath, mutator, validator = null, opts = {}) {
       try {
         current = parser(rawContent);
       } catch (parseErr) {
-        console.error(`[safe-config] ${label} ${base} PARSE FAILED in ${Date.now()-t0}ms: ${parseErr.message}`);
-        throw parseErr;
+        // For transient-state files (update progress, throttle queue, etc.)
+        // a corrupt body should not block a fresh write — losing the old
+        // content is acceptable and self-healing. Callers opt in via
+        // `opts.tolerateParseError`; the existing rawContent is replaced
+        // by `defaultValue` so the mutator runs against a clean slate.
+        if (opts.tolerateParseError) {
+          console.warn(`[safe-config] ${label} ${base} corrupt JSON; repairing with default. ${parseErr.message}`);
+          current = _deepClone(defaultValue);
+          rawContent = '';
+        } else {
+          console.error(`[safe-config] ${label} ${base} PARSE FAILED in ${Date.now()-t0}ms: ${parseErr.message}`);
+          throw parseErr;
+        }
       }
     } catch (e) {
       if (e.code === 'ENOENT') {
