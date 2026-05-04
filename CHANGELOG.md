@@ -2,6 +2,35 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.50.2] — 2026-05-04
+
+### Added
+
+- **Bbox technical info bar in the spectrogram modal.** Below the species
+  meta row, a discrete chip strip now surfaces the data already stored in
+  `detection_bbox_v1` + `detection_stability_v1`: duration of the energy
+  window (ms), frequency band (kHz), peak time, estimated SNR, plus
+  colored badges for `truncated` (orange — call extends past clip
+  boundary), `stable` / `unstable` / `inconclusive` (Phase 2 verdict
+  with recentered confidence and ratio). Tooltips on every chip explain
+  the metric in plain language. Fully translated (fr/en/de/nl).
+- **Truncated + stability badges on `review.html` cards.** Next to the
+  existing reasons row, each card now shows an orange `truncated` chip
+  when the bbox flag is set, and a green `stable` / grey `inconclusive`
+  chip when Phase 2 has decided. The `unstable` badge is intentionally
+  not duplicated here — it already appears as the `recentering_unstable`
+  reason. Useful when a detection is flagged for one rule but Phase 2
+  still confirms it (high signal that the bird is real).
+
+### Changed
+
+- `/api/detections/bbox` now LEFT JOINs `detection_stability_v1` so a
+  single fetch from the modal serves both the visual overlay and the
+  info bar (no extra round-trip).
+- `/api/flagged-detections` rows include `truncated` (0/1) and
+  `stability_status` (`stable` / `unstable` / `inconclusive` / `null`)
+  so card-level badges can render without follow-up queries.
+
 ## [1.50.1] — 2026-05-04
 
 ### Fixed

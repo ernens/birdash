@@ -120,8 +120,23 @@
               <span>{{fmtDate(det.date)}} {{det.time.slice(0,5)}} · {{det.model}}</span>
               <weather-chip :date="det.date" :time="det.time"></weather-chip>
             </div>
-            <div style="margin-top:.2rem;">
+            <div style="margin-top:.2rem;display:flex;flex-wrap:wrap;gap:.2rem;align-items:center;">
               <span v-for="r in det.reasons" :key="r" class="rv-badge">{{r}}</span>
+              <span v-if="det.truncated" class="rv-badge"
+                    :title="t('bbox_info_truncated_tip')"
+                    style="background:color-mix(in srgb, #dd6b20 15%, transparent);color:#dd6b20;">
+                <bird-icon name="alert-circle" :size="10" style="vertical-align:-1px;"></bird-icon> {{t('bbox_info_truncated')}}
+              </span>
+              <span v-if="det.stability_status === 'stable'" class="rv-badge"
+                    :title="t('bbox_info_stable_tip')"
+                    style="background:color-mix(in srgb, var(--success,#16a34a) 15%, transparent);color:var(--success,#16a34a);">
+                <bird-icon name="check-circle" :size="10" style="vertical-align:-1px;"></bird-icon> {{t('bbox_info_stable')}}
+              </span>
+              <span v-else-if="det.stability_status === 'inconclusive'" class="rv-badge"
+                    :title="t('bbox_info_inconclusive_tip')"
+                    style="background:color-mix(in srgb, #7a8a9e 15%, transparent);color:#7a8a9e;">
+                <bird-icon name="help-circle" :size="10" style="vertical-align:-1px;"></bird-icon> {{t('bbox_info_inconclusive')}}
+              </span>
             </div>
           </div>
           <button v-if="det.file_name" class="rv-mini" @click="playAudio(det)" :aria-label="playingDet===detKey(det)?'Stop':'Play'">{{playingDet===detKey(det)?'⏹':'▶'}}</button>

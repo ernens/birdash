@@ -57,6 +57,19 @@
       // Switching off re-renders the spectro without the bbox; switching on
       // re-renders, then re-paints the bbox over the fresh pixels.
       const bboxEnabled = ref(U.getBboxOverlayEnabled());
+      // bboxData holds the fetched bbox+stability row (single fetch per modal
+      // open) — used both to paint the overlay and to render the info bar.
+      const bboxData = ref(null);
+
+      function paintBbox() {
+        if (!canvas.value) return;
+        if (bboxEnabled.value && bboxData.value) {
+          U.attachBboxOverlay(canvas.value, bboxData.value,
+            { duration: audioBuf?.duration, maxHz: 12000 });
+        } else {
+          U.attachBboxOverlay(canvas.value, null);
+        }
+      }
       function toggleBbox() {
         bboxEnabled.value = !bboxEnabled.value;
         U.setBboxOverlayEnabled(bboxEnabled.value);
@@ -64,12 +77,35 @@
         // Re-render the current pcmData (which is already cleaned if cleanMode is on)
         // then re-paint or skip the bbox.
         U.renderSpectrogram(pcmData, sampleRate, canvas.value, { fftSize: 1024, maxHz: 12000 });
-        if (bboxEnabled.value) {
-          U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
-        } else {
-          U.attachBboxOverlay(canvas.value, null);
-        }
+        paintBbox();
       }
+
+      // Formatted strings for the info bar — null when no bbox row exists.
+      const bboxMeta = computed(() => {
+        const b = bboxData.value;
+        if (!b) return null;
+        const durMs = Math.round((b.t_max_s - b.t_min_s) * 1000);
+        const fmtKHz = (hz) => hz >= 1000 ? (hz / 1000).toFixed(hz >= 10000 ? 0 : 1) : (hz + 'Hz');
+        const fLo = fmtKHz(b.f_min_hz);
+        const fHi = fmtKHz(b.f_max_hz);
+        const band = (typeof fLo === 'string' && fLo.endsWith('Hz')) || (typeof fHi === 'string' && fHi.endsWith('Hz'))
+          ? `${fLo}–${fHi}`
+          : `${fLo}–${fHi} kHz`;
+        const snr = (b.snr_estimate != null && isFinite(b.snr_estimate))
+          ? b.snr_estimate.toFixed(1) : null;
+        const peak = (b.peak_t_s != null && isFinite(b.peak_t_s))
+          ? b.peak_t_s.toFixed(2) + 's' : null;
+        const stab = b.stability_status || null;
+        const recConf = (b.recentered_confidence != null)
+          ? Math.round(b.recentered_confidence * 100) + '%' : null;
+        const ratio = (b.ratio_to_original != null)
+          ? '×' + b.ratio_to_original.toFixed(2) : null;
+        return {
+          durMs, band, snr, peak,
+          truncated: !!b.truncated,
+          stability: stab, recConf, ratio,
+        };
+      });
 
       // Loop selection
       const loopStart = ref(null); // 0-1 fraction
@@ -144,10 +180,12 @@
           _rawPcm = pcmData;
           _rawSr = sampleRate;
           _rawAudioBuf = audioBuf;
-          // Render spectrogram
+          // Render spectrogram + fetch bbox/stability once — the same row is
+          // reused for both the overlay paint and the info bar.
           if (canvas.value) {
             U.renderSpectrogram(pcmData, sampleRate, canvas.value, { fftSize: 1024, maxHz: 12000 });
-            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf.duration, maxHz: 12000 });
+            bboxData.value = await U.fetchBbox(modal.fileName);
+            paintBbox();
           }
         } catch (e) {
           console.warn('SpectroModal: load error', e);
@@ -343,6 +381,7 @@
         pausedAt = 0;
         filters.gain = 0; filters.highpass = 0; filters.lowpass = 0;
         loopStart.value = null; loopEnd.value = null; loopActive.value = false;
+        bboxData.value = null;
         cancelAnimationFrame(rafId);
       }
 
@@ -359,7 +398,7 @@
           cleanMode.value = false;
           if (_rawPcm && canvas.value) {
             U.renderSpectrogram(_rawPcm, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
-            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
+            paintBbox();
           }
           const wasPlaying = isPlaying.value;
           if (wasPlaying) stopPlay();
@@ -379,7 +418,7 @@
           const cleaned = U.cleanAudioPipeline(_rawPcm, _rawSr, cleanStrength.value);
           if (canvas.value) {
             U.renderSpectrogram(cleaned, _rawSr, canvas.value, { fftSize: 1024, maxHz: 12000 });
-            U.showBboxForFile(canvas.value, modal.fileName, { duration: audioBuf?.duration, maxHz: 12000 });
+            paintBbox();
           }
           // Build a new AudioBuffer so playback uses the cleaned signal.
           const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -437,7 +476,7 @@
         loopStart, loopEnd, loopActive,
         weather, wmoIcon, wmoLabel,
         cleanMode, cleanStrength, processingClean,
-        bboxEnabled, toggleBbox,
+        bboxEnabled, toggleBbox, bboxMeta,
         togglePlay, seek, setFilter, close, t,
         onCanvasMousedown, onCanvasMousemove, onCanvasMouseup, clearLoop,
         toggleClean, reapplyClean
@@ -465,6 +504,33 @@
             <span v-if="weather.wind_kmh != null && weather.wind_kmh >= 5" class="weather-wind">
               <bird-icon name="wind" :size="12"></bird-icon>{{Math.round(weather.wind_kmh)}}km/h
             </span>
+          </span>
+        </div>
+        <!-- Detection Refinement info bar (Phase 1B + Phase 2) — visible
+             only when a bbox row exists for this clip. -->
+        <div v-if="bboxMeta" class="spectro-modal-bboxinfo"
+             style="display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.25rem;font-size:.7rem;color:var(--text-muted);align-items:center;line-height:1.4;">
+          <span :title="t('bbox_info_duration_tip')"><bird-icon name="clock" :size="11"></bird-icon> {{bboxMeta.durMs}} ms</span>
+          <span :title="t('bbox_info_band_tip')"><bird-icon name="audio-lines" :size="11"></bird-icon> {{bboxMeta.band}}</span>
+          <span v-if="bboxMeta.peak" :title="t('bbox_info_peak_tip')"><bird-icon name="target" :size="11"></bird-icon> {{bboxMeta.peak}}</span>
+          <span v-if="bboxMeta.snr" :title="t('bbox_info_snr_tip')"><bird-icon name="activity" :size="11"></bird-icon> SNR ~{{bboxMeta.snr}}</span>
+          <span v-if="bboxMeta.truncated" :title="t('bbox_info_truncated_tip')"
+                style="color:#dd6b20;font-weight:600;">
+            <bird-icon name="alert-circle" :size="11"></bird-icon> {{t('bbox_info_truncated')}}
+          </span>
+          <span v-if="bboxMeta.stability === 'stable'" :title="t('bbox_info_stable_tip')"
+                style="color:var(--success,#16a34a);font-weight:600;">
+            <bird-icon name="check-circle" :size="11"></bird-icon>
+            {{t('bbox_info_stable')}}<span v-if="bboxMeta.recConf" style="font-weight:400;opacity:.85;"> · {{bboxMeta.recConf}} {{bboxMeta.ratio}}</span>
+          </span>
+          <span v-else-if="bboxMeta.stability === 'unstable'" :title="t('bbox_info_unstable_tip')"
+                style="color:#e53e3e;font-weight:600;">
+            <bird-icon name="alert-triangle" :size="11"></bird-icon>
+            {{t('bbox_info_unstable')}}<span v-if="bboxMeta.recConf" style="font-weight:400;opacity:.85;"> · {{bboxMeta.recConf}} {{bboxMeta.ratio}}</span>
+          </span>
+          <span v-else-if="bboxMeta.stability === 'inconclusive'" :title="t('bbox_info_inconclusive_tip')"
+                style="color:#7a8a9e;">
+            <bird-icon name="help-circle" :size="11"></bird-icon> {{t('bbox_info_inconclusive')}}
           </span>
         </div>
       </div>

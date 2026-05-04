@@ -530,11 +530,25 @@ function handle(req, res, pathname, ctx) {
         // Table may not exist yet on installs that never ran the migration —
         // swallow the error so the flagging endpoint stays alive.
         const unstableSet = new Set();
+        const stabilityByFile = new Map();
         try {
-          const unstable = db.prepare(`
-            SELECT file_name FROM detection_stability_v1 WHERE stability_status = 'unstable'
+          const stab = db.prepare(`
+            SELECT file_name, stability_status FROM detection_stability_v1
           `).all();
-          for (const u of unstable) unstableSet.add(u.file_name);
+          for (const s of stab) {
+            stabilityByFile.set(s.file_name, s.stability_status);
+            if (s.stability_status === 'unstable') unstableSet.add(s.file_name);
+          }
+        } catch {}
+
+        // Phase 1: bbox truncated flag — sourced from detection_bbox_v1.
+        // Same defensive load (table may be empty / missing on fresh installs).
+        const truncatedSet = new Set();
+        try {
+          const trunc = db.prepare(`
+            SELECT file_name FROM detection_bbox_v1 WHERE truncated = 1
+          `).all();
+          for (const t of trunc) truncatedSet.add(t.file_name);
         } catch {}
 
         const flagged = [];
@@ -600,6 +614,8 @@ function handle(req, res, pathname, ctx) {
               confidence: det.Confidence, file_name: det.File_Name,
               model: det.Model,
               reasons,
+              truncated: truncatedSet.has(det.File_Name) ? 1 : 0,
+              stability_status: stabilityByFile.get(det.File_Name) || null,
               validation: existing || 'unreviewed',
             });
           }
