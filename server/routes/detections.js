@@ -521,6 +521,17 @@ function handle(req, res, pathname, ctx) {
           for (const v of vals) validations[`${v.date}|${v.time}|${v.sci_name}`] = v.status;
         } catch {}
 
+        // Phase 2: detections flagged unstable by the stability worker.
+        // Table may not exist yet on installs that never ran the migration —
+        // swallow the error so the flagging endpoint stays alive.
+        const unstableSet = new Set();
+        try {
+          const unstable = db.prepare(`
+            SELECT file_name FROM detection_stability_v1 WHERE stability_status = 'unstable'
+          `).all();
+          for (const u of unstable) unstableSet.add(u.file_name);
+        } catch {}
+
         const flagged = [];
         const r = rules.rules;
 
@@ -569,6 +580,12 @@ function handle(req, res, pathname, ctx) {
             if (r.non_european.excluded_keywords.some(kw => det.Com_Name.includes(kw))) {
               reasons.push('Espece non europeenne');
             }
+          }
+
+          // Rule (Phase 2): unstable on recentering — confidence collapsed
+          // when the model was re-run on a window centered on the bbox peak.
+          if (r.recentering_unstable?.enabled && unstableSet.has(det.File_Name)) {
+            reasons.push(r.recentering_unstable.label || 'Detection instable au recentrage');
           }
 
           if (reasons.length > 0) {

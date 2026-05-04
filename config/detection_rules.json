@@ -172,6 +172,11 @@
         "Grand-duc d'Amérique",
         "Buse à épaulettes"
       ]
+    },
+    "recentering_unstable": {
+      "enabled": true,
+      "description": "Confiance s'effondre quand on recentre la fenêtre sur le pic d'énergie (Phase 2 stability check)",
+      "label": "Détection instable au recentrage"
     }
   }
 }

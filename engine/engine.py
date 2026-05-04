@@ -103,6 +103,7 @@ from db import init_db, write_detection, upsert_quality_events
 from birdweather import upload_to_birdweather
 from clips import extract_clip
 from bbox import compute_and_write_bbox
+from stability import enqueue_for_check
 from watcher import WavHandler
 
 
@@ -439,7 +440,8 @@ class BirdEngine:
                                         os.path.expanduser("~"), "BirdSongs", "Extracted", "By_Date",
                                         d["date"], d["com_name"].replace("'", "").replace(" ", "_"),
                                         clip_name)
-                                    compute_and_write_bbox(mp3, d["sci_name"], clip_name)
+                                    if compute_and_write_bbox(mp3, d["sci_name"], clip_name):
+                                        enqueue_for_check(clip_name, d["confidence"])
                             upload_to_birdweather(fpath, detections, cfg)
                         except Exception as e:
                             log.warning("[%s] Post-processing error: %s",
@@ -605,7 +607,8 @@ class BirdEngine:
                                     os.path.expanduser("~"), "BirdSongs", "Extracted", "By_Date",
                                     d["date"], d["com_name"].replace("'", "").replace(" ", "_"),
                                     clip_name)
-                                compute_and_write_bbox(mp3, d["sci_name"], clip_name)
+                                if compute_and_write_bbox(mp3, d["sci_name"], clip_name):
+                                    enqueue_for_check(clip_name, d["confidence"])
                         upload_to_birdweather(fpath, dets, cfg)
                     except Exception as e:
                         log.warning("Post-processing error: %s", e)

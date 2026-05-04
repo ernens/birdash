@@ -1,0 +1,25 @@
+[Unit]
+Description=BirdEngine — Stability check worker (Phase 2)
+# Stability checks are most useful WHEN the live engine is producing
+# detections, but we don't strictly need it running. Keep the dep loose.
+After=network-online.target birdengine.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=BIRDASH_USER
+WorkingDirectory=BIRDASH_HOME/birdash/engine
+ExecStart=BIRDASH_HOME/birdash/engine/venv/bin/python BIRDASH_HOME/birdash/engine/stability.py
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=15
+UMask=0022
+# Yield CPU + I/O — the live engine is the priority. The worker is best-effort.
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
