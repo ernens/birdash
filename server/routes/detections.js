@@ -499,11 +499,16 @@ function handle(req, res, pathname, ctx) {
         const dateTo = qs.get('dateTo') || dateFrom;
         const limit = Math.min(parseInt(qs.get('limit') || '500'), 2000);
 
-        // Get all detections for the date range
+        // Scan ALL detections in the date range — applying LIMIT here would
+        // silently drop the oldest detections of any day with >limit rows
+        // (busy spring days easily hit 4000+/day), making early-morning
+        // detections invisible to the flagging rules. We instead apply the
+        // limit after JS-side filtering so callers get up to N flagged
+        // results regardless of where in the range they fall.
         const rows = db.prepare(`
           SELECT Date, Time, Sci_Name, Com_Name, Confidence, File_Name, Model
-          FROM active_detections WHERE Date >= ? AND Date <= ? ORDER BY Date DESC, Time DESC LIMIT ?
-        `).all(dateFrom, dateTo, limit);
+          FROM active_detections WHERE Date >= ? AND Date <= ? ORDER BY Date DESC, Time DESC
+        `).all(dateFrom, dateTo);
 
         // Count per species per day (for isolated detection rule)
         const speciesCounts = {};
@@ -600,8 +605,14 @@ function handle(req, res, pathname, ctx) {
           }
         }
 
+        // Cap the response — callers expect ≤ limit flagged rows, but `total`
+        // exposes the true count so UI can show "showing 500 of 1247 flagged".
+        const truncated = flagged.slice(0, limit);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ flagged, dateFrom, dateTo, total: flagged.length }));
+        res.end(JSON.stringify({
+          flagged: truncated, dateFrom, dateTo,
+          total: flagged.length, returned: truncated.length,
+        }));
       } catch (e) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
