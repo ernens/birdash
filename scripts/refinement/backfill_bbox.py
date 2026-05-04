@@ -40,10 +40,19 @@ DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
 CLIPS_ROOT = Path("/home/bjorn/BirdSongs/Extracted/By_Date")
 TAXONOMY_CSV = PROJECT_ROOT / "config" / "ebird-taxonomy.csv"
 
-ALGORITHM_VERSION = "heuristic_v1"
+ALGORITHM_VERSION = "heuristic_v1_1"
 BATCH_SIZE = 50  # commit toutes les N insertions
 
+# Phase 1.5 quality filters (mirrored in engine/bbox.py)
+MIN_SNR = 2.0
+MIN_TRUNCATED_DURATION_S = 0.3
+
 # ── Bandes fréquentielles fallback (SPEC §3.5) ─────────────────────────────
+# Per-family overrides applied before the ORDER fallback.
+FAMILY_BANDS = {
+    "Corvidae": (200, 3000),
+}
+
 ORDER_BANDS = {
     "Passeriformes":     (1000, 8000),
     "Falconiformes":     (500,  3500),
@@ -110,21 +119,25 @@ def decode_audio(mp3_path, target_sr=32000):
 
 
 def load_taxonomy():
-    sci_to_order = {}
+    """Returns {sci_name: (order, family)}."""
+    sci_to_taxo = {}
     if not TAXONOMY_CSV.exists():
-        return sci_to_order
+        return sci_to_taxo
     with TAXONOMY_CSV.open() as f:
         header = f.readline().rstrip("\n").split(",")
         sci_idx = header.index("SCIENTIFIC_NAME")
         order_idx = header.index("ORDER")
+        family_idx = header.index("FAMILY_SCI_NAME")
         for row in csv.reader(f):
-            if len(row) > max(sci_idx, order_idx):
-                sci_to_order[row[sci_idx]] = row[order_idx]
-    return sci_to_order
+            if len(row) > max(sci_idx, order_idx, family_idx):
+                sci_to_taxo[row[sci_idx]] = (row[order_idx], row[family_idx])
+    return sci_to_taxo
 
 
 def band_for_species(sci_name, taxo):
-    order = taxo.get(sci_name, "")
+    order, family = taxo.get(sci_name, ("", ""))
+    if family in FAMILY_BANDS:
+        return FAMILY_BANDS[family]
     return ORDER_BANDS.get(order, DEFAULT_BAND)
 
 
@@ -204,11 +217,22 @@ def main():
     t0 = time.perf_counter()
 
     INSERT_SQL = """
-        INSERT OR IGNORE INTO detection_bbox_v1
+        INSERT INTO detection_bbox_v1
           (file_name, t_min_s, t_max_s, f_min_hz, f_max_hz,
            peak_t_s, peak_energy, snr_estimate, truncated,
            algorithm_version, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(file_name) DO UPDATE SET
+          t_min_s = excluded.t_min_s,
+          t_max_s = excluded.t_max_s,
+          f_min_hz = excluded.f_min_hz,
+          f_max_hz = excluded.f_max_hz,
+          peak_t_s = excluded.peak_t_s,
+          peak_energy = excluded.peak_energy,
+          snr_estimate = excluded.snr_estimate,
+          truncated = excluded.truncated,
+          algorithm_version = excluded.algorithm_version,
+          created_at = excluded.created_at
     """
 
     def flush():
@@ -234,6 +258,12 @@ def main():
         fmin, fmax = band_for_species(sci, taxo)
         bbox = heuristic_bbox(audio, sr, fmin, fmax)
         if bbox is None:
+            no_bbox += 1
+            continue
+        if bbox["snr_estimate"] < MIN_SNR:
+            no_bbox += 1
+            continue
+        if bbox["truncated"] and (bbox["t_max_s"] - bbox["t_min_s"]) < MIN_TRUNCATED_DURATION_S:
             no_bbox += 1
             continue
         insert_buf.append((

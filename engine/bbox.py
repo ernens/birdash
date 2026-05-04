@@ -27,10 +27,28 @@ log = logging.getLogger("birdengine")
 # Mirror backfill_bbox.py exactly — bumping the algorithm requires bumping
 # the version string in BOTH places, then re-backfilling, so they don't
 # diverge silently.
-ALGORITHM_VERSION = "heuristic_v1"
+ALGORITHM_VERSION = "heuristic_v1_1"
+
+# Drop bboxes whose peak-to-mean ratio is below this — empirically these are
+# noise on uniformly-bruited clips (Phase 0 case 0045: SNR=1.6 produced a
+# 3.4 s bbox eating most of the clip, no real signal under it).
+MIN_SNR = 2.0
+
+# Drop bboxes that are both very short AND truncated against a clip edge
+# (Phase 0 case 0120: 0.15 s bbox starting at 0.03 s — boundary artifact).
+MIN_TRUNCATED_DURATION_S = 0.3
 
 DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
 TAXONOMY_CSV = Path("/home/bjorn/birdash/config/ebird-taxonomy.csv")
+
+# Per-family overrides for taxa whose ORDER fallback band misses their actual
+# vocal range. Looked up before ORDER_BANDS. Keep additions narrow — only add
+# when Phase 0/1.5 evaluation shows the order band is wrong for the family.
+FAMILY_BANDS = {
+    # Corvids (crows, jays, magpies) are Passeriformes but vocalize 200-3000 Hz,
+    # well below the 1000-8000 Hz Passeriformes default (Phase 0 cases 0078, 0120).
+    "Corvidae": (200, 3000),
+}
 
 ORDER_BANDS = {
     "Passeriformes":     (1000, 8000),
@@ -51,27 +69,31 @@ _taxo_cache = None
 
 
 def _load_taxonomy():
+    """Returns {sci_name: (order, family)} cached after first call."""
     global _taxo_cache
     if _taxo_cache is not None:
         return _taxo_cache
-    sci_to_order = {}
+    sci_to_taxo = {}
     if not TAXONOMY_CSV.exists():
         log.warning("[bbox] taxonomy not found at %s — falling back to default band", TAXONOMY_CSV)
-        _taxo_cache = sci_to_order
-        return sci_to_order
+        _taxo_cache = sci_to_taxo
+        return sci_to_taxo
     with TAXONOMY_CSV.open() as f:
         header = f.readline().rstrip("\n").split(",")
         sci_idx = header.index("SCIENTIFIC_NAME")
         order_idx = header.index("ORDER")
+        family_idx = header.index("FAMILY_SCI_NAME")
         for row in csv.reader(f):
-            if len(row) > max(sci_idx, order_idx):
-                sci_to_order[row[sci_idx]] = row[order_idx]
-    _taxo_cache = sci_to_order
-    return sci_to_order
+            if len(row) > max(sci_idx, order_idx, family_idx):
+                sci_to_taxo[row[sci_idx]] = (row[order_idx], row[family_idx])
+    _taxo_cache = sci_to_taxo
+    return sci_to_taxo
 
 
 def _band_for_species(sci_name):
-    order = _load_taxonomy().get(sci_name, "")
+    order, family = _load_taxonomy().get(sci_name, ("", ""))
+    if family in FAMILY_BANDS:
+        return FAMILY_BANDS[family]
     return ORDER_BANDS.get(order, DEFAULT_BAND)
 
 
@@ -124,12 +146,26 @@ def _decode_audio(mp3_path, target_sr=32000):
     return np.frombuffer(p.stdout, dtype=np.float32).copy(), target_sr
 
 
+# UPSERT on file_name PK — replaces any prior row regardless of its
+# algorithm_version. This is what lets a backfill at a new version overwrite
+# stale rows in place instead of leaving two algorithms living side-by-side.
 _INSERT_SQL = """
-    INSERT OR IGNORE INTO detection_bbox_v1
+    INSERT INTO detection_bbox_v1
       (file_name, t_min_s, t_max_s, f_min_hz, f_max_hz,
        peak_t_s, peak_energy, snr_estimate, truncated,
        algorithm_version, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(file_name) DO UPDATE SET
+      t_min_s = excluded.t_min_s,
+      t_max_s = excluded.t_max_s,
+      f_min_hz = excluded.f_min_hz,
+      f_max_hz = excluded.f_max_hz,
+      peak_t_s = excluded.peak_t_s,
+      peak_energy = excluded.peak_energy,
+      snr_estimate = excluded.snr_estimate,
+      truncated = excluded.truncated,
+      algorithm_version = excluded.algorithm_version,
+      created_at = excluded.created_at
 """
 
 
@@ -151,6 +187,10 @@ def compute_and_write_bbox(mp3_path, sci_name, file_name):
         fmin, fmax = _band_for_species(sci_name)
         bbox = _heuristic_bbox(audio, sr, fmin, fmax)
         if bbox is None:
+            return False
+        if bbox["snr_estimate"] < MIN_SNR:
+            return False
+        if bbox["truncated"] and (bbox["t_max_s"] - bbox["t_min_s"]) < MIN_TRUNCATED_DURATION_S:
             return False
         conn = sqlite3.connect(DB_PATH, timeout=30)
         try:
