@@ -102,6 +102,7 @@ from models import (
 from db import init_db, write_detection, upsert_quality_events
 from birdweather import upload_to_birdweather
 from clips import extract_clip
+from bbox import compute_and_write_bbox
 from watcher import WavHandler
 
 
@@ -432,7 +433,13 @@ class BirdEngine:
                     def _sec_post(detections, fpath, cfg):
                         try:
                             for d in detections:
-                                extract_clip(fpath, d, cfg)
+                                clip_name = extract_clip(fpath, d, cfg)
+                                if clip_name:
+                                    mp3 = os.path.join(
+                                        os.path.expanduser("~"), "BirdSongs", "Extracted", "By_Date",
+                                        d["date"], d["com_name"].replace("'", "").replace(" ", "_"),
+                                        clip_name)
+                                    compute_and_write_bbox(mp3, d["sci_name"], clip_name)
                             upload_to_birdweather(fpath, detections, cfg)
                         except Exception as e:
                             log.warning("[%s] Post-processing error: %s",
@@ -592,7 +599,13 @@ class BirdEngine:
                 def _post_process(dets, fpath, cfg):
                     try:
                         for d in dets:
-                            extract_clip(fpath, d, cfg)
+                            clip_name = extract_clip(fpath, d, cfg)
+                            if clip_name:
+                                mp3 = os.path.join(
+                                    os.path.expanduser("~"), "BirdSongs", "Extracted", "By_Date",
+                                    d["date"], d["com_name"].replace("'", "").replace(" ", "_"),
+                                    clip_name)
+                                compute_and_write_bbox(mp3, d["sci_name"], clip_name)
                         upload_to_birdweather(fpath, dets, cfg)
                     except Exception as e:
                         log.warning("Post-processing error: %s", e)
