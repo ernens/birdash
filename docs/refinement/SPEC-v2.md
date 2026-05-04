@@ -1,10 +1,46 @@
 # SPEC — Module de raffinement des détections (Detection Refinement Module) — V2
 
 > **Version** : 2.0
-> **Statut** : Spécification de design consolidée, prête pour implémentation
+> **Statut** : Spécification de design consolidée, **partiellement implémentée**
 > **Cible** : Birdash sur Raspberry Pi 5 (8GB), modèle Perch V2 INT8 + BirdNET V2.4
 > **Auteur** : Conception itérative Björn Ernens, mai 2026
 > **Précédente version** : V1 (mai 2026), revue critique externe et auto-revue
+
+---
+
+## Statut d'implémentation (au 2026-05-04)
+
+| Niveau / Section SPEC | Phase nominale SPEC | Versions livrées | Statut |
+|---|---|---|---|
+| **Niveau 1** — Heuristique live (§3) | Phase 1 | `1.48.0` → `1.49.1` | ✅ **Live** (engine + dashboard overlay + backfill) |
+| ↳ Phase 1A — storage + endpoint | — | (préparatoire) | ✅ shipped |
+| ↳ Phase 1B — overlay spectro | — | `1.48.0` | ✅ shipped (canvas paint, pas SVG, voir notes) |
+| ↳ Phase 1C — calcul live | — | `1.49.0` | ✅ shipped (post-process thread) |
+| ↳ Phase 1.5 — FAMILY_BANDS + filtres SNR/tronqué | — | `1.49.1` | ✅ shipped (`heuristic_v1_1`) |
+| **Niveau 2** — Stability check (§4) | Phase 4 dans la SPEC | `1.50.0` | ✅ **Live** (worker opt-in via config + service systemd) |
+| **Niveau 3** — Raffinement on-demand (§5) | Phases 2/3/3.5 SPEC | — | ❌ **Différé** |
+| Phase 0 — validation empirique (§8) | — | (pré-1.48) | ✅ fait, 150 clips annotés, doc dans `docs/refinement/phase0/` |
+
+### Divergences vs. phasage SPEC
+
+- **Niveau 2 livré avant Niveau 3.** La SPEC §8 plaçait Phase 2 = single-shot Niveau 3 depuis Review, et Phase 4 = stability check. L'implémentation a **inversé l'ordre** : on a livré la stability (« Phase 2.0 » dans les commits) avant tout work sur le Niveau 3. Raison pratique : le worker stability est plus simple (un seul Perch, pas de balayage) et donne immédiatement un signal réutilisable par l'auto-flagging existant — donc la valeur arrive plus vite.
+- **Phase 1.5 hors SPEC.** Trois quality filters (FAMILY_BANDS Corvidae, MIN_SNR=2.0, reject truncated+narrow) ajoutés en réponse à l'évaluation Phase 0 qui a sorti 5 cas misleading (3 % du sample). Algorithme bumpé `heuristic_v1` → `heuristic_v1_1`. Voir `engine/bbox.py` + `scripts/refinement/backfill_bbox.py`.
+- **Overlay canvas, pas SVG (§7.1).** La SPEC suggérait un overlay SVG sibling du `<canvas>`. Vue 3 patche le subtree DOM et strippe les enfants non-Vue → SVG disparaît à chaque redraw. Refactor en peinture directe sur le canvas via `ctx.strokeRect` ; inconvénient : doit ré-appeler `attachBboxOverlay` après chaque `renderSpectrogram`. C'est fait dans tous les call sites.
+- **Trigger autoflagging-rule (§4.2) non implémenté en Phase 2.0.** L'auto-flagging vit côté dashboard (lecture-time, pas write-time), donc reproduire la logique côté worker = scope creep. Le trigger Phase 2.0 est uniquement `confidence < threshold`. Les detections déjà flaggées par d'autres règles ne sont donc PAS auto-enqueueed. Différé en « Phase 2.1 » à évaluer si le besoin se confirme.
+- **Pas de FK `detection_stability_v1.detection_id → detections(id)`.** La table `detections` n'a pas de PK `id` (juste `(Date, Time, Sci_Name, Model)` natural key). On utilise `file_name TEXT PRIMARY KEY` en miroir de `detection_bbox_v1`.
+
+### Comment activer Niveau 2 en production
+
+```bash
+python3 scripts/refinement/migrate_phase2.py        # crée detection_stability_v1 + stability_queue
+# ajouter la section [stability_check] dans engine/config.toml :
+#   enabled = true
+#   confidence_threshold = 0.6
+sudo systemctl restart birdengine.service           # producer pick up enabled
+sudo systemctl enable --now birdengine-stability.service
+```
+
+Coût observé sur Pi 5 : 1.5–9 s par check (Perch warmup une fois au démarrage = ~10 s). Producer-side overhead nul tant que `enabled = false`.
 
 ---
 

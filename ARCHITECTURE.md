@@ -79,6 +79,7 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
 |---------|------|-------------|
 | Recording | `birdengine-recording.service` | Continuous `arecord` capturing 45s WAV files |
 | Engine | `birdengine.service` | Watchdog-based inference pipeline |
+| Stability check (opt-in) | `birdengine-stability.service` | Phase 2 worker — re-runs Perch on a recentered window for low-confidence detections (see Detection Refinement Module) |
 | Dashboard | `birdash.service` | Node.js API server on port 7474 |
 | Terminal | `ttyd.service` | Web terminal on port 7681 |
 | Proxy | `caddy.service` | Reverse proxy on port 80 |
@@ -231,9 +232,43 @@ Companion script `scripts/cleanup_throttle.py` applies the same rule retroactive
 - MP3 extraction of detection clips
 - Spectrogram PNG generation
 - SQLite INSERT of detections
+- **Heuristic bbox computation** (`bbox.py`) → `detection_bbox_v1`
+- **Stability-check enqueue** if confidence < threshold (`stability.py`, opt-in via `[stability_check]` section in `config.toml`) → `stability_queue`
 - BirdWeather upload (if configured)
 
 > **Note:** Notifications are no longer in the engine. They are handled by the Node.js notification watcher (see below).
+
+---
+
+### Detection Refinement Module
+
+Two-level signal-processing layer added in mai 2026 (versions 1.48 → 1.50)
+that gives every detection a time-frequency localization and an optional
+stability score. Full design:
+[`docs/refinement/SPEC-v2.md`](docs/refinement/SPEC-v2.md).
+
+| Level | Trigger | Cost | Output | Status |
+|---|---|---|---|---|
+| 1 — Heuristic bbox | Live, every detection | ~200 ms (Pi 5) / ~1-2 s (Pi 3) | `detection_bbox_v1` row (file_name PK, t/f bounds, peak, SNR) | Live since 1.49.0; v1.5 filters since 1.49.1 |
+| 2 — Stability check | Confidence < threshold (default 0.6), opt-in | ~1.5-9 s per detection (Perch re-inference) | `detection_stability_v1` (`stable` / `unstable` / `inconclusive`) | Worker since 1.50.0, off by default |
+| 3 — On-demand sliding-window refinement | User request | minutes per detection | (deferred to Phase 3, see SPEC §5) | not shipped |
+
+**Visualization** — every spectrogram in the dashboard (today.html cards,
+full-screen modal, future review.html) overlays an amber dashed rectangle
+on the area where the heuristic localized the call. Painted directly on
+the canvas (Vue 3's vdom strips non-Vue siblings). Toggle button on the
+modal; preference persisted via `localStorage:birdash:showBbox`.
+
+**Auto-flagging integration** — when Phase 2 marks a detection `unstable`,
+the existing `/api/flagged-detections` endpoint surfaces it via a new
+`recentering_unstable` rule in `config/detection_rules.json` — no new UI
+code, the badge appears alongside `nocturnal_day`, `out_of_season` etc.
+in `review.html`.
+
+**Backfill** — `scripts/refinement/backfill_bbox.py` re-computes bboxes
+for historical detections using `nice -n 19 ionice -c 3` to yield to
+the live engine. Idempotent via UPSERT, deletes stale rows when the
+current algorithm rejects (algorithm-version migration in place).
 
 ---
 

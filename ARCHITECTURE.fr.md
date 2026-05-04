@@ -75,7 +75,23 @@ Chaque étape est configurable et peut être activée/désactivée indépendamme
 
 ### Modules du moteur (engine/)
 
-`engine.py` (~850 l) garde la classe `BirdEngine` + `main()`. Les helpers ont été extraits en modules dédiés : `audio.py` (I/O + filtres), `models.py` (wrappers TFLite + factory), `clips.py` (mp3 + spectrogramme), `birdweather.py`, `db.py`, `watcher.py`, `yamnet_filter.py`. Les re-exports en haut de `engine.py` préservent `from engine import X` côté tests.
+`engine.py` (~1100 l) garde la classe `BirdEngine` + `main()`. Les helpers ont été extraits en modules dédiés : `audio.py` (I/O + filtres), `models.py` (wrappers TFLite + factory), `clips.py` (mp3 + spectrogramme), `birdweather.py`, `db.py`, `watcher.py`, `yamnet_filter.py`, `bbox.py` (localisation temps-fréquence Phase 1), `stability.py` (vérification de stabilité Phase 2). Les re-exports en haut de `engine.py` préservent `from engine import X` côté tests.
+
+### Module de raffinement des détections (mai 2026, versions 1.48 → 1.50)
+
+Couche signal-processing ajoutée pour donner à chaque détection une localisation temps-fréquence et un score de stabilité optionnel. Spec complète : [`docs/refinement/SPEC-v2.md`](docs/refinement/SPEC-v2.md).
+
+| Niveau | Déclenchement | Coût | Sortie | Statut |
+|---|---|---|---|---|
+| 1 — Bbox heuristique | Live, chaque détection | ~200 ms (Pi 5) / ~1-2 s (Pi 3) | `detection_bbox_v1` (PK file_name, bornes t/f, pic, SNR) | Live depuis 1.49.0 ; filtres v1.5 depuis 1.49.1 |
+| 2 — Stability check | Confiance < seuil (défaut 0.6), opt-in | ~1.5-9 s par détection (re-inférence Perch) | `detection_stability_v1` (`stable` / `unstable` / `inconclusive`) | Worker depuis 1.50.0, désactivé par défaut |
+| 3 — Raffinement on-demand | À la demande utilisateur | minutes par détection | (différé Phase 3, voir SPEC §5) | non livré |
+
+Chaque spectrogramme du dashboard (cards `today.html`, modal plein écran, future `review.html`) affiche un encadré amber pointillé sur la zone localisée. Toggle dans la modal, préférence persistée (`localStorage:birdash:showBbox`).
+
+Quand Phase 2 marque une détection `unstable`, l'endpoint `/api/flagged-detections` la remonte via une nouvelle règle `recentering_unstable` dans `config/detection_rules.json` — pas de nouveau code UI, le badge apparaît à côté de `nocturnal_day`, `out_of_season` etc. dans `review.html`.
+
+Backfill : `scripts/refinement/backfill_bbox.py` re-calcule les bboxes historiques sous `nice -n 19 ionice -c 3` pour ne pas concurrencer le moteur live. Idempotent via UPSERT, supprime les rows obsolètes quand l'algorithme courant rejette.
 
 ### Limite par espèce (throttle)
 

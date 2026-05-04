@@ -24,8 +24,18 @@ engine.py ─── BirdEngine class
           ├── Write to local SQLite DB
           ├── Sync detections to remote DB (SSH)
           ├── Extract MP3 clip + spectrogram PNG
+          ├── Compute heuristic bbox (bbox.py, ~1-2s on Pi 3, ~200ms on Pi 5)
+          ├── Enqueue for stability check if confidence < threshold (Phase 2, opt-in)
           ├── Upload to BirdWeather API
           └── Send smart notifications (ntfy.sh)
+
+birdengine-stability.service (Phase 2, disabled by default)
+      │
+      ▼ (polls stability_queue every 30s, own Perch instance)
+stability.py ─── recenter 5s window on bbox peak → re-run Perch
+      │
+      └── Write ratio_to_original to detection_stability_v1
+          (stable / unstable / inconclusive)
 ```
 
 ## Model Scoring — Critical Design Decisions
@@ -374,11 +384,62 @@ AUDIO_RETENTION_DAYS=90
 
 BirdEngine reads `MODEL`, `DUAL_MODEL_ENABLED`, and `SECONDARY_MODEL` from birdnet.conf every ~5 minutes for hot-reload. Other detection parameters come from config.toml.
 
+## Detection Refinement Module (Phase 1+2, mai 2026)
+
+Two-level signal-processing layer that adds time-frequency localization
+and stability scoring to every detection. Full design lives in
+[`docs/refinement/SPEC-v2.md`](../docs/refinement/SPEC-v2.md); engine-side
+quick reference below.
+
+**`bbox.py`** — heuristic bbox computation invoked from `_post_process`
+after `extract_clip` succeeds. Decodes the just-written MP3 via ffmpeg,
+computes a spectrogram (scipy.signal), finds the dominant energy peak in
+the species-specific frequency band (per-family override → ORDER fallback),
+then widens at half-energy to get the time bounds. Writes to
+`detection_bbox_v1` via UPSERT under `algorithm_version='heuristic_v1_1'`.
+Three quality filters reject suspect outputs (Phase 1.5):
+
+- `FAMILY_BANDS` lookup before `ORDER_BANDS` — corvids sit at 200-3000 Hz,
+  not the 1000-8000 Hz Passeriformes default
+- `MIN_SNR = 2.0` — peak-to-mean ratio below 2 = noise-driven bbox, dropped
+- `truncated && width < 0.3 s` — clip-edge artifact, dropped
+
+**`stability.py`** — independent worker (own Perch instance) for
+`birdengine-stability.service`. Polls `stability_queue` every 30 s, pops
+oldest, re-loads the MP3, slices a 5 s window centered on
+`detection_bbox_v1.peak_t_s`, resamples to 32 kHz, runs Perch, looks up
+the species probability, computes `ratio = recentered_conf / original_conf`.
+Writes status (`stable` / `unstable` / `inconclusive`) to
+`detection_stability_v1`. Producer-side `enqueue_for_check()` called
+from the engine's post-process thread when bbox compute succeeds AND
+detection confidence is below the configured threshold AND
+`[stability_check] enabled = true` in `config.toml`.
+
+```toml
+# config.toml — opt-in section, both producer and worker honor `enabled`
+[stability_check]
+enabled = true
+confidence_threshold = 0.6   # only enqueue detections below this
+poll_interval_s = 30
+ratio_stable = 0.8           # ratio >= 0.8 → stable
+ratio_unstable = 0.5         # ratio < 0.5 → unstable
+```
+
+To activate Phase 2 from a fresh install:
+```bash
+python3 scripts/refinement/migrate_phase2.py        # creates the two tables
+# add [stability_check] section to engine/config.toml as above
+sudo systemctl restart birdengine.service           # producer picks up enabled
+sudo systemctl enable --now birdengine-stability.service  # worker drains queue
+```
+
 ## File Structure
 
 ```
 engine/
 ├── engine.py                  # Main engine (1100+ lines)
+├── bbox.py                    # Phase 1: heuristic bbox computation
+├── stability.py               # Phase 2: stability check worker + enqueue helper
 ├── config.toml                # Local configuration (not in git)
 ├── config.toml.example        # Template for new installations
 ├── record.sh                  # Audio capture via arecord
@@ -386,6 +447,7 @@ engine/
 ├── quantize_perch_mac.py      # Quantization script (run on Mac/x86)
 ├── birdengine.service         # systemd service
 ├── birdengine-recording.service
+├── birdengine-stability.service  # Phase 2 worker (disabled by default)
 ├── ttyd.service               # Web terminal
 ├── venv/                      # Python virtual environment (not in git)
 ├── audio/

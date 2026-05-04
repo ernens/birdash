@@ -2,6 +2,95 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.50.1] — 2026-05-04
+
+### Fixed
+
+- **`/api/flagged-detections` was silently dropping morning detections
+  on busy days.** The endpoint applied `LIMIT ?` (capped at 2000) at SQL
+  level *before* running the flagging rules, so on days with > 2000
+  detections (most spring days easily clear 4000) any flagged hit from
+  the early hours was invisible to `review.html`, `dashboard.html`, and
+  the menu badge in `bird-vue-core.js`. Scan now covers the entire date
+  range; the user-supplied `limit` applies after JS-side filtering, so
+  callers still get ≤ limit results but those results are drawn from
+  the full range. Response gains a `returned` field next to `total`
+  so the UI can show "showing 500 of 1247 flagged" accurately. Surfaced
+  while validating Phase 2 stability checks — two morning unstable
+  flags from May 2 weren't appearing despite being in the database.
+
+## [1.50.0] — 2026-05-04
+
+### Added
+
+- **Detection Refinement — Phase 2: stability check worker.** A new
+  background service `birdengine-stability.service` that recenters a
+  5 s window on the bbox peak from Phase 1 and re-runs Perch to test
+  whether the model's confidence holds up. Detections that lose
+  > 50 % confidence on recentering get tagged `unstable` — the original
+  window probably caught the wrong signal, or the model was leaning on
+  context outside the actual vocalization. Disabled by default; opt-in
+  via `[stability_check] enabled = true` in `engine/config.toml`.
+  Surfaces in the existing flagged-detection paths via a new
+  `recentering_unstable` rule in `config/detection_rules.json` —
+  zero new client UI. New tables `detection_stability_v1` (results)
+  and `stability_queue` (pending work) live alongside `detection_bbox_v1`
+  in `birds.db`. CLI mode `python stability.py --once <file>` for
+  smoke-testing without DB writes. Inference time on Pi 5: 1.5–9 s
+  per check (Perch warmup is the only ~10 s outlier).
+
+## [1.49.1] — 2026-05-04
+
+### Added
+
+- **Detection Refinement — Phase 1.5: per-family bands + quality filters.**
+  The bbox heuristic now applies a `FAMILY_BANDS` lookup *before* the
+  ORDER fallback — corvids (Corvus, Pica, …) are Passeriformes by
+  taxonomy but vocalize at 200–3000 Hz, well below the 1000–8000 Hz
+  Passeriformes default, which produced misleading bboxes (Phase 0
+  cases 0078, 0120). Two new post-bbox filters reject suspect outputs
+  before write: `SNR < 2.0` (case 0045: peak-vs-mean barely above the
+  noise floor, bbox is just bruit) and `truncated AND width < 0.3 s`
+  (case 0120: clip-edge artifact). Algorithm version bumped to
+  `heuristic_v1_1`; both `engine/bbox.py` (live) and the offline
+  `scripts/refinement/backfill_bbox.py` switched to UPSERT
+  (`ON CONFLICT(file_name) DO UPDATE`) so a re-run of the backfill
+  upgrades existing rows in place — no separate migration needed.
+  The backfill also now `DELETE`s pre-existing rows when the new
+  algorithm rejects, so stale `heuristic_v1` bboxes don't survive
+  silently when the new filter says no.
+
+## [1.49.0] — 2026-05-04
+
+### Added
+
+- **Detection Refinement — Phase 1C: live bbox at detection time.**
+  The post-process daemon thread now computes a heuristic bbox from
+  each just-extracted MP3 and INSERTs into `detection_bbox_v1`, so new
+  detections land with a bbox immediately instead of waiting on a
+  periodic backfill. Mirrors `scripts/refinement/backfill_bbox.py`
+  verbatim (same SciPy peak + half-energy widening, same ORDER → band
+  lookup) under `algorithm_version='heuristic_v1'` so live and historical
+  rows stay schema-compatible. Errors swallowed at warning level — a
+  bbox failure must never poison the inference pipeline.
+
+## [1.48.0] — 2026-05-03
+
+### Added
+
+- **Detection Refinement — Phase 1B: bbox overlay on spectrograms.**
+  Every spectrogram in the dashboard (today.html cards, full-screen
+  modal opened from any thumbnail, future review.html) now overlays
+  an amber dashed rectangle on the area where the heuristic localized
+  the detected vocalization. Fetched on demand from
+  `/api/detections/bbox?file=<File_Name>`, painted directly on the
+  canvas (Vue 3's vdom strips non-Vue siblings, so SVG overlays would
+  vanish on every redraw — canvas paint is immune). Toggle button on
+  the modal lets the user hide/show; preference persists in
+  `localStorage` (`birdash:showBbox`). Service worker cache version
+  bumped so clients pick up the new JS without a manual hard reload.
+  4-locale i18n (`bbox_on`, `bbox_off`, `bbox_toggle_title` in fr/en/nl/de).
+
 ## [1.47.2] — 2026-05-03
 
 ### Added
