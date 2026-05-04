@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.50.3] — 2026-05-04
+
+### Fixed
+
+- **Setup wizard popping intermittently on already-configured installs.**
+  Three reinforcing changes:
+  - Ship the `setup-completed.json` backfill that was sitting uncommitted
+    on bird.local. Pis without the flag (mickey, biloute, anything set up
+    before 1.43) now get auto-marked as completed on the first
+    `/api/setup/status` call after pull.
+  - Backfill triggers as soon as **location** is set (lat/lon ≠ 0,0). The
+    old gate also required audio_config.json with a `device_id`, which
+    legacy installs running off `birdnet.conf` REC_CARD don't have, so
+    the backfill never fired and the wizard kept popping.
+  - `detectGaps()` now treats a non-empty `REC_CARD` in birdnet.conf as a
+    valid audio configuration. Modern installs (audio_config.json) and
+    legacy installs (REC_CARD only) both register as "audio configured".
+  - **Auto-pop rule tightened to `!flag && gaps.location`.** Mere flag
+    absence is no longer enough — the install must also have lat/lon=0,0
+    (the wizard's primary purpose). Anything else stays `needed: false`,
+    so transient config-read hiccups during a service restart no longer
+    surface the modal on a healthy install. Settings still surfaces gaps
+    as warnings.
+
 ## [1.50.2] — 2026-05-04
 
 ### Added

@@ -167,21 +167,55 @@ async function readSetupFlag() {
   } catch { return null; }
 }
 
+async function backfillSetupFlag() {
+  // Pre-existing installs (before the wizard shipped, or set up by editing
+  // configs directly) have no flag file but are already configured. Write
+  // one so the wizard doesn't auto-pop on every fresh browser/PC.
+  const flag = {
+    completed_at: new Date().toISOString(),
+    version: 1,
+    backfilled: true,
+  };
+  try {
+    const tmp = SETUP_FLAG + '.tmp';
+    await fsp.writeFile(tmp, JSON.stringify(flag, null, 2));
+    await fsp.rename(tmp, SETUP_FLAG);
+    return flag;
+  } catch { return null; }
+}
+
 async function detectGaps(parseBirdnetConf) {
   // What's missing for a usable install? Empty/zero lat/lon counts as a
   // gap because solar/lunar/weather/eBird filtering all need it.
   const gaps = { location: false, audio_device: false };
+  let conf = null;
   try {
-    const conf = await parseBirdnetConf();
+    conf = await parseBirdnetConf();
     const lat = parseFloat(conf.LATITUDE || conf.LAT || '0');
     const lon = parseFloat(conf.LONGITUDE || conf.LON || '0');
     if ((lat === 0 && lon === 0) || isNaN(lat) || isNaN(lon)) gaps.location = true;
   } catch { gaps.location = true; }
+  // Audio is configured if EITHER audio_config.json has a device_id (modern
+  // path) OR birdnet.conf has a non-empty REC_CARD (legacy path that pre-
+  // dates the wizard). Marking legacy installs as "audio missing" caused
+  // false-positive wizard pops on Pis that have been recording for years.
   try {
     const audioCfgPath = path.join(PROJECT_ROOT, 'config', 'audio_config.json');
     const cfg = JSON.parse(await fsp.readFile(audioCfgPath, 'utf8'));
-    if (!cfg || !cfg.device_id) gaps.audio_device = true;
-  } catch { gaps.audio_device = true; }
+    if (cfg && cfg.device_id) {
+      // OK — modern config present.
+    } else if (conf && conf.REC_CARD && String(conf.REC_CARD).trim()) {
+      // Legacy: REC_CARD set, no audio_config.json yet.
+    } else {
+      gaps.audio_device = true;
+    }
+  } catch {
+    if (conf && conf.REC_CARD && String(conf.REC_CARD).trim()) {
+      // Legacy fallback: audio_config.json missing but REC_CARD is set.
+    } else {
+      gaps.audio_device = true;
+    }
+  }
   return gaps;
 }
 
@@ -287,13 +321,23 @@ function handle(req, res, pathname, ctx) {
   // GET /api/setup/status
   if (req.method === 'GET' && pathname === '/api/setup/status') {
     (async () => {
-      const flag = await readSetupFlag();
+      let flag = await readSetupFlag();
       const gaps = await detectGaps(parseBirdnetConf);
-      // Once the user has completed the wizard, trust the flag and never
-      // auto-reopen — transient read failures (service restart, concurrent
-      // writes) used to surface as false-positive gaps and re-pop the modal.
-      // Gaps stay in the response for Settings to surface as warnings.
-      const needed = !flag;
+      // Backfill the flag for pre-existing installs that have a real
+      // location set (lat/lon ≠ 0,0) — that's the unambiguous signal of
+      // "install has been configured by hand, just never went through the
+      // wizard". Audio gaps alone don't block the backfill: legacy installs
+      // often work fine via birdnet.conf REC_CARD without audio_config.json.
+      if (!flag && !gaps.location) {
+        flag = await backfillSetupFlag();
+      }
+      // Auto-pop the wizard ONLY when both are true:
+      //   - no completion flag exists
+      //   - location is missing (lat/lon=0,0 — the wizard's primary purpose)
+      // Anything else (transient read failure, audio config quirk) leaves
+      // `needed: false` so the modal doesn't surprise users on a working
+      // install. Gaps stay in the response so Settings can warn the user.
+      const needed = !flag && gaps.location;
       res.writeHead(200, JSON_CT);
       res.end(JSON.stringify({
         needed,
