@@ -462,6 +462,22 @@ class BirdEngine:
                               self.secondary_model.name, basename, e)
             self._secondary_queue.task_done()
 
+    def _move_to_dropped(self, file_path, source):
+        # Without this move, a service restart re-scans the WAV, the filter
+        # fires again, and the file accumulates in incoming/ forever — the
+        # in-memory processed_files set is wiped on every restart.
+        try:
+            if not os.path.exists(file_path):
+                return
+            processed_dir = self.config["audio"]["processed_dir"]
+            base = os.path.join(processed_dir, source) if source else processed_dir
+            target_dir = os.path.join(base, "dropped")
+            os.makedirs(target_dir, exist_ok=True)
+            shutil.move(file_path, os.path.join(target_dir, os.path.basename(file_path)))
+        except Exception as e:
+            log.warning("Could not move %s out of incoming: %s",
+                        os.path.basename(file_path), e)
+
     def process_file(self, file_path):
         """Analyze a single WAV file with primary model, queue for secondary.
 
@@ -536,6 +552,8 @@ class BirdEngine:
                                 log.info("[privacy] deleted %s (RGPD)", basename)
                             except OSError as e:
                                 log.warning("[privacy] could not delete %s: %s", basename, e)
+                        else:
+                            self._move_to_dropped(file_path, source)
                         self._quality_inc("privacy_dropped")
                         self.processed_files.add(basename)
                         return
@@ -545,6 +563,7 @@ class BirdEngine:
                         log.info("[dog] DROP %s — bark=%.2f (top=%s %.2f) cooldown %.0fs",
                                  basename, dog, top_label, top_score,
                                  self.dog_cooldown_sec)
+                        self._move_to_dropped(file_path, source)
                         self._quality_inc("dog_dropped")
                         self.processed_files.add(basename)
                         return
@@ -558,6 +577,7 @@ class BirdEngine:
                 remaining = self._dog_silence_until - time.time()
                 log.info("[dog] cooldown active — skip %s (%.0fs remaining)",
                          basename, remaining)
+                self._move_to_dropped(file_path, source)
                 self._quality_inc("dog_cooldown_skipped")
                 self.processed_files.add(basename)
                 return
