@@ -1,0 +1,32 @@
+/* ────────────────────────────────────────────────────────────────────────
+   Waddenzee — panoramic body background
+   À ajouter à la fin de public/css/bird-styles.css (ou juste après le
+   bloc data-viz du thème waddenzee).
+   Entièrement scopé à [data-theme="waddenzee"] — n'affecte aucun autre thème.
+   ──────────────────────────────────────────────────────────────────────── */
+
+[data-theme="waddenzee"] body { position: relative; }
+
+[data-theme="waddenzee"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: url("../img/waddenzee-bg.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+[data-theme="waddenzee"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 1200px 700px at 80% -10%, rgba(201,163,107,.18), transparent 60%),
+    radial-gradient(ellipse 1400px 800px at 10% 110%, rgba(107,143,168,.18), transparent 60%),
+    linear-gradient(180deg, rgba(216,225,232,.78) 0%, rgba(216,225,232,.86) 50%, rgba(227,220,208,.82) 100%);
+}
