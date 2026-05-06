@@ -17,6 +17,7 @@ const { db, dbWrite, birdashDb, taxonomyDb, SONGS_DIR,
 const _alerts        = require('./lib/alerts');
 const _backupRoutes  = require('./routes/backup');
 const _timelineRoutes = require('./routes/timeline');
+const _calendarRoutes = require('./routes/calendar');
 const _systemRoutes  = require('./routes/system');
 const _whatsNewRoutes = require('./routes/whats-new');
 const _dataRoutes    = require('./routes/data');
@@ -305,6 +306,7 @@ const server = http.createServer((req, res) => {
   if (_audioRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_backupRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_timelineRoutes.handle(req, res, pathname, _routeCtx)) return;
+  if (_calendarRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_systemRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_whatsNewRoutes.handle(req, res, pathname, _routeCtx)) return;
   if (_dataRoutes.handle(req, res, pathname, _routeCtx)) return;

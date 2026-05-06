@@ -469,6 +469,42 @@ const app = createApp({
       try {
         const conf = BIRD_CONFIG.defaultConfidence;
 
+        // Fast path : single server endpoint backed by daily_stats /
+        // species_stats (~27k rows) instead of 7 client-side queries against
+        // the full detections table (~436k+). Falls back to the legacy
+        // per-query path on 400 — currently when conf differs from 0.7,
+        // since count_07 is the only pre-aggregated confidence bucket.
+        if (Math.abs(conf - 0.7) < 0.001) {
+          try {
+            const r = await fetch(`${BIRD_CONFIG.apiUrl}/calendar/month?from=${from}&to=${to}&conf=${conf}`);
+            if (r.ok) {
+              const data = await r.json();
+              dailyData.value = data.daily;
+              monthMeta.value = data.meta;
+              maxDet = data.maxDet || 1;
+              const firstEverDate = data.firstEverDate;
+              const ageDays = firstEverDate
+                ? Math.floor((Date.now() - new Date(firstEverDate + 'T12:00:00').getTime()) / 86400000)
+                : 0;
+              stationMatured.value = ageDays >= 30;
+
+              const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+              if (todayStr.startsWith(monthPrefix)) {
+                selectedDate.value = todayStr;
+                loadDayDetails(todayStr);
+              } else {
+                selectedDate.value = null;
+              }
+              loading.value = false;
+              firstLoad.value = false;
+              return;
+            }
+            console.warn('[calendar] fast path returned', r.status, '— falling back to legacy queries');
+          } catch (e) {
+            console.warn('[calendar] fast path failed, falling back:', e);
+          }
+        }
+
         // 1. Daily counts
         const rows = await birdQuery(
           `SELECT Date as date, COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp
