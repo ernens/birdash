@@ -3753,3 +3753,34 @@ select, input[type="text"], input[type="number"], textarea {
 .bird-icon.icon-md { width: 18px; height: 18px; }
 .bird-icon.icon-lg { width: 22px; height: 22px; }
 .bird-icon.icon-xl { width: 32px; height: 32px; }
+
+/* ────────────────────────────────────────────────────────────────────────
+   Waddenzee — panoramic body background
+   Entièrement scopé à [data-theme="waddenzee"] — n'affecte aucun autre thème.
+   ──────────────────────────────────────────────────────────────────────── */
+
+[data-theme="waddenzee"] body { position: relative; }
+
+[data-theme="waddenzee"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: url("../img/waddenzee-bg.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+[data-theme="waddenzee"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 1200px 700px at 80% -10%, rgba(201,163,107,.18), transparent 60%),
+    radial-gradient(ellipse 1400px 800px at 10% 110%, rgba(107,143,168,.18), transparent 60%),
+    linear-gradient(180deg, rgba(216,225,232,.78) 0%, rgba(216,225,232,.86) 50%, rgba(227,220,208,.82) 100%);
+}
