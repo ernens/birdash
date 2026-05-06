@@ -171,6 +171,7 @@
     { id:'ocean',       label:'Ocean',        colors:['#22d3ee','#0a1220'] },
     { id:'dusk',        label:'Dusk',         colors:['#f472b6','#161218'] },
     { id:'sepia',       label:'Sepia',        colors:['#8b5a2b','#f5ecd9'] },
+    { id:'waddenzee',   label:'Waddenzee',    colors:['#6b8fa8','#d8e1e8'] },
     { id:'colonial',    label:'Colonial',     colors:['#7a1e14','#e5d6b0'] },
     { id:'jungle',      label:'Jungle',       colors:['#3fb886','#0a1612'] },
     { id:'lab',         label:'Lab',          colors:['#0f5b6b','#ffffff'] },

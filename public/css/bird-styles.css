@@ -279,6 +279,65 @@
   --data-abundance-3: #2e2810;
 }
 
+/* ── Waddenzee — Mer du Nord, une heure avant le couchant ─────────────────
+   Light theme. Bleus pastel, sable rosé, roseaux dorés. */
+[data-theme="waddenzee"] {
+  --bg-deep:      #b9c8d6;
+  --bg-page:      #d8e1e8;
+  --bg-card:      #eaeef1;
+  --bg-card2:     #dde3e8;
+  --bg-hover:     #cdd6dd;
+  --bg-input:     #e4eaee;
+  --border:       #aebcc8;
+  --border-light: #c2cdd7;
+
+  --accent:     #6b8fa8;
+  --accent-dim: #4f7088;
+  --on-accent:  #f5f7f9;
+
+  /* light theme — override dark-mode amber defaults */
+  --amber:     #c9a36b;
+  --amber-dim: #a07a3f;
+  --warning:   #c9a36b;
+
+  --danger:  #c47a7a;
+  --success: #8aa982;
+  --info:    #8aa3bf;
+  --blue:    #8aa3bf;
+
+  --text-main:  #2a3a48;
+  --text-muted: #58708a;
+  --text-faint: #8ea3b6; /* decorative only */
+
+  --bg-spectro:      #1c2832;
+  --text-spectro:    #6b8fa880;
+  --scrollbar-thumb: #aebcc8;
+  --scrollbar-track: #dde3e8;
+
+  --shadow:        0 6px 28px rgba(60,88,110,.14);
+  --shadow-card:   0 1px 2px rgba(60,88,110,.08), 0 1px 3px rgba(60,88,110,.10);
+  --overlay-scrim: rgba(42,58,72,.45);
+  --overlay-line:  rgba(42,58,72,.10); /* light theme override */
+}
+
+/* Waddenzee data-viz — couchant sur la baie */
+[data-theme="waddenzee"] {
+  --data-night: #4a6478;
+  --data-dawn:  #c9a36b;
+  --data-day:   #8aa982;
+  --data-dusk:  #c47a7a;
+
+  --data-abundance-0: #cfd9df;
+  --data-abundance-1: #9eb5c4;
+  --data-abundance-2: #6b8fa8;
+  --data-abundance-3: #3f6480;
+
+  --data-cat-1: #6b8fa8; --data-cat-2: #8aa982;
+  --data-cat-3: #c9a36b; --data-cat-4: #c47a7a;
+  --data-cat-5: #8aa3bf; --data-cat-6: #b09bb8;
+  --data-cat-7: #8a9ba0; --data-cat-8: #d4b88f;
+}
+
 /* ── Colonial — Carnet 1930, parchemin vieilli, encre fer-gallique ────────
    Ambiance "coffre colonial belge" : papier parchemin teinté de thé, encre
    walnut, accents terreux (mousse/ocre/rouille/baie/ciel). Typographie
@@ -1388,6 +1447,7 @@ select, input[type="text"], input[type="number"], textarea {
 .theme-dot[data-t="ocean"]       { --preview-accent:#22d3ee; --preview-card:#0f1a2e; --preview-bg:#0a1220; }
 .theme-dot[data-t="dusk"]        { --preview-accent:#f472b6; --preview-card:#1e1820; --preview-bg:#161218; }
 .theme-dot[data-t="sepia"]       { --preview-accent:#8b5a2b; --preview-card:#fbf3e0; --preview-bg:#f5ecd9; }
+.theme-dot[data-t="waddenzee"]   { --preview-accent:#6b8fa8; --preview-card:#eaeef1; --preview-bg:#d4c0a4; }
 .theme-dot[data-t="hicontrast"]  { --preview-accent:#00ff88; --preview-card:#0a0a0a; --preview-bg:#000000; }
 .theme-dot[data-t="solar-dark"]  { --preview-accent:#2aa198; --preview-card:#073642; --preview-bg:#002b36; }
 .theme-dot[data-t="solar-light"] { --preview-accent:#2aa198; --preview-card:#ffffff; --preview-bg:#fdf6e3; }
