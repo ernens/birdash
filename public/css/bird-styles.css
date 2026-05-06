@@ -8,6 +8,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
 /* Lab theme fonts — narrow specimen-label sans + humanist body + data mono. */
 @import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+/* Waddenzee theme fonts — variable serif édito (Fraunces) + Inter étendu. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Inter:wght@400;500;600;700&display=swap');
 
 /* Hide Vue templates until mounted — prevents {{moustache}} flash */
 [v-cloak] { display: none !important; }
@@ -979,6 +981,324 @@
   --data-cat-6: #22d3ee; /* cyan    */
   --data-cat-7: #fb923c; /* orange  */
   --data-cat-8: #f87171; /* red     */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   WADDENZEE — Traitement complet
+   Mer du Nord, une heure avant le couchant. Bleus pastel, sable rosé,
+   roseaux dorés, huîtrier-pie en accent.
+   Tout est scopé à [data-theme="waddenzee"]. Placé APRÈS le :root tardif
+   "Polices & constantes" pour gagner la cascade sur --font-*.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1) Typographie ────────────────────────────────────────────────────── */
+[data-theme="waddenzee"] {
+  --font-display: 'Fraunces', 'Plus Jakarta Sans', Georgia, serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+}
+[data-theme="waddenzee"] h1,
+[data-theme="waddenzee"] h2,
+[data-theme="waddenzee"] .card-title,
+[data-theme="waddenzee"] .section-title,
+[data-theme="waddenzee"] .brand-name {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "SOFT" 50;
+  letter-spacing: -.012em;
+  font-weight: 500;
+}
+[data-theme="waddenzee"] .bf-det-sci,
+[data-theme="waddenzee"] .cal-panel-sp-sci,
+[data-theme="waddenzee"] .cmp2-id-sci,
+[data-theme="waddenzee"] .cmp-species-sci {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ── 2) Body — panorama fixe + voile pastel ────────────────────────────── */
+[data-theme="waddenzee"] body { position: relative; }
+[data-theme="waddenzee"] body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -2;
+  background-image: url("../img/waddenzee-bg.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+[data-theme="waddenzee"] body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 1200px 700px at 80% -10%, rgba(201,163,107,.18), transparent 60%),
+    radial-gradient(ellipse 1400px 800px at 10% 110%, rgba(107,143,168,.18), transparent 60%),
+    linear-gradient(180deg, rgba(216,225,232,.82) 0%, rgba(216,225,232,.88) 50%, rgba(227,220,208,.84) 100%);
+}
+
+/* ── 3) Cartes — "plage à marée basse" : sable→mer ─────────────────────── */
+[data-theme="waddenzee"] .card {
+  background:
+    linear-gradient(180deg,
+      #efe6d8 0%,
+      #eaeef1 28%,
+      #eaeef1 72%,
+      #dde5ec 100%);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.7) inset,
+    0 1px 2px rgba(60,88,110,.06),
+    0 4px 12px rgba(60,88,110,.08);
+  border-radius: var(--radius-lg);
+}
+[data-theme="waddenzee"] .kpi-card {
+  background:
+    linear-gradient(180deg, #efe6d8 0%, #eaeef1 60%, #dde5ec 100%);
+}
+[data-theme="waddenzee"] .kpi-value,
+[data-theme="waddenzee"] .d-kpi-value,
+[data-theme="waddenzee"] .k-kpi-value {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  font-weight: 400;
+  letter-spacing: -.02em;
+  color: var(--text-main);
+}
+
+/* ── 4) Header & navigation — bandeau sable, accent bleu mer ───────────── */
+[data-theme="waddenzee"] .app-header,
+[data-theme="waddenzee"] .app-nav {
+  background:
+    linear-gradient(180deg, #e8dcc8 0%, #ddd1bb 100%);
+  border-bottom: 1px solid #c9b896;
+}
+[data-theme="waddenzee"] .nav-section-btn { color: #58708a; }
+[data-theme="waddenzee"] .nav-section-btn:hover {
+  background: rgba(107,143,168,.08);
+  color: var(--accent-dim);
+}
+[data-theme="waddenzee"] .nav-section-btn.active {
+  color: var(--accent-dim);
+  border-bottom-color: var(--accent);
+  background: rgba(107,143,168,.06);
+}
+[data-theme="waddenzee"] .brand-name { color: var(--accent-dim); }
+[data-theme="waddenzee"] .brand-model {
+  background: rgba(107,143,168,.16);
+  color: var(--accent-dim);
+}
+[data-theme="waddenzee"] .hdr-toggle {
+  background: rgba(255,255,255,.55);
+  border-color: #c2cdd7;
+}
+[data-theme="waddenzee"] .hdr-menu {
+  background: linear-gradient(180deg, #f3eee4, #eaeef1);
+  border-color: #c2cdd7;
+}
+
+/* ── 5) Drawer mobile (Birdash : .mob-drawer*) ─────────────────────────── */
+[data-theme="waddenzee"] .mob-drawer {
+  background:
+    linear-gradient(180deg, #e8dcc8 0%, #d6dde4 100%);
+  border-right: 1px solid #c9b896;
+}
+[data-theme="waddenzee"] .mob-drawer-header {
+  background: linear-gradient(180deg, #e8dcc8, #ddd1bb);
+  border-bottom: 1px solid #c9b896;
+}
+
+/* ── 6) Boutons ────────────────────────────────────────────────────────── */
+[data-theme="waddenzee"] .btn-primary {
+  background: linear-gradient(180deg, #7a9eb6 0%, #6b8fa8 100%);
+  color: #f5f7f9;
+  border: 1px solid #4f7088;
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 1px 2px rgba(60,88,110,.18);
+  transition: all .15s ease;
+}
+[data-theme="waddenzee"] .btn-primary:hover {
+  background: linear-gradient(180deg, #5e83a0 0%, #4f7088 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.20) inset,
+    0 2px 6px rgba(60,88,110,.28);
+  transform: translateY(-1px);
+}
+[data-theme="waddenzee"] .btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(60,88,110,.20) inset;
+}
+[data-theme="waddenzee"] .btn-secondary,
+[data-theme="waddenzee"] .btn {
+  background: rgba(255,255,255,.55);
+  color: var(--text-main);
+  border: 1px solid #c2cdd7;
+}
+[data-theme="waddenzee"] .btn-secondary:hover,
+[data-theme="waddenzee"] .btn:hover {
+  background: #fff;
+  border-color: var(--accent);
+}
+
+/* ── 7) Badges & chips — sable / oyats / huîtrier ──────────────────────── */
+[data-theme="waddenzee"] .badge,
+[data-theme="waddenzee"] .chip,
+[data-theme="waddenzee"] .tag {
+  background: rgba(201,163,107,.18);
+  color: #6b4f2a;
+  border: 1px solid rgba(201,163,107,.4);
+  border-radius: 999px;
+  padding: .15rem .55rem;
+  font-size: .72rem;
+  font-weight: 500;
+}
+[data-theme="waddenzee"] .badge.success,
+[data-theme="waddenzee"] .chip.success {
+  background: rgba(138,169,130,.20);
+  color: #4f6a48;
+  border-color: rgba(138,169,130,.45);
+}
+[data-theme="waddenzee"] .badge.danger,
+[data-theme="waddenzee"] .badge.alert,
+[data-theme="waddenzee"] .chip.danger {
+  background: rgba(196,122,122,.18);
+  color: #7a3838;
+  border-color: rgba(196,122,122,.4);
+}
+[data-theme="waddenzee"] .badge.info,
+[data-theme="waddenzee"] .chip.info {
+  background: rgba(138,163,191,.20);
+  color: #3f5a78;
+  border-color: rgba(138,163,191,.45);
+}
+
+/* ── 8) Inputs & selects ───────────────────────────────────────────────── */
+[data-theme="waddenzee"] input[type="text"],
+[data-theme="waddenzee"] input[type="search"],
+[data-theme="waddenzee"] input[type="number"],
+[data-theme="waddenzee"] input[type="email"],
+[data-theme="waddenzee"] input[type="password"],
+[data-theme="waddenzee"] textarea,
+[data-theme="waddenzee"] select {
+  background: rgba(255,255,255,.7);
+  border: 1px solid #c2cdd7;
+  border-radius: var(--radius);
+  color: var(--text-main);
+  color-scheme: light;
+  transition: border-color .15s, box-shadow .15s;
+}
+[data-theme="waddenzee"] input:focus,
+[data-theme="waddenzee"] textarea:focus,
+[data-theme="waddenzee"] select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(196,122,122,.18),
+    0 0 0 1px var(--accent) inset;
+  background: #fff;
+}
+[data-theme="waddenzee"] input::placeholder,
+[data-theme="waddenzee"] textarea::placeholder {
+  color: #8ea3b6;
+  font-style: italic;
+}
+
+/* ── 9) Spectrogramme — basalte mouillé ────────────────────────────────── */
+[data-theme="waddenzee"] .spectro,
+[data-theme="waddenzee"] .spectrogram,
+[data-theme="waddenzee"] .spectro-canvas,
+[data-theme="waddenzee"] canvas.spectro {
+  background:
+    linear-gradient(180deg, #1c2832 0%, #243440 100%);
+  border: 1px solid #2a3e4e;
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.04) inset,
+    0 2px 8px rgba(28,40,50,.18);
+}
+[data-theme="waddenzee"] .spectro-modal {
+  background: #1c2832;
+  border: 1px solid #2a3e4e;
+}
+
+/* ── 10) Charts — grille/axes teintés mer ──────────────────────────────── */
+[data-theme="waddenzee"] .chart-wrap,
+[data-theme="waddenzee"] .chart {
+  --chart-grid:  rgba(60,88,110,.10);
+  --chart-axis:  rgba(60,88,110,.55);
+  --chart-label: var(--text-muted);
+}
+
+/* ── 11) Scrollbars ────────────────────────────────────────────────────── */
+[data-theme="waddenzee"] * {
+  scrollbar-width: thin;
+  scrollbar-color: #aebcc8 #dde3e8;
+}
+[data-theme="waddenzee"] *::-webkit-scrollbar { width: 10px; height: 10px; }
+[data-theme="waddenzee"] *::-webkit-scrollbar-track {
+  background: rgba(221,227,232,.6);
+}
+[data-theme="waddenzee"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #b8c5d0, #9eafbe);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+[data-theme="waddenzee"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9eafbe, #7e93a4);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* ── 12) Empty states ──────────────────────────────────────────────────── */
+[data-theme="waddenzee"] .hint-empty {
+  color: #58708a;
+  position: relative;
+}
+[data-theme="waddenzee"] .hint-empty::before {
+  content: "";
+  display: block;
+  width: 120px; height: 32px;
+  margin: 0 auto .8rem;
+  opacity: .55;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 64'><g stroke='%233f5260' stroke-width='2.5' fill='none' stroke-linecap='round'><path d='M 30 30 q 8 -7 16 0 q 8 -7 16 0'/><path d='M 90 22 q 7 -6 14 0 q 7 -6 14 0'/><path d='M 150 36 q 9 -7 18 0 q 9 -7 18 0'/><path d='M 200 26 q 6 -5 12 0 q 6 -5 12 0'/></g></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+/* ── 13) Modales & overlays ────────────────────────────────────────────── */
+[data-theme="waddenzee"] .spectro-modal-overlay,
+[data-theme="waddenzee"] .update-modal-backdrop,
+[data-theme="waddenzee"] .share-modal-backdrop,
+[data-theme="waddenzee"] .tl-popup-overlay,
+[data-theme="waddenzee"] .sp-modal-overlay,
+[data-theme="waddenzee"] .bio-info-overlay,
+[data-theme="waddenzee"] .svc-modal-overlay {
+  background:
+    radial-gradient(ellipse at center, rgba(28,40,50,.55) 0%, rgba(42,58,72,.72) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+[data-theme="waddenzee"] .bio-info-modal {
+  background:
+    linear-gradient(180deg, #efe6d8 0%, #eaeef1 30%, #eaeef1 100%);
+  border: 1px solid #c2cdd7;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.6) inset,
+    0 12px 40px rgba(28,40,50,.35);
+}
+
+/* ── 14) Mouvement — dérive lente du panorama (90s) ────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme="waddenzee"] body::before {
+    animation: waddenzee-drift 90s ease-in-out infinite alternate;
+  }
+}
+@keyframes waddenzee-drift {
+  from { background-position: 48% center; }
+  to   { background-position: 52% center; }
 }
 
 /* Paper needs slightly toned-down data colors so the cards don't glare. */
@@ -3753,34 +4073,3 @@ select, input[type="text"], input[type="number"], textarea {
 .bird-icon.icon-md { width: 18px; height: 18px; }
 .bird-icon.icon-lg { width: 22px; height: 22px; }
 .bird-icon.icon-xl { width: 32px; height: 32px; }
-
-/* ────────────────────────────────────────────────────────────────────────
-   Waddenzee — panoramic body background
-   Entièrement scopé à [data-theme="waddenzee"] — n'affecte aucun autre thème.
-   ──────────────────────────────────────────────────────────────────────── */
-
-[data-theme="waddenzee"] body { position: relative; }
-
-[data-theme="waddenzee"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background-image: url("../img/waddenzee-bg.svg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-[data-theme="waddenzee"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 1200px 700px at 80% -10%, rgba(201,163,107,.18), transparent 60%),
-    radial-gradient(ellipse 1400px 800px at 10% 110%, rgba(107,143,168,.18), transparent 60%),
-    linear-gradient(180deg, rgba(216,225,232,.78) 0%, rgba(216,225,232,.86) 50%, rgba(227,220,208,.82) 100%);
-}

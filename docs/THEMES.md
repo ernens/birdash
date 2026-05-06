@@ -1,6 +1,6 @@
 # Theme system
 
-Birdash ships **12 themes** built on a single design-token system in
+Birdash ships **15 themes** built on a single design-token system in
 [`public/css/bird-styles.css`](../public/css/bird-styles.css). This document
 covers the architecture, the cascade tricks that keep it small, and how to
 add a new theme.
@@ -16,7 +16,10 @@ add a new theme.
 | `ocean`       | dark  | cyan            |                                      |
 | `dusk`        | dark  | rose            |                                      |
 | `sepia`       | light | warm brown      | Reading-optimized parchment palette  |
+| `waddenzee`   | light | sea blue        | North-Sea coastal — Fraunces+Inter typography, panoramic SVG backdrop with slow drift, full UI treatment (cards, buttons, badges, spectrograms, modals) |
 | `colonial`    | light | moss green      | 1930 field-notebook carnet — IM Fell typography, paper grain, ochre/rust/berry |
+| `jungle`      | dark  | mint green      | Tropical naturalist — Playfair Display + DM Sans |
+| `lab`         | light | teal            | Specimen-label sans — Archivo Narrow + Source Serif 4 |
 | `solar-light` | light | Solarized teal  | Schoonover's Solarized Light         |
 | `solar-dark`  | dark  | Solarized teal  | Schoonover's Solarized Dark          |
 | `nord`        | dark  | Frost cyan      | Arctic Ice Studio Nord               |
@@ -302,6 +305,35 @@ After phase 4 of the theme refactor, adding a new theme is roughly 30 lines:
    ```
 
 That's the entire process. No JS color logic, no Vue changes, no rebuild.
+
+### Optional: deep UI treatment
+
+Most themes stop after step 6 — they re-skin everything via the token system
+alone. Two themes go further (`colonial`, `waddenzee`) by adding
+component-specific overrides for a stronger atmosphere. The pattern is
+opt-in and entirely scoped to `[data-theme="..."]` so no other theme is
+affected. Typical extras:
+
+- **Custom typography** — `@import` Google Fonts at the top of
+  `bird-styles.css` (must precede any `:root`), then override `--font-display`
+  / `--font-body` *after* the `:root "Polices & constantes"` block so the
+  cascade picks up the theme value. See `waddenzee` for Fraunces+Inter,
+  `colonial` for IM Fell English.
+- **Body backdrop** — a fixed SVG asset under `public/img/` painted via
+  `body::before` (`z-index:-2`) plus a tinted veil via `body::after`
+  (`z-index:-1`). Optionally an ultra-slow `@keyframes` drift, gated behind
+  `@media (prefers-reduced-motion: no-preference)`.
+- **Component-specific gradients** — `.card`, `.kpi-card`, `.app-header`,
+  `.btn-primary`, `.spectro`, modal overlays. Use the theme's accent color
+  with low alpha for hairlines and shadows; keep AA contrast on cards.
+- **Custom scrollbars** (`scrollbar-color` + `::-webkit-scrollbar-thumb`),
+  empty-state silhouettes (inline SVG `data:` URI), italic placeholders.
+
+Important cascade note for fonts: `:root` and `[data-theme="..."]` share
+specificity (0,1,0). The `:root "Polices & constantes"` block sits *after*
+the theme blocks in `bird-styles.css`, so a theme's `--font-display`
+override **must** come *after* that `:root` to win — otherwise it silently
+falls back to Plus Jakarta Sans.
 
 ## Accessibility notes
 
