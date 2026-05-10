@@ -13,6 +13,16 @@
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
   <style>
+    /* KPI card rendered as <button> for keyboard a11y — same reset as
+       today.html so the existing .kpi-card sizing wins. */
+    .kpi-card--btn {
+      font: inherit; color: inherit; cursor: pointer;
+      width: 100%;
+    }
+    .kpi-card--btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
     .featured-tabs {
       display: flex; gap: 0; margin: -.6rem -1rem .8rem;
       border-bottom: 1px solid var(--border);
@@ -275,7 +285,9 @@
         <div class="kpi-value amber">{{kpis.sp || '—'}}</div>
         <div class="kpi-label">{{t('species')}}</div>
       </a>
-      <div class="kpi-card" style="position:relative;cursor:pointer;" @click="toggleRarePanel" :title="t('rare_tooltip')">
+      <button type="button" class="kpi-card kpi-card--btn" style="position:relative;"
+              @click="toggleRarePanel" :title="t('rare_tooltip')"
+              :aria-expanded="rarePanelOpen" aria-haspopup="true">
         <div class="kpi-value" style="color:var(--danger);">{{rareSpeciesToday.length}}</div>
         <div class="kpi-label">{{t('rare_today')}}</div>
         <div v-if="rarePanelOpen && rareSpeciesToday.length" class="new-sp-panel" @click.stop>
@@ -292,7 +304,7 @@
             <span class="rare-badge" style="flex-shrink:0;"><bird-icon name="gem" :size="14" ></bird-icon> {{r.n}}×</span>
           </div>
         </div>
-      </div>
+      </button>
       <a href="today.html" class="kpi-card" style="text-decoration:none;color:inherit;cursor:pointer;">
         <div class="kpi-value" style="color:var(--accent);">{{kpis.lastHour || '—'}}</div>
         <div class="kpi-label">{{t('last_hour')}}</div>
@@ -496,7 +508,8 @@
           <!-- Meta + player + mini-spectro stack -->
           <div class="hero-strip-meta">
             <div class="hero-strip-line">
-              <a class="hero-strip-name species-link" @click="navigateTo('species.html',{species:currentFeatured.row.Com_Name})">
+              <a class="hero-strip-name species-link"
+                 :href="'species.html?species=' + encodeURIComponent(currentFeatured.row.Com_Name)">
                 {{spName(currentFeatured.row.Com_Name, currentFeatured.row.Sci_Name)}}
               </a>
               <span :class="'conf-badge '+(parseFloat(currentFeatured.row.Confidence)>=0.8?'conf-high':parseFloat(currentFeatured.row.Confidence)>=0.6?'conf-mid':'conf-low')">{{fmtConf(currentFeatured.row.Confidence)}}</span>
@@ -654,14 +667,22 @@ const app = createApp({
     const canvasHourly  = ref(null);
     const spectroCanvas = ref(null);
 
-    const kpis    = ref({ det:'', sp:'', conf:'', total:'', lastHour:'', rareToday:'0' });
+    // Initial state — fields populated by loadKpis. `total` and `rareToday`
+    // used to live here but were never read in the template (rare count is
+    // computed from rareSpeciesToday.length directly).
+    const kpis    = ref({ det:'', sp:'', conf:'', lastHour:'' });
     const rarePanelOpen = ref(false);
     function toggleRarePanel(e) {
       if (!rareSpeciesToday.value.length) return;
       rarePanelOpen.value = !rarePanelOpen.value;
       e.stopPropagation();
     }
-    onMounted(() => document.addEventListener('click', () => { rarePanelOpen.value = false; }));
+    // Click-outside closes the rare panel. Capture the handler so we can
+    // remove it on unmount — without that, every page mount stacked another
+    // listener on document and they fired forever on every click.
+    function _closeRareOnClick() { rarePanelOpen.value = false; }
+    onMounted(() => document.addEventListener('click', _closeRareOnClick));
+    onUnmounted(() => document.removeEventListener('click', _closeRareOnClick));
     const lastDet = ref({ loading:true, row:null, photoUrl:null });
     const bestDet = ref({ loading:true, row:null, photoUrl:null });
     const featuredTab = ref('latest'); // 'latest' | 'best'
@@ -825,13 +846,28 @@ const app = createApp({
         const oneHourAgo = new Date(now - 3600000);
         const hh0 = String(oneHourAgo.getHours()).padStart(2,'0');
         const mm0 = String(oneHourAgo.getMinutes()).padStart(2,'0');
-        const [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=? AND Confidence>=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`, CONF]);
+        // Crossing-midnight case: when `now` is e.g. 00:30, oneHourAgo
+        // sits at 23:30 the day before. A naive `Date=today AND Time>=23:30`
+        // returns 0 detections (the rows from 23:30-00:00 yesterday have
+        // Date=yesterday). Run two windowed queries and sum.
+        let lh;
+        if (oneHourAgo.getDate() !== now.getDate()) {
+          const yest = localDateStr(oneHourAgo);
+          const [a, b] = await Promise.all([
+            birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Confidence>=?`,
+                      [yest, `${hh0}:${mm0}:00`, CONF]),
+            birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time<=? AND Confidence>=?`,
+                      [today, `${hh}:${mm}:59`, CONF]),
+          ]);
+          lh = { n: (a[0]?.n || 0) + (b[0]?.n || 0) };
+        } else {
+          [lh] = await birdQuery(`SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Time>=? AND Time<=? AND Confidence>=?`,[today, `${hh0}:${mm0}:00`, `${hh}:${mm}:59`, CONF]);
+        }
         kpis.value = {
           det: td?td.det.toLocaleString():'0', sp: td?td.sp:'0',
           conf: td&&td.conf?td.conf+'%':'—',
           firstDet: td?.first_time ? td.first_time.slice(0, 5) : '—',
           lastHour: lh?lh.n.toLocaleString():'0',
-          rareToday: String(rareSpeciesToday.value.length),
           // deltaPct populated later, once whatsNew context is available.
           // species_richness.deltaPct = (today species count − 30d-median) / median.
           deltaPct: kpis.value?.deltaPct ?? null,
@@ -1098,7 +1134,20 @@ const app = createApp({
       }));
     });
 
-    watch([dataHourly, lang], async () => {
+    // currentHour ticks on hour boundaries so the "you-are-here" bar in the
+    // hourly chart follows the clock. Without this, a session left open
+    // for 1 h+ kept highlighting the hour the user originally landed on.
+    const currentHour = ref(new Date().getHours());
+    let _hourTimer = null;
+    onMounted(() => {
+      _hourTimer = setInterval(() => {
+        const h = new Date().getHours();
+        if (h !== currentHour.value) currentHour.value = h;
+      }, 60 * 1000);
+    });
+    onUnmounted(() => { if (_hourTimer) clearInterval(_hourTimer); });
+
+    watch([dataHourly, lang, currentHour], async () => {
       await nextTick();
       const d = dataHourly.value;
       if (!d || !canvasHourly.value) return;
@@ -1107,7 +1156,7 @@ const app = createApp({
       const muted  = cs.getPropertyValue('--text-muted').trim();
       const gridC  = cs.getPropertyValue('--border').trim() + '40';
       const txtC   = muted;
-      const curH = new Date().getHours();
+      const curH = currentHour.value;
       const vals = d.vals || d;            // backwards-compat with old shape
       const baseline = d.baseline || null;  // null when < 30 days of history
       // Phase 3: highlight bars > 1.5× baseline as "unusual peak" (full
