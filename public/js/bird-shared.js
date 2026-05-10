@@ -758,10 +758,23 @@
 
   // ── DSP Pipeline ────────────────────────────────────────────────────────
 
-  /** Fetch + decode audio URL to PCM. */
+  /** Fetch + decode audio URL to PCM. Error carries `.status` (HTTP code or
+   *  0 for network failure) so callers can distinguish 404 (audio pruned)
+   *  from a real decode error without regex-matching the message. */
   async function fetchAndDecodeAudio(url) {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    let resp;
+    try {
+      resp = await fetch(url);
+    } catch (e) {
+      const err = new Error(e.message || 'network error');
+      err.status = 0;
+      throw err;
+    }
+    if (!resp.ok) {
+      const err = new Error('HTTP ' + resp.status);
+      err.status = resp.status;
+      throw err;
+    }
     const arrBuf = await resp.arrayBuffer();
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const buf = await ctx.decodeAudioData(arrBuf);

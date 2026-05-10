@@ -128,6 +128,22 @@
       border: 1px solid var(--border);
       font-family: monospace;
     }
+    /* KPI cards rendered as <button> for keyboard a11y — reset UA chrome
+       so the existing .kpi-card sizing (padding/border/text-align) wins. */
+    .kpi-card--btn {
+      font: inherit; color: inherit; cursor: pointer;
+      width: 100%;
+    }
+    .kpi-card--btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    /* Species name link in player header — accent on hover/focus. Was an
+       <a> with @mouseenter/@mouseleave color hack; now a real link with
+       href so keyboard users get tab-stop and middle-click works. */
+    a.player-name:hover, a.player-name:focus-visible {
+      color: var(--accent) !important;
+    }
     .freq-toggle-btn {
       position: absolute; top: 6px; right: 44px; z-index: 4;
       background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.2);
@@ -203,18 +219,18 @@
          existaient avant — ils répétaient overview/dashboard sans servir
          le poste de travail. -->
     <div class="kpi-strip">
-      <div class="kpi-card" style="cursor:pointer;" @click="newSpOnly = false; sortMode = 'count'"
-           :style="{ borderColor: !newSpOnly ? 'var(--accent)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
-           :title="t('today_kpi_species_tooltip')">
+      <button type="button" class="kpi-card kpi-card--btn" @click="newSpOnly = false; sortMode = 'count'"
+              :style="{ borderColor: !newSpOnly ? 'var(--accent)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
+              :title="t('today_kpi_species_tooltip')">
         <div class="kpi-value amber">{{kpis.sp}}</div>
         <div class="kpi-label">{{t('species')}}</div>
-      </div>
-      <div class="kpi-card" style="cursor:pointer;" @click="toggleNewOnly"
-           :style="{ borderColor: newSpOnly ? 'var(--danger)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
-           :title="t('today_kpi_new_tooltip')">
+      </button>
+      <button type="button" class="kpi-card kpi-card--btn" @click="toggleNewOnly"
+              :style="{ borderColor: newSpOnly ? 'var(--danger)' : 'transparent', borderWidth: '2px', borderStyle: 'solid' }"
+              :title="t('today_kpi_new_tooltip')">
         <div class="kpi-value" style="color:var(--danger);">{{kpis.newSp}}</div>
         <div class="kpi-label">{{t('new_species')}}</div>
-      </div>
+      </button>
       <div class="kpi-card" :title="t('today_kpi_rare_tooltip')">
         <div class="kpi-value" style="color:var(--accent);">{{rareCount}}</div>
         <div class="kpi-label">{{t('today_kpi_rare')}}</div>
@@ -338,7 +354,8 @@
               <span v-else><bird-icon name="bird" :size="16" ></bird-icon></span>
             </div>
             <div class="player-species">
-              <a class="player-name" @click="navigateTo('species.html',{species:selected.Com_Name})" style="cursor:pointer;text-decoration:none;color:inherit;" @mouseenter="$event.target.style.color='var(--accent)'" @mouseleave="$event.target.style.color='inherit'">{{spName(selected.Com_Name, selected.sci)}}</a>
+              <a class="player-name" :href="'species.html?species=' + encodeURIComponent(selected.Com_Name)"
+                 style="text-decoration:none;color:inherit;">{{spName(selected.Com_Name, selected.sci)}}</a>
               <div class="player-sci">{{selected.sci}}</div>
               <div class="player-meta">
                 <span class="conf-badge" :class="parseFloat(currentDet.Confidence)>=0.8?'conf-high':'conf-mid'">
@@ -606,7 +623,7 @@
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useSpeciesNames, useFavorites,
         birdQuery, fmtDate, fmtTime, fmtConf, freshnessLabel,
-        localDateStr, buildAudioUrl, buildSpeciesLinks,
+        localDateStr, buildAudioUrl, buildSpeciesLinks, photoUrl,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav,
         showBboxForFile, attachBboxOverlay,
         navigateTo, useAudioPlayer } = BIRDASH;
@@ -628,7 +645,6 @@ const app = createApp({
     const _urlDate = new URLSearchParams(window.location.search).get('date');
     const today = _urlDate && /^\d{4}-\d{2}-\d{2}$/.test(_urlDate) ? _urlDate : localDateStr();
     const isToday = today === localDateStr();
-    const viewingDate = ref(today);
     const minConf = ref(BIRD_CONFIG.defaultConfidence);
     const searchQ = ref('');
     const newSpOnly = ref(false);
@@ -935,7 +951,7 @@ const app = createApp({
            GROUP BY Com_Name ORDER BY n DESC`, [today, minConf.value]);
         speciesList.value = rows.map(r => ({
           ...r,
-          imgUrl: BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(r.sci || r.Com_Name),
+          imgUrl: photoUrl(r.sci || r.Com_Name),
         }));
         if (rows.length > 0 && !selected.value) {
           const urlSp = new URLSearchParams(window.location.search).get('species');
@@ -948,8 +964,15 @@ const app = createApp({
 
     const selectedHourly = ref(Array(24).fill(0));
 
+    // Load-epoch guard: increments on every selectSpecies/refreshLive cycle.
+    // Awaited tasks check the epoch before committing to selectedDets so a
+    // stale 60 s auto-refresh response can't overwrite the species the
+    // user just clicked into.
+    let _loadEpoch = 0;
+
     async function selectSpecies(sp) {
       if (selected.value?.Com_Name === sp.Com_Name) return;
+      const epoch = ++_loadEpoch;
       stopAudio();
       selected.value      = sp;
       currentDetIdx.value = 0;
@@ -965,41 +988,14 @@ const app = createApp({
             ['SELECT CAST(SUBSTR(Time,1,2) AS INTEGER) as h, COUNT(*) as n FROM active_detections WHERE Date=? AND Com_Name=? AND Confidence>=0.7 GROUP BY h', [today, sp.Com_Name]]
           ).catch(() => []),
         ]);
+        if (epoch !== _loadEpoch) return; // user switched while we awaited
         selectedDets.value = rows;
         const hArr = Array(24).fill(0);
         for (const r of hourlyRows) { if (r.h >= 0 && r.h < 24) hArr[r.h] = r.n || 0; }
         selectedHourly.value = hArr;
-        if (!sp.imgUrl && sp.sci) sp.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sp.sci);
+        if (!sp.imgUrl && sp.sci) sp.imgUrl = photoUrl(sp.sci);
         await loadDetection(0);
       } catch(e) { console.error('selectSpecies:', e); }
-    }
-
-    async function quickValidate(status) {
-      const det = selectedDets.value[currentDetIdx.value];
-      if (!det || !selected.value) return;
-      try {
-        const resp = await fetch(BIRD_CONFIG.apiUrl + '/bulk-validate', {
-          method: 'POST',
-          headers: BIRDASH.authHeaders(),
-          body: JSON.stringify({
-            detections: [{ date: today, time: det.Time, sci_name: selected.value.sci }],
-            status,
-          }),
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.error) throw new Error(data.error || 'HTTP ' + resp.status);
-        // Visual feedback via toast
-        const labels = { confirmed: '✓', doubtful: '?', rejected: '✗' };
-        window.dispatchEvent(new CustomEvent('birdash:success', {
-          detail: `${labels[status]} ${spName(selected.value.Com_Name, selected.value.sci)} ${fmtTime(det.Time)}`
-        }));
-        // Auto-advance to next detection
-        if (currentDetIdx.value < selectedDets.value.length - 1) {
-          await loadDetection(currentDetIdx.value + 1);
-        }
-      } catch(e) {
-        window.dispatchEvent(new CustomEvent('birdash:error', { detail: e.message }));
-      }
     }
 
     async function loadDetection(idx) {
@@ -1041,10 +1037,12 @@ const app = createApp({
         spectro.value = { state:'ready', url, _origUrl: url };
       } catch(e) {
         console.error('[spectro]', e, '| url:', url);
-        const is404 = e.message?.includes('fetch');
+        // fetchAndDecodeAudio throws Error with `.status` (404 = pruned audio,
+        // 0 = network failure, other = HTTP). decode failures (no .status)
+        // mean the file came down but ffmpeg-encoded MP3 is corrupt.
         spectro.value = {
           state:'error',
-          msg: is404 ? t('audio_not_found') : t('audio_decode_error'),
+          msg: e.status === 404 ? t('audio_not_found') : t('audio_decode_error'),
           detail: url.replace(BIRD_CONFIG.audioUrl, '…'),
         };
       }
@@ -1135,8 +1133,10 @@ const app = createApp({
     let _refreshTimer = null;
     async function refreshLive() {
       if (document.hidden || isPlaying.value) return;
+      const epoch = ++_loadEpoch;
       try {
         await Promise.all([loadKpis(), loadSpecies()]);
+        if (epoch !== _loadEpoch) return; // user clicked a species mid-refresh
         // Re-fetch detections for the selected species so newly-arrived
         // entries appear at the top. Keep the user's audio position by
         // re-anchoring currentDetIdx to the same File_Name if it still
@@ -1146,6 +1146,7 @@ const app = createApp({
           if (sp) {
             const currentFile = selectedDets.value[currentDetIdx.value]?.File_Name;
             const rows = await birdQuery(...Q.detectionsForSpecies(today, sp.Com_Name, minConf.value));
+            if (epoch !== _loadEpoch) return;
             selectedDets.value = rows;
             if (currentFile) {
               const idx = rows.findIndex(r => r.File_Name === currentFile);
@@ -1180,9 +1181,12 @@ const app = createApp({
     }
 
     function navDay(dir) {
+      // Anchor at noon-local then walk by setDate so DST shifts can't move
+      // us across midnight. localDateStr keeps everything in Brussels-local
+      // space — toISOString().slice(0,10) would leak UTC at the day edge.
       const d = new Date(today + 'T12:00:00');
       d.setDate(d.getDate() + dir);
-      window.location.href = 'today.html?date=' + d.toISOString().slice(0, 10);
+      window.location.href = 'today.html?date=' + localDateStr(d);
     }
 
     return {
