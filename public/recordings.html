@@ -12,6 +12,17 @@
   <meta property="og:image" content="/birds/img/robin-logo.svg">
   <link rel="stylesheet" href="css/bird-styles.css">
   <link rel="stylesheet" href="css/bird-pages.css">
+  <style>
+    /* Species name link in card header — accent on hover/focus.
+       Replaces a @mouseenter/@mouseleave inline-style hack that wasn't
+       keyboard-reachable. */
+    a.rec-com-name--link {
+      text-decoration: none; color: inherit;
+    }
+    a.rec-com-name--link:hover, a.rec-com-name--link:focus-visible {
+      color: var(--accent);
+    }
+  </style>
   <script src="js/vue.global.prod.min.js"></script>
   <script src="js/birdash-local.js" onerror=""></script>
   <script src="js/bird-config.js"></script>
@@ -52,14 +63,15 @@
               <a :href="'species.html?species='+encodeURIComponent(group.name)" style="font-size:.88rem;font-weight:600;text-decoration:none;color:var(--text-main);">{{spName(group.name, group.sci)}}</a>
               <div style="font-size:.72rem;color:var(--text-muted);font-style:italic;">{{group.sci}}</div>
             </div>
-            <span style="font-size:.72rem;color:var(--accent);font-weight:600;">{{group.dets.length}} det.</span>
           </div>
-          <div v-for="rec in group.dets" :key="rec.uid" style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-top:1px solid var(--border);">
-            <button class="play-btn" style="width:28px;height:28px;font-size:.6rem;" @click="togglePlay(rec)">{{playingUid===rec.uid?'⏹':'▶'}}</button>
-            <span :class="'conf-badge '+(rec.conf>=80?'conf-high':rec.conf>=60?'conf-mid':'conf-low')" style="font-size:.72rem;">{{rec.conf.toFixed(1)}}%</span>
-            <span style="font-size:.72rem;color:var(--text-muted);flex:1;">{{rec.Date}} {{rec.Time.substring(0,5)}}</span>
-            <weather-chip :date="rec.Date" :time="rec.Time"></weather-chip>
-            <button class="dl-btn" @click="openSpectroModal({fileName:rec.File_Name,speciesName:rec.Com_Name,sciName:rec.Sci_Name,confidence:rec.Confidence,date:rec.Date,time:rec.Time})" title="Spectrogramme"><bird-icon name="maximize-2" :size="13"></bird-icon></button>
+          <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-top:1px solid var(--border);">
+            <button class="play-btn" style="width:28px;height:28px;font-size:.6rem;"
+                    :aria-label="t('play')" @click="togglePlay(group.best)">{{playingUid===group.best.uid?'⏹':'▶'}}</button>
+            <span :class="'conf-badge '+(group.best.conf>=80?'conf-high':group.best.conf>=60?'conf-mid':'conf-low')" style="font-size:.72rem;">{{group.best.conf.toFixed(1)}}%</span>
+            <span style="font-size:.72rem;color:var(--text-muted);flex:1;">{{group.best.Date}} {{group.best.Time.substring(0,5)}}</span>
+            <weather-chip :date="group.best.Date" :time="group.best.Time"></weather-chip>
+            <button class="dl-btn" :aria-label="t('spectro_expand')||'Spectrogramme'"
+                    @click="openSpectroModal({fileName:group.best.File_Name,speciesName:group.best.Com_Name,sciName:group.best.Sci_Name,confidence:group.best.Confidence,date:group.best.Date,time:group.best.Time})"><bird-icon name="maximize-2" :size="13"></bird-icon></button>
           </div>
         </div>
       </div>
@@ -101,7 +113,7 @@
           :confidence="fc.confidence.value"
           :conf-editing="fc.confEditing.value"
           :conf-edit-val="fc.confEditVal.value"
-          @update:confidence="v => { fc.confidence.value = v; loadData(); }"
+          @update:confidence="v => { fc.confidence.value = v; loadDataDebounced(); }"
           @start-edit="fc.startEdit()"
           @commit-edit="fc.commitEdit(); loadData();"
           @update:conf-edit-val="v => fc.confEditVal.value = v">
@@ -142,7 +154,8 @@
             <!-- Noms + confiance -->
             <div class="rec-header">
               <div class="rec-names">
-                <a class="rec-com-name" :href="'species.html?species='+encodeURIComponent(rec.Com_Name)" style="text-decoration:none;color:inherit;" @mouseenter="$event.target.style.color='var(--accent)'" @mouseleave="$event.target.style.color='inherit'">{{spName(rec.Com_Name, rec.Sci_Name)}}</a>
+                <a class="rec-com-name rec-com-name--link"
+                   :href="'species.html?species='+encodeURIComponent(rec.Com_Name)">{{spName(rec.Com_Name, rec.Sci_Name)}}</a>
                 <div class="rec-sci-name">{{rec.Sci_Name}}</div>
               </div>
               <div class="rec-badges">
@@ -195,8 +208,11 @@
               <div v-if="spectroLoading===rec.uid" class="rec-spectro-loading">
                 ⏳ {{t('fft_analysis')}}
               </div>
-              <!-- Bouton ouvrir spectro-modal -->
-              <button v-if="!spectroLoading" class="spectro-expand-btn"
+              <!-- Bouton ouvrir spectro-modal — masqué uniquement quand
+                   CETTE carte charge ; v-if="!spectroLoading" cachait
+                   bizarrement le bouton sur toutes les autres cartes
+                   pendant le chargement d'une seule. -->
+              <button v-if="spectroLoading !== rec.uid" class="spectro-expand-btn"
                       @click.stop="openSpectroModal(rec)"
                       :title="t('spectro_expand')||'Agrandir le spectrogramme'"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
               <!-- Badge CLEAN sur le spectrogramme -->
@@ -289,7 +305,7 @@
                 🔍 {{t('species_detail')}}
               </a>
               <div class="rec-links">
-                <a v-for="(lnk,key) in buildSpeciesLinks(rec.Sci_Name, rec.Com_Name)"
+                <a v-for="(lnk,key) in rec.links"
                    :key="key" :href="lnk.url" target="_blank" rel="noopener noreferrer" class="rec-link"
                    :title="lnk.label">
                   {{lnk.icon}}
@@ -318,7 +334,7 @@
 // ── Vue 3 App ─────────────────────────────────────────────────────────────────
 const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
 const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery, fmtConf, localDateStr,
-        buildAudioUrl, buildSpeciesLinks, shortModel,
+        buildAudioUrl, buildSpeciesLinks, shortModel, photoUrl,
         useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
         fetchAndDecodeAudio, drawSpectrogramFromPcm, cleanAudioPipeline, encodeWav } = BIRDASH;
 
@@ -337,6 +353,16 @@ const app = createApp({
     const loading           = ref(true);
     const sortBy            = ref('conf');
     const page              = ref(1);
+
+    // Debounced loadData — the confidence slider emits @input on every
+    // pixel of drag (via FilterConfidence component), which used to fire
+    // a SQL query per event. 250 ms catches a fast drag without making
+    // a deliberate single-step click feel sluggish.
+    let _loadTimer = null;
+    function loadDataDebounced() {
+      if (_loadTimer) clearTimeout(_loadTimer);
+      _loadTimer = setTimeout(() => { _loadTimer = null; loadData(); }, 250);
+    }
 
     // ── Filtres (composables partagés) ────────────────────────────
     const fp = useFilterPeriod({
@@ -443,9 +469,12 @@ const app = createApp({
           ...r,
           uid:         r.Date + '_' + r.Com_Name,
           conf:        parseFloat(r.Confidence) * 100,
-          imgUrl:      null,
-          imgSrc:      null,
+          imgUrl:      photoUrl(r.Sci_Name),
           durationStr: null,
+          // Pre-compute external links once per row (Wikipedia/iNat/eBird)
+          // — recomputing in the v-for ran the helper for every render of
+          // every card, churning new object refs and re-rendering the <a>s.
+          links:       buildSpeciesLinks(r.Sci_Name, r.Com_Name),
         }));
         // Charger les données dans allRecs
         allRecs.value = enriched;
@@ -455,70 +484,27 @@ const app = createApp({
           .map(r => ({ name: r.Com_Name, sci: r.Sci_Name, count: r.rec_count }))
           .sort((a,b) => spName(a.name, a.sci).localeCompare(spName(b.name, b.sci)));
 
-        // Photos : URL directe vers /api/photo — le serveur gère le cache disque.
-        // Assignation synchrone → Vue rend immédiatement les img tags,
-        // le browser charge en parallèle (et met en cache HTTP côté navigateur).
-        for (const r of allRecs.value) {
-          r.imgUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(r.Sci_Name);
-          r.imgSrc = null; // badge de source supprimé (géré côté serveur)
-        }
-
       } catch(e) {
         console.error('[recordings] load error', e);
       }
       loading.value = false;
     }
 
-    // ── Fallback photo si /api/photo échoue ───────────────────────
-    // Tente iNaturalist puis Wikipedia directement depuis le navigateur
-    const _photoFailed = new Set(); // évite les boucles
-    async function onPhotoError(rec) {
-      if (_photoFailed.has(rec.Sci_Name)) { rec.imgUrl = null; return; }
-      _photoFailed.add(rec.Sci_Name);
-
-      // 1. iNaturalist direct
-      try {
-        const tn  = encodeURIComponent(rec.Sci_Name);
-        const res = await fetch(
-          `https://api.inaturalist.org/v1/taxa?taxon_name=${tn}&rank=species&per_page=3`
-        );
-        if (res.ok) {
-          const data  = await res.json();
-          const taxon = data.results?.find(t =>
-            t.name.toLowerCase() === rec.Sci_Name.toLowerCase()
-          );
-          const url = taxon?.default_photo?.medium_url
-                   || taxon?.default_photo?.square_url
-                   || taxon?.default_photo?.url;
-          if (url) { rec.imgUrl = url; return; }
-        }
-      } catch(e) { console.error(e); }
-
-      // 2. Wikipedia direct
-      try {
-        const title = rec.Sci_Name.replace(/ /g, '_');
-        const res   = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const url  = data.thumbnail?.source;
-          if (url) { rec.imgUrl = url; return; }
-        }
-      } catch(e) { console.error(e); }
-
-      rec.imgUrl = null; // placeholder
-    }
-
     // ── Filtres ────────────────────────────────────────────────────
     function loadMore() { page.value++; }
 
     // ── Lecture audio (Web Audio API avec filtres) ─────────────────
+    // Play epoch — incremented every time we start a new playback. The
+    // `ended` listener on the previous Audio element checks the epoch
+    // before calling stopAudio, so a stale onended from track A can't
+    // pause track B that the user just started.
+    let _playEpoch = 0;
     function togglePlay(rec) {
       if (playingUid.value === rec.uid) {
         stopAudio(); return;
       }
       stopAudio();
+      const epoch = ++_playEpoch;
       // Utiliser le blob clean si disponible et mode clean actif
       const cs  = cleanState.value[rec.uid];
       const url = (cs?.mode && _cleanBlobs[rec.uid])
@@ -577,7 +563,10 @@ const app = createApp({
       audio.addEventListener('loadedmetadata', () => {
         rec.durationStr = formatDuration(audio.duration);
       });
-      audio.addEventListener('ended', stopAudio);
+      audio.addEventListener('ended', () => {
+        // Only act on `ended` if this is still the current track.
+        if (epoch === _playEpoch) stopAudio();
+      });
     }
 
     function applyFilterValues(af) {
@@ -771,19 +760,6 @@ const app = createApp({
       return (bytes/1048576).toFixed(2) + ' MB';
     }
 
-    // ── Téléchargement audio ───────────────────────────────────────
-    function downloadAudio(rec) {
-      const url = buildAudioUrl(rec.File_Name);
-      if (!url) return;
-      const cs = cleanState.value[rec.uid];
-      const href = (cs && cs.mode && _cleanBlobs[rec.uid]) ? _cleanBlobs[rec.uid] : url;
-      const ext  = (cs && cs.mode && _cleanBlobs[rec.uid]) ? '.wav' : '.mp3';
-      const a = document.createElement('a');
-      a.href = href;
-      a.download = (rec.Com_Name + '_' + rec.Date + ext).replace(/[^a-zA-Z0-9._-]/g, '_');
-      a.click();
-    }
-
     // Templates helpers (évite les regex literals dans les bindings Vue)
     function dlUrl(rec) {
       const cs = cleanState.value[rec.uid];
@@ -817,6 +793,7 @@ const app = createApp({
     onUnmounted(() => {
       document.removeEventListener('keydown', _onKeydown);
       stopAudio();
+      if (_loadTimer) { clearTimeout(_loadTimer); _loadTimer = null; }
       Object.values(_cleanBlobs).forEach(u => URL.revokeObjectURL(u));
     });
 
@@ -833,17 +810,24 @@ const app = createApp({
 
     const viewTab = ref('library');
 
-    // "Best" view: group by species, top 3 detections by confidence
-    const bestBySpecies = computed(() => {
-      const groups = {};
-      for (const r of filteredRecs.value) {
-        if (!groups[r.Com_Name]) groups[r.Com_Name] = { name: r.Com_Name, sci: r.Sci_Name, imgUrl: r.imgUrl, dets: [] };
-        groups[r.Com_Name].dets.push(r);
-      }
-      return Object.values(groups)
-        .map(g => ({ ...g, dets: g.dets.sort((a, b) => b.Confidence - a.Confidence).slice(0, 3) }))
-        .sort((a, b) => b.dets[0].Confidence - a.dets[0].Confidence);
-    });
+    // "Best" view — best recording per species. The SQL upstream already
+    // does GROUP BY Com_Name + MAX(Confidence) so allRecs has exactly one
+    // row per species (the best). This computed sorts by confidence so
+    // the most-convincing species lead. The previous version pretended
+    // to group "top 3 detections per species" but allRecs never had more
+    // than one row per species — slice(0,3) was a no-op. Realigned to
+    // what the data actually represents.
+    const bestBySpecies = computed(() =>
+      filteredRecs.value
+        .slice()
+        .sort((a, b) => b.Confidence - a.Confidence)
+        .map(r => ({
+          name: r.Com_Name,
+          sci:  r.Sci_Name,
+          imgUrl: r.imgUrl,
+          best: r,
+        }))
+    );
 
     return {
       lang, t, spName, viewTab, bestBySpecies,
@@ -857,7 +841,7 @@ const app = createApp({
       cleanState, _cleanBlobs,
       audioFilters, gainOptions, hpOptions, lpOptions,
       fileInfoUid, fileInfoData,
-      onPhotoError, downloadAudio, dlUrl, dlName,
+      dlUrl, dlName,
       loadData, loadMore, togglePlay, toggleClean, reapplyClean,
       toggleSpectro, buildSpeciesLinks,
       setFilter, toggleFileInfo, fmtSize, shortModel,
