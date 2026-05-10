@@ -2,6 +2,44 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.52.1] — 2026-05-10
+
+Hotfix for a chronic UX bug surfaced today: the spectrogram modal opened
+from `recordings.html` ("best recordings" view) showed an empty canvas
+for the top species pick. Root cause was a structural drift between DB
+and disk that nobody had noticed before.
+
+### Fixed
+
+- **Empty spectrogram modal in the "best recordings" view.** The modal
+  did `fetch()` on the audio file, hit a 404, logged a warning to the
+  console, and left the canvas blank — the user got no signal anything
+  was wrong. BirdNET-Pi prunes audio clips for disk space, but the
+  matching `detections` rows persist forever; measured ~30 % orphan
+  rate on April-May 2026 data. The `recordings.html` "best" query
+  (`GROUP BY Com_Name + MAX(Confidence)`) was statistically guaranteed
+  to land on these orphans for low-count species.
+
+  Two-prong fix:
+  - **Frontend** (`bird-spectro-modal.js`) — detects the 404 and shows
+    a clear "Audio file not found" overlay instead of an empty canvas.
+    Reuses the existing `audio_not_found` i18n key (FR/EN/DE/NL).
+  - **Lazy backend** (`POST /api/recordings/clear-orphan`) — when the
+    modal hits 404, it pings this endpoint so the dangling `File_Name`
+    is cleared. Server independently verifies the file is missing on
+    disk before mutating (path-traversal-safe via the same regex as
+    `purge.js`), so a malicious or buggy client cannot nullify rows
+    whose audio still exists. Each user click amortises the cleanup;
+    cleared rows drop out of `File_Name != ''` queries on next load.
+  - **Eager backend** (`engine._clear_orphan_filenames`) — a daily
+    sweep in the engine main loop builds the on-disk filename set per
+    date and clears `File_Name` on DB rows whose file is missing,
+    catching orphans nobody clicks on. Skips today's date to avoid
+    racing with active extraction. Batches `UPDATE`s by 500 to bound
+    write-lock hold time under dawn-chorus contention. First pass
+    runs ~5 min after engine startup so the historical backlog is
+    cleared without waiting a full day.
+
 ## [1.52.0] — 2026-05-10
 
 Stability and correctness pass following the 2026-05-09 WAL incident.

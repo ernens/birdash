@@ -13,7 +13,7 @@ const QUERY_CACHE_TTL = 2 * 60 * 1000;
 function clearQueryCache() { resultCache.clearAll(); }
 
 function handle(req, res, pathname, ctx) {
-  const { requireAuth, db, dbWrite, readJsonFile, writeJsonFileAtomic, JSON_CT, validateQuery, photoCacheKey, PHOTO_CACHE_DIR, ebirdFreq } = ctx;
+  const { requireAuth, db, dbWrite, readJsonFile, writeJsonFileAtomic, JSON_CT, validateQuery, photoCacheKey, PHOTO_CACHE_DIR, ebirdFreq, SONGS_DIR } = ctx;
 
   // ── Route : GET /api/rare-today ──────────────────────────────────────────
   // Returns species detected today that are genuinely rare in the region
@@ -301,6 +301,57 @@ function handle(req, res, pathname, ctx) {
       res.writeHead(200, JSON_CT);
       res.end('{"ok":true}');
     } catch(e) { console.error('[notes]', e.message); res.writeHead(500, JSON_CT); res.end(JSON.stringify({ error: 'Internal error' })); }
+    return true;
+  }
+
+  // ── Route : POST /api/recordings/clear-orphan ───────────────────────────
+  // Self-healing endpoint: when the spectro modal hits 404 on the audio
+  // file, it pings here so the dangling File_Name reference gets cleared
+  // from `detections`. Without this, the same orphan row keeps surfacing
+  // in the "best recordings" view (GROUP BY Com_Name + MAX(Confidence))
+  // and frustrates the user every time.
+  //
+  // Server verifies the file is actually missing before mutating — a
+  // malicious or buggy client can't nullify rows whose audio still exists.
+  // The detection row itself stays (count/conf are real signal); only the
+  // File_Name column is cleared so the row drops out of File_Name != ''
+  // queries. No auth required: it's a constrained, self-validating op.
+  if (req.method === 'POST' && pathname === '/api/recordings/clear-orphan') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { fileName } = JSON.parse(body);
+        if (typeof fileName !== 'string' || !fileName) {
+          res.writeHead(400, JSON_CT); res.end('{"error":"fileName required"}'); return;
+        }
+        // Same regex as buildAudioUrl / purge.js — avoids path traversal
+        // and rejects malformed names before we touch the filesystem.
+        const m = fileName.match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
+        if (!m || fileName.includes('/') || fileName.includes('..')) {
+          res.writeHead(400, JSON_CT); res.end('{"error":"bad fileName"}'); return;
+        }
+        const species = m[1];
+        const date = m[2];
+        const fp = path.join(SONGS_DIR, date, species, fileName);
+        if (fs.existsSync(fp)) {
+          // File is on disk — refuse to mutate.
+          res.writeHead(409, JSON_CT); res.end('{"error":"file still on disk"}'); return;
+        }
+        const r = dbWrite.prepare('UPDATE detections SET File_Name = \'\' WHERE File_Name = ?').run(fileName);
+        if (r.changes > 0) {
+          // Clear cached "best" / recordings query results so the row
+          // disappears from the UI on next refresh.
+          resultCache.clearAll();
+          console.log(`[orphan-audio] cleared ${r.changes} ref(s) to missing ${fileName}`);
+        }
+        res.writeHead(200, JSON_CT);
+        res.end(JSON.stringify({ ok: true, cleared: r.changes }));
+      } catch (e) {
+        res.writeHead(500, JSON_CT);
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
     return true;
   }
 

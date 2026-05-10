@@ -731,6 +731,111 @@ class BirdEngine:
         except Exception as e:
             log.warning("[db] optimize failed: %s", e)
 
+    def _clear_orphan_filenames(self):
+        """Clear File_Name on detection rows whose audio file is gone from disk.
+
+        BirdNET-Pi prunes audio clips for disk space, but the corresponding
+        detection rows persist forever — measured ~30 % orphan rate on
+        recent data (2026-05-10). The recordings.html "best" view groups
+        by Com_Name + MAX(Confidence) and was surfacing these orphans as
+        the top pick for a species, leading to an empty spectro modal.
+
+        We clear File_Name (not the row) so:
+          - count / confidence statistics stay correct
+          - File_Name != '' filter at query time excludes the row
+          - the row drops out of "best" / recent-recordings views
+        Pairs with a lazy POST /api/recordings/clear-orphan that birdash
+        fires when the modal hits 404 — both routes converge on the same
+        cleanup; this batch one catches rows nobody clicks on.
+
+        Skips today's local date to avoid racing with active extraction.
+        """
+        songs_root = os.path.join(os.path.expanduser("~"), "BirdSongs",
+                                  "Extracted", "By_Date")
+        if not os.path.isdir(songs_root):
+            return
+        today = datetime.date.today().strftime("%Y-%m-%d")
+
+        # Union of dates with files on disk and dates with rows in DB —
+        # catches dates where the directory was wholly purged.
+        try:
+            disk_dates = {d for d in os.listdir(songs_root)
+                          if os.path.isdir(os.path.join(songs_root, d)) and d < today}
+        except OSError as e:
+            log.warning("[orphan-clear] cannot read %s: %s", songs_root, e)
+            return
+        try:
+            with self._db_lock:
+                db_dates = {r[0] for r in self.db.execute(
+                    "SELECT DISTINCT Date FROM detections "
+                    "WHERE File_Name != '' AND Date < ?", (today,)).fetchall()}
+        except Exception as e:
+            log.warning("[orphan-clear] DB date scan failed: %s", e)
+            return
+
+        cleared_total = 0
+        dates_with_orphans = 0
+        for date in sorted(disk_dates | db_dates):
+            if self.shutdown:
+                return
+            # Build the on-disk filename set for this date (across species).
+            present = set()
+            date_path = os.path.join(songs_root, date)
+            if os.path.isdir(date_path):
+                try:
+                    for sp_dir in os.listdir(date_path):
+                        sp_path = os.path.join(date_path, sp_dir)
+                        if not os.path.isdir(sp_path):
+                            continue
+                        try:
+                            for f in os.listdir(sp_path):
+                                if f.endswith(".mp3"):
+                                    present.add(f)
+                        except OSError:
+                            pass
+                except OSError:
+                    pass
+
+            try:
+                with self._db_lock:
+                    rows = self.db.execute(
+                        "SELECT File_Name FROM detections "
+                        "WHERE Date = ? AND File_Name != ''", (date,)).fetchall()
+            except Exception as e:
+                log.warning("[orphan-clear] DB query failed for %s: %s", date, e)
+                continue
+
+            orphan_names = list({r[0] for r in rows if r[0] not in present})
+            if not orphan_names:
+                continue
+
+            # Batch the UPDATE so we don't hold the write lock too long
+            # under dawn-chorus contention (cleared at startup is fine,
+            # but the daily run can hit a busy DB).
+            BATCH = 500
+            for i in range(0, len(orphan_names), BATCH):
+                if self.shutdown:
+                    return
+                chunk = orphan_names[i:i + BATCH]
+                placeholders = ",".join("?" for _ in chunk)
+                try:
+                    with self._db_lock:
+                        cur = self.db.execute(
+                            f"UPDATE detections SET File_Name = '' "
+                            f"WHERE File_Name IN ({placeholders})", chunk)
+                        self.db.commit()
+                        cleared_total += cur.rowcount
+                except Exception as e:
+                    log.warning("[orphan-clear] UPDATE failed on %s: %s", date, e)
+                    break
+            dates_with_orphans += 1
+
+        if cleared_total:
+            log.info("[orphan-clear] cleared %d orphan File_Name ref(s) "
+                     "across %d date(s)", cleared_total, dates_with_orphans)
+        else:
+            log.debug("[orphan-clear] no orphans found")
+
     def _reload_perch_ebird(self):
         """Load (or reload if stale) the eBird presence map used to filter
         Perch detections. Map lives at ~/birdash/config/ebird-frequency.json
@@ -1052,6 +1157,11 @@ class BirdEngine:
         purge_counter = 0
         checkpoint_counter = 0
         optimize_counter = 0
+        # ~24 h worth of cycles at rsync_interval — see _clear_orphan_filenames.
+        # Seed near-trigger so we run within ~5 min of startup the first time
+        # (catches all the orphans accumulated before this version shipped),
+        # then settle into the daily cadence.
+        orphan_counter = max(0, (24 * 3600 // max(rsync_interval, 1)) - 10)
         try:
             while not self.shutdown:
                 # Every 10 cycles (~5 min): purge old WAVs + check model change
@@ -1073,6 +1183,14 @@ class BirdEngine:
                 if optimize_counter >= 120:
                     self._db_optimize()
                     optimize_counter = 0
+                # Daily: scrub orphan File_Name refs (audio pruned but row kept).
+                orphan_counter += 1
+                if orphan_counter >= (24 * 3600 // max(rsync_interval, 1)):
+                    try:
+                        self._clear_orphan_filenames()
+                    except Exception as e:
+                        log.warning("[orphan-clear] unhandled: %s", e)
+                    orphan_counter = 0
                 self._shutdown_event.wait(timeout=rsync_interval)
         except KeyboardInterrupt:
             log.info("Interrupted")

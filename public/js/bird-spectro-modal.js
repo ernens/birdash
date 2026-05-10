@@ -22,6 +22,7 @@
       const { t } = useI18n();
       const modal = _spectroModal;
       const loading = ref(false);
+      const audioMissing = ref(false);
       const isPlaying = ref(false);
       const progress = ref(0);
       const currentTime = ref('0:00');
@@ -165,8 +166,25 @@
         const url = audioUrl.value;
         if (!url) return;
         loading.value = true;
+        audioMissing.value = false;
         try {
           const resp = await fetch(url);
+          // Audio referenced by the DB row is gone from disk (BirdNET-Pi
+          // pruned it for space). Show a clear message and ask the server
+          // to clear the dangling File_Name reference so this row stops
+          // surfacing as a "best" recording.
+          if (resp.status === 404) {
+            audioMissing.value = true;
+            try {
+              fetch('/birds/api/recordings/clear-orphan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileName: modal.fileName }),
+              }).catch(() => {});
+            } catch {}
+            loading.value = false;
+            return;
+          }
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
           const arrBuf = await resp.arrayBuffer();
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -374,6 +392,7 @@
         audioCtx = null; audioBuf = null; pcmData = null;
         _rawPcm = null; _rawSr = 0; _rawAudioBuf = null;
         cleanMode.value = false; processingClean.value = false;
+        audioMissing.value = false;
         isPlaying.value = false;
         progress.value = 0;
         currentTime.value = '0:00';
@@ -470,7 +489,7 @@
       });
 
       return {
-        modal, loading, isPlaying, progress, currentTime, duration,
+        modal, loading, audioMissing, isPlaying, progress, currentTime, duration,
         filters, gainOpts, hpOpts, lpOpts,
         canvas, audioUrl, downloadName,
         loopStart, loopEnd, loopActive,
@@ -540,6 +559,12 @@
          @mousedown="onCanvasMousedown" @mousemove="onCanvasMousemove" @mouseup="onCanvasMouseup">
       <canvas ref="canvas" :width="800" :height="200"></canvas>
       <div v-if="loading || processingClean" class="spectro-modal-loading">{{processingClean ? t('audio_cleaning') : 'Loading...'}}</div>
+      <div v-if="audioMissing" class="spectro-modal-loading"
+           style="background:rgba(120,40,40,.85);color:#fde2e2;font-weight:600;
+                  display:flex;align-items:center;gap:.5rem;">
+        <bird-icon name="alert-triangle" :size="20"></bird-icon>
+        {{t('audio_not_found')}}
+      </div>
       <div v-if="cleanMode && !processingClean"
            style="position:absolute;top:8px;left:10px;z-index:3;background:var(--success,#16a34a);
                   color:#fff;font-size:.7rem;font-weight:700;padding:.18rem .5rem;border-radius:3px;
