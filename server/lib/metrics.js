@@ -16,6 +16,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const promClient = require('prom-client');
+const { localDateStr, localDateOffset, localTimeStr } = require('./local-date');
 
 const register = new promClient.Registry();
 promClient.collectDefaultMetrics({ register, prefix: 'birdash_node_' });
@@ -171,22 +172,25 @@ function _refreshDb() {
     const total = _db.prepare('SELECT COUNT(*) AS n FROM detections').get();
     detectionsTotal.set(total.n || 0);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr();
     const todayRow = _db.prepare('SELECT COUNT(*) AS n, COUNT(DISTINCT Sci_Name) AS s FROM detections WHERE Date = ?').get(today);
     detectionsToday.set(todayRow.n || 0);
     speciesToday.set(todayRow.s || 0);
 
-    // Last hour — Date+Time strings, build a SQL-comparable cutoff.
+    // Last hour — Date+Time strings, build a SQL-comparable cutoff in local time.
     const cutoff = new Date(Date.now() - 3600 * 1000);
-    const cutoffDate = cutoff.toISOString().slice(0, 10);
-    const cutoffTime = cutoff.toISOString().slice(11, 19);
+    const cutoffDate = localDateStr(cutoff);
+    const cutoffTime = localTimeStr(cutoff);
     const lastHour = _db.prepare(
       "SELECT COUNT(*) AS n FROM detections WHERE (Date > ?) OR (Date = ? AND Time >= ?)"
     ).get(cutoffDate, cutoffDate, cutoffTime);
     detectionsLastHour.set(lastHour.n || 0);
 
-    const span30 = new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10);
-    const sp30 = _db.prepare('SELECT COUNT(DISTINCT Sci_Name) AS s FROM detections WHERE Date >= ?').get(span30);
+    const span30 = localDateOffset(-30);
+    // INDEXED BY: without the hint, the planner walks idx_sci_name (full
+    // table scan, ~660 ms on 345k rows) because COUNT(DISTINCT) prefers a
+    // pre-sorted index. idx_date_sci scans only the 30-day window (~25 ms).
+    const sp30 = _db.prepare('SELECT COUNT(DISTINCT Sci_Name) AS s FROM detections INDEXED BY idx_date_sci WHERE Date >= ?').get(span30);
     species30d.set(sp30.s || 0);
 
     const last = _db.prepare('SELECT Date, Time FROM detections ORDER BY Date DESC, Time DESC LIMIT 1').get();

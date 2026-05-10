@@ -383,10 +383,14 @@ function handle(req, res, pathname, ctx) {
         dbWrite.prepare('DELETE FROM detections_trashed WHERE id = ?').run(row.id);
         purged++;
       }
-      // Best-effort: prune empty subdirs in the trash root
+      // Best-effort: prune empty subdirs in the trash root.
+      // spawnSync with an argv array — no shell, so trashRoot can't be
+      // interpreted as multiple tokens or contain metacharacters that
+      // would alter the command (defence in depth: trashRoot derives
+      // from SONGS_DIR which is server-side config, not user input).
       try {
-        const cmd = require('child_process');
-        cmd.execSync(`find "${trashRoot}" -type d -empty -delete 2>/dev/null`, { stdio: 'ignore' });
+        const { spawnSync } = require('child_process');
+        spawnSync('find', [trashRoot, '-type', 'd', '-empty', '-delete'], { stdio: 'ignore' });
       } catch {}
 
       console.log(`[purge] empty-trash: purged ${purged} rows, removed ${removed} files`);

@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const { localDateStr } = require('./local-date');
 
 const PROJECT_ROOT  = path.join(__dirname, '..', '..');
 const APPRISE_CONFIG = path.join(PROJECT_ROOT, 'config', 'apprise.txt');
@@ -103,7 +104,7 @@ function _t(lang, key, vars = {}) {
 }
 
 // ─── Date helpers ────────────────────────────────────────────────────────
-function _isoDate(d) { return d.toISOString().slice(0, 10); }
+function _isoDate(d) { return localDateStr(d); }
 function _fmtShort(d, lang) {
   // dd/mm or mm/dd depending on locale
   const day = String(d.getDate()).padStart(2, '0');

@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
+const { localDateStr } = require('./local-date');
 
 const CONFIG_PATH = path.join(__dirname, '..', '..', 'config', 'telemetry.json');
 
@@ -243,11 +244,11 @@ async function sendDailyReport(db, parseBirdnetConf) {
     const version = _getVersion();
     const { hardware, os } = _getHardwareInfo();
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10);
+    const dateStr = localDateStr(today);
     // Yesterday's complete data (today is still accumulating)
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toISOString().slice(0, 10);
+    const yStr = localDateStr(yesterday);
 
     // Re-read GPS from birdnet.conf (may have changed since registration)
     let lat = null, lon = null, model = '';

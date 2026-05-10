@@ -2,6 +2,101 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.52.0] — 2026-05-10
+
+Stability and correctness pass following the 2026-05-09 WAL incident.
+Twenty files touched, all targeted at long-standing latent bugs surfaced
+during a senior-auditor sweep — no new user-visible features.
+
+### Fixed
+
+- **`birds.db-wal` runaway: 8.6 GB blocked all writes (2026-05-09).**
+  Long-lived readers (birdash, the stability worker) prevented WAL
+  checkpoints from completing for hours; the journal grew unbounded
+  until SQLite returned "database is locked". Three structural changes:
+  - `journal_size_limit = 64 MB` on every writer connection (engine,
+    birdash, stability worker). Caps the WAL after each checkpoint.
+  - `_wal_checkpoint(TRUNCATE)` runs from the engine main loop every
+    ~15 min so a stuck reader is observable (`busy=1` logged) instead
+    of silently growing the WAL.
+  - `busy_timeout=60000` and matching pragmas on the stability worker's
+    enqueue connection (was 10 s, lost writes during dawn-chorus
+    contention).
+
+- **Date helpers leaked UTC across timezone-sensitive code paths.**
+  `Date.toISOString().slice(0, 10)` returns the UTC day; the codebase
+  stores Brussels-local dates in `detections.Date`, so 10 callers were
+  silently wrong between local midnight and ~02:00 (two hours of "today"
+  attributed to yesterday in CEST). New helpers in
+  `server/lib/local-date.js` (`localDateStr`, `localDateOffset`,
+  `localTimeStr`) centralise the conversion. Updated callers: `metrics`,
+  `notification-watcher`, `alerts`, `weekly-digest`, `quality`,
+  `audio/_helpers`, `mqtt-publisher`, `telemetry`, `whats-new-worker`.
+  Time-of-day variant (`slice(11, 19)`) fixed the same way in the
+  notification and MQTT polling cutoffs.
+
+- **Latent shell-injection in trash-directory cleanup.** `purge.js`
+  `execSync`-ed an interpolated trash root path. Replaced with
+  `spawnSync('find', […])` — argv array, no shell.
+
+### Changed
+
+- **Query planner hints on three hot queries.** Default plans were
+  full-scanning a leaf-only index instead of using the date-prefixed
+  composite. Measured on a 345k-row prod DB:
+
+  | Query | Before | After | Hint |
+  |---|---|---|---|
+  | species 30 d (`metrics.js`) | 661 ms | 22 ms (30×) | `INDEXED BY idx_date_sci` |
+  | throttle 7 d (`quality.js`) | 871 ms | 6 ms (145×) | `INDEXED BY idx_date_com` |
+  | rarity cache (`notification-watcher.js`) | 552 ms | 129 ms (4×) | `INDEXED BY idx_date_sci` |
+
+  Both bootstraps (`engine/db.py`, `server/lib/db.js`) now create the
+  required composites; the hints fail loudly on a missing index rather
+  than silently regress to the bad plan.
+
+- **Cleaner index set on `detections`.** Three strict-duplicate indexes
+  carried over from older BirdNET-Pi schemas (`detections_Sci_Name`,
+  `detections_Com_Name`, `idx_date_sciname`) get dropped on engine boot.
+  Frees ~50 MB and removes three B-tree updates per insert during
+  dawn-chorus.
+
+- **`PRAGMA optimize` runs hourly from the engine.** Keeps planner stats
+  fresh without an explicit `ANALYZE`. Pre-fix `sqlite_stat1` was 2× over
+  reality (727k rows recorded, 345k actual after purges) — the planner
+  was making decisions on stats from indexes that no longer existed.
+
+### Added
+
+- **Timezone regression guard** (`tests/timezone-guard.test.js`). Static
+  lint walks `server/` and fails CI on any new
+  `toISOString().slice(0,10)`, `toISOString().split('T')[0]`, or
+  `toISOString().slice(11,19)` outside the explicit allowlist. Plus
+  functional tests under `TZ=Europe/Brussels` verifying the helpers
+  cross midnight and DST correctly.
+
+- **ARCHITECTURE.md — "Why two count columns" section.** Documents the
+  `count` (≥0.5 noise floor, denominator) vs `count_07` (≥0.7 system
+  default, what every UI reads) contract on the four pre-aggregated
+  tables, including the threshold-fast-path / slow-path rule for
+  consumers and the migration constraint.
+
+- **Canonical-index docblock in `engine/db.py`.** Lists the five engine
+  indexes plus the two birdash-side ones with their use cases, so the
+  next person doesn't reintroduce a duplicate "just in case".
+
+### Security
+
+- **`ip-address` XSS** (GHSA-v2v4-37r5-5v8g, transitive via
+  mqtt → socks). Bumped to 10.2.0 via `npm audit fix`; no API change.
+
+- **`updates.js` `_git()` shell-injection contract.** The helper uses
+  `execSync` and was being called with a SHA hundreds of lines from its
+  regex validator. Added a comment-contract on the helper so the
+  validation requirement is visible at the call site (no behaviour
+  change — the SHA is already validated by `/^[0-9a-f]{7,40}$/` at the
+  request boundary).
+
 ## [1.50.4] — 2026-05-04
 
 ### Fixed

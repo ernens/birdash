@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
 const { BIRDNET_CONF } = require('./config');
+const { localDateStr, localDateOffset } = require('./local-date');
 
 /**
  * Start the alert monitoring system.
@@ -325,8 +326,8 @@ async function checkBirdAlerts() {
   if (!th.alert_influx && !th.alert_missing && !th.alert_rare_visitor) return;
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const today = localDateStr();
+    const thirtyDaysAgo = localDateOffset(-30);
 
     // ── Unusual influx: today's count > 3x 30-day daily average ──
     if (th.alert_influx) {

@@ -688,6 +688,49 @@ class BirdEngine:
                 for k, v in snap.items():
                     self._quality_acc[k] += v
 
+    def _wal_checkpoint(self):
+        """Force a TRUNCATE checkpoint on birds.db so the WAL file stays bounded.
+
+        journal_size_limit only kicks in when a checkpoint actually
+        completes — and long-lived readers (birdash, stability worker)
+        can prevent autocheckpoints from finalising for hours. We force
+        one every ~15 min from the engine (the only writer) to make sure
+        the cap takes effect. Returns busy=1 if readers were holding the
+        WAL during the call; that's logged so a stuck WAL is visible in
+        the journal.
+        """
+        try:
+            with self._db_lock:
+                row = self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            if row:
+                busy, log_frames, ckpt = row
+                if busy:
+                    log.warning("[wal] checkpoint busy: %d frames in WAL, %d checkpointed", log_frames, ckpt)
+                else:
+                    log.info("[wal] checkpoint OK: %d frames, %d checkpointed", log_frames, ckpt)
+        except Exception as e:
+            log.warning("[wal] checkpoint failed: %s", e)
+
+    def _db_optimize(self):
+        """Run PRAGMA optimize so the query planner has fresh stats.
+
+        On 2026-05-10 we found that the planner was scanning idx_sci_name
+        (full table) for `WHERE Date >= ? GROUP BY/DISTINCT Sci_Name`
+        instead of using idx_date_sci — multi-second on 345k rows. Stale
+        sqlite_stat1 was a contributing factor (last ANALYZE was at 727k
+        rows; current is 345k after purges).
+
+        PRAGMA optimize is cheap by design: it only re-analyzes indexes
+        whose stats have drifted enough to matter, and it short-circuits
+        when there's nothing to do. Safe to call hourly.
+        """
+        try:
+            with self._db_lock:
+                self.db.execute("PRAGMA optimize")
+            log.debug("[db] optimize OK")
+        except Exception as e:
+            log.warning("[db] optimize failed: %s", e)
+
     def _reload_perch_ebird(self):
         """Load (or reload if stale) the eBird presence map used to filter
         Perch detections. Map lives at ~/birdash/config/ebird-frequency.json
@@ -1007,6 +1050,8 @@ class BirdEngine:
         rsync_interval = self.config["audio"].get("rsync_interval", 30)
 
         purge_counter = 0
+        checkpoint_counter = 0
+        optimize_counter = 0
         try:
             while not self.shutdown:
                 # Every 10 cycles (~5 min): purge old WAVs + check model change
@@ -1017,6 +1062,17 @@ class BirdEngine:
                     self._check_model_change()
                     self._quality_flush()
                     purge_counter = 0
+                # Every 30 cycles (~15 min): force a TRUNCATE checkpoint so
+                # journal_size_limit (set in db.init_db) can actually fire.
+                checkpoint_counter += 1
+                if checkpoint_counter >= 30:
+                    self._wal_checkpoint()
+                    checkpoint_counter = 0
+                # Every 120 cycles (~1 h): keep the planner stats fresh.
+                optimize_counter += 1
+                if optimize_counter >= 120:
+                    self._db_optimize()
+                    optimize_counter = 0
                 self._shutdown_event.wait(timeout=rsync_interval)
         except KeyboardInterrupt:
             log.info("Interrupted")

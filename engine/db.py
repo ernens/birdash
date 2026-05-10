@@ -13,13 +13,21 @@ log = logging.getLogger("birdengine")
 def init_db(db_path):
     """Create the detections database if it doesn't exist + run idempotent migrations."""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    # timeout=30 gives us a 30 s busy-wait when birdash is holding the
-    # write lock (aggregates rebuild, alerts query, etc.) — well beyond
-    # Node's busy_timeout=5000 so we're the patient party rather than
-    # the one raising "database is locked".
-    conn = sqlite3.connect(db_path, check_same_thread=False, timeout=30)
+    # 60 s busy-wait absorbs dawn-chorus contention with three concurrent
+    # writers (engine, stability worker, birdash aggregates refresh) plus
+    # the WAL checkpoint stalls that can pile on top during heavy traffic.
+    # Birdash uses 30 s; the engine staying patient longer means *it*
+    # waits rather than raising "database is locked" — at the cost of a
+    # slightly slower per-detection insert under contention.
+    conn = sqlite3.connect(db_path, check_same_thread=False, timeout=60)
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA busy_timeout=60000")
+    # Cap WAL file after each checkpoint. Default is unlimited; on
+    # 2026-05-09 birds.db-wal grew to 8.6 GB and blocked all writes
+    # because long-lived readers (birdash, stability worker) were
+    # preventing checkpoints from completing. 64 MB is well above
+    # a dawn-chorus burst.
+    conn.execute("PRAGMA journal_size_limit=67108864")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS detections (
             Date DATE,
@@ -38,9 +46,36 @@ def init_db(db_path):
             Source TEXT
         )
     """)
+    # Canonical detection indexes. Birdash bootstrap (server/lib/db.js)
+    # mirrors this list and adds two more (idx_date_conf, idx_date_hour_conf)
+    # used by the quality dashboard and weather JOIN heatmap.
+    #
+    #   idx_date_time — (Date, Time DESC). Last-hour KPI, recent-row scans.
+    #   idx_com_name  — (Com_Name).        Common-name lookup.
+    #   idx_sci_name  — (Sci_Name).        Sci-name lookup.
+    #   idx_date_sci  — (Date, Sci_Name).  Required by INDEXED BY hints in
+    #                                      metrics.js (species 30d) and
+    #                                      notification-watcher.js. Without
+    #                                      it the planner full-scans
+    #                                      idx_sci_name (660 ms on 345k rows).
+    #   idx_date_com  — (Date, Com_Name).  Required by INDEXED BY hint in
+    #                                      quality.js (throttleEffect).
     conn.execute("CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_date_sci ON detections(Date, Sci_Name)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)")
+
+    # One-shot cleanup of strict-duplicate indexes carried over from older
+    # BirdNET-Pi schema variants. They cost insert time (extra B-tree update
+    # per row, painful at dawn chorus) and ~50 MB on disk for zero benefit
+    # — same columns, same direction as the canonical names above.
+    # Idempotent: no-op once they're gone, no-op on fresh installs.
+    for legacy in ("detections_Sci_Name", "detections_Com_Name", "idx_date_sciname"):
+        try:
+            conn.execute(f"DROP INDEX IF EXISTS {legacy}")
+        except sqlite3.OperationalError as e:
+            log.warning("[schema] could not drop legacy index %s: %s", legacy, e)
 
     # Migration: add Source column to existing tables that pre-date multi-source.
     # PRAGMA table_info is the portable way to check column presence on SQLite.

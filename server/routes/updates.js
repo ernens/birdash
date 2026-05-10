@@ -49,6 +49,12 @@ let _statusCache = null;
 let _statusCacheTs = 0;
 const CACHE_TTL = 60 * 1000;
 
+// Shell-injection contract: every call site MUST hand only sanitized
+// values into `args`. Current callers pass either static strings
+// ('rev-parse HEAD', 'ls-remote origin <const BRANCH>') or a SHA that
+// has already been regex-checked at the request handler boundary
+// (`/^[0-9a-f]{7,40}$/`). Don't relax that without re-checking each
+// call site — execSync runs through a shell.
 function _git(args) {
   return execSync('git ' + args, { cwd: PROJECT_ROOT, encoding: 'utf8', timeout: 15000 }).trim();
 }

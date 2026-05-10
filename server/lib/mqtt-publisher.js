@@ -17,6 +17,7 @@
  */
 
 const os = require('os');
+const { localDateStr, localTimeStr } = require('./local-date');
 
 const POLL_INTERVAL = 15 * 1000;  // 15s — half of notif-watcher; feels real-time enough
 const RECONNECT_BASE_MS = 2000;
@@ -203,12 +204,14 @@ async function _poll() {
   if (!conf.enabled || !conf.broker) return;
   if (!_client || !_client.connected) return;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr();
   if (_currentDay !== today) {
     _currentDay = today;
     _lastPollTime = null;
   }
-  const since = _lastPollTime || new Date(Date.now() - POLL_INTERVAL).toISOString().slice(11, 19);
+  // Time column is local wall-clock; toISOString() is UTC and would skip
+  // ~2 h of detections in summer. localTimeStr keeps the same frame.
+  const since = _lastPollTime || localTimeStr(new Date(Date.now() - POLL_INTERVAL));
 
   let rows;
   try {

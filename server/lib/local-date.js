@@ -8,9 +8,10 @@
  * calendar day between midnight and ~02:00 local time.
  *
  * Usage:
- *   const { localDateStr, localDateOffset } = require('./lib/local-date');
+ *   const { localDateStr, localDateOffset, localTimeStr } = require('./lib/local-date');
  *   const today = localDateStr();              // "2026-04-12"
  *   const weekAgo = localDateOffset(-7);       // "2026-04-05"
+ *   const now = localTimeStr();                // "14:23:07"
  */
 
 function localDateStr(d) {
@@ -24,4 +25,11 @@ function localDateOffset(days) {
   return localDateStr(d);
 }
 
-module.exports = { localDateStr, localDateOffset };
+// "HH:MM:SS" in local time. Pairs with localDateStr for SQL queries
+// against (Date, Time) columns, which the engine writes in local time.
+function localTimeStr(d) {
+  const now = d || new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+}
+
+module.exports = { localDateStr, localDateOffset, localTimeStr };

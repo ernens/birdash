@@ -52,6 +52,7 @@ if (!fs.existsSync(DB_PATH)) {
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)');
+  initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_sci ON detections(Date, Sci_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
   initDb.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
   dbPragmas.applyWritePragmas(initDb);
@@ -75,6 +76,7 @@ console.log('[BIRDASH] PRAGMAs:',
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_time ON detections(Date, Time DESC)');
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_com_name ON detections(Com_Name)');
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_sci_name ON detections(Sci_Name)');
+dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_sci ON detections(Date, Sci_Name)');
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_com ON detections(Date, Com_Name)');
 dbWrite.exec('CREATE INDEX IF NOT EXISTS idx_date_conf ON detections(Date, Confidence)');
 // Expression index used by the weather analytics JOINs (vdb.weather_hourly
@@ -205,6 +207,25 @@ const aggregates = require('./aggregates');
 aggregates.createTables(dbWrite);
 
 console.log(`[BIRDASH] birds.db ouvert : ${DB_PATH}`);
+
+// ── Periodic WAL checkpoint ────────────────────────────────────────────────
+// Without this the WAL can grow to tens of MB during dawn chorus when the
+// readonly `db` connection (used by /api/query) keeps cycling through
+// short read transactions: most pages stay pinned and autocheckpoint
+// (PASSIVE every 1000 pages) only frees a fraction. A bloated WAL slows
+// every write and pushes the engine's 30s busy_timeout over the edge,
+// surfacing as `sqlite3.OperationalError: database is locked` on the
+// Python side. TRUNCATE every minute keeps the WAL bounded.
+const _checkpointTimer = setInterval(() => {
+  try {
+    // Best-effort: TRUNCATE may downgrade to PASSIVE if readers still
+    // hold snapshots, which is fine — we'll get the rest next round.
+    dbWrite.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (e) {
+    console.warn('[BIRDASH] wal_checkpoint failed:', e.message);
+  }
+}, 60 * 1000);
+_checkpointTimer.unref();
 
 // ── Birdash validation database ──────────────────────────────────────────────
 const BIRDASH_DB_PATH = path.join(process.env.HOME, 'birdash', 'birdash.db');
@@ -419,6 +440,7 @@ module.exports = {
   aggregates,
   refreshTaxonomy, closeAll() {
     aggregates.stopPeriodicRefresh();
+    clearInterval(_checkpointTimer);
     try { db.close(); } catch{} try { dbWrite.close(); } catch{}
     try { if (taxonomyDb) taxonomyDb.close(); } catch{} try { if (birdashDb) birdashDb.close(); } catch{}
   },

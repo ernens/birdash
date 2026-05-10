@@ -45,6 +45,15 @@
  *     volume. Lower = more frequent checkpoints (more I/O); higher = WAL
  *     can grow unbounded between checkpoints.
  *
+ *   journal_size_limit = 64 MB (writer only)
+ *     Caps the WAL file after each checkpoint truncates it. Default is
+ *     -1 (unlimited) — on 2026-05-09 the WAL on bird.local reached
+ *     8.6 GB and blocked all writes with "database is locked" because
+ *     long-lived readers prevented full checkpoint completion and the
+ *     unbounded ceiling let the file grow indefinitely. 64 MB is well
+ *     above a dawn-chorus write burst (~few MB) and small enough that
+ *     a partial checkpoint reset always succeeds.
+ *
  * Returns the snapshot of values applied so callers can log them at
  * startup for visibility.
  */
@@ -98,17 +107,19 @@ function applyReadPragmas(db) {
 function applyWritePragmas(db) {
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
+  db.pragma('journal_size_limit = 67108864'); // 64 MB — caps WAL after checkpoint
   return applyReadPragmas(db);
 }
 
 function snapshot(db) {
   return {
-    journal_mode: db.pragma('journal_mode',  { simple: true }),
-    synchronous:  db.pragma('synchronous',   { simple: true }),
-    cache_size:   db.pragma('cache_size',    { simple: true }),
-    mmap_size:    db.pragma('mmap_size',     { simple: true }),
-    temp_store:   db.pragma('temp_store',    { simple: true }),
-    busy_timeout: db.pragma('busy_timeout',  { simple: true }),
+    journal_mode:       db.pragma('journal_mode',       { simple: true }),
+    synchronous:        db.pragma('synchronous',        { simple: true }),
+    cache_size:         db.pragma('cache_size',         { simple: true }),
+    mmap_size:          db.pragma('mmap_size',          { simple: true }),
+    temp_store:         db.pragma('temp_store',         { simple: true }),
+    busy_timeout:       db.pragma('busy_timeout',       { simple: true }),
+    journal_size_limit: db.pragma('journal_size_limit', { simple: true }),
   };
 }
 

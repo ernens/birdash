@@ -90,7 +90,9 @@ def enqueue_for_check(file_name, confidence):
     if confidence >= threshold:
         return False
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = sqlite3.connect(DB_PATH, timeout=60)
+        conn.execute("PRAGMA busy_timeout = 60000")
+        conn.execute("PRAGMA journal_size_limit = 67108864")
         try:
             with conn:
                 conn.execute(
@@ -107,8 +109,9 @@ def enqueue_for_check(file_name, confidence):
 # ── DB helpers ─────────────────────────────────────────────────────────────
 
 def _open_db():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.execute("PRAGMA busy_timeout = 30000")
+    conn = sqlite3.connect(DB_PATH, timeout=60)
+    conn.execute("PRAGMA busy_timeout = 60000")
+    conn.execute("PRAGMA journal_size_limit = 67108864")
     return conn
 
 

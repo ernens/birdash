@@ -22,6 +22,7 @@ try { Database = require('better-sqlite3'); } catch {
 }
 
 const SunCalc = require('suncalc');
+const { localDateStr } = require('./local-date');
 
 // ── Open own DB connections (worker threads cannot share handles) ────────────
 const { dbPath, birdashDbPath, lat, lon, minConf, rulesPath } = workerData;
@@ -497,9 +498,9 @@ try {
   const COMEBACK_LOOKBACK_MONTHS = 6;
   try {
     const now = new Date();
-    const ym = now.toISOString().slice(0, 7);
+    const ym = localDateStr(now).slice(0, 7);
     const lookbackDate = new Date(now.getFullYear(), now.getMonth() - COMEBACK_LOOKBACK_MONTHS, 1);
-    const lookbackYm = lookbackDate.toISOString().slice(0, 7);
+    const lookbackYm = localDateStr(lookbackDate).slice(0, 7);
 
     // 1. Newcomer
     const newcomer = db.prepare(`

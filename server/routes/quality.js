@@ -18,6 +18,8 @@
  * (timeline-comparison "throttle effect") with an engine measurement.
  */
 
+const { localDateOffset } = require('../lib/local-date');
+
 function handle(req, res, pathname, ctx) {
   const { db, birdashDb, parseBirdnetConf } = ctx;
 
@@ -308,9 +310,12 @@ function throttleEffect(db) {
     enabled = m ? m[1].trim().replace(/['"]/g, '') === '1' : false;
   } catch (_) { /* leave disabled */ }
 
+  // INDEXED BY: without the hint, the planner walks idx_com_name (full
+  // table scan + temp B-tree, ~870 ms on 345k rows). idx_date_com scans
+  // only the 7-day window (~10 ms).
   const recent = db.prepare(`
     SELECT Com_Name, COUNT(*) AS n
-    FROM detections
+    FROM detections INDEXED BY idx_date_com
     WHERE Date >= date('now', '-7 days')
     GROUP BY Com_Name
     ORDER BY n DESC
@@ -451,9 +456,7 @@ function buildSynthesis({ review, agreement, prefilter, balance }) {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function isoDateOffset(deltaDays) {
-  const d = new Date();
-  d.setDate(d.getDate() + deltaDays);
-  return d.toISOString().slice(0, 10);
+  return localDateOffset(deltaDays);
 }
 
 module.exports = { handle };

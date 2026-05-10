@@ -797,7 +797,24 @@ CREATE TABLE hourly_stats (
 -- Index: idx_hs_date(date)
 ```
 
-**Noise floor filter**: all aggregates use `WHERE Confidence >= 0.5` to exclude obvious junk. The `count_07` column provides the default-confidence count (>= 0.7) for user-facing totals.
+#### Why two count columns (`count` vs `count_07`)
+
+Every aggregate row stores **two** counts of the same `(date, species)` group, materialized at write time:
+
+| Column | Threshold | Purpose |
+|---|---|---|
+| `count`     | `Confidence >= 0.5` | Noise floor — every detection that wasn't obvious junk. Lets `avg_conf` and `max_conf` in the same row stay meaningful (an aggregate built only from ≥0.7 rows would skew avg_conf upward by ~21 % and lose the low-confidence tail entirely). |
+| `count_07`  | `Confidence >= 0.7` | The system-default "real detection" count — what the calendar, "what's new", species browser, and every user-facing total actually display. |
+
+The 0.5 floor is a quality-control input for the *aggregate row itself*, not for downstream consumption — every read path uses `count_07` (`grep -rn count_07 server/`). The 0.5 bucket is kept because:
+
+- it is the denominator for "% of detections above default threshold" diagnostics
+- analysis routes (quality dashboard, model-agreement) need the unfiltered tail without re-querying `detections`
+- removing it would force every avg_conf consumer to either accept the 0.7-skewed value or run a per-call SQL aggregate against the 1 M-row source
+
+**Hardcoded threshold — fast path is 0.7-only.** `count_07` materializes one specific cutoff. If the user runs the UI at a non-default confidence (`?conf=0.6` etc.), every endpoint that reads `count_07` is wrong. The calendar route handles this explicitly: when `conf !== 0.7 ± 0.001` it returns HTTP 400 and the frontend falls back to per-query SQL against `detections` (slower but accurate). Any new aggregate consumer must implement the same gate — see `server/routes/calendar.js` for the canonical pattern. The alternative (adding `count_06`, `count_08`, …) was explicitly rejected: write amplification on every detection insert and a combinatorial column explosion.
+
+**Implication for migrations.** Changing the system-default threshold (currently 0.7) requires either (a) a one-shot rebuild of all four aggregate tables with the new cutoff, or (b) renaming the column for forward compatibility. Don't quietly change `0.7` in `aggregates.js` — old rows will silently mix two thresholds.
 
 **Refresh strategy**:
 - **Startup**: full rebuild if tables empty or sentinel file `.rebuild-aggregates` exists; otherwise `refreshToday()` only (~200ms vs ~14s)
@@ -1091,7 +1108,7 @@ Four materialized tables replace expensive live queries:
 | `species_stats` | species/lifetime | Species cards, rankings, records |
 | `hourly_stats` | species/hour/day | Hourly activity charts, timeline density |
 
-Each table has both `count` (>= 0.5 confidence) and `count_07` (>= 0.7 confidence) columns. Downstream queries use `count_07` for user-facing totals.
+Each table stores both `count` (>= 0.5 noise floor — denominator for diagnostics) and `count_07` (>= 0.7 system default — what every user-facing endpoint reads). See **§4 → Why two count columns** for the rationale and the threshold-fast-path/slow-path contract.
 
 ### Raw Table vs VIEW Strategy
 

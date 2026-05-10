@@ -11,6 +11,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const safeConfig = require('../../lib/safe-config');
 const { readJsonFile } = require('../../lib/config');
+const { localDateStr } = require('../../lib/local-date');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..', '..');
 
@@ -94,7 +95,7 @@ async function getRecentMp3s(songsDir) {
   const cutoff = Date.now() - 48 * 3600 * 1000;
   for (let daysAgo = 0; daysAgo <= 1; daysAgo++) {
     const d = new Date(Date.now() - daysAgo * 86400000);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = localDateStr(d);
     const dayDir  = path.join(songsDir, dateStr);
     let species;
     try { species = await fsp.readdir(dayDir); } catch(e) { continue; }
