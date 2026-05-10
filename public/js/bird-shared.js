@@ -69,16 +69,9 @@
 
   // ── Formatting ───────────────────────────────────────────────────────────
 
-  function fmtDate(dateStr) {
-    if (!dateStr) return '\u2014';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-  }
-
-  function fmtTime(timeStr) {
-    if (!timeStr) return '\u2014';
-    return timeStr.substring(0, 5);
-  }
+  // fmtDate / fmtTime live in bird-vue-core.js as locale-aware versions.
+  // The legacy DD/MM/YYYY + HH:MM helpers used to live here; removed
+  // after grep confirmed zero callers (vue-core's exports win on BIRDASH).
 
   function fmtConf(val) {
     if (val == null) return '\u2014';
@@ -952,8 +945,6 @@
 
   window.BIRDASH_UTILS = {
     birdQuery: birdQuery,
-    fmtDate: fmtDate,
-    fmtTime: fmtTime,
     fmtConf: fmtConf,
     localDateStr: localDateStr,
     daysAgo: daysAgo,
