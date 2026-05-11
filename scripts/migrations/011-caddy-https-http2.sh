@@ -5,8 +5,7 @@
 # Enable HTTP/2 (and HTTP/3 / QUIC) by adding an :443 listener with
 # tls internal. Caddy generates its own root CA and mints leaf certs on
 # demand for any hostname the LAN accesses (bird.local, IPs, mDNS).
-# HTTP/1.1 stays available on :80 for compatibility — browsers that
-# don't trust the self-signed cert can keep using HTTP.
+# HTTP/1.1 stays available on :80 for compatibility.
 #
 # HTTP/2 multiplexes the ~10 JS/CSS files we load per page over a single
 # connection, eliminating head-of-line blocking that capped page-load
@@ -14,8 +13,12 @@
 #
 # First-visit caveat: the browser shows a cert warning because the
 # internal CA isn't in the OS trust store. Users either click through
-# once (browser remembers) or run `caddy trust` to install the root CA
-# system-wide.
+# once (browser remembers) or run `sudo caddy trust` to install the
+# root CA system-wide.
+#
+# This script DETECTS the user's home directory from the existing
+# Caddyfile rather than hardcoding /home/bjorn/, so it works on any
+# Pi regardless of the Linux user name (bird, mickey, biloute, etc.).
 #
 # Idempotent: detects the :443 block.
 # ══════════════════════════════════════════════════════════════════════════
@@ -35,12 +38,22 @@ if grep -q "^:443" "$CADDYFILE"; then
     exit 0
 fi
 
+# Detect the user's home from the existing Caddyfile's `root * /home/<user>/...`
+# lines. v1 of this script hardcoded /home/bjorn which broke any Pi where
+# the user wasn't bjorn (mickey saw 404 on every page after the migration
+# overwrote /home/mickey paths).
+DETECTED_HOME=$(grep -oE 'root \* /home/[^/]+' "$CADDYFILE" | head -1 | awk '{print $3}')
+if [ -z "$DETECTED_HOME" ]; then
+    DETECTED_HOME="$HOME"
+fi
+echo "[migrate $NAME] using home dir: $DETECTED_HOME"
+
 sudo cp "$CADDYFILE" "$CADDYFILE.before-$NAME"
 
-# Replace the entire Caddyfile with a snippet-based config that serves
-# the same handles on both ports. This refactor is required to keep
-# :80 and :443 in sync without duplicating handle blocks.
-sudo tee "$CADDYFILE" > /dev/null <<'CADDYEOF'
+# Generate the new Caddyfile with the detected home dir substituted in.
+# The ask URL for on_demand_tls points at /api/health (returns 200 on a
+# healthy birdash) so Caddy only mints certs while the local API is up.
+sudo tee "$CADDYFILE" > /dev/null <<CADDYEOF
 {
 	# Internal CA generates leaf certs on demand for any hostname —
 	# LAN deployment, no public DNS, no Let's Encrypt.
@@ -68,21 +81,21 @@ sudo tee "$CADDYFILE" > /dev/null <<'CADDYEOF'
 	handle /birds/audio/* {
 		encode zstd gzip
 		uri strip_prefix /birds/audio
-		root * /home/bjorn/BirdSongs/Extracted
+		root * ${DETECTED_HOME}/BirdSongs/Extracted
 		file_server
 	}
 	@vendor path /birds/js/chart.umd.min.js /birds/js/echarts.min.js /birds/js/vue.global.prod.min.js /birds/js/chart.* /birds/js/lucide* /birds/js/leaflet*
 	handle @vendor {
 		encode zstd gzip
 		uri strip_prefix /birds
-		root * /home/bjorn/birdash/public
+		root * ${DETECTED_HOME}/birdash/public
 		header Cache-Control "public, max-age=604800"
 		file_server
 	}
 	handle /birds/i18n/* {
 		encode zstd gzip
 		uri strip_prefix /birds
-		root * /home/bjorn/birdash/public
+		root * ${DETECTED_HOME}/birdash/public
 		header Cache-Control "public, max-age=3600"
 		file_server
 	}
@@ -90,7 +103,7 @@ sudo tee "$CADDYFILE" > /dev/null <<'CADDYEOF'
 	handle @birds {
 		encode zstd gzip
 		uri strip_prefix /birds
-		root * /home/bjorn/birdash/public
+		root * ${DETECTED_HOME}/birdash/public
 		header Cache-Control "public, no-cache"
 		file_server
 	}
