@@ -145,8 +145,8 @@
             </div>
             <div class="card">
               <div class="card-title">{{t('stats_daily_records')}}</div>
-              <div v-if="records.loading" class="spinner"><div></div><div></div><div></div></div>
-              <div v-else style="display:flex;flex-direction:column;gap:.75rem;padding:.25rem 0;">
+              <div v-if="recordsLoadingVisible" class="spinner"><div></div><div></div><div></div></div>
+              <div v-else-if="!records.loading" style="display:flex;flex-direction:column;gap:.75rem;padding:.25rem 0;">
                 <div class="det-item">
                   <div style="font-size:1.5rem;"><bird-icon name="bar-chart-3" :size="16" ></bird-icon></div>
                   <div style="flex:1;">
@@ -293,7 +293,7 @@
 <script>
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
-        useFilterPeriod, useFilterConfidence, buildWhereClause,
+        useFilterPeriod, useFilterConfidence, useDelayedLoading, buildWhereClause,
         birdQuery, fmtDate, chartDefaults, navigateTo, localDateStr, daysAgo, photoUrl, quickPlaySpecies } = BIRDASH;
 const Q = BIRDASH_QUERIES;
 
@@ -342,6 +342,11 @@ const app = createApp({
     const topCount = ref({loading:true, rows:[]});
     const topConf  = ref({loading:true, rows:[]});
     const records  = ref({loading:true, maxDet:null, maxSp:null, maxConf:null});
+
+    // Delayed-loading wrapper for the "records" bouncing-balls spinner.
+    // The kpis card uses skeletons (stable layout) so an additional delay
+    // there would only blank out the placeholder; we leave it as-is.
+    const { visible: recordsLoadingVisible } = useDelayedLoading(computed(() => records.value.loading));
     const timeData = ref(null), timeRes = ref('daily'), confData = ref(null);
     const timeResLabel = computed(() => {
       const labels = { hourly: t('stats_hourly_totals') || 'Hourly totals', daily: t('stats_daily_totals') || 'Daily totals', weekly: t('stats_weekly_totals') || 'Weekly totals', monthly: t('monthly_totals') };
@@ -476,7 +481,7 @@ const app = createApp({
     return {
       lang, t, spName, tab, switchTab,
       // Stats
-      fp, fc, kpis, topCount, topConf, records, isMultiModel,
+      fp, fc, kpis, topCount, topConf, records, recordsLoadingVisible, isMultiModel,
       canvasMonthly, canvasConf, timeResLabel,
       fmtDate, navigateTo, chartColor, loadAll, resetDefaults, exportCsv,
       quickPlay(comName) { quickPlaySpecies(comName); },

@@ -205,8 +205,8 @@
               </div>
               <div class="pd-detections">
                 <div class="pd-det-label">{{t('analyses_best_dets')}}</div>
-                <div v-if="polarDetail.loadingDets" class="spinner" style="padding:.5rem;"><div></div><div></div><div></div></div>
-                <div v-else-if="!polarDetail.topDets.length" style="font-size:.78rem;color:var(--text-faint);">{{t('analyses_no_det')}}</div>
+                <div v-if="polarDetLoadingVisible" class="spinner" style="padding:.5rem;"><div></div><div></div><div></div></div>
+                <div v-else-if="!polarDetail.loadingDets && !polarDetail.topDets.length" style="font-size:.78rem;color:var(--text-faint);">{{t('analyses_no_det')}}</div>
                 <div v-for="d in polarDetail.topDets" :key="d.Time+d.Confidence" class="pd-det-item">
                   <span class="pd-det-time">{{fmtTimeFull(d.Time)}}</span>
                   <span class="pd-det-conf conf-badge"
@@ -220,8 +220,8 @@
               </div>
             </div>
             <div class="activity-narrative">
-              <div v-if="narrativeLoading" class="spinner"><div></div><div></div><div></div></div>
-              <div v-else v-html="safeHtml(narrativeHtml)"></div>
+              <div v-if="narrativeLoadingVisible" class="spinner"><div></div><div></div><div></div></div>
+              <div v-else-if="!narrativeLoading" v-html="safeHtml(narrativeHtml)"></div>
             </div>
           </div>
         </div>
@@ -289,8 +289,8 @@
         <div v-show="selectedSpecies.length" class="chart-card">
           <div class="chart-card-title">{{heatmapTitle}}</div>
           <div class="daily-heatmap-wrap" style="overflow-x:auto;">
-            <div v-if="heatmapLoading" class="spinner"><div></div><div></div><div></div></div>
-            <div v-else v-html="safeHtml(heatmapHtml)"></div>
+            <div v-if="heatmapLoadingVisible" class="spinner"><div></div><div></div><div></div></div>
+            <div v-else-if="!heatmapLoading" v-html="safeHtml(heatmapHtml)"></div>
           </div>
         </div>
 
@@ -308,7 +308,7 @@
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
-        useFilterPeriod, useFilterConfidence,
+        useFilterPeriod, useFilterConfidence, useDelayedLoading,
         birdQuery, escHtml, safeHtml, fmtDate, fmtTime, localDateStr, daysAgo, photoUrl,
         buildAudioUrl, navigateTo } = BIRDASH;
 
@@ -364,6 +364,13 @@ const app = createApp({
     });
     let _byHourCache = null;
     let _totalDetCache = 0;
+
+    // Delayed-loading spinners. 300 ms delay → no flicker on cache hits;
+    // the underlying heavy aggregations (5 parallel queries) still show
+    // the spinner when they actually take time, just not on warm cache.
+    const { visible: narrativeLoadingVisible } = useDelayedLoading(narrativeLoading);
+    const { visible: heatmapLoadingVisible } = useDelayedLoading(heatmapLoading);
+    const { visible: polarDetLoadingVisible } = useDelayedLoading(computed(() => polarDetail.value.loadingDets));
 
     // ── Taxonomy data ──────────────────────────────────────────────────────
     const taxonomyData = ref([]);
@@ -1074,8 +1081,9 @@ const app = createApp({
       fOrder, fFamily, fGuild, guildOptions, selectGuild, taxonomyOrders, availableFamilies, onOrderChange, onFamilyChange,
       speciesList, selectedSpecies, mainSpecies, spSearch, spSearchInput, pickerOpen, topN,
       filteredSpeciesList, selCtx, headerTitle,
-      loading, kpis, breakdown, narrativeHtml, narrativeLoading, heatmapHtml, heatmapLoading, safeHtml,
-      navigateTo, thumbUrl, elPolar, elSeries, elCircadian, polarDetail,
+      loading, kpis, breakdown, narrativeHtml, narrativeLoading, narrativeLoadingVisible,
+      heatmapHtml, heatmapLoading, heatmapLoadingVisible, safeHtml,
+      navigateTo, thumbUrl, elPolar, elSeries, elCircadian, polarDetail, polarDetLoadingVisible,
       speciesLabel, polarTitle, seriesTitle, heatmapTitle,
       playingFile, fmtTime, zeroPad, fmtTimeFull, toggleAudioFile, photoUrl,
       resetDefaults, applyFilters, toggleSpecies, removeTag, selectTopN, selectAllFiltered, clearSelection, allFiltersSelected, exportCsv,
