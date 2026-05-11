@@ -27,7 +27,7 @@
   <birdash-shell page="settings" :title="t('nav_settings')">
 
     <!-- Info modal -->
-    <div v-show="helpKey" class="info-overlay" @click.self="helpKey=null" :style="{display: helpKey ? 'flex' : 'none'}">
+    <div class="info-overlay" @click.self="helpKey=null" :style="{display: helpKey ? 'flex' : 'none'}">
       <div class="info-modal">
         <button class="info-modal-close" @click="helpKey=null">&times;</button>
         <div class="info-modal-title">ⓘ {{helpTitle}}</div>
@@ -640,13 +640,20 @@ const app = createApp({
       loadBackupHistory();
     }
 
+    // reload(), restartService (via setTimeout) et les hot-spots de la nav
+    // peuvent déclencher loadServices en parallèle. Epoch monotone pour
+    // empêcher une réponse périmée d'écraser un état plus frais (ex. une
+    // réponse pré-restart qui revient après le restart effectif).
+    let _svcLoadEpoch = 0;
     async function loadServices() {
+      const epoch = ++_svcLoadEpoch;
       svcLoading.value = true;
       try {
         const data = await fetch(API + '/services').then(r => r.json());
+        if (epoch !== _svcLoadEpoch) return;
         services.value = (data.services || []).map(s => ({ ...s, restarting: false }));
       } catch(e) { console.error(e); }
-      svcLoading.value = false;
+      if (epoch === _svcLoadEpoch) svcLoading.value = false;
     }
 
     // Track initial model to detect changes
@@ -1520,7 +1527,7 @@ const app = createApp({
       return html;
     });
 
-    // ── Audio config ──────────────────────────────────────────────────────────
+    // Force-reload key for the terminal iframe (used in the terminal tab).
     const terminalKey = ref(0);
 
     // ── Generic JSON config loader ─────────────────────────────────────────
@@ -2678,58 +2685,18 @@ const app = createApp({
 
     provide('settingsCtx', settingsCtx);
 
+    // Le template orchestrateur (l. 26-72) n'utilise que les 14 clés
+    // ci-dessous. Tout le reste de l'état est exposé aux onglets enfants via
+    // provide('settingsCtx', ...) — il n'a pas besoin d'être ré-exposé ici.
     return {
-      t, lang, safeHtml, conf, models, analysisStatus, languages, services,
+      t, safeHtml,
+      helpKey, helpTitle, helpBody,
+      loading,
       tabs, activeTab, switchTab: switchTabWithMap,
       tabComponents,
-      // Audio
-      audioConf, audioDevices, audioProfiles, audioSubTab, audioSubTabs,
-      channelStrategies,
-      filterPreviewing, filterPreview, filterPreviewErr, runFilterPreview,
-      filterPreviewProgress, filterPreviewPhase,
-      noiseProfileStatus, noiseProfileRecording, recordNoiseProfile, deleteNoiseProfile,
-      calRunning, calResult, calExpired,
-      audioMonitoring, monitorLevels, audioTesting, audioTestImg,
-      loadAudioDevices, selectAudioDevice, activateAudioProfile,
-      duplicateAudioProfile, deleteAudioProfile,
-      boostState, saveBoostDb, loadBoost,
-      soundLevel,
-      startCalibration, applyCalibration,
-      startMonitor, stopMonitor, testAudio,
-      loading, saving, svcLoading, saveMsg, saveErr,
-      includeList, excludeList, savingLists,
-      appriseUrls, savingApprise, testingApprise, appriseMsg, appriseErr, saveApprise, testApprise,
-      alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
-      modelLabel, modelDescription, secondaryModelOptions,
-      birdnetLicenseAccepted, birdnetDownloading, downloadBirdnet,
-      appriseEnabled, toggleAllApprise, notifyMinConfPct, bwMinConfPct,
-      notifGlobalEnabled, toggleNotifGlobal, saveNotifSettings, notifSaveMsg, notifSaveErr, terminalKey,
-      digestPreview, digestSendNow, digestMsg, digestErr, digestPreviewText,
-      mqttMinConfPct, testingMqtt, mqttMsg, mqttErr, testMqtt,
-      authUser, authCurrentPw, authNewPw, authNewPw2, authSaving, authMsg, authErr, authConfigured, saveAuthCreds,
-      rangePreview, onRangePreviewDebounced,
-      agConf, agState, loadAgState,
-      dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
-      dbLoadTables, dbSelectTable, dbExec,
-      saveAll, resetDefaults, restartService, saveSpeciesLists, isDirty,
-      helpKey, helpTitle, helpBody,
-      bkp, backupDests, savingBkp, runningBkp, bkpProgress,
-      toggleBackupContent, saveBackupConfig, runBackup,
-      bkpStepLabel, bkpElapsed, pollBackupProgress,
-      pauseBackup, stopBackup, fmtSize, fmtDateTimeFull,
-      bkpSchedule, bkpHistory,
-      telemetryStatus, telemetryLoading, telemetryName, telemetryJoining, enableTelemetry, disableTelemetry,
-      anonPingsEnabled, toggleAnonPings,
-      openPower, openWizard,
-      tftStatus, tftInstalling, tftInstallMsg, tftInstallErr, tftInstallCmds,
-      tftSaving, tftConfirmInstall, loadTftStatus, saveTftConfig, runTftInstall, tftServiceAction,
-      alertHistory, loadAlertHistory,
-      zram, fmtMb, loadZramStatus, configureZram,
-      // Region & units prefs (reactive refs, watchers persist to localStorage)
-      unitsPref: fmt.units, timeFormatPref: fmt.timeFormat,
-      dateFormatPref: fmt.dateFormat, weekStartPref: fmt.weekStart,
-      effUnits: fmt.effUnits, effTimeFormat: fmt.effTimeFormat,
-      effDateFormat: fmt.effDateFormat, effWeekStart: fmt.effWeekStart,
+      saveAll, saving, isDirty,
+      resetDefaults,
+      saveMsg, saveErr,
     };
   }
 });
