@@ -2,6 +2,38 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.54.1] — 2026-05-11
+
+### Added — purge progress overlay
+
+- `/api/purge/trash`, `/api/purge/restore`, `/api/purge/empty-trash` now
+  stream per-row progress as Server-Sent Events when the client sends
+  `Accept: text/event-stream`. Each frame is `data: {progress, total}\n\n`;
+  the final frame is `data: {done: true, ...result}\n\n`. Plain JSON
+  responses remain available for clients that don't request the stream
+  (back-compat for curl + tests).
+- Purge page shows a modal overlay with a progress bar + N/total counter
+  for bulk trash / restore / empty-trash. Single-row actions still use
+  the plain POST (instant, no overlay).
+- Caddy's existing `flush_interval -1` on `/birds/api/*` passes the
+  stream through unbuffered — no reverse-proxy changes required.
+
+### Added — review bulk overlay
+
+- review.html shows an indeterminate overlay during bulk-validate /
+  reject-by-rule when the request takes more than 200 ms. SSE would
+  not help here (server runs one SQL tx, no per-row work), so the
+  overlay is a delayed-show spinner with a "{N} detections" caption.
+
+### Removed — dead delete-modal code in review.html
+
+- Deletion was moved to the Purge page in an earlier release but the
+  delete-confirm modal, `deleteSelected` / `openDeleteModal` /
+  `executeDelete` functions, and 5 i18n keys (`review_purge_title`,
+  `review_purge_warning`, `review_deleted_count`, `review_delete_failed`,
+  `review_delete_selection`) remained as orphans wired to no UI. Removed.
+  review.html: 461 → 388 lines.
+
 ## [1.54.0] — 2026-05-11
 
 Performance & perceived-latency pass following the 1.53.0 site-wide
