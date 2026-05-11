@@ -163,8 +163,8 @@
             </p>
             <div style="display:flex;flex-direction:column;gap:.6rem;">
               <label v-for="s in channelStrategies" :key="s.id"
-                     style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;padding:.5rem .6rem;border-radius:6px;border:1px solid var(--border);transition:border-color .2s;"
-                     :style="{ borderColor: audioConf.channel_strategy === s.id ? 'var(--accent)' : 'var(--border)', background: audioConf.channel_strategy === s.id ? 'rgba(52,211,153,.05)' : 'transparent' }">
+                     class="audio-strategy-option"
+                     :class="{'is-active': audioConf.channel_strategy === s.id}">
                 <input type="radio" v-model="audioConf.channel_strategy" :value="s.id" style="margin-top:3px;">
                 <div style="flex:1;">
                   <strong style="font-size:.85rem;">{{ s.label }}</strong>
@@ -270,7 +270,7 @@
             <div v-if="noiseProfileStatus.exists" style="display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border-radius:6px;background:var(--bg-card2);margin-bottom:.6rem;">
               <bird-icon name="check-circle" :size="16" style="color:var(--accent);flex-shrink:0;"></bird-icon>
               <div style="flex:1;font-size:.78rem;">
-                {{t('audio_noise_profile_recorded')}} — {{ new Date(noiseProfileStatus.date).toLocaleString() }}
+                {{t('audio_noise_profile_recorded')}} — {{ new Date(noiseProfileStatus.date).toLocaleString(lang) }}
                 <div style="font-size:.7rem;color:var(--text-muted);">{{ Math.round(noiseProfileStatus.size / 1024) }} KB</div>
               </div>
               <button class="btn-outline" style="font-size:.72em;color:var(--danger);" @click="deleteNoiseProfile">

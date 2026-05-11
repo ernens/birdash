@@ -2947,6 +2947,25 @@
     .set-range-val { font-size:.85rem; font-weight:600; color:var(--accent); min-width:2.5rem; text-align:right; white-space:nowrap; }
     .set-check { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
     .set-check input { accent-color:var(--accent); width:18px; height:18px; }
+    /* Settings rule/option cards with active state highlight */
+    .notif-rule {
+      padding:.6rem .7rem; border-radius:6px;
+      border:1px solid var(--border); margin-bottom:.5rem;
+      transition: border-color .15s, background .15s;
+    }
+    .notif-rule.is-active {
+      border-color: var(--accent);
+      background: rgba(52,211,153,.05);
+    }
+    .audio-strategy-option {
+      display:flex; align-items:flex-start; gap:.5rem; cursor:pointer;
+      padding:.5rem .6rem; border-radius:6px; border:1px solid var(--border);
+      transition: border-color .15s, background .15s;
+    }
+    .audio-strategy-option.is-active {
+      border-color: var(--accent);
+      background: rgba(52,211,153,.05);
+    }
     .model-card { padding:.8rem; border-radius:8px; border:2px solid var(--border); cursor:pointer; transition:all .2s; }
     .model-card:hover { border-color:var(--accent); }
     .model-card.active { border-color:var(--accent); background:rgba(90,158,58,.08); }
