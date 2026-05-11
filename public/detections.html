@@ -78,8 +78,7 @@
                          v-model="spSearch" @click.stop>
                 </div>
                 <div class="ms-actions">
-                  <button class="ms-action-btn"
-                          :style="allSpeciesSelected ? 'background:var(--accent);color:var(--on-accent);' : ''"
+                  <button class="ms-action-btn" :class="{'is-active': allSpeciesSelected}"
                           @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))">
                     {{allSpeciesSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
                   </button>
@@ -228,7 +227,7 @@
                 <td style="font-size:.8rem;color:var(--text-muted);">{{fmtDate(d.Date)}}</td>
                 <td style="font-family:monospace;font-size:.8rem;">{{fmtTime(d.Time)}}</td>
                 <td>
-                  <a class="species-link" @click="navigateTo('species.html',{species:d.Com_Name})">{{spName(d.Com_Name, d.Sci_Name)}}</a>
+                  <a class="species-link" :href="'species.html?species='+encodeURIComponent(d.Com_Name)">{{spName(d.Com_Name, d.Sci_Name)}}</a>
                   <!-- Signaux de ligne : favori, nouvelle espèce, et compteur Unique. -->
                   <span v-if="isFavorite(d.Com_Name)" class="row-mark row-mark-fav" :title="t('det_row_fav')">★</span>
                   <span v-if="isNewSpecies(d.Com_Name)" class="row-mark row-mark-new" :title="t('det_row_new')">✨</span>
@@ -263,10 +262,10 @@
 
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useAudio, useFavorites, useSpeciesNames,
+const { useI18n, useTheme, useNav, useFavorites, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
         birdQuery, fmtDate, fmtTime, fmtConf,
-        localDateStr, daysAgo, getUrlParam, navigateTo,
+        localDateStr, getUrlParam,
         photoUrl, buildAudioUrl, shortModel } = BIRDASH;
       const Q = BIRDASH_QUERIES;
 
@@ -285,7 +284,6 @@ const app = createApp({
     const { lang, t, setLang, langs } = useI18n();
     const { theme, themes, setTheme } = useTheme();
     const { navItems, siteName } = useNav('detections');
-    const { playingFile, toggleAudio }= useAudio();
     const { spName } = useSpeciesNames();
     const { favorites, isFavorite } = useFavorites();
     const favOnly = ref(false);
@@ -504,58 +502,68 @@ const app = createApp({
     }
 
     function buildWhere() {
-      const wheres=['1=1'], params=[];
-      // Taxonomy filter: inject matching species from order/family
+      const wheres = ['1=1'], params = [];
+
+      // effectiveSpecies est l'intersection des filtres "qui contraignent
+      // Com_Name" : sélection manuelle ∩ taxonomie/guild ∩ favoris ∩ nouvelles.
+      // null = aucune contrainte. [] = intersection vide → forcer 1=0.
+      let effectiveSpecies = null;
+
+      if (fSpecies.value.length) effectiveSpecies = [...fSpecies.value];
+
       const taxSpecies = taxonomyFilteredSpecies();
-      // Combine with manual species selection
-      let effectiveSpecies = fSpecies.value.length ? [...fSpecies.value] : [];
       if (taxSpecies) {
-        if (effectiveSpecies.length) {
-          // Intersection: keep only species that match both filters
-          effectiveSpecies = effectiveSpecies.filter(s => taxSpecies.includes(s));
-        } else {
-          effectiveSpecies = taxSpecies;
-        }
-        if (!effectiveSpecies.length) effectiveSpecies = ['__NO_MATCH__']; // force empty result
+        effectiveSpecies = effectiveSpecies
+          ? effectiveSpecies.filter(s => taxSpecies.includes(s))
+          : taxSpecies;
       }
-      if (effectiveSpecies.length === 1) {
-        wheres.push('Com_Name=?'); params.push(effectiveSpecies[0]);
-      } else if (effectiveSpecies.length > 1) {
-        wheres.push(`Com_Name IN (${effectiveSpecies.map(()=>'?').join(',')})`);
-        params.push(...effectiveSpecies);
+
+      if (favOnly.value) {
+        const favList = favorites.value || [];
+        effectiveSpecies = effectiveSpecies
+          ? effectiveSpecies.filter(s => favList.includes(s))
+          : [...favList];
       }
-      if (favOnly.value && favorites.value.length) {
-        const favList = favorites.value;
+
+      if (newSpOnly.value) {
+        const nsSet = newSpeciesSet.value;
+        effectiveSpecies = effectiveSpecies
+          ? effectiveSpecies.filter(s => nsSet.has(s))
+          : [...nsSet];
+      }
+
+      if (effectiveSpecies !== null) {
         if (!effectiveSpecies.length) {
-          effectiveSpecies = favList;
-          if (effectiveSpecies.length === 1) {
-            wheres.push('Com_Name=?'); params.push(effectiveSpecies[0]);
-          } else {
-            wheres.push(`Com_Name IN (${effectiveSpecies.map(()=>'?').join(',')})`);
-            params.push(...effectiveSpecies);
-          }
+          wheres.push('1=0');
+        } else if (effectiveSpecies.length === 1) {
+          wheres.push('Com_Name=?'); params.push(effectiveSpecies[0]);
+        } else {
+          wheres.push(`Com_Name IN (${effectiveSpecies.map(()=>'?').join(',')})`);
+          params.push(...effectiveSpecies);
         }
-      } else if (favOnly.value) {
-        wheres.push('1=0'); // no favorites → no results
       }
-      if (newSpOnly.value && newSpeciesSet.value.size) {
-        const nsList = [...newSpeciesSet.value];
-        wheres.push(`Com_Name IN (${nsList.map(()=>'?').join(',')})`);
-        params.push(...nsList);
-      }
-      if (fp.dateFrom.value) { wheres.push('Date>=?');       params.push(fp.dateFrom.value); }
-      if (fp.dateTo.value)   { wheres.push('Date<=?');       params.push(fp.dateTo.value); }
-      { const c = fc.confidence.value > 0 ? fc.confidence.value : Q.confidence(); wheres.push('Confidence>=?'); params.push(c); }
-      return { where:wheres.join(' AND '), params };
+
+      if (fp.dateFrom.value) { wheres.push('Date>=?'); params.push(fp.dateFrom.value); }
+      if (fp.dateTo.value)   { wheres.push('Date<=?'); params.push(fp.dateTo.value); }
+      const c = fc.confidence.value > 0 ? fc.confidence.value : Q.confidence();
+      wheres.push('Confidence>=?'); params.push(c);
+      return { where: wheres.join(' AND '), params };
     }
 
+    // Plusieurs déclencheurs peuvent lancer loadDetections en parallèle (slider
+    // confiance debounced, watch lang, goPage, multiselect…). Epoch monotone :
+    // toute réponse qui revient avec un epoch périmé est ignorée — la dernière
+    // demande gagne, indépendamment de l'ordre d'arrivée des réponses.
+    let _loadEpoch = 0;
     async function loadDetections() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       spDropdownOpen.value = false;
       // Charge le set "nouvelles espèces" — toujours, pour les pastilles ✨
       // de chaque ligne. Mémoïsé par dateFrom : ne se relance que si la
       // période change.
       await ensureNewSpeciesSet();
+      if (epoch !== _loadEpoch) return;
       try {
         const { where, params } = buildWhere();
         if (uniqueMode.value) {
@@ -564,24 +572,30 @@ const app = createApp({
              FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT 5000`,
             params
           );
-          data.forEach((r,i) => { r._key=r.Date+r.Time+r.Com_Name+i; r._count=1; });
+          if (epoch !== _loadEpoch) return;
+          data.forEach((r,i) => { r._key=r.Date+r.Time+r.Com_Name+'_'+i; r._count=1; });
           allUniqueRows.value = data;
           total.value = data.length;
           loadPhotos(data);
         } else {
           const [cnt] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE ${where}`, params);
+          if (epoch !== _loadEpoch) return;
           total.value = cnt ? cnt.n : 0;
           const data = await birdQuery(
             `SELECT Date,Time,Com_Name,Sci_Name,Confidence,File_Name,Model
              FROM detections WHERE ${where} ORDER BY Date DESC,Time DESC LIMIT ? OFFSET ?`,
             [...params, PS, (page.value-1)*PS]
           );
-          data.forEach(r => { r._key = r.Date+r.Time+(r.File_Name||r.Com_Name); });
+          if (epoch !== _loadEpoch) return;
+          data.forEach((r,i) => { r._key = r.Date+r.Time+r.Com_Name+'_'+i; });
           rows.value = data;
           loadPhotos(data);
         }
-      } catch(e) { rows.value=[]; allUniqueRows.value=[]; }
-      loading.value = false;
+      } catch(e) {
+        console.error('[loadDetections]', e);
+        rows.value=[]; allUniqueRows.value=[];
+      }
+      if (epoch === _loadEpoch) loading.value = false;
     }
 
     function loadPhotos(data) {
@@ -721,13 +735,6 @@ const app = createApp({
       });
     }
 
-    // Deletion is now centralized on the Purge page (Settings → Purge).
-    // Stub kept so any keyboard shortcut still resolves, but it just
-    // routes the user there with the species pre-filtered.
-    function deleteDet(d) {
-      window.location.href = `purge.html?species=${encodeURIComponent(d.Com_Name)}`;
-    }
-
     onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });
 
     return {
@@ -740,10 +747,10 @@ const app = createApp({
       closeSpDropdown,removeSpecies,
       page,total,rows,loading,totalPages,paginationPages,
       displayRows,displayTotal,activeChips,
-      playingFile,toggleAudio, buildAudioUrl,
-      fmtDate,fmtTime,fmtConf,navigateTo,spName,shortModel,modelKey,
+      buildAudioUrl,
+      fmtDate,fmtTime,fmtConf,spName,shortModel,modelKey,
       isFavorite,isNewSpecies,
-      applyFilters,resetFilters,goPage,exportCsv,exportEbird,openSpectro,deleteDet,
+      applyFilters,resetFilters,goPage,exportCsv,exportEbird,openSpectro,
     };
   }
 });

@@ -705,6 +705,7 @@
       background:transparent; color:var(--text-muted);
     }
     .ms-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .ms-action-btn.is-active { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
     .ms-list { overflow-y:auto; flex:1; }
     .ms-item {
       display:flex; align-items:center; gap:.5rem;
