@@ -475,10 +475,7 @@
           <div class="card-title" style="margin:0;">&#128260; {{t('cmp_title')}}</div>
           <div style="display:flex;align-items:center;gap:.5rem;">
             <label style="font-size:.72rem;color:var(--text-muted);">{{t('cmp_split_date')}}</label>
-            <input type="date" v-model="cmpDate" @change="loadModelCompare()"
-                   style="font-size:.75rem;padding:.2rem .4rem;border:1px solid var(--border);
-                          border-radius:.3rem;background:var(--bg-card);color:var(--text-main);
-                          font-family:inherit;">
+            <input type="date" v-model="cmpDate" @change="loadModelCompare()" class="cmp-date-input">
           </div>
         </div>
 
@@ -1003,10 +1000,10 @@ const { useI18n, useTheme, useNav, useChart, useSpeciesNames, MODEL_LABELS,
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
+    const { lang, t } = useI18n();
     const { spName } = useSpeciesNames();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('system');
+    useTheme();
+    useNav('system');
     const { mountChart: mountAct }    = useChart();
     const { mountChart: mountHrly }   = useChart();
     const { mountChart: mountModC }   = useChart();
@@ -1135,17 +1132,26 @@ const app = createApp({
       } catch(e) { health.value = { ...health.value, loading:false, error:e.message }; }
     }
 
+    // Polling 30 s + reload après svcAction → loadServices peut être en vol
+    // multiple fois. Epoch monotone : la réponse périmée n'écrase pas une plus
+    // fraîche (par ex. polling ancien arrivant après un restart actif).
+    let _svcLoadEpoch = 0;
     async function loadServices() {
+      const epoch = ++_svcLoadEpoch;
       services.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/services`);
+        if (epoch !== _svcLoadEpoch) return;
         const data = await res.json();
+        if (epoch !== _svcLoadEpoch) return;
         services.value = {
           loading: false, error: null,
           list: data.services || [],
-          refreshAt: new Date().toLocaleTimeString('fr-BE', {hour:'2-digit',minute:'2-digit'})
+          refreshAt: new Date().toLocaleTimeString(lang.value, {hour:'2-digit',minute:'2-digit'})
         };
-      } catch(e) { services.value = { ...services.value, loading:false, error:e.message }; }
+      } catch(e) {
+        if (epoch === _svcLoadEpoch) services.value = { ...services.value, loading:false, error:e.message };
+      }
     }
 
     async function openSvcModal(name) {
@@ -1784,7 +1790,7 @@ const app = createApp({
           localMatch: localSpecies.has(o.comName),
         }));
 
-        const ts = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString('fr-BE', {hour:'2-digit',minute:'2-digit'}) : '';
+        const ts = data.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString(lang.value, {hour:'2-digit',minute:'2-digit'}) : '';
         ebird.value = { loading:false, error:null, hasKey:true, obs, fetchedAt: ts };
       } catch(e) {
         ebird.value = { loading:false, error:t('network_error')+' : '+e.message, hasKey:true, obs:[], fetchedAt:'' };
@@ -1853,7 +1859,7 @@ const app = createApp({
       if (svcRefreshTimer) clearInterval(svcRefreshTimer);
     });
 
-    function openUrl(url) { window.open(url, '_blank'); }
+    function openUrl(url) { window.open(url, '_blank', 'noopener,noreferrer'); }
 
     return {
       lang, t, spName,

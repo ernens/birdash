@@ -1370,6 +1370,11 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
     }
     @media (max-width: 640px) { .cmp-grid { grid-template-columns: 1fr; } }
+    .cmp-date-input {
+      font-size: .75rem; padding: .2rem .4rem;
+      border: 1px solid var(--border); border-radius: .3rem;
+      background: var(--bg-card); color: var(--text-main); font-family: inherit;
+    }
     .cmp-col {
       border: 1px solid var(--border); border-radius: var(--radius);
       overflow: hidden;
