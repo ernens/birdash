@@ -318,9 +318,9 @@ let _chartCircadian = null;
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName }      = useNav('analyses');
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('analyses');
     const { playingFile, toggleAudio }= useAudio();
     const { spName, spNamesReady }   = useSpeciesNames();
 
@@ -581,25 +581,33 @@ const app = createApp({
     //  UNIFIED ANALYSIS (works for 1 or N species)
     // ══════════════════════════════════════════════════════════════════════
 
+    // applyFilters (fp/fc/resample/picker) and watch(lang) both lead here.
+    // 5 parallel chart loaders, each with heavy aggregations + echarts /
+    // Chart.js init. Epoch keeps a stale set of 5 responses from painting
+    // into the freshly-displayed selection.
+    let _loadEpoch = 0;
     async function loadAnalysis() {
       if (!selectedSpecies.value.length) return;
+      const epoch = ++_loadEpoch;
       thumbUrl.value = null;
       if (selCtx.value.type === 'single') {
         thumbUrl.value = photoUrl(mainSpecies.value);
       }
-      await Promise.all([loadKpis(), loadPolarChart(), loadSeriesChart(), loadCircadianChart(), loadDailyHeatmap()]);
+      await Promise.all([loadKpis(epoch), loadPolarChart(epoch), loadSeriesChart(epoch), loadCircadianChart(epoch), loadDailyHeatmap(epoch)]);
     }
 
-    async function loadKpis() {
+    async function loadKpis(epoch) {
       const sciNames = selectedSciNames();
       if (!sciNames.length) return;
       const conf = fc.confidence.value;
       try {
         const [r] = await birdQuery(...Q.analysesKpis(sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
+        if (epoch !== _loadEpoch) return;
         if (!r) return;
 
         if (selectedSpecies.value.length === 1) {
           const [sampled] = await birdQuery(...Q.analysesResampleCount(sciNames, fp.dateFrom.value, fp.dateTo.value, resample.value, conf));
+          if (epoch !== _loadEpoch) return;
           const avgPerDay = r.days > 0 ? (r.total / r.days).toFixed(1) : '—';
           kpis.value = [
             { val: r.total.toLocaleString(),            label: t('analyses_kpi_raw'),       cls: ''      },
@@ -620,6 +628,7 @@ const app = createApp({
           ];
           // Build breakdown
           const bdRows = await birdQuery(...Q.analysesBreakdown(sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
+          if (epoch !== _loadEpoch) return;
           const totalCount = bdRows.reduce((s, r) => s + r.count, 0);
           breakdown.value = bdRows.map(row => {
             const tax = taxonomyData.value.find(s => s.sciName === row.Sci_Name);
@@ -634,7 +643,7 @@ const app = createApp({
       } catch(e) { console.error('[analyses] kpis:', e); }
     }
 
-    async function loadPolarChart() {
+    async function loadPolarChart(epoch) {
       const sciNames = selectedSciNames();
       if (!sciNames.length) return;
       const conf = fc.confidence.value;
@@ -643,6 +652,7 @@ const app = createApp({
       try {
         const rows = await birdQuery(...Q.analysesHourly(sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
         const rowsMin = await birdQuery(...Q.analysesQuarterHourly(sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
+        if (epoch !== _loadEpoch) return;
         const byHour = Array(24).fill(0);
         rows.forEach(r => { byHour[r.h] = r.n; });
         const totalDet = byHour.reduce((a,b)=>a+b,0);
@@ -785,7 +795,7 @@ const app = createApp({
       return html;
     }
 
-    async function loadSeriesChart() {
+    async function loadSeriesChart(epoch) {
       const species = selectedSpecies.value;
       const conf    = fc.confidence.value;
       if (!species.length) return;
@@ -848,6 +858,7 @@ const app = createApp({
           })());
           datasets = await Promise.all(dsPromises);
         }
+        if (epoch !== _loadEpoch) return;
 
         await nextTick();
         const canvas = elSeries.value; if (!canvas) return;
@@ -872,7 +883,7 @@ const app = createApp({
       } catch(e) { console.error('[analyses] series:', e); }
     }
 
-    async function loadCircadianChart() {
+    async function loadCircadianChart(epoch) {
       const species = selectedSpecies.value;
       if (species.length < 2) return;
       const conf = fc.confidence.value;
@@ -896,6 +907,7 @@ const app = createApp({
           };
         })());
         const datasets = await Promise.all(dsPromises);
+        if (epoch !== _loadEpoch) return;
         await nextTick();
         const canvas = elCircadian.value;
         if (!canvas) return;
@@ -922,7 +934,7 @@ const app = createApp({
       } catch (e) { console.error('[analyses] circadian:', e); }
     }
 
-    async function loadDailyHeatmap() {
+    async function loadDailyHeatmap(epoch) {
       const sciNames = selectedSciNames();
       if (!sciNames.length) return;
       const conf = fc.confidence.value;
@@ -931,6 +943,7 @@ const app = createApp({
         const daysDiff = (new Date(fp.dateTo.value)-new Date(fp.dateFrom.value))/86400000;
         const from = daysDiff > 120 ? daysAgo(89) : fp.dateFrom.value;
         const rows = await birdQuery(...Q.analysesHeatmapSlots(sciNames, from, fp.dateTo.value, conf));
+        if (epoch !== _loadEpoch) return;
         if (!rows.length) {
           heatmapHtml.value = '<p style="color:var(--text-faint);font-size:.8rem;padding:.5rem;">' + t('analyses_no_data_period') + '</p>';
           heatmapLoading.value = false; return;

@@ -301,9 +301,9 @@ const M_COLORS = ['#5a9e3a', '#4a7eb5', '#c8a84b', '#a85c3a'];
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('stats');
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('stats');
     const { spName } = useSpeciesNames();
     const { mountChart: mountMonthly }= useChart();
     const { mountChart: mountConf }   = useChart();
@@ -349,36 +349,45 @@ const app = createApp({
     });
     const chartColor = i => BIRD_CONFIG.chartColors[i % BIRD_CONFIG.chartColors.length];
 
-    async function loadAll() { await Promise.all([loadKpis(),loadTimeData(),loadTopCount(),loadTopConf(),loadConfData(),loadRecords()]); }
+    // fp/fc onChange both fire loadAll. With 6 parallel queries each,
+    // rapid filter changes had a stale Promise.all painting old data into
+    // a fresh KPI / chart layout. Epoch keeps the latest winner.
+    let _loadEpoch = 0;
+    async function loadAll() {
+      const epoch = ++_loadEpoch;
+      await Promise.all([loadKpis(epoch),loadTimeData(epoch),loadTopCount(epoch),loadTopConf(epoch),loadConfData(epoch),loadRecords(epoch)]);
+    }
 
     const isMultiModel = ref(false);
 
-    async function loadKpis() {
+    async function loadKpis(epoch) {
       kpis.value.loading = true;
       try {
         buildWhere();
         const [g] = await birdQuery(`SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as avg_conf, ROUND(MAX(Confidence)*100,1) as max_conf, MIN(Date) as first, MAX(Date) as last, COUNT(DISTINCT Model) as model_count FROM detections WHERE ${_w}`,_wp);
         const [pd] = await birdQuery(`SELECT ROUND(AVG(n),0) as avg FROM (SELECT COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date)`,_wp);
+        if (epoch !== _loadEpoch) return;
         const days = Math.round((new Date(g.last)-new Date(g.first))/86400000)+1;
         isMultiModel.value = (g.model_count || 1) > 1;
         kpis.value = {loading:false, total:g.total.toLocaleString(), sp:g.sp, avgConf:g.avg_conf, maxConf:g.max_conf, perDay:Math.round(pd.avg||0).toLocaleString(), days:days.toLocaleString()};
-      } catch(e) { kpis.value = {loading:false}; }
+      } catch(e) { if (epoch === _loadEpoch) kpis.value = {loading:false}; }
     }
 
-    async function loadTimeData() {
+    async function loadTimeData(epoch) {
       try {
         const ats = Q.adaptiveTimeSeries(fp.dateFrom.value, fp.dateTo.value, fc.confidence.value);
-        timeRes.value = ats.resolution;
         let rows = await birdQuery(ats.sql, ats.params);
+        if (epoch !== _loadEpoch) return;
+        timeRes.value = ats.resolution;
         if (ats.resolution === 'weekly' && ats.days > 90) rows = Q.aggregateWeekly(rows);
         timeData.value = { rows, labelFn: ats.labelFn, resolution: ats.resolution };
       } catch(e) { console.error('[loadTimeData]', e); }
     }
     function loadPhotosFor(r,rows) { rows.forEach(r=>{r.photoUrl=photoUrl(r.Sci_Name);}); r.value={...r.value,rows:[...rows]}; }
-    async function loadTopCount() { topCount.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name ORDER BY n DESC LIMIT 15`,_wp); topCount.value={loading:false,rows}; loadPhotosFor(topCount,rows); } catch(e){topCount.value={loading:false,rows:[]};} }
-    async function loadTopConf() { topConf.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,_wp); topConf.value={loading:false,rows}; loadPhotosFor(topConf,rows); } catch(e){topConf.value={loading:false,rows:[]};} }
-    async function loadConfData() { try { confData.value = await birdQuery(...Q.confidenceHistogram()); } catch(e){} }
-    async function loadRecords() { records.value.loading=true; try { buildWhere(); const [maxDet]=await birdQuery(`SELECT Date,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxSp]=await birdQuery(`SELECT Date,COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxConf]=await birdQuery(...Q.recordConfidence()); records.value={loading:false,maxDet,maxSp,maxConf}; } catch(e){records.value={loading:false,maxDet:null,maxSp:null,maxConf:null};} }
+    async function loadTopCount(epoch) { topCount.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name ORDER BY n DESC LIMIT 15`,_wp); if (epoch !== _loadEpoch) return; topCount.value={loading:false,rows}; loadPhotosFor(topCount,rows); } catch(e){ if (epoch === _loadEpoch) topCount.value={loading:false,rows:[]};} }
+    async function loadTopConf(epoch) { topConf.value.loading=true; try { buildWhere(); const rows=await birdQuery(`SELECT Com_Name,Sci_Name,ROUND(AVG(Confidence)*100,1) as avg_conf FROM detections WHERE ${_w} GROUP BY Com_Name,Sci_Name HAVING COUNT(*)>=10 ORDER BY avg_conf DESC LIMIT 15`,_wp); if (epoch !== _loadEpoch) return; topConf.value={loading:false,rows}; loadPhotosFor(topConf,rows); } catch(e){ if (epoch === _loadEpoch) topConf.value={loading:false,rows:[]};} }
+    async function loadConfData(epoch) { try { const rows = await birdQuery(...Q.confidenceHistogram()); if (epoch !== _loadEpoch) return; confData.value = rows; } catch(e){} }
+    async function loadRecords(epoch) { records.value.loading=true; try { buildWhere(); const [maxDet]=await birdQuery(`SELECT Date,COUNT(*) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxSp]=await birdQuery(`SELECT Date,COUNT(DISTINCT Com_Name) as n FROM detections WHERE ${_w} GROUP BY Date ORDER BY n DESC LIMIT 1`,_wp); const [maxConf]=await birdQuery(...Q.recordConfidence()); if (epoch !== _loadEpoch) return; records.value={loading:false,maxDet,maxSp,maxConf}; } catch(e){ if (epoch === _loadEpoch) records.value={loading:false,maxDet:null,maxSp:null,maxConf:null};} }
     // loadYearlyData removed — merged into adaptive loadTimeData
 
     watch([timeData,lang], async()=>{
@@ -423,17 +432,25 @@ const app = createApp({
       return labels[m] || m.replace(/_/g,' ');
     }
 
+    // mfp.onChange (period buttons) → loadModels. Rapid clicks race a single
+    // fetch but the response also drives drawModelChart's Chart.js cleanup —
+    // a stale response that lands late would .destroy() the chart the fresh
+    // response just built. Epoch keeps the user honest.
+    let _mLoadEpoch = 0;
     async function loadModels() {
+      const epoch = ++_mLoadEpoch;
       mLoading.value = true;
       try {
         const from = mfp.dateFrom.value, to = mfp.dateTo.value;
         const days = Math.max(1, Math.ceil((new Date(to)-new Date(from))/86400000)+1);
         const resp = await fetch(`${BIRD_CONFIG.apiUrl}/model-comparison?days=${days}&dateFrom=${from}&dateTo=${to}`);
-        mData.value = await resp.json();
+        const json = await resp.json();
+        if (epoch !== _mLoadEpoch) return;
+        mData.value = json;
         mLoading.value = false;
         await nextTick(); await nextTick();
-        drawModelChart();
-      } catch(e) { console.error('model-comparison:',e); mLoading.value = false; }
+        if (epoch === _mLoadEpoch) drawModelChart();
+      } catch(e) { console.error('model-comparison:',e); if (epoch === _mLoadEpoch) mLoading.value = false; }
     }
 
     function drawModelChart() {

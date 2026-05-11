@@ -196,9 +196,9 @@ const { useI18n, useTheme, useNav, useChart, useSpeciesNames,
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('biodiversity');
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('biodiversity');
     const { mountChart: mountRichness } = useChart();
     const { mountChart: mountTaxChart } = useChart();
     let _echartsOrders = null;
@@ -238,12 +238,13 @@ const app = createApp({
     const simpsonD = ref(null);
     const top1Pct  = ref(null);
 
-    async function loadDiversity() {
+    async function loadDiversity(epoch) {
       try {
         const from = fp.dateFrom.value || '2000-01-01';
         const rows = await birdQuery(
           `SELECT Com_Name, COUNT(*) as n FROM detections WHERE Date>=? AND Date<=? AND Confidence>=? GROUP BY Com_Name ORDER BY n DESC`,
           [from, fp.dateTo.value || localDateStr(), fc.confidence.value]);
+        if (epoch !== _loadEpoch) return;
         if (!rows.length) {
           shannonH.value = null; shannonJ.value = null; shannonS.value = null;
           simpsonD.value = null; top1Pct.value = null;
@@ -266,8 +267,12 @@ const app = createApp({
       } catch(e) { console.error('[diversity]', e); }
     }
 
+    // fp/fc onChange + watch(lang) all trigger loadAll. Three parallel
+    // queries each — epoch keeps the latest winner.
+    let _loadEpoch = 0;
     async function loadAll() {
-      await Promise.all([loadRichnessData(), loadMatrix(), loadDiversity()]);
+      const epoch = ++_loadEpoch;
+      await Promise.all([loadRichnessData(epoch), loadMatrix(epoch), loadDiversity(epoch)]);
     }
 
     // ── KPI info modal (Phase 1.5) ───────────────────────────────────────
@@ -314,12 +319,13 @@ const app = createApp({
     }));
     const infoModalData = computed(() => infoModalKey.value ? KPI_INFO.value[infoModalKey.value] : null);
 
-    async function loadRichnessData() {
+    async function loadRichnessData(epoch) {
       try {
         const from = fp.dateFrom.value || '2000-01-01';
         const to = fp.dateTo.value || localDateStr();
         const ats = Q.adaptiveTimeSeries(from, to, fc.confidence.value);
         let rows = await birdQuery(ats.sql, ats.params);
+        if (epoch !== _loadEpoch) return;
         if (ats.resolution === 'weekly' && ats.days > 90) rows = Q.aggregateWeekly(rows);
         // Fill gaps so the chart shows all buckets in the range (empty days = 0)
         if (ats.resolution === 'daily') {
@@ -349,16 +355,18 @@ const app = createApp({
       } catch(e) { console.error(e); }
     }
 
-    async function loadMatrix() {
+    async function loadMatrix(epoch) {
       matrix.value.loading = true;
       try {
         const topRows = await birdQuery(...Q.topSpeciesAllTime(20, fc.confidence.value));
+        if (epoch !== _loadEpoch) return;
         const topSp = topRows.map(r=>r.Com_Name);
         const sciMap = {}; topRows.forEach(r=>{sciMap[r.Com_Name]=r.Sci_Name;});
         if (!topSp.length) { matrix.value={loading:false,error:null,html:`<div class="hint-empty"><div>${t('no_data')}</div></div>`}; return; }
         const rows = await birdQuery(
           `SELECT Com_Name, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM detections WHERE Com_Name IN (${topSp.map(()=>'?').join(',')}) AND Confidence>=? GROUP BY Com_Name,m`,
           [...topSp, fc.confidence.value]);
+        if (epoch !== _loadEpoch) return;
         const data = {};
         topSp.forEach(sp=>{data[sp]=Array(12).fill(0);});
         rows.forEach(r=>{if(data[r.Com_Name]) data[r.Com_Name][r.m-1]=r.n;});
@@ -406,7 +414,7 @@ const app = createApp({
     });
 
     // Heatmap et matrice : retraduits si lang change
-    watch(lang, () => { loadMatrix(); loadTaxonomy(); });
+    watch(lang, () => { loadMatrix(++_loadEpoch); loadTaxonomy(); });
 
     // ── Taxonomy donut chart ────────────────────────────────────────────
     async function loadTaxonomy() {

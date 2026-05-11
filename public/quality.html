@@ -634,17 +634,24 @@ const app = createApp({
       return t('quality_no_species_volume');
     });
 
+    // setDays triggers load. renderTimeline creates a new Chart.js instance
+    // and destroys the previous one — a stale response landing after a fresh
+    // one would destroy the chart the fresh load just built.
+    let _loadEpoch = 0;
     async function load() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       try {
         const r = await fetch(`${API}/quality?days=${days.value}`);
-        data.value = await r.json();
+        const json = await r.json();
+        if (epoch !== _loadEpoch) return;
+        data.value = json;
         await nextTick();
-        renderTimeline();
+        if (epoch === _loadEpoch) renderTimeline();
       } catch (e) {
         console.error('[quality] load failed', e);
       }
-      loading.value = false;
+      if (epoch === _loadEpoch) loading.value = false;
     }
 
     function renderTimeline() {
