@@ -692,6 +692,18 @@
     U.loadFavorites().then(() => { favorites.value = U.getFavorites(); });
 
     async function toggle(comName, sciName) {
+      // Optimistic UI: flip the star synchronously before the server
+      // round-trip, then reconcile when the response lands. Saves the
+      // ~50-200 ms of network latency a click used to wait through.
+      // U.toggleFavorite has its own localStorage fallback on server
+      // failure, so reverting here would actually contradict that — we
+      // leave the optimistic state in place and rely on the next
+      // loadFavorites() sync (favorites page mount, watch trigger) to
+      // surface any divergence via the existing desync banner.
+      const wasFav = favorites.value.includes(comName);
+      favorites.value = wasFav
+        ? favorites.value.filter(c => c !== comName)
+        : [...favorites.value, comName];
       await U.toggleFavorite(comName, sciName);
       favorites.value = U.getFavorites();
     }
