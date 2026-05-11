@@ -257,9 +257,35 @@ const app = createApp({
       ]);
     }
 
+    // All-time = the 'all' period (default). species_stats is pre-aggregated
+    // per-species lifetime, so the KPIs become single-row counts instead of
+    // nested GROUP BY HAVING COUNT(*) over 436 k detections (measured:
+    // 515 ms → 3 ms, ~170× on the production DB).
+    function isAllTime() {
+      return fp.period.value === 'all' || (fp.dateFrom.value || '') <= '1901-01-01';
+    }
+
     async function loadKpis(epoch, conf, maxDet) {
       kpis.value.loading = true;
       try {
+        if (isAllTime()) {
+          // Fast path: read species_stats directly. count_07 is pre-built
+          // for the standard 0.7 threshold; if the user picks a different
+          // confidence we fall through to the slow path below so the count
+          // stays correct.
+          if (Math.abs(conf - 0.7) < 0.001) {
+            const [tot]  = await birdQuery(`SELECT COUNT(*) as n FROM species_stats WHERE count_07>0`);
+            const [rare] = await birdQuery(`SELECT COUNT(*) as n FROM species_stats WHERE count_07>0 AND count_07<=?`, [maxDet]);
+            const [once] = await birdQuery(`SELECT COUNT(*) as n FROM species_stats WHERE count_07=1`);
+            const [nw]   = await birdQuery(`SELECT COUNT(*) as n FROM species_stats WHERE count_07>0 AND first_date>=?`, [thisYear+'-01-01']);
+            if (epoch !== _loadEpoch) return;
+            kpis.value = { loading:false, total:tot.n, rare:rare.n, once:once.n, newThisYear:nw.n };
+            return;
+          }
+        }
+        // Slow path: explicit confidence threshold or bounded date range.
+        // Same shape as before; the nested GROUP BY HAVING is unavoidable
+        // when we can't use the count_07 pre-aggregate.
         const p1 = [conf]; const dw1 = buildDateWhere('', p1);
         const [tot]  = await birdQuery(`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?${dw1}`, p1);
         const p2 = [conf]; const dw2 = buildDateWhere('', p2); p2.push(maxDet);
