@@ -67,18 +67,33 @@
     },
 
     /** First observation date per species — today, calendar, recent, gallery */
+    // species_stats.first_date is the lifetime-first-detection date per
+    // species (pre-aggregated). Reading it directly is ~1400× faster
+    // than the GROUP BY HAVING MIN(Date) over raw detections — the
+    // slow-route log first surfaced one of these queries at 18 s cold.
     firstObservations(c) {
-      return ['SELECT Com_Name, MIN(Date) as first_date FROM active_detections WHERE Confidence>=? GROUP BY Com_Name', [(c != null ? c : C())]];
+      const conf = c != null ? c : C();
+      if (Math.abs(conf - 0.7) < 0.001) {
+        return ['SELECT com_name as Com_Name, first_date FROM species_stats WHERE count_07 > 0', []];
+      }
+      return ['SELECT Com_Name, MIN(Date) as first_date FROM active_detections WHERE Confidence>=? GROUP BY Com_Name', [conf]];
     },
 
     /** Species first seen on a specific date — today, calendar, recent */
     newSpeciesForDate(date, c) {
-      return ['SELECT Com_Name FROM active_detections WHERE Confidence>=? GROUP BY Com_Name HAVING MIN(Date)=?', [(c != null ? c : C()), date]];
+      const conf = c != null ? c : C();
+      if (Math.abs(conf - 0.7) < 0.001) {
+        return ['SELECT com_name as Com_Name FROM species_stats WHERE count_07 > 0 AND first_date = ?', [date]];
+      }
+      return ['SELECT Com_Name FROM active_detections WHERE Confidence>=? GROUP BY Com_Name HAVING MIN(Date)=?', [conf, date]];
     },
 
     /** New species since a date — detections, gallery */
     newSpeciesSince(dateFrom, c) {
-      return ['SELECT Com_Name FROM detections GROUP BY Com_Name HAVING MIN(Date)>=?', [dateFrom || '2000-01-01']];
+      // species_stats keys by sci_name not com_name PK, but first_date is
+      // indexed implicitly by the small row count (~150 species). count_07
+      // gate excludes species seen only at <0.7 (noise-only).
+      return ['SELECT com_name as Com_Name FROM species_stats WHERE count_07 > 0 AND first_date >= ?', [dateFrom || '2000-01-01']];
     },
 
     /** Current confidence threshold */

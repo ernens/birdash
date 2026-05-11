@@ -294,6 +294,21 @@ const server = http.createServer((req, res) => {
   if (!pathname.startsWith('/api/')) res.setHeader('Content-Security-Policy', CSP);
   console.log(`[BIRDASH] ${req.method} ${req.url} → pathname: ${pathname}`);
 
+  // Slow-route log — mirror of the slow-query log added in 1.54. Whole-
+  // endpoint wall time, captured by wrapping res.end. Catches latency
+  // that doesn't come from SQL (fs walks, external API cascades, large
+  // JSON serialization, etc.). 1 s threshold to keep the signal-to-
+  // noise high; tweak in code if needed.
+  const _routeT0 = Date.now();
+  const _origEnd = res.end.bind(res);
+  res.end = function (...args) {
+    const _dt = Date.now() - _routeT0;
+    if (_dt > 1000) {
+      console.warn(`[slow-route ${_dt}ms] ${req.method} ${pathname}`);
+    }
+    return _origEnd(...args);
+  };
+
   // ── Auth gate (synchronous, attaches req.user) ─────────────────────────
   // Returns false + responds 401 if the route requires auth and the
   // caller isn't authenticated. Sync to avoid losing POST body chunks
