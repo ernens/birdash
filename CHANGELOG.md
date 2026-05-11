@@ -2,6 +2,232 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.53.0] — 2026-05-11
+
+Site-wide stabilization pass over every page in `public/`. Eighteen
+audit commits, 42 files touched, ~98 distinct fixes — no new
+user-visible features. Continuation of the 1.52.0 senior-auditor
+sweep, but this time on the frontend instead of the server/DB.
+
+The dominant pattern was **race-condition protection**: nearly every
+page had at least one loader that could be re-entered (filter changes,
+keyboard shortcuts, polling intervals, language switches) without any
+guard, so a slow response from the previous call could land after a
+fresh one and paint stale data into the now-displayed layout. Twenty-
+plus pages got an explicit `_loadEpoch` counter that is captured at
+the top of the loader and rechecked after each `await` before any ref
+is written.
+
+### Fixed — race conditions (the big one)
+
+- **`species.html`** — `loadDetail()` spawned **10+ parallel
+  queries** (stats, info, videos, 5 charts, feed, note, weather) and
+  could be re-entered by URL param + last-species fallback, the
+  picker, prev/next buttons, ←/→ keyboard shortcuts, `watch(lang)`,
+  and post-delete reloads. Now every sub-loader takes an epoch and
+  bails before writing. The single most impactful race fix of the
+  sweep, because the page is the most reachable and the most
+  navigated via keyboard.
+
+- **Pages where filter changes raced their own loaders.**
+  `today.html`, `overview.html`, `recordings.html`, `detections.html`,
+  `timeline.html`, `purge.html`, `system.html` (`loadServices` polling
+  vs. manual reload), `settings.html` orchestrator (`loadServices`),
+  `rarities.html`, `favorites.html`, `calendar.html` (fast-path +
+  legacy fallback), `phenology.html` (`reloadData` and `selectWeek`),
+  `stats.html` (`loadAll` 6× + `loadModels`), `biodiversity.html`
+  (`loadAll` 3×), `quality.html` (`load()` + Chart.js
+  destroy/create), `analyses.html` (`loadAnalysis` 5×),
+  `comparison.html`, `compare.html` (4+4 queries + 3 chart renders),
+  `review.html`.
+
+- **`calendar.html` `loadDayDetails` object-spread race.** Two
+  concurrent calls each snapshotted `dayTopSpecies.value` before the
+  spread; whichever resolved last would drop the entry written by the
+  other. Replaced with a direct property mutation — Vue 3 deep
+  reactivity catches it.
+
+### Fixed — bugs (user-visible)
+
+- **`detections.html` favorites-with-species filter was silently
+  ignored.** `buildWhere`'s `favOnly` branch only emitted the
+  favorites IN-clause when no other species/taxonomy filter was
+  active. So `fGuild=raptors + favOnly` returned every raptor — not
+  only the raptors among favorites. Refactored to compute
+  `effectiveSpecies` as a true intersection (manual selection ∩
+  taxonomy ∩ favorites ∩ new-species) before emitting one
+  Com_Name IN clause (or `1=0` when the intersection is empty).
+
+- **`rarities.html` rarity-threshold change did nothing.** The
+  "≤ N detections" `<select>` had no `@change` handler and `fMaxDet`
+  wasn't in any watch — the UI label changed but data stayed loaded
+  with the old threshold until the user clicked Refresh. Added
+  `@change="load"`.
+
+- **`recordings.html` "Best recordings" view lied about top-3.** The
+  view template iterated `group.dets[*]` as if there were multiple
+  recordings per species, but the SQL returned one row per species
+  (`GROUP BY Com_Name HAVING MAX(Confidence)`). Realigned to
+  `group.best` everywhere and dropped the imaginary array.
+
+- **`overview.html` "last hour" returned 0 across midnight.** The
+  query `WHERE Date = today AND Time >= 23:30` excluded the hour
+  before midnight when run after 00:30. Split into a two-query branch
+  when the one-hour window crosses midnight.
+
+- **`overview.html` listener leak.** A document-level click handler
+  added on mount to close the rare-species panel was never removed.
+  Capture the function reference and remove it in `onUnmounted`.
+
+- **`timeline.html` popup tag `<span>` was missing its closing `>`.**
+  HTML parser swallowed the `{{t('tl_tag_'+tag)}}` interpolation as a
+  pseudo-attribute, so the tags never rendered when an event popup
+  opened. Fixed.
+
+- **`timeline.html` unreachable cluster modal.** `clusterPopup` ref
+  was never assigned a non-null value anywhere; clusters are expanded
+  inline into individual markers in `buildMarkers`, so the modal was
+  dead code (~20 lines of template plus the ref). Removed.
+
+- **`purge.html` URL species filter wasn't pre-filled.** `species.html`
+  links to `purge.html?species=Robin`, but purge ignored
+  `location.search` on mount, so the link looked broken. Now reads
+  `?species=` and `?date=` and pre-fills the filters.
+
+- **`purge.html` destructive endpoints surfaced no errors.** trash /
+  restore / empty-trash called `await fetch(...)` then
+  `Promise.all([load(), loadStats()])` without checking
+  `response.ok`. A backend rejection (401, 500, …) looked like
+  success to the user — particularly bad for `emptyTrash`. Now
+  routed through a `postDestructive` helper that surfaces the
+  error and refuses to reload.
+
+- **`settings.html` "Notifications" duplicate card.** The
+  Services-tab card kept three fields (title template, body template,
+  per-species cooldown) that never got moved to the dedicated
+  Notifications tab; the migration comment said the move was done
+  but it wasn't. Completed the migration: fields moved to
+  `settings/notif.html`, duplicate card removed from
+  `settings/services.html` (−54 lines net).
+
+- **`favorites.html` extra `loadFavorites` round-trip on every star
+  click.** `removeFav` called `toggleFavorite()` followed by an
+  explicit `loadFavorites()`, but `toggleFavorite` mutates the shared
+  favorites ref which already fires `watch(favorites) →
+  loadFavorites()`. So every click hit `/favorites/stats` twice.
+  Removed the redundant call.
+
+### Fixed — i18n / a11y / security
+
+- **Hardcoded `'fr-BE'` locale in `system.html` timestamps.** Two
+  timestamp formatters (services refreshAt, eBird fetchedAt) used a
+  fixed locale instead of the user's UI language. Same fix on
+  `audio.html` (noise-profile-recorded date). Now follow `lang`.
+
+- **`system.html` `openUrl` allowed reverse tabnabbing.**
+  `window.open(url, '_blank')` without `rel=noopener` leaks
+  `window.opener` to the destination. Added `noopener,noreferrer`.
+
+- **`rarities.html` SQL date concatenation.** `buildDateWhere` was
+  string-concatenating `fp.dateFrom`/`dateTo` directly into the SQL
+  alongside `?` placeholders for other values. Risk was low in
+  practice (the dates come from `<input type="date">`) but the mixed
+  pattern is wrong for a query layer. Now appends `?` placeholders
+  and pushes the values into the caller's params array.
+
+- **`species.html` species link, multiple pages.** Picker-style links
+  that did `@click="navigateTo(...)"` instead of using a real `href`
+  meant middle-click and keyboard activation didn't work and screen
+  readers couldn't see the link target. Real hrefs on
+  `today.html`, `overview.html`, `detections.html`, and the
+  `<a class="species-link">` in `detections.html`.
+
+- **Native `confirm()` left silently on destructive ops.** `purge.html`
+  destructive endpoints still use native dialogs, but now have proper
+  ok/error feedback and don't act on failure.
+
+### Fixed — pages with race-relevant Chart.js
+
+Pages that call `chartInstance.destroy()` before mounting a new chart
+had a destroy-the-fresh-chart bug: a stale response landing after a
+fresh one would invoke `destroy()` on the chart the fresh load just
+built, leaving an empty canvas. Affected (and guarded with epochs):
+`stats.html` (`loadModels` + Chart.js draw), `quality.html`
+(`renderTimeline`), `comparison.html` (`renderChart`), `compare.html`
+(three chart renders), `analyses.html` (polar / series / circadian
+echarts and Chart.js mix).
+
+### Changed — orchestrator hygiene
+
+- **`settings.html` orchestrator return statement** — the template at
+  the top of the file references **14 refs**; the return statement
+  previously re-exposed **62**. Every tab sub-component already gets
+  its state via `inject('settingsCtx')` provided once in the
+  orchestrator, so the return-statement duplicates were inherited
+  from the era when the template was monolithic. Trimmed to just
+  what the orchestrator template reads. Net: −33 lines and a single
+  source of truth.
+
+- **Inline-style → CSS class extraction.** The toggle-on-active card
+  pattern was duplicated across `settings/notif.html`,
+  `settings/detection.html`, `settings/station.html`, and
+  `settings.html` MQTT discovery — 10 sites with the same
+  `:style="{borderColor: cond ? var(--accent) : var(--border), …}"`
+  block. Now one `.set-toggle-card` + `.is-active` class with a
+  proper CSS transition. Similar extractions for `.notif-rule`
+  (audio + notif), `.audio-strategy-option`, `.fav-remove-btn`,
+  `.ph-suggestion-btn`, `.sp-back-link`, `.sp-personal-note`,
+  `.tl-date-input`, `.cmp-date-input`.
+
+- **Inline event handlers → CSS pseudo-classes.** `onmouseover` /
+  `onmouseout` / `onfocus` / `onfocusout` on
+  `species.html`, `phenology.html` replaced with `:hover` and
+  `:focus`. Drops a hostile-content surface (inline JS) and lets
+  the browser handle the transition.
+
+- **Dead-destructure cleanup.** The boilerplate
+  `const { lang, t, setLang, langs } = useI18n(); const { theme,
+  themes, setTheme } = useTheme(); const { navItems, siteName } =
+  useNav(…);` returned a lot of refs that no page actually read —
+  the shell handles theme/nav via its own provide/inject. Trimmed
+  to `const { lang, t } = useI18n(); useTheme(); useNav(…);` on:
+  `today`, `overview`, `recordings`, `detections`, `timeline`,
+  `system`, `rarities`, `favorites`, `species`, `stats`,
+  `biodiversity`, `analyses`, `spectrogram`. The bare calls are kept
+  for their shell-side effects.
+
+### Changed — code mort dropped
+
+- `recordings.html`: `onPhotoError` (40 lines, superseded by
+  `/api/photo`), `downloadAudio` (never called), `_photoFailed` Set,
+  dead `imgSrc: null` field.
+- `detections.html`: `deleteDet` stub (no template binding),
+  `useAudio` + `playingFile/toggleAudio` (composable destructured
+  but never wired).
+- `today.html`: dead `quickValidate` function and `viewingDate` ref.
+- `timeline.html`: the entire dead `clusterPopup` modal.
+- `species.html`: `wikiSummaryAlt` ref (declared "second language
+  summary", assigned only `''`, never read), duplicate `shortModel`
+  in the setup return, `favorites` ref orphan.
+- `favorites.html`: `sortBy` ref + `sortOptions` computed (left over
+  from a pre-bucket refactor, no template binding).
+- `bird-shared.js`: dead `fmtDate`/`fmtTime` and 9 unused imports of
+  `bird-queries.js` across pages.
+
+### Added
+
+- **`.set-toggle-card`, `.notif-rule` (renamed → `.set-toggle-card`),
+  `.audio-strategy-option`, `.fav-remove-btn`, `.ph-suggestion-btn`,
+  `.sp-back-link`, `.sp-personal-note`, `.tl-date-input`,
+  `.cmp-date-input`** — new CSS classes consolidating recurring
+  inline-style patterns under settings, favorites, phenology,
+  species, timeline, system. All include a proper `:hover` /
+  `.is-active` transition where the inline version had none.
+
+- **i18n keys** `purge_err_trash`, `purge_err_restore`,
+  `purge_err_empty` in EN / FR / NL / DE for the new error feedback
+  on the purge page.
+
 ## [1.52.1] — 2026-05-10
 
 Hotfix for a chronic UX bug surfaced today: the spectrogram modal opened

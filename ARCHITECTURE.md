@@ -1020,6 +1020,33 @@ The shell wraps every page and provides:
 
 Redirects: `index.html` -> `overview.html`, `recent.html` -> `calendar.html`, `models.html` -> `stats.html?tab=models`
 
+### Convention: race-protected loaders
+
+Any page that can re-enter its main load function (filter changes,
+prev/next, keyboard shortcuts, polling intervals, language switches,
+post-mutation reloads) captures an epoch counter at the top of the
+function and rechecks it after every `await` before writing to a ref:
+
+```js
+let _loadEpoch = 0;
+async function load() {
+  const epoch = ++_loadEpoch;
+  const data = await fetchSomething();
+  if (epoch !== _loadEpoch) return;  // stale, a newer call is in flight
+  myRef.value = data;
+}
+```
+
+This is what keeps a slow Robin response from painting into the Tit
+detail view after the user navigated on, or from `Chart.destroy()`-ing
+the chart a fresher response just built. The pattern is uniform
+across 20+ pages and every multi-loader sub-function (see e.g.
+`species.html` `loadDetail`, `analyses.html` `loadAnalysis`,
+`weather.html` `runSearch` which uses the equivalent `_searchSeq`).
+Polling pages (`liveboard.html`, `dashboard.html`,
+`dashboard-kiosk.html`) are intentionally **not** guarded because
+their state self-corrects on the next tick.
+
 ### Internationalization (i18n)
 
 - **4 UI languages**: French, English, German, Dutch (`public/i18n/*.json`)
