@@ -8,6 +8,50 @@
  * whether it uses Vue, vanilla JS, or another framework.
  */
 
+// ── Web Vitals instrumentation ──────────────────────────────────────────
+// Runs as early as possible (bird-shared.js loads before Vue boot) to
+// capture FCP / LCP / CLS / TBT for every page navigation. Numbers are
+// stored on window.BIRDASH_VITALS so they can be inspected from the
+// devtools console (window.BIRDASH_VITALS) or surfaced via /api/perf
+// later. Logged once on visibilitychange so the final values land in the
+// console without polling.
+(function setupVitals() {
+  if (typeof PerformanceObserver === 'undefined') return;
+  const v = { FCP: null, LCP: null, CLS: 0, TBT: 0, navStart: performance.now() };
+  window.BIRDASH_VITALS = v;
+  const tryObserve = (type, cb) => {
+    try { new PerformanceObserver(list => list.getEntries().forEach(cb))
+      .observe({ type, buffered: true }); } catch (_) { /* unsupported */ }
+  };
+  tryObserve('paint', e => {
+    if (e.name === 'first-contentful-paint') v.FCP = Math.round(e.startTime);
+  });
+  tryObserve('largest-contentful-paint', e => {
+    v.LCP = Math.round(e.startTime);   // keep the latest (LCP can update)
+  });
+  tryObserve('layout-shift', e => {
+    if (!e.hadRecentInput) v.CLS = Math.round((v.CLS + e.value) * 1000) / 1000;
+  });
+  tryObserve('longtask', e => {
+    // TBT = sum of (longtask duration - 50ms) for every task >50ms.
+    if (e.duration > 50) v.TBT = Math.round(v.TBT + (e.duration - 50));
+  });
+  // Final snapshot when the user navigates away. console.log so it appears
+  // in /system.html's logs view alongside the other backend traces.
+  let _logged = false;
+  function flush() {
+    if (_logged) return; _logged = true;
+    const page = location.pathname.split('/').pop() || 'index';
+    console.log('[vitals]', page, JSON.stringify({
+      FCP: v.FCP, LCP: v.LCP, CLS: v.CLS, TBT: v.TBT,
+    }));
+  }
+  addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+  addEventListener('pagehide', flush);
+})();
+
 ;(function (BIRD_CONFIG) {
   'use strict';
 
