@@ -391,8 +391,19 @@ function handle(req, res, pathname, ctx) {
           return;
         }
 
+        // Slow-query log: queries crossing 500 ms get a one-line console
+        // entry with the SQL and params, surfacing hotspots empirically
+        // (caller pages aren't always obvious from the SQL alone). 500 ms
+        // is roughly where a human notices latency; anything fast enough
+        // not to clear that bar doesn't need logging.
+        const _qt0 = Date.now();
         const stmt = db.prepare(sql);
         const rows = stmt.all(...params);
+        const _qt = Date.now() - _qt0;
+        if (_qt > 500) {
+          const oneLine = sql.replace(/\s+/g, ' ').trim().slice(0, 200);
+          console.warn(`[slow-query ${_qt}ms] ${oneLine} :: ${JSON.stringify(params).slice(0, 100)}`);
+        }
         if (rows.length > 10000) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Too many rows (max 10000)' }));
