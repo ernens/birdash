@@ -35,6 +35,33 @@
               json://hostname/path
             </div>
           </details>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:.8rem 0;">
+
+          <!-- Notification title / body templates + per-species cooldown.
+               Moved here from the Services tab on 2026-05-11 — the Services
+               tab had a duplicate Apprise card that retained only these
+               three fields after the rest moved to this dedicated tab. -->
+          <div style="display:flex;flex-direction:column;gap:.4rem;">
+            <label style="font-size:.78rem;color:var(--text-muted);display:flex;flex-direction:column;gap:.2rem;">
+              {{t('set_notif_title')}}
+              <input type="text" v-model="conf.APPRISE_NOTIFICATION_TITLE"
+                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+            </label>
+            <label style="font-size:.78rem;color:var(--text-muted);display:flex;flex-direction:column;gap:.2rem;">
+              {{t('set_notif_body')}}
+              <input type="text" v-model="conf.APPRISE_NOTIFICATION_BODY"
+                     placeholder="A $comname ($sciname) was detected with confidence $confidence"
+                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+              <span style="font-size:.7rem;color:var(--text-faint);">{{t('set_notif_body_help')}}</span>
+            </label>
+            <label style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.5rem;">
+              <span style="flex:1;">{{t('set_notif_cooldown')}}</span>
+              <input type="number" min="0" max="86400" step="1"
+                     v-model="conf.APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES"
+                     style="width:90px;padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;">
+            </label>
+          </div>
         </div>
 
         <!-- ═══ Notifications oiseaux ═══ -->
