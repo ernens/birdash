@@ -305,9 +305,9 @@ const { useI18n, useTheme, useNav, useSpeciesNames, birdQuery, fmtConf, localDat
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('spectrogram');
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('spectrogram');
     const { spName } = useSpeciesNames();
 
     const status    = ref('idle');

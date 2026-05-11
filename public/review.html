@@ -255,7 +255,12 @@ const app = createApp({
       return Object.entries(g).map(([reason,count]) => ({reason,count})).sort((a,b) => b.count-a.count);
     });
 
+    // fp.onChange and the review-changed event listener both fire loadFlagged.
+    // Without an epoch a stale list could overwrite a fresh one (or one that
+    // just received an optimistic update from validate()), confusing the user.
+    let _loadEpoch = 0;
     async function loadFlagged() {
+      const epoch = ++_loadEpoch;
       loading.value = true; selected.clear(); pageLimit.value = 50;
       try {
         const from = fp.dateFrom.value || new Date().toISOString().split('T')[0];
@@ -263,10 +268,11 @@ const app = createApp({
         if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(from, to);
         const resp = await fetch(`${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=2000`);
         const data = await resp.json();
+        if (epoch !== _loadEpoch) return;
         flagged.value = data.flagged || [];
         totalDets.value = data.total || 0;
       } catch(e) { console.error('loadFlagged:', e); }
-      loading.value = false;
+      if (epoch === _loadEpoch) loading.value = false;
     }
 
     // Helper: POST that throws on any failure path. Mirrors _postJson in

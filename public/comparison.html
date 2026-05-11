@@ -337,16 +337,25 @@ const app = createApp({
       loadData();
     }
 
+    // prev/next season + season-picker triggers can fire loadData rapidly.
+    // renderChart destroys the previous Chart.js instance and builds a new
+    // one — without an epoch a stale response landing late would destroy
+    // the chart the fresh response just built.
+    let _loadEpoch = 0;
     async function loadData() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       try {
         const resp = await fetch(`${BIRD_CONFIG.apiUrl}/seasons/report?season=${season.value}&year=${year.value}`);
-        data.value = await resp.json();
+        const json = await resp.json();
+        if (epoch !== _loadEpoch) return;
+        data.value = json;
       } catch(e) { console.error('[seasons]', e); }
+      if (epoch !== _loadEpoch) return;
       loading.value = false;
       // Chart must render after loading=false so the v-if template is in the DOM
       await nextTick();
-      renderChart();
+      if (epoch === _loadEpoch) renderChart();
     }
 
     function renderChart() {

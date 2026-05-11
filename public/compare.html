@@ -523,8 +523,13 @@ const app = createApp({
       } catch (e) { console.error('[compare] species list', e); }
     }
 
+    // Two species pickers + period buttons can all retrigger loadData. With
+    // 8 queries + 3 chart renders per call, a stale response set would draw
+    // species A's data into species B's picker after the user re-picked.
+    let _loadEpoch = 0;
     async function loadData() {
       if (!speciesA.value || !speciesB.value) return;
+      const epoch = ++_loadEpoch;
       loading.value = true;
       const [from, to] = periodRange();
       try {
@@ -534,21 +539,24 @@ const app = createApp({
           birdQuery(...Q.compareWeeklyPhenology(speciesA.value, from, to)),
           birdQuery(...Q.compareConfidenceHist(speciesA.value, from, to)),
         ]);
+        if (epoch !== _loadEpoch) return;
         const [idB, hrB, phB, cfB] = await Promise.all([
           birdQuery(...Q.compareIdentity(speciesB.value, from, to)),
           birdQuery(...Q.compareHourlyProfile(speciesB.value, from, to)),
           birdQuery(...Q.compareWeeklyPhenology(speciesB.value, from, to)),
           birdQuery(...Q.compareConfidenceHist(speciesB.value, from, to)),
         ]);
+        if (epoch !== _loadEpoch) return;
         dataA.value = { identity: idA[0] || _emptyIdentity(), hourly: _toBuckets(hrA, 24, 'h'), pheno: _toBuckets(phA, 53, 'week'), conf: cfA };
         dataB.value = { identity: idB[0] || _emptyIdentity(), hourly: _toBuckets(hrB, 24, 'h'), pheno: _toBuckets(phB, 53, 'week'), conf: cfB };
       } catch (e) {
         console.error('[compare] loadData', e);
       }
+      if (epoch !== _loadEpoch) return;
       loading.value = false;
       updateUrl();
       await nextTick();
-      renderHourly(); renderPheno(); renderConf();
+      if (epoch === _loadEpoch) { renderHourly(); renderPheno(); renderConf(); }
     }
 
     function _emptyIdentity() {
