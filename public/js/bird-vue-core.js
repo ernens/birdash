@@ -592,6 +592,59 @@
     return { toasts: _toasts, showToast: show };
   }
 
+  // ── useDelayedLoading ─────────────────────────────────────────────────────
+  //
+  // Wraps a loading ref with two timing thresholds:
+  //
+  //   - delay  (default 300 ms) : how long to wait before *showing* the
+  //     spinner / skeleton. Hides the loader entirely on fast responses
+  //     (cache hits, pre-aggregated queries) — no flicker, no jittery UI.
+  //   - slow   (default 3000 ms) : how long to wait before flagging the
+  //     load as "slow". Lets the UI escalate to an explanatory message
+  //     ("still loading…") rather than leaving the user in front of an
+  //     unchanging spinner.
+  //
+  // Returns reactive `visible` and `isSlow` booleans, plus `cancel()` if
+  // the caller wants to short-circuit a still-pending timer (e.g. on
+  // unmount). The source `loading` ref keeps its original semantics —
+  // this is purely a presentation overlay.
+  //
+  // Usage:
+  //   const { loading } = something();
+  //   const { visible: showSpinner, isSlow } = useDelayedLoading(loading);
+  //   <div v-if="showSpinner" class="spinner">…</div>
+  //   <div v-if="isSlow">{{ t('still_loading') }}</div>
+  function useDelayedLoading(loadingRef, opts = {}) {
+    const delay = opts.delay ?? 300;
+    const slow  = opts.slow  ?? 3000;
+    const visible = ref(false);
+    const isSlow  = ref(false);
+    let _showT = null, _slowT = null;
+
+    function cancel() {
+      if (_showT) { clearTimeout(_showT); _showT = null; }
+      if (_slowT) { clearTimeout(_slowT); _slowT = null; }
+      visible.value = false;
+      isSlow.value  = false;
+    }
+
+    Vue.watch(loadingRef, (loading) => {
+      if (loading) {
+        // Restart the timers fresh each time loading flips true.
+        if (_showT) clearTimeout(_showT);
+        if (_slowT) clearTimeout(_slowT);
+        visible.value = false;
+        isSlow.value  = false;
+        _showT = setTimeout(() => { visible.value = true;  _showT = null; }, delay);
+        _slowT = setTimeout(() => { isSlow.value  = true;  _slowT = null; }, slow);
+      } else {
+        cancel();
+      }
+    }, { immediate: true });
+
+    return { visible, isSlow, cancel };
+  }
+
   // ── useFavorites ────────────────────────────────────────────────────────
   function useFavorites() {
     const favorites = ref(U.getFavorites());
@@ -2461,7 +2514,7 @@
   // ── Export global ─────────────────────────────────────────────────────────
   window.BIRDASH = {
     // Vue composables
-    useI18n, useTheme, useNav, useChart, useAudio, useAudioPlayer, useFavorites, useSpeciesNames, useToast, useFormat, updateSiteIdentity, exportChart,
+    useI18n, useTheme, useNav, useChart, useAudio, useAudioPlayer, useFavorites, useSpeciesNames, useToast, useDelayedLoading, useFormat, updateSiteIdentity, exportChart,
     // Filter composables
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components
