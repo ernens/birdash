@@ -107,8 +107,7 @@
               </div>
               <div class="sp-sci-row">
                 {{f.sci_name}}
-                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
-                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -139,8 +138,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
-                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -171,8 +169,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
-                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -202,8 +199,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button @click.stop="removeFav(f.com_name)" :title="t('fav_remove')"
-                        style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:0 .15rem;line-height:1;color:var(--accent);vertical-align:middle;">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
               </div>
             </div>
           </div>
@@ -221,23 +217,16 @@ const { navigateTo, photoUrl } = BIRDASH;
 const app = Vue.createApp({
   setup() {
     const { t, lang } = BIRDASH.useI18n();
-    const { theme }   = BIRDASH.useTheme();
+    BIRDASH.useTheme();
     const { spName }  = BIRDASH.useSpeciesNames();
-    const { favorites, toggleFavorite, isFavorite } = BIRDASH.useFavorites();
+    const { favorites, toggleFavorite } = BIRDASH.useFavorites();
 
     const loading = ref(true);
     const favList = ref([]);
     const stats   = ref({});
     const searchQ = ref('');
-    const sortBy  = ref('recent');
     const syncMissing = ref([]);   // favoris en localStorage non présents côté serveur
     const syncing     = ref(false);
-
-    const sortOptions = computed(() => [
-      { key: 'name',   label: t('fav_sort_name') },
-      { key: 'recent', label: t('fav_sort_recent') },
-      { key: 'count',  label: t('fav_sort_count') },
-    ]);
 
     const filteredFavs = computed(() => {
       let list = [...favList.value];
@@ -319,12 +308,18 @@ const app = Vue.createApp({
       return t('fav_status_days_ago', { n: days });
     }
 
+    // Mount + watch(favorites) + syncNow can all hit loadFavorites concurrently.
+    // Epoch keeps only the latest response.
+    let _loadEpoch = 0;
     async function loadFavorites() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       try {
         const res = await fetch(BIRD_CONFIG.apiUrl + '/favorites/stats');
+        if (epoch !== _loadEpoch) return;
         if (res.ok) {
           const data = await res.json();
+          if (epoch !== _loadEpoch) return;
           favList.value = (data.favorites || []).map(f => ({
             ...f,
             photoUrl: photoUrl(f.sci_name),
@@ -345,7 +340,7 @@ const app = Vue.createApp({
       } catch (e) {
         console.warn('[favorites]', e);
       }
-      loading.value = false;
+      if (epoch === _loadEpoch) loading.value = false;
     }
 
     async function syncNow() {
@@ -372,9 +367,9 @@ const app = Vue.createApp({
     }
 
     async function removeFav(comName) {
+      // toggleFavorite mutates the shared favorites ref, which fires the
+      // watch below → loadFavorites(). No need to call it again here.
       await toggleFavorite(comName, '');
-      // Reload stats
-      await loadFavorites();
     }
 
     loadFavorites();
@@ -383,9 +378,9 @@ const app = Vue.createApp({
     watch(favorites, () => loadFavorites());
 
     return {
-      t, lang, theme, spName,
+      t, lang, spName,
       loading, favList, stats, searchQ,
-      filteredFavs, fmtDateShort,
+      fmtDateShort,
       navigateTo, removeFav,
       syncMissing, syncing, syncNow,
       buckets, dormantCount, lastActivityLabel, statusFor,

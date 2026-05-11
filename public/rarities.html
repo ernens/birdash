@@ -48,7 +48,7 @@
         </div>
         <div>
           <span class="fp-label">{{t('rarity_threshold_label')}}</span>
-          <select class="fp-select" v-model.number="fMaxDet">
+          <select class="fp-select" v-model.number="fMaxDet" @change="load">
             <option :value="1">= 1 ({{t('never_seen')}})</option>
             <option :value="5">≤ 5</option>
             <option :value="10">≤ 10</option>
@@ -176,17 +176,16 @@
 
 <script>
 const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
-const { useI18n, useTheme, useNav, useAudio, useSpeciesNames,
+const { useI18n, useTheme, useNav, useSpeciesNames,
         useFilterPeriod, useFilterConfidence,
-        birdQuery, fmtDate, fmtConf, localDateStr, daysAgo,
+        birdQuery, fmtDate, fmtConf, localDateStr,
         navigateTo, buildAudioUrl, photoUrl, quickPlaySpecies } = BIRDASH;
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('rarities');
-    const { playingFile, toggleAudio }= useAudio();
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('rarities');
     const { spName } = useSpeciesNames();
 
     const thisYear = localDateStr().substring(0,4);
@@ -231,45 +230,65 @@ const app = createApp({
       });
     }
 
-    function buildDateWhere(alias) {
+    // buildDateWhere now appends ? placeholders to the WHERE clause and pushes
+    // the values into the caller's params array. Previously dates were
+    // string-concatenated into the SQL (low risk thanks to <input type="date">
+    // validation, but a bad pattern that doesn't belong in a query layer).
+    function buildDateWhere(alias, params) {
       const p = alias ? alias+'.' : '';
       const parts = [];
-      if (fp.dateFrom.value) parts.push(`${p}Date>='${fp.dateFrom.value}'`);
-      if (fp.dateTo.value)   parts.push(`${p}Date<='${fp.dateTo.value}'`);
+      if (fp.dateFrom.value) { parts.push(`${p}Date>=?`); params.push(fp.dateFrom.value); }
+      if (fp.dateTo.value)   { parts.push(`${p}Date<=?`); params.push(fp.dateTo.value); }
       return parts.length ? ' AND ' + parts.join(' AND ') : '';
     }
 
+    // The page kicks off three parallel queries (KPIs, recent, table) and any
+    // of fp/fc/fMaxDet/lang/Refresh can re-trigger them. Without an epoch a
+    // stale Promise.all could land after a fresh one and revert the UI.
+    let _loadEpoch = 0;
     async function load() {
+      const epoch = ++_loadEpoch;
       const conf   = fc.confidence.value;
       const maxDet = fMaxDet.value;
-      const dw     = buildDateWhere('');
       await Promise.all([
-        loadKpis(conf, maxDet, dw),
-        loadRecent(conf, maxDet, dw),
-        loadTable(conf, maxDet, dw),
+        loadKpis(epoch, conf, maxDet),
+        loadRecent(epoch, conf, maxDet),
+        loadTable(epoch, conf, maxDet),
       ]);
     }
 
-    async function loadKpis(conf, maxDet, dw) {
+    async function loadKpis(epoch, conf, maxDet) {
       kpis.value.loading = true;
       try {
-        const [tot]  = await birdQuery(`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?${dw}`,[conf]);
-        const [rare] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)<=?)`,[conf,maxDet]);
-        const [once] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)=1)`,[conf]);
+        const p1 = [conf]; const dw1 = buildDateWhere('', p1);
+        const [tot]  = await birdQuery(`SELECT COUNT(DISTINCT Com_Name) as n FROM detections WHERE Confidence>=?${dw1}`, p1);
+        const p2 = [conf]; const dw2 = buildDateWhere('', p2); p2.push(maxDet);
+        const [rare] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw2} GROUP BY Com_Name HAVING COUNT(*)<=?)`, p2);
+        const p3 = [conf]; const dw3 = buildDateWhere('', p3);
+        const [once] = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=?${dw3} GROUP BY Com_Name HAVING COUNT(*)=1)`, p3);
         const [nw]   = await birdQuery(`SELECT COUNT(*) as n FROM (SELECT Com_Name FROM detections WHERE Confidence>=? AND SUBSTR(Date,1,4)=? GROUP BY Com_Name HAVING MIN(Date)>=?||'-01-01')`,[conf,thisYear,thisYear]);
+        if (epoch !== _loadEpoch) return;
         kpis.value = { loading:false, total:tot.n, rare:rare.n, once:once.n, newThisYear:nw.n };
-      } catch(e) { kpis.value = {...kpis.value, loading:false}; }
+      } catch(e) { if (epoch === _loadEpoch) kpis.value = {...kpis.value, loading:false}; }
     }
 
-    async function loadRecent(conf, maxDet, dw) {
+    async function loadRecent(epoch, conf, maxDet) {
       recent.value.loading = true;
       try {
+        // Inner subquery: WHERE Confidence>=? AND Date>=? AND Date<=? HAVING COUNT(*)<=?
+        const params = [conf];
+        const dwInner = buildDateWhere('', params);
+        params.push(maxDet);
+        // Outer WHERE: d.Confidence>=? AND d.Date>=? AND d.Date<=?
+        params.push(conf);
+        const dwOuter = buildDateWhere('d', params);
         const rows = await birdQuery(
           `SELECT d.Date,d.Time,d.Com_Name,d.Sci_Name,d.Confidence,d.File_Name
            FROM detections d
-           INNER JOIN (SELECT Com_Name FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING COUNT(*)<=?) rare
-           ON d.Com_Name=rare.Com_Name WHERE d.Confidence>=?${dw}
-           ORDER BY d.Date DESC,d.Time DESC LIMIT 15`,[conf,maxDet,conf]);
+           INNER JOIN (SELECT Com_Name FROM detections WHERE Confidence>=?${dwInner} GROUP BY Com_Name HAVING COUNT(*)<=?) rare
+           ON d.Com_Name=rare.Com_Name WHERE d.Confidence>=?${dwOuter}
+           ORDER BY d.Date DESC,d.Time DESC LIMIT 15`, params);
+        if (epoch !== _loadEpoch) return;
         assignPhotos(rows);
         recent.value = { loading:false, rows };
         // Pre-fetch weather for the visible date range so chips populate
@@ -277,21 +296,23 @@ const app = createApp({
           const dates = rows.map(r => r.Date).sort();
           BIRDASH.loadWeatherRange(dates[0], dates[dates.length-1]);
         }
-      } catch(e) { recent.value = { loading:false, rows:[] }; }
+      } catch(e) { if (epoch === _loadEpoch) recent.value = { loading:false, rows:[] }; }
     }
 
-    async function loadTable(conf, maxDet, dw) {
+    async function loadTable(epoch, conf, maxDet) {
       table.value.loading = true;
       try {
+        const params = [conf]; const dw = buildDateWhere('', params); params.push(maxDet);
         const rows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n,
                   MIN(Date) as first_date, MAX(Date) as last_date,
                   ROUND(MAX(Confidence)*100,1) as max_conf
            FROM detections WHERE Confidence>=?${dw} GROUP BY Com_Name HAVING n<=?
-           ORDER BY last_date DESC, n ASC`,[conf,maxDet]);
+           ORDER BY last_date DESC, n ASC`, params);
+        if (epoch !== _loadEpoch) return;
         assignPhotos(rows, 'sci');
         table.value = { loading:false, rows };
-      } catch(e) { table.value = { loading:false, rows:[] }; }
+      } catch(e) { if (epoch === _loadEpoch) table.value = { loading:false, rows:[] }; }
     }
 
     function assignPhotos(rows, sciField='Sci_Name') {
@@ -308,7 +329,7 @@ const app = createApp({
       kpis,recent,table,
       tableFilter,activeKpi,filteredTable,
       tableSection,scrollToSection,
-      playingFile,toggleAudio,buildAudioUrl,
+      buildAudioUrl,
       fmtDate,fmtConf,navigateTo,spName,load,
       quickPlay(comName) { quickPlaySpecies(comName); },
     };
