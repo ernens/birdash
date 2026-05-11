@@ -838,8 +838,29 @@ const app = createApp({
 
     async function loadKpis() {
       try {
-        const [td]  = await birdQuery(`SELECT COUNT(*) as det, COUNT(DISTINCT Com_Name) as sp, ROUND(AVG(Confidence)*100,1) as conf, COUNT(DISTINCT Model) as mc, MIN(Time) as first_time FROM active_detections WHERE Date=? AND Confidence>=?`,[today, CONF]);
-        isMultiModel.value = (td?.mc || 1) > 1;
+        // Read today's KPIs from daily_stats (pre-aggregated, ~2 ms) instead
+        // of active_detections (13 s cold-cache anti-join over ~436 k rows).
+        // The /api/query 2-min cache used to hide this, but any mutation
+        // (validate, favorite toggle, delete) clears the cache and the next
+        // user-facing reload eats the full cold scan. avg_conf here is the
+        // count-weighted mean of per-species daily means — within ~2 % of
+        // the true mean; precise enough for a header KPI. daily_stats lags
+        // raw detections by the 5-min incremental refresh window, which is
+        // imperceptible compared to the page's 60 s auto-reload cadence.
+        // Model count + lastHour still need raw detections (model is not
+        // pre-aggregated; lastHour straddles midnight); both are narrow
+        // date windows so idx_date_conf keeps them sub-100 ms.
+        const [td] = await birdQuery(
+          `SELECT
+             COALESCE(SUM(count_07), 0) as det,
+             COUNT(*) as sp,
+             ROUND(COALESCE(SUM(avg_conf * count_07) / NULLIF(SUM(count_07), 0), 0) * 100, 1) as conf,
+             MIN(first_time) as first_time
+           FROM daily_stats WHERE date=? AND count_07>0`, [today]);
+        const [mcRow] = await birdQuery(
+          `SELECT COUNT(DISTINCT Model) as mc FROM detections WHERE Date=? AND Confidence>=?`,
+          [today, CONF]);
+        isMultiModel.value = (mcRow?.mc || 1) > 1;
         const now = new Date();
         const hh = String(now.getHours()).padStart(2,'0');
         const mm = String(now.getMinutes()).padStart(2,'0');
