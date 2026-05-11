@@ -78,10 +78,7 @@
       <div v-if="topSpecies.length" style="margin-top:1.2rem;">
         <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:.5rem;">Suggestions</div>
         <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-          <button v-for="sp in topSpecies" :key="sp" @click="selectSpecies(sp)"
-                  style="padding:.4rem .8rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-main);font-size:.82rem;cursor:pointer;transition:all .15s;"
-                  onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-                  onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-main)'">
+          <button v-for="sp in topSpecies" :key="sp" class="ph-suggestion-btn" @click="selectSpecies(sp)">
             {{spName(sp, '')}}
           </button>
         </div>
@@ -371,15 +368,19 @@ BIRDASH.ready.then(() => {
         if (first) pickSpeciesFromDropdown(first);
       }
 
-      // ── Load weekly + hourly data for current species/year ───
+      // Concurrent triggers (species pick, year change) can race the three
+      // parallel queries below. Epoch keeps only the latest call's result.
+      let _reloadEpoch = 0;
       async function reloadData() {
         if (!currentSpecies.value) return;
+        const epoch = ++_reloadEpoch;
         try {
           const [weekly, hourly, statsRow] = await Promise.all([
             birdQuery(...Q.phenologyWeekly(currentSpecies.value, selectedYear.value)),
             birdQuery(...Q.phenologyHourlyByWeek(currentSpecies.value, selectedYear.value)),
             birdQuery(...Q.phenologyFirstLast(currentSpecies.value, selectedYear.value)),
           ]);
+          if (epoch !== _reloadEpoch) return;
           weeklyData.value = weekly;
           hourlyData.value = hourly;
           const s = statsRow[0] || {};
@@ -390,7 +391,7 @@ BIRDASH.ready.then(() => {
             activeWeeks: weekly.length,
           };
           loaded.value = true;
-        } catch(e) { console.error('reloadData:', e); loaded.value = true; }
+        } catch(e) { console.error('reloadData:', e); if (epoch === _reloadEpoch) loaded.value = true; }
       }
 
       // ── Color scale (abundance / heatmap) ────────────────────
@@ -449,12 +450,16 @@ BIRDASH.ready.then(() => {
       });
 
       // ── Week zoom: select / close / fetch ────────────────────
+      // Same epoch pattern as reloadData — clicking ribbon cells fast can have
+      // an older week's details land after the user moved to another week.
+      let _weekEpoch = 0;
       async function selectWeek(cell) {
         if (cell.future || !cell.n) return;
         if (selectedWeek.value === cell.week) {
           closeWeek();
           return;
         }
+        const epoch = ++_weekEpoch;
         selectedWeek.value = cell.week;
         weekDetails.value = null;
         weekPrevYearCount.value = 0;
@@ -465,6 +470,7 @@ BIRDASH.ready.then(() => {
             birdQuery(...Q.phenologyWeekTopDetections(currentSpecies.value, selectedYear.value, cell.week, 5)),
             birdQuery(...Q.phenologyWeekPrevYear(currentSpecies.value, selectedYear.value, cell.week)),
           ]);
+          if (epoch !== _weekEpoch) return;
           weekDetails.value = {
             ...(details[0] || {}),
             hourly,
@@ -477,7 +483,7 @@ BIRDASH.ready.then(() => {
           }
         } catch (e) {
           console.error('selectWeek:', e);
-          weekDetails.value = { n: 0, days: 0, hourly: [], top: [] };
+          if (epoch === _weekEpoch) weekDetails.value = { n: 0, days: 0, hourly: [], top: [] };
         }
       }
 

@@ -265,10 +265,12 @@ const app = createApp({
            GROUP BY Com_Name ORDER BY det DESC LIMIT 3`,
           [date, conf]
         );
-        dayTopSpecies.value = {
-          ...dayTopSpecies.value,
-          [date]: rows.map(r => ({ com: r.Com_Name, sci: r.Sci_Name, det: r.det, photo: photoUrl(r.Sci_Name) })),
-        };
+        // Mutate the existing object instead of spreading: with two concurrent
+        // loadDayDetails (e.g. quick day-to-day clicks) the spread snapshots
+        // taken at call time would drop entries written by the other.
+        // Vue 3 deep reactivity catches the mutation just fine.
+        dayTopSpecies.value[date] = rows.map(r =>
+          ({ com: r.Com_Name, sci: r.Sci_Name, det: r.det, photo: photoUrl(r.Sci_Name) }));
       } catch (e) { console.error('[calendar] loadDayDetails', e); }
     }
 
@@ -460,7 +462,12 @@ const app = createApp({
       return Math.max(10, Math.round((det / maxDet) * 100));
     }
 
+    // prev/next can be clicked rapidly, each call spawns either a single
+    // fast-path fetch or 7 client-side SQL queries. Epoch lets us discard
+    // a slow legacy response that arrives after the user already navigated on.
+    let _loadEpoch = 0;
     async function loadMonth() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       const y = viewYear.value, m = viewMonth.value;
       const from = `${y}-${String(m + 1).padStart(2, '0')}-01`;
@@ -476,8 +483,10 @@ const app = createApp({
         if (Math.abs(conf - 0.7) < 0.001) {
           try {
             const r = await fetch(`${BIRD_CONFIG.apiUrl}/calendar/month?from=${from}&to=${to}&conf=${conf}`);
+            if (epoch !== _loadEpoch) return;
             if (r.ok) {
               const data = await r.json();
+              if (epoch !== _loadEpoch) return;
               dailyData.value = data.daily;
               monthMeta.value = data.meta;
               maxDet = data.maxDet || 1;
@@ -511,6 +520,7 @@ const app = createApp({
            GROUP BY Date ORDER BY Date`,
           [from, to, conf]
         );
+        if (epoch !== _loadEpoch) return;
         const map = {};
         let mx = 1;
         for (const r of rows) {
@@ -629,6 +639,7 @@ const app = createApp({
           `SELECT MIN(Date) as first_date FROM active_detections WHERE Confidence >= ?`,
           [conf]
         );
+        if (epoch !== _loadEpoch) return;
         const firstEverDate = ageRows.length ? ageRows[0].first_date : null;
         const ageDays = firstEverDate
           ? Math.floor((Date.now() - new Date(firstEverDate + 'T12:00:00').getTime()) / 86400000)
@@ -654,8 +665,10 @@ const app = createApp({
           selectedDate.value = null;
         }
       } catch (e) { console.error('[calendar]', e); }
-      loading.value = false;
-      firstLoad.value = false;
+      if (epoch === _loadEpoch) {
+        loading.value = false;
+        firstLoad.value = false;
+      }
     }
 
     function prevMonth() {
