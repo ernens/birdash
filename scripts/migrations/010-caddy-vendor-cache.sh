@@ -31,25 +31,32 @@ if grep -q "@vendor path /birds/js/" "$CADDYFILE"; then
     exit 0
 fi
 
+# Detect the user's home from the existing Caddyfile so this migration
+# works on any Pi regardless of user name (bird, mickey, biloute…).
+# Origin: same hardcoded /home/bjorn/ pattern that broke mickey via
+# migration 011 v1 (see commit e443422).
+DETECTED_HOME=$(grep -oE 'root \* /home/[^/]+' "$CADDYFILE" | head -1 | awk '{print $3}')
+if [ -z "$DETECTED_HOME" ]; then DETECTED_HOME="$HOME"; fi
+
 sudo cp "$CADDYFILE" "$CADDYFILE.before-$NAME"
 
 # Insert before the @birds catch-all (more-specific must come first).
-sudo python3 - "$CADDYFILE" <<'PYEOF'
+sudo python3 - "$CADDYFILE" "$DETECTED_HOME" <<'PYEOF'
 import sys, re
-path = sys.argv[1]
+path, home = sys.argv[1], sys.argv[2]
 with open(path) as f: txt = f.read()
-block = """\t# Vendor libraries: 3rd-party, change at most once per release.
+block = f"""\t# Vendor libraries: 3rd-party, change at most once per release.
 \t# 7-day hard cache — service-worker cache-name bump on each release
 \t# forces re-fetch via the SW, and a manual ctrl-shift-R bypasses
 \t# both caches if the user really needs to.
 \t@vendor path /birds/js/chart.umd.min.js /birds/js/echarts.min.js /birds/js/vue.global.prod.min.js /birds/js/chart.* /birds/js/lucide* /birds/js/leaflet*
-\thandle @vendor {
+\thandle @vendor {{
 \t\tencode zstd gzip
 \t\turi strip_prefix /birds
-\t\troot * /home/bjorn/birdash/public
+\t\troot * {home}/birdash/public
 \t\theader Cache-Control "public, max-age=604800"
 \t\tfile_server
-\t}
+\t}}
 """
 txt2 = re.sub(r'(\n\t@birds path /birds /birds/\*)', '\n' + block + r'\1', txt)
 if txt == txt2:
