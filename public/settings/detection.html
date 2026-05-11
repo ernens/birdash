@@ -234,8 +234,7 @@
           <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('set_yamnet_desc')}}</p>
 
           <!-- Privacy filter -->
-          <div style="padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem;"
-               :style="{borderColor: conf.PRIVACY_FILTER_ENABLED == 1 ? 'var(--accent)' : 'var(--border)', background: conf.PRIVACY_FILTER_ENABLED == 1 ? 'rgba(52,211,153,.05)' : 'transparent'}">
+          <div class="set-toggle-card" :class="{'is-active': conf.PRIVACY_FILTER_ENABLED == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.PRIVACY_FILTER_ENABLED" true-value="1" false-value="0">
               <span><bird-icon name="user-check" :size="14"></bird-icon> <strong>{{t('set_yamnet_privacy')}}</strong></span>
@@ -257,8 +256,7 @@
           </div>
 
           <!-- Dog bark filter -->
-          <div style="padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem;"
-               :style="{borderColor: conf.DOG_FILTER_ENABLED == 1 ? 'var(--accent)' : 'var(--border)', background: conf.DOG_FILTER_ENABLED == 1 ? 'rgba(52,211,153,.05)' : 'transparent'}">
+          <div class="set-toggle-card" :class="{'is-active': conf.DOG_FILTER_ENABLED == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.DOG_FILTER_ENABLED" true-value="1" false-value="0">
               <span><bird-icon name="filter" :size="14"></bird-icon> <strong>{{t('set_yamnet_dog')}}</strong></span>
@@ -295,8 +293,7 @@
           </div>
           <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('set_throttle_desc')}}</p>
 
-          <div style="padding:.6rem .7rem;border-radius:6px;border:1px solid var(--border);"
-               :style="{borderColor: conf.NOISY_THROTTLE_ENABLED == 1 ? 'var(--accent)' : 'var(--border)', background: conf.NOISY_THROTTLE_ENABLED == 1 ? 'rgba(52,211,153,.05)' : 'transparent'}">
+          <div class="set-toggle-card" :class="{'is-active': conf.NOISY_THROTTLE_ENABLED == 1}" style="margin-bottom:0;">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.NOISY_THROTTLE_ENABLED" true-value="1" false-value="0">
               <span><strong>{{t('set_throttle_enable')}}</strong></span>

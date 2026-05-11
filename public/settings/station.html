@@ -208,8 +208,9 @@
                   {v:'off',         t:t('set_security_mode_off'),         d:t('set_security_mode_off_desc')},
                   {v:'protected',   t:t('set_security_mode_protected'),   d:t('set_security_mode_protected_desc')},
                   {v:'public-read', t:t('set_security_mode_public_read'), d:t('set_security_mode_public_read_desc')}]"
-                 :key="opt.v"
-                 :style="{padding:'.55rem .7rem',borderRadius:'6px',border:'1px solid '+(conf.AUTH_MODE === opt.v ? 'var(--accent)' : 'var(--border)'),background: conf.AUTH_MODE === opt.v ? 'rgba(52,211,153,.05)' : 'transparent',cursor:'pointer',display:'block'}">
+                 :key="opt.v" class="set-toggle-card"
+                 :class="{'is-active': conf.AUTH_MODE === opt.v}"
+                 style="display:block;">
             <div style="display:flex;align-items:center;gap:.5rem;">
               <input type="radio" :value="opt.v" v-model="conf.AUTH_MODE">
               <strong style="font-size:.85rem;">{{opt.t}}</strong>

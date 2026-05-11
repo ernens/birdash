@@ -2947,13 +2947,15 @@
     .set-range-val { font-size:.85rem; font-weight:600; color:var(--accent); min-width:2.5rem; text-align:right; white-space:nowrap; }
     .set-check { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
     .set-check input { accent-color:var(--accent); width:18px; height:18px; }
-    /* Settings rule/option cards with active state highlight */
-    .notif-rule {
+    /* Settings toggle card with active-state highlight (notif rules,
+       detection sub-filters, security-mode picker, MQTT HASS, etc.). */
+    .set-toggle-card {
       padding:.6rem .7rem; border-radius:6px;
       border:1px solid var(--border); margin-bottom:.5rem;
+      cursor:pointer;
       transition: border-color .15s, background .15s;
     }
-    .notif-rule.is-active {
+    .set-toggle-card.is-active {
       border-color: var(--accent);
       background: rgba(52,211,153,.05);
     }

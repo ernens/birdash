@@ -62,7 +62,7 @@
           <p style="font-size:.72rem;color:var(--text-faint);margin:0 0 .7rem .2rem;">{{t('notif_min_confidence_hint')}}</p>
 
           <!-- Rule 1: Rare species -->
-          <div class="notif-rule" :class="{'is-active': conf.NOTIFY_RARE_SPECIES == 1}">
+          <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_RARE_SPECIES == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.NOTIFY_RARE_SPECIES" true-value="1" false-value="0">
               <span><bird-icon name="gem" :size="14"></bird-icon> <strong>{{t('notif_rare')}}</strong></span>
@@ -87,7 +87,7 @@
           </div>
 
           <!-- Rule 2: First of season -->
-          <div class="notif-rule" :class="{'is-active': conf.NOTIFY_FIRST_SEASON == 1}">
+          <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_FIRST_SEASON == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.NOTIFY_FIRST_SEASON" true-value="1" false-value="0">
               <span><bird-icon name="sprout" :size="14"></bird-icon> <strong>{{t('notif_season')}}</strong></span>
@@ -102,7 +102,7 @@
           </div>
 
           <!-- Rule 3: New species ever -->
-          <div class="notif-rule" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES == 1}">
+          <div class="set-toggle-card" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES" true-value="1" false-value="0">
               <span><bird-icon name="sparkles" :size="14"></bird-icon> <strong>{{t('notif_new')}}</strong></span>
@@ -111,7 +111,7 @@
           </div>
 
           <!-- Rule 4: First of the day -->
-          <div class="notif-rule" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY == 1}">
+          <div class="set-toggle-card" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" true-value="1" false-value="0">
               <span><bird-icon name="calendar-days" :size="14"></bird-icon> <strong>{{t('notif_daily')}}</strong></span>
@@ -123,7 +123,7 @@
           </div>
 
           <!-- Rule 5: Favorites -->
-          <div class="notif-rule" :class="{'is-active': conf.NOTIFY_FAVORITES == 1}">
+          <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_FAVORITES == 1}">
             <label class="set-check" style="cursor:pointer;">
               <input type="checkbox" v-model="conf.NOTIFY_FAVORITES" true-value="1" false-value="0">
               <span><bird-icon name="star" :size="14"></bird-icon> <strong>{{t('notif_favorites')}}</strong></span>
@@ -331,7 +331,7 @@
             </div>
 
             <!-- HA discovery -->
-            <div class="notif-rule" :class="{'is-active': conf.MQTT_HASS_DISCOVERY == 1}">
+            <div class="set-toggle-card" :class="{'is-active': conf.MQTT_HASS_DISCOVERY == 1}">
               <label class="set-check" style="cursor:pointer;">
                 <input type="checkbox" v-model="conf.MQTT_HASS_DISCOVERY" true-value="1" false-value="0">
                 <span><bird-icon name="zap" :size="14"></bird-icon> <strong>{{t('notif_mqtt_hass')}}</strong></span>
