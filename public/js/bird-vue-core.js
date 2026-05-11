@@ -645,6 +645,45 @@
     return { visible, isSlow, cancel };
   }
 
+  // ── useAbortableLoader ────────────────────────────────────────────────────
+  //
+  // Helper for the "rapid filter change" pattern that already uses
+  // _loadEpoch. Pairs the epoch guard with a real AbortController so
+  // pending fetches are cancelled at the network layer instead of just
+  // ignored on arrival.
+  //
+  //   const { run, abort, signal } = useAbortableLoader();
+  //
+  //   async function load() {
+  //     const { epoch, signal } = run();
+  //     const rows = await birdQuery(sql, params, { signal });
+  //     if (epoch.stale) return;
+  //     data.value = rows;
+  //   }
+  //
+  // Each run() aborts whatever the previous run() left in flight and
+  // returns a fresh { epoch, signal } pair. `epoch.stale` flips true
+  // when a newer run() supersedes it, so the caller can early-return
+  // anywhere after an await without having to remember a counter.
+  function useAbortableLoader() {
+    let _ctrl = null;
+    let _seq = 0;
+    function run() {
+      if (_ctrl) _ctrl.abort();
+      _ctrl = new AbortController();
+      const mySeq = ++_seq;
+      const epoch = {
+        get stale() { return mySeq !== _seq; },
+      };
+      return { epoch, signal: _ctrl.signal };
+    }
+    function abort() {
+      if (_ctrl) _ctrl.abort();
+      _ctrl = null;
+    }
+    return { run, abort };
+  }
+
   // ── useFavorites ────────────────────────────────────────────────────────
   function useFavorites() {
     const favorites = ref(U.getFavorites());
@@ -2514,7 +2553,7 @@
   // ── Export global ─────────────────────────────────────────────────────────
   window.BIRDASH = {
     // Vue composables
-    useI18n, useTheme, useNav, useChart, useAudio, useAudioPlayer, useFavorites, useSpeciesNames, useToast, useDelayedLoading, useFormat, updateSiteIdentity, exportChart,
+    useI18n, useTheme, useNav, useChart, useAudio, useAudioPlayer, useFavorites, useSpeciesNames, useToast, useDelayedLoading, useAbortableLoader, useFormat, updateSiteIdentity, exportChart,
     // Filter composables
     useFilterPeriod, useFilterConfidence, useFilterSpecies, buildWhereClause,
     // Vue components

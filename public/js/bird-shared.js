@@ -35,17 +35,31 @@
     }
   }
 
-  async function birdQuery(sql, params = []) {
-    const res = await fetch(`${BIRD_CONFIG.apiUrl}/query`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ sql, params }),
-    });
+  // Optional third arg: { signal } — forward an AbortSignal so callers
+  // can cancel an in-flight query when a fresher one is about to fire.
+  // _loadEpoch race guards already throw away stale responses on the
+  // client; adding abort means we *also* stop the server processing them
+  // and the JSON parse never runs. AbortError is rethrown so the caller
+  // can early-return without firing the generic 'birdash:error' toast.
+  async function birdQuery(sql, params = [], options = {}) {
+    let res;
+    try {
+      res = await fetch(`${BIRD_CONFIG.apiUrl}/query`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ sql, params }),
+        signal:  options.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      throw e;
+    }
     if (!res.ok) { _apiFailCount++; if (_apiFailCount >= 3) _showApiBanner(); const err = new Error(`HTTP ${res.status}`); if (res.status !== 429) window.dispatchEvent(new CustomEvent('birdash:error', { detail: 'API error: ' + res.status })); throw err; }
     _clearApiBanner();
     let data;
     try { data = await res.json(); }
     catch (e) {
+      if (e.name === 'AbortError') throw e;
       // Empty/invalid body — typical during a service restart. Treat as transient.
       _apiFailCount++;
       if (_apiFailCount >= 3) _showApiBanner();
