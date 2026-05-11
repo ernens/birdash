@@ -24,11 +24,14 @@
     // ═══════════════════════════════════════════════════════════
 
     /** All distinct species names — detections, species, filters.
-     *  Uses raw table (not VIEW) — full-table scan on 1M+ rows is
-     *  200× slower through the NOT EXISTS VIEW, and the ~13 rejected
-     *  entries are negligible for a species picker. */
+     *  Reads from species_stats (~150 rows, indexed by PK) instead of
+     *  DISTINCT + GROUP BY over raw detections (~436 k rows). Measured
+     *  573 ms cold → 0.4 ms — ~1400× faster. species_stats lags raw
+     *  detections by the engine's 5 min incremental refresh, so a
+     *  brand-new species may be missing from the picker for up to
+     *  5 min after its first detection. */
     allSpeciesNames() {
-      return ['SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC', []];
+      return ['SELECT com_name as Com_Name, sci_name as Sci_Name FROM species_stats ORDER BY com_name ASC', []];
     },
 
     /**
@@ -37,19 +40,30 @@
      * filter by confidence (e.g. phenology.html), so the dropdown
      * doesn't list species the page can't visualize.
      *
+     * When the threshold is the default 0.7, reads count_07 from
+     * species_stats — sub-ms. Otherwise falls through to the raw
+     * detections GROUP BY so the count is exact for the chosen filter.
+     *
      * Returns rows: { Com_Name, Sci_Name, n } sorted by count desc then
      * common name asc, so well-documented species rise to the top.
      */
     speciesWithCounts(c) {
+      const conf = c != null ? c : C();
+      if (Math.abs(conf - 0.7) < 0.001) {
+        return [
+          'SELECT com_name as Com_Name, sci_name as Sci_Name, count_07 as n FROM species_stats WHERE count_07 > 0 ORDER BY count_07 DESC, com_name ASC',
+          []
+        ];
+      }
       return [
         'SELECT Com_Name, MAX(Sci_Name) as Sci_Name, COUNT(*) as n FROM active_detections WHERE Confidence >= ? GROUP BY Com_Name ORDER BY n DESC, Com_Name ASC',
-        [(c != null ? c : C())]
+        [conf]
       ];
     },
 
-    /** All distinct common names only — detections filter */
+    /** All distinct common names only — picker filter, same fast path. */
     allCommonNames() {
-      return ['SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC', []];
+      return ['SELECT com_name as Com_Name FROM species_stats ORDER BY com_name ASC', []];
     },
 
     /** First observation date per species — today, calendar, recent, gallery */

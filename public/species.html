@@ -859,9 +859,12 @@ const app = createApp({
       Object.assign(speciesInfo, { order: '', family: '', familyCom: '', size: '', wingspan: '', diet: '' });
 
       try {
-        // Load species list in background if not loaded
+        // Load species list in background if not loaded. Uses species_stats
+        // (pre-aggregated, ~0.4 ms) instead of DISTINCT/GROUP BY over raw
+        // detections (~573 ms cold). See Q.allSpeciesNames in bird-queries.js
+        // for the same migration applied to other pages.
         if (!speciesList.value.length) {
-          birdQuery(`SELECT DISTINCT Com_Name, MAX(Sci_Name) as Sci_Name FROM detections GROUP BY Com_Name ORDER BY Com_Name ASC`)
+          birdQuery(`SELECT com_name as Com_Name, sci_name as Sci_Name FROM species_stats ORDER BY com_name ASC`)
             .then(rows => {
               speciesList.value = rows.map(r => ({ com: r.Com_Name, sci: r.Sci_Name }));
               pickerVal.value = speciesName;
@@ -1433,9 +1436,10 @@ const app = createApp({
         bulkConfirmName.value = '';
         deleteMode.value      = false;
 
-        // Reload species list in background
+        // Reload species list in background (post-bulk-delete). species_stats
+        // is rebuilt incrementally and will reflect the deletion within ~5 min.
         const rows = await birdQuery(
-          'SELECT DISTINCT Com_Name FROM detections ORDER BY Com_Name ASC');
+          'SELECT com_name as Com_Name FROM species_stats ORDER BY com_name ASC');
         speciesList.value = rows.map(r => ({ com: r.Com_Name }));
         if (rows.length) {
           pickerVal.value = rows[0].Com_Name;
