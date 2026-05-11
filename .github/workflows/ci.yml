@@ -28,6 +28,13 @@ jobs:
         # runs at runtime.
         run: npm run lint
 
+      - name: Lint migrations
+        # Static check: caddy-* migration scripts must not contain literal
+        # /home/<name>/ paths. They must use $DETECTED_HOME (auto-detected
+        # from the existing Caddyfile). Origin: mickey 404 incident where
+        # migration 011 v1 had hardcoded /home/bjorn/.
+        run: npm run lint:migrations
+
       - name: Stage CI fixtures
         # Copy birdnet.conf to /tmp so any boot-time mutation (auth secret
         # rotation, cache writes) doesn't dirty the checked-in fixture and

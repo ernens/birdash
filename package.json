@@ -1,6 +1,6 @@
 {
   "name": "birdash",
-  "version": "1.54.1",
+  "version": "1.54.2",
   "private": true,
   "scripts": {
     "start": "node server/server.js",
@@ -9,7 +9,8 @@
     "test:e2e": "npx playwright test",
     "smoke": "node scripts/smoke.mjs",
     "screenshots": "node scripts/screenshots.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:migrations": "node scripts/lint-migrations.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
