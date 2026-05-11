@@ -4,7 +4,7 @@
  * Stratégie : cache-first pour les assets, network-first pour l'API.
  */
 
-const CACHE_NAME = 'birdash-v248';
+const CACHE_NAME = 'birdash-v249';
 
 // Assets statiques à pré-cacher à l'installation
 const PRECACHE = [
@@ -60,6 +60,33 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/birds/api/photo')) {
     event.respondWith(cacheFirst(event.request));
     return;
+  }
+
+  // Species-info: Wikipedia summary + photo list. Cached server-side for
+  // 7 days; effectively static within a session. SWR returns the cached
+  // copy instantly and refreshes the cache in the background — so a
+  // species page revisit feels like opening from local disk while still
+  // picking up any upstream change on the next visit.
+  if (url.pathname.startsWith('/birds/api/species-info')) {
+    event.respondWith(staleWhileRevalidate(event.request));
+    return;
+  }
+
+  // Past-date queries that the engine never rewrites: timeline events,
+  // calendar month aggregates. The url has a `date=YYYY-MM-DD` (or
+  // `from=…&to=…`) param. If the latest date in the URL is strictly
+  // before today, the data is immutable for the client — SWR makes
+  // prev/next navigation feel local while still revalidating in the
+  // background. Today's date keeps the network-only behaviour.
+  if (url.pathname.startsWith('/birds/api/timeline') ||
+      url.pathname.startsWith('/birds/api/calendar/month')) {
+    const today = new Date().toISOString().slice(0, 10);
+    const params = url.searchParams;
+    const latest = params.get('to') || params.get('date') || '';
+    if (latest && latest < today) {
+      event.respondWith(staleWhileRevalidate(event.request));
+      return;
+    }
   }
 
   // API : network-only (données live)
@@ -120,5 +147,20 @@ async function networkFirst(request) {
     const cached = await caches.match(request);
     return cached || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
   }
+}
+
+// Stale-while-revalidate: serve from cache instantly (if present) and
+// kick off a background fetch that refreshes the cache for next time.
+// First visit still pays the network cost; every subsequent visit is
+// near-instant. Only safe for endpoints whose past values are
+// effectively immutable.
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  const network = fetch(request).then(response => {
+    if (response && response.ok) cache.put(request, response.clone());
+    return response;
+  }).catch(() => null);
+  return cached || network || new Response('Offline', { status: 503 });
 }
 
