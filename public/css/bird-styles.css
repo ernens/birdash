@@ -3562,6 +3562,10 @@ select, input[type="text"], input[type="number"], textarea {
   flex-wrap:wrap;
 }
 .tl-page-header h1 { font-size:1.05rem; font-weight:600; margin:0; }
+.tl-date-input {
+  background:var(--bg-card); border:1px solid var(--border); color:var(--text-main);
+  border-radius:6px; padding:4px 8px; font-size:.82rem;
+}
 .tl-stats-row {
   display:flex; gap:1.5rem; flex-wrap:wrap; padding:.75rem 2rem;
   font-size:.82rem; color:var(--text-muted);

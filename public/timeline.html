@@ -33,8 +33,7 @@
         <button class="tp-nav-btn" :disabled="!data?.navigation?.prevDate" @click="navigateDay(-1)">‹</button>
         <h1>{{formatDate(selectedDate)}}</h1>
         <button class="tp-nav-btn" :disabled="!data?.navigation?.nextDate" @click="navigateDay(1)">›</button>
-        <input type="date" v-model="selectedDate" @change="load" :max="todayStr"
-               style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-main);border-radius:6px;padding:4px 8px;font-size:.82rem;" />
+        <input type="date" v-model="selectedDate" @change="load" :max="todayStr" class="tl-date-input" />
         <button v-if="viewStart !== 0 || viewEnd !== 24" class="tp-nav-btn tl-reset-btn" @click="resetZoom()">↺ 24h</button>
         <span v-if="viewStart !== 0 || viewEnd !== 24" style="font-size:.8rem;color:var(--text-muted);">
           {{String(Math.floor(viewStart)).padStart(2,'0')}}:{{String(Math.round((viewStart%1)*60)).padStart(2,'0')}}
@@ -196,7 +195,7 @@
           </div>
         </div>
         <div class="tl-popup-tags">
-          <span v-for="tag in popupEvent.tags" :key="tag" class="tl-popup-tag"
+          <span v-for="tag in popupEvent.tags" :key="tag" class="tl-popup-tag">
             {{t('tl_tag_'+tag)}}
           </span>
         </div>
@@ -208,28 +207,6 @@
                   @click="navigateTo(selectedDate === todayStr ? 'today.html' : 'calendar.html', {species:popupEvent.commonName, date:selectedDate})">
             📅 {{t('tl_see_today')}}
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cluster popup -->
-    <div class="tl-popup-overlay" v-if="clusterPopup" @click.self="clusterPopup = null" @keydown.escape="clusterPopup = null" role="dialog" aria-modal="true">
-      <div class="tl-popup" style="max-width:360px;">
-        <button class="tl-popup-close" @click="clusterPopup = null">✕</button>
-        <div style="font-weight:600;margin-bottom:.75rem;">🕐 {{clusterPopup.time}} — {{clusterPopup.count}} {{t('tl_detections')}}</div>
-        <div v-for="sp in clusterPopup.species" :key="sp.sciName"
-             class="tl-event-row" style="border-radius:8px;padding:.5rem .6rem;cursor:pointer;"
-             @click="clusterPopup = null; openPopup(sp)">
-          <div class="tl-er-photo">
-            <img v-if="sp.photoUrl" :src="sp.photoUrl" :alt="spName(sp.commonName, sp.sciName)"
-                 @error="$event.target.style.display='none'" />
-            <span v-if="!sp.photoUrl">{{sp.photoFallback}}</span>
-          </div>
-          <div style="flex:1;">
-            <span class="tl-er-name">{{spName(sp.commonName, sp.sciName)}}</span>
-            <span class="tl-er-sci" v-if="sp.sciName">{{sp.sciName}}</span>
-          </div>
-          <div class="tl-er-conf" v-if="sp.confidence">{{Math.round(sp.confidence * 100)}}%</div>
         </div>
       </div>
     </div>
@@ -293,7 +270,6 @@ const app = createApp({
     }
     function onSliderChange() { load(); }
     const popupEvent = ref(null);
-    const clusterPopup = ref(null);
     const activeFilters = ref([]);
     const eventTypes = ['nocturnal','rare','firstyear','firstday','best','out_of_season','species_return','top_species'];
 
@@ -325,7 +301,7 @@ const app = createApp({
             timeDecimal: h + m/60,
             commonName: r.Com_Name, sciName: r.Sci_Name,
             confidence: r.Confidence, tags: [], priority: 4,
-            photoUrl: `/birds/api/photo?sci=${encodeURIComponent(r.Sci_Name)}`,
+            photoUrl: photoUrl(r.Sci_Name),
             photoFallback: '🐦', audioFile: r.File_Name,
             isRaw: true,
           };
@@ -365,6 +341,13 @@ const app = createApp({
         buildMarkers(innerRef.value, displayedEvents.value);
       }
     }, { flush: 'post' });
+
+    // Les libellés des markers (`t('tl_tag_'+tag)`, "Now") sont calculés à la
+    // construction du DOM, pas via Vue bindings. À chaque changement de langue,
+    // on doit reconstruire les markers pour que les labels suivent.
+    watch(lang, () => {
+      if (innerRef.value && data.value) buildMarkers(innerRef.value, displayedEvents.value);
+    });
 
     // Drag-to-zoom on density bar or sky canvas
     let _dragActive = false;
@@ -875,8 +858,12 @@ const app = createApp({
       });
     }
 
+    // 4 déclencheurs concurrents de load() : slider, navigation jour, polling
+    // 3 min, mount. Epoch monotone : seule la dernière demande pose son résultat.
     let _lastDate = null;
+    let _loadEpoch = 0;
     async function load() {
+      const epoch = ++_loadEpoch;
       const dateChanged = _lastDate !== selectedDate.value;
       if (dateChanged) loading.value = true;
       // Reset zoom only on date change
@@ -889,8 +876,10 @@ const app = createApp({
         const mc = sliderToConf(confSlider.value);
         const ml = sliderToMax(confSlider.value);
         const r = await fetch(`${BIRD_CONFIG.apiUrl}/timeline?date=${selectedDate.value}&minConf=${mc}&maxEvents=${ml}`);
+        if (epoch !== _loadEpoch) return;
         if (!r.ok) return;
         const json = await r.json();
+        if (epoch !== _loadEpoch) return;
         if (!json || json.error) return;
         data.value = json;
         // Le seuil de confiance a pu changer : invalider le cache raw pour ce jour.
@@ -907,10 +896,12 @@ const app = createApp({
       } catch(e) {
         console.error('[timeline]', e);
       } finally {
-        loading.value = false;
-        // Wait for DOM to update after loading=false, then render canvas
-        await nextTick();
-        try { render(); } catch(e) { console.error('[timeline render]', e); }
+        if (epoch === _loadEpoch) {
+          loading.value = false;
+          // Wait for DOM to update after loading=false, then render canvas
+          await nextTick();
+          try { render(); } catch(e) { console.error('[timeline render]', e); }
+        }
       }
     }
 
@@ -961,11 +952,25 @@ const app = createApp({
         if (selectedDate.value === todayStr) load();
       }, 3 * 60 * 1000);
     });
-    onUnmounted(() => { if (_timer) clearInterval(_timer); });
+
+    // Le canvas dépend de scrollRef.clientWidth pour la résolution pixel/heure.
+    // Sans handler resize, la frise reste figée à la largeur du premier render
+    // après un changement de taille de fenêtre (split d'écran, rotation, etc.).
+    let _resizeTimer = null;
+    function onWindowResize() {
+      if (_resizeTimer) clearTimeout(_resizeTimer);
+      _resizeTimer = setTimeout(() => { _resizeTimer = null; if (data.value) render(); }, 150);
+    }
+    onMounted(() => window.addEventListener('resize', onWindowResize));
+    onUnmounted(() => {
+      if (_timer) clearInterval(_timer);
+      if (_resizeTimer) clearTimeout(_resizeTimer);
+      window.removeEventListener('resize', onWindowResize);
+    });
 
     return {
       lang, t, spName, data, loading, selectedDate, todayStr,
-      popupEvent, clusterPopup, openPopup, activeFilters, eventTypes, toggleFilter, typeCounts, filteredEvents,
+      popupEvent, openPopup, activeFilters, eventTypes, toggleFilter, typeCounts, filteredEvents,
       remarkableCount, totalDetectionsCount,
       viewMode, setViewMode, loadingRaw, displayedEvents, isZoomed,
       formatDate, moonEmoji, navigateDay, load,
