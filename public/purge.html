@@ -316,7 +316,12 @@ const app = createApp({
     const speciesInput = ref('');
     const speciesSuggestions = ref([]);
 
+    // Plusieurs déclencheurs concurrents : watch sur filters/view/page (debounced
+    // 250 ms), Promise.all après trash/restore/empty (immédiat). Epoch monotone
+    // pour qu'une réponse périmée ne pose ni rows ni selected={}.
+    let _loadEpoch = 0;
     async function load() {
+      const epoch = ++_loadEpoch;
       loading.value = true;
       orphanScanError.value = '';
       const params = new URLSearchParams({
@@ -333,7 +338,9 @@ const app = createApp({
       if (filters.orphaned) params.set('orphaned', '1');
       try {
         const r = await fetch(`${API}/purge/list?${params}`);
+        if (epoch !== _loadEpoch) return;
         const d = await r.json();
+        if (epoch !== _loadEpoch) return;
         if (!r.ok) {
           // Specific feedback for the orphan-scan cap
           if (d.error === 'too_many_for_orphan_scan') {
@@ -353,7 +360,7 @@ const app = createApp({
       } catch (e) {
         console.error('[purge] load failed:', e);
       }
-      loading.value = false;
+      if (epoch === _loadEpoch) loading.value = false;
     }
 
     async function loadStats() {
@@ -415,9 +422,9 @@ const app = createApp({
     }
 
     function confColor(c) {
-      if (c >= 0.85) return '#4caf50';
-      if (c >= 0.65) return '#ff9800';
-      return '#e53e3e';
+      if (c >= 0.85) return 'var(--success)';
+      if (c >= 0.65) return 'var(--warning)';
+      return 'var(--danger)';
     }
 
     function daysUntilPurge(r) {
@@ -440,56 +447,61 @@ const app = createApp({
         .map(([k]) => parseInt(k));
     }
 
+    // Centralise les fetch destructifs : POST JSON + auth + check response.ok.
+    // Le silence d'origine donnait à l'utilisateur l'illusion d'une suppression
+    // réussie quand le backend rejetait la requête (401, 500…). On lève désormais
+    // pour que le caller affiche un feedback et n'efface pas la sélection.
+    async function postDestructive(endpoint, body, errKey) {
+      const r = await fetch(`${API}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        let msg = t(errKey);
+        try { const d = await r.json(); if (d?.error) msg += ' (' + d.error + ')'; } catch {}
+        console.error('[purge]', endpoint, r.status, msg);
+        alert(msg);
+        throw new Error(endpoint + ' failed: ' + r.status);
+      }
+      return r;
+    }
+
     async function trashSelected() {
       const rowids = selectedRowIds();
       if (!rowids.length) return;
       if (!confirm(t('purge_confirm_trash_n', { n: rowids.length }))) return;
-      await fetch(`${API}/purge/trash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
-        body: JSON.stringify({ rowids }),
-      });
+      try { await postDestructive('/purge/trash', { rowids }, 'purge_err_trash'); }
+      catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
     async function trashOne(r) {
       if (!confirm(t('purge_confirm_trash_one', { name: r.Com_Name }))) return;
-      await fetch(`${API}/purge/trash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
-        body: JSON.stringify({ rowids: [r.rowid] }),
-      });
+      try { await postDestructive('/purge/trash', { rowids: [r.rowid] }, 'purge_err_trash'); }
+      catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
     async function restoreSelected() {
       const ids = selectedRowIds();
       if (!ids.length) return;
-      await fetch(`${API}/purge/restore`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
-        body: JSON.stringify({ ids }),
-      });
+      try { await postDestructive('/purge/restore', { ids }, 'purge_err_restore'); }
+      catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
     async function restoreOne(r) {
-      await fetch(`${API}/purge/restore`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
-        body: JSON.stringify({ ids: [r.rowid] }),
-      });
+      try { await postDestructive('/purge/restore', { ids: [r.rowid] }, 'purge_err_restore'); }
+      catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
     async function emptyTrash() {
       const word = prompt(t('purge_empty_confirm_prompt'));
       if (word !== 'EMPTY') return;
-      await fetch(`${API}/purge/empty-trash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
-        body: JSON.stringify({ confirm: 'EMPTY' }),
-      });
+      try { await postDestructive('/purge/empty-trash', { confirm: 'EMPTY' }, 'purge_err_empty'); }
+      catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
@@ -519,6 +531,14 @@ const app = createApp({
     }, { deep: true });
 
     onMounted(() => {
+      // Liens entrants : species.html → purge.html?species=Robin doit pré-remplir
+      // le filtre. Sinon la page paraît cassée (toute la liste s'affiche au lieu
+      // d'être filtrée à l'espèce ciblée).
+      const qs = new URLSearchParams(window.location.search);
+      const sp = qs.get('species');
+      const d  = qs.get('date');
+      if (sp) { filters.species = sp; speciesInput.value = sp; }
+      if (d)  { filters.dateFrom = d; filters.dateTo = d; }
       loadStats();
       load();
     });
