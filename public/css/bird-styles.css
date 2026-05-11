@@ -2032,6 +2032,13 @@ select, input[type="text"], input[type="number"], textarea {
 /* ── Chart containers ────────────────────────────────────────────────────── */
 .chart-wrap      { position: relative; height: 280px; }
 .chart-wrap-tall { height: 320px; }
+/* Spinner / error overlay centred inside a .chart-wrap; keeps the canvas
+   mounted (v-show), so Chart.js doesn't rebuild on every refresh. */
+.chart-state-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
 /* Hero chart : "premier rôle" pour les pages où un graphe ouvre la lecture
    analytique (ex. species : activité par heure). Plus haut que tall. */
 .chart-wrap-hero { position: relative; height: 360px; }

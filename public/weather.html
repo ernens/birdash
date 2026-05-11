@@ -65,9 +65,16 @@
     <!-- 30-day chart — activity × weather time series -->
     <div class="card">
       <div class="card-title" :title="t('activity_tooltip')">{{t('weather_activity')}}</div>
-      <div v-if="loading" class="spinner"><div></div><div></div><div></div></div>
-      <div v-else-if="error" class="error-msg">{{error}}</div>
-      <div v-else class="chart-wrap chart-wrap-tall"><canvas ref="canvasWeather"></canvas></div>
+      <!-- Canvas stays mounted via v-show so Chart.js doesn't lose its
+           ref on every filter change (the previous v-if pattern caused a
+           destroy → DOM rebuild → re-mount flicker, ~150 ms each). The
+           overlay (spinner / error) is absolutely positioned, so the
+           reserved 320 px height stays stable across all three states. -->
+      <div class="chart-wrap chart-wrap-tall" style="position:relative;">
+        <canvas ref="canvasWeather" v-show="!loading && !error"></canvas>
+        <div v-show="loading" class="spinner chart-state-overlay"><div></div><div></div><div></div></div>
+        <div v-show="error" class="error-msg chart-state-overlay">{{error}}</div>
+      </div>
       <!-- Correlation — shown only when at least one r crosses the |0.2|
            significance floor. With 30 days of data this is rare, so we
            hide the whole block rather than surface an "no significant
