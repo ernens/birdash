@@ -1047,6 +1047,88 @@ Polling pages (`liveboard.html`, `dashboard.html`,
 `dashboard-kiosk.html`) are intentionally **not** guarded because
 their state self-corrects on the next tick.
 
+### Convention: delayed-loading spinners
+
+Every "bouncing balls" spinner (`.spinner` with 3 nested divs) is paired
+with `useDelayedLoading` from bird-vue-core.js when adopted on a new
+page. The composable wraps any reactive loading ref with a 300 ms
+threshold before the spinner becomes visible, and a 3 s threshold to
+flag the load as "slow" so callers can escalate the UI:
+
+```js
+const { visible: visibleLoading, isSlow } = useDelayedLoading(loadingRef);
+// In template:  <div v-if="visibleLoading" class="spinner">…</div>
+//               <div v-else-if="!loadingRef.value">{{data}}</div>
+```
+
+Fast paths — cache hits, pre-aggregated daily_stats / species_stats
+queries, sub-300 ms SQL — finish before the spinner ever appears,
+killing the pervasive spinner-flicker. Slow paths (cold-cache scans,
+external API cascades) still get the spinner exactly when needed.
+
+Skeleton placeholders (`.skeleton-row`, `.skeleton-kpi`,
+`.skeleton-chart`) keep the layout stable while loading; they're
+preferred over spinners on pages where the data has a known shape.
+
+### Convention: pre-aggregate first
+
+When a query GROUPs BY species or aggregates over a date window, check
+whether one of the pre-aggregated tables already holds the answer:
+
+  - `species_stats` (one row per species, indexed by sci_name PK):
+    lifetime `count_07`, `first_date`, `last_date`, `avg_conf`,
+    `day_count`. Sub-millisecond reads.
+  - `daily_stats` (one row per species per day, indexed by date):
+    per-day `count_07`, `avg_conf`, `max_conf`, `first_time`,
+    `last_time`. ~50 k rows total — small, page-cached, fast.
+  - `monthly_stats` (one row per species per month): `count_07`,
+    `day_count`. ~2.3 k rows.
+  - `hourly_stats` (one row per species per date per hour): `count_07`.
+
+Queries that filter at `Confidence >= 0.7` can read `count_07` directly
+and skip the WHERE clause entirely; non-default confidence falls back
+to the raw detections scan. The engine rebuilds these tables
+incrementally every 5 min, so they lag raw detections by that window —
+acceptable for header KPIs, picker dropdowns, and historical aggregates;
+not for "what's playing right now". For pages that need today's exact
+state, query `detections` directly with `Date=?` (narrow window,
+idx_date_conf, sub-100 ms).
+
+### Convention: cache strategy by endpoint class
+
+Caddy serves four classes of file with different cache policies:
+
+| Class | Path | Cache-Control |
+|---|---|---|
+| Live API | `/birds/api/*` | none (network, with `encode zstd gzip`) |
+| i18n locale JSON | `/birds/i18n/*` | `public, max-age=3600` |
+| Vendor JS (Vue, Chart.js, echarts, …) | `/birds/js/{vue,chart,echarts,lucide,leaflet}*` | `public, max-age=604800` (7 d) |
+| App JS/CSS/HTML | everything else under `/birds` | `public, no-cache` (revalidate via ETag) |
+
+The Service Worker (`public/sw.js`) layers on top:
+
+- **cache-first** for `/api/photo*` (~7 d server cache, immutable for
+  the client).
+- **stale-while-revalidate** for `/api/species-info` and any
+  `/api/timeline?date=PAST` / `/api/calendar/month?to=PAST` — past
+  data is effectively immutable, so the SW serves the cached copy
+  instantly and refreshes in the background.
+- **network-only** for live API endpoints.
+- **network-first** for app JS/CSS/HTML/partials.
+
+The `CACHE_NAME` constant gets bumped on every release that touches
+PRECACHE'd files, which forces clients with installed SWs to refresh
+their cache through the SW's activate handler.
+
+### Convention: Web Vitals
+
+`bird-shared.js` ships a small PerformanceObserver that captures FCP,
+LCP, CLS, and TBT for every page navigation. Final values are
+console-logged on `visibilitychange`/`pagehide` so they appear in
+`system.html`'s logs view; live values are also on
+`window.BIRDASH_VITALS` for devtools poking. No external dependency,
+no separate dashboard.
+
 ### Internationalization (i18n)
 
 - **4 UI languages**: French, English, German, Dutch (`public/i18n/*.json`)

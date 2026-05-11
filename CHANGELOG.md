@@ -2,6 +2,185 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.54.0] — 2026-05-11
+
+Performance & perceived-latency pass following the 1.53.0 site-wide
+audit. Twenty-one commits, ~10 files touched, no new user-visible
+features — focused entirely on cutting the time between "user clicks"
+and "useful content visible". Distinct from 1.53.0 (race-condition
+fixes) and from 1.52.0 (SQL planner hints + WAL fix): this release is
+about request volume, payload size, pre-aggregate adoption, and
+loading UX.
+
+Highlights, measured on the production DB (436 k detections):
+
+  - Overview today KPIs:      13 s cold → 2 ms     (~6500×)
+  - Rarities all-time KPIs:   515 ms     → 3 ms      (~170×)
+  - Biodiversity matrix:      449 ms     → 1 ms      (~449×)
+  - Species picker dropdown:  573 ms     → 0.4 ms    (~1400×)
+  - favorites/stats endpoint: 2.5 s      → 35 ms     (~70×)
+  - Timeline past-date load:  16-28 s    → 31 ms     (~700×)
+  - /api/calendar/month JSON: 11.6 KB    → 2 KB      (5.9× via gzip)
+
+### Added — performance infrastructure
+
+- **Web Vitals tracking** (`bird-shared.js`). PerformanceObserver-based
+  capture of FCP / LCP / CLS / TBT for every page navigation. Stored on
+  `window.BIRDASH_VITALS` for live devtools inspection; final values
+  also `console.log`'d on `visibilitychange` so they land in
+  `system.html`'s logs view. Zero deps, ~0.5 ms cost at navigation
+  start. This is the measurement layer the perf audit was missing —
+  from now on every release can be compared against the previous on
+  real numbers, not static estimates.
+
+- **`useDelayedLoading` composable** (`bird-vue-core.js`). Wraps any
+  loading ref with two thresholds: 300 ms before the spinner becomes
+  visible (kills flicker on cache hits — fast paths finish before
+  the loader ever appears) and 3 s before flagging the load as
+  "slow" so callers can escalate the UI. Adopted on stats,
+  biodiversity and analyses.
+
+- **`useAbortableLoader` composable** + AbortController support in
+  `birdQuery`. Pair the existing `_loadEpoch` race guards with a real
+  AbortController so cancelled requests are torn down at the network
+  layer instead of just ignored on arrival. Infrastructure ready;
+  adoption deferred until a page with rapid filter changes actually
+  needs it.
+
+- **Slow-query log** in `/api/query` route. One-line `console.warn`
+  for any SQL execution exceeding 500 ms — captures the SQL (truncated
+  to 200 chars), bound params, and wall time. Surfaces hotspots
+  empirically even when the SQL is dynamically generated.
+
+### Changed — SQL hotspots migrated to pre-aggregates
+
+- **`overview.html` today KPIs.** Replaced `COUNT/AVG over
+  active_detections WHERE Date=today` (13 s cold thanks to the
+  NOT EXISTS anti-join) with a sum over `daily_stats` (2 ms). The
+  /api/query result cache used to hide the cold cost but every
+  mutation cleared it, so the next overview load ate the full scan.
+  Model count + lastHour stay as small companion queries on raw
+  detections (narrow windows, idx_date_conf, sub-100 ms).
+
+- **`rarities.html` KPIs.** Four queries with the same `SELECT COUNT(*)
+  FROM (SELECT Com_Name FROM detections … GROUP BY Com_Name HAVING
+  COUNT(*)<=?)` shape collapsed into single-row index lookups against
+  `species_stats.count_07`. ~170× faster on the default all-time
+  period. Non-default confidences fall through to the legacy query.
+
+- **`biodiversity.html` species×month matrix.** The
+  `CAST(SUBSTR(Date,6,2) AS INTEGER)` pattern defeated `idx_date_*` and
+  scanned the full table on every refresh. `monthly_stats` already
+  aggregates per (year_month, sci_name) with `count_07` — same matrix
+  drops from 449 ms to 1 ms.
+
+- **Species picker queries** in `bird-queries.js`
+  (`allSpeciesNames`, `allCommonNames`, `speciesWithCounts`). All three
+  used to DISTINCT/GROUP BY over raw detections; switched to
+  `species_stats` (~150 rows, indexed by PK). The
+  `speciesWithCounts(0.7)` fast path reads `count_07` directly. Picker
+  dropdown opens in 0.4 ms instead of 573 ms. species.html's inline
+  copies of the same query were migrated too.
+
+- **`/api/favorites/stats` endpoint.** Two GROUP BY queries against
+  active_detections (the view's anti-join was ~2.3 s of the total
+  2.5 s) replaced by reads from species_stats (lifetime per fav) +
+  daily_stats (today per fav) + one small detections query for
+  last_time (the only field neither aggregate stores). 2.5 s → 35 ms.
+
+- **`/api/timeline`.** Two-stage migration:
+  1. Replaced `FROM active_detections` with `FROM detections` in all
+     19 sites. The 24 rejected detections that exist across history
+     are a negligible cost for editorial event picking, but the view's
+     anti-join over 436 k rows was the dominant cost — 71 s cold for
+     today and 16-28 s for past dates.
+  2. The four heaviest historical scans (rare 365 d, foy YTD, return
+     90 d, spike 30 d) further migrated to `daily_stats`. count_07
+     means historical comparisons now sit at ≥ 0.7 — actually a
+     better noise-vs-signal trade-off for rarity detection.
+
+  Net: past-date timeline navigation is now ~700× faster
+  (16-28 s → 31 ms).
+
+### Changed — network: payload and cache headers
+
+- **Caddy compression on `/birds/api/*`.** The reverse-proxy handle
+  had no `encode` directive, so JSON payloads went uncompressed.
+  Added `zstd gzip`. Measured 11.6 KB → 2 KB (5.9×) on
+  /api/calendar/month; benefits every JSON endpoint at once.
+
+- **`/birds/i18n/*` cached 1 hour.** Locale JSON files used to issue
+  a conditional GET (304) on every page load — four roundtrips per
+  page per session. They change once a release, so
+  `Cache-Control: public, max-age=3600` cuts the request count by
+  ~99% during a session.
+
+- **Vendor JS libs cached 7 days.** `vue.global.prod.min.js`,
+  `chart.umd.min.js`, `echarts.min.js`, `lucide*`, `leaflet*`, etc.
+  totalled ~1.3 MB shared the catch-all's `public, no-cache`
+  directive. Now served with `max-age=604800`; the SW cache-name
+  bump on each release already forces a fresh re-fetch when the
+  libs actually change. App JS (bird-shared, bird-vue-core, page
+  HTML, app CSS) keeps `no-cache`.
+
+- **Photo endpoint negative cache.** `/api/photo` already cached
+  successful resolutions for 7 days, but every miss (species without
+  a photo on iNaturalist or Wikipedia) re-ran the 2–5 s external
+  cascade. A sibling `<key>.notfound` marker with a 7-day TTL now
+  short-circuits subsequent misses to an instant 404 (with
+  `Cache-Control: max-age=86400` so browsers cache it too). The
+  marker is cleared the moment a photo does become available.
+
+- **Service Worker stale-while-revalidate.** For endpoints whose past
+  values are effectively immutable — `/api/species-info`,
+  `/api/timeline?date=PAST`, `/api/calendar/month?to=PAST` — the SW
+  now serves the cached copy instantly and refreshes the cache in the
+  background. Revisits feel local-disk fast; today's data keeps
+  network-only. SW cache name bumped to v249.
+
+### Changed — perceived performance / loading UX
+
+- **`system.html` no longer blanks 16 cards on every refresh.** Every
+  `loadXxx` function used to start with `xxx.value.loading = true`,
+  flipping the template to its spinner branch and removing the data
+  block. With 16 cards + a 30 s polling timer, the entire System page
+  went blank-then-back every ~30 s. Removed the `loading = true`
+  assignment from all 16 load functions: each ref still initialises
+  with `loading: true` so the very first mount shows the spinner, but
+  subsequent refreshes leave the data visible and replace the ref
+  value atomically when the fetch returns.
+
+- **`weather.html` 30-day chart no longer DOM-thrashes on filter
+  change.** The `v-if / v-else-if / v-else` chain removed the canvas
+  from the DOM during loading and error states, forcing Chart.js to
+  destroy and rebuild on every filter flip (~150 ms of flicker each).
+  Wrapped the three states in a single `.chart-wrap-tall` with
+  `v-show` on the canvas + absolutely-positioned overlays for
+  spinner/error.
+
+- **Stats, biodiversity, analyses: 5 bouncing-balls spinners now use
+  `useDelayedLoading`.** The 300 ms threshold means fast paths
+  (~35-80 ms post-1.54 perf wins) finish before the spinner ever
+  appears.
+
+- **Favorites star toggle is now optimistic.** The star flips
+  synchronously before the network round-trip instead of after; the
+  ~50-200 ms wait the user used to perceive is gone. The underlying
+  `toggleFavorite` already has its own localStorage fallback +
+  desync banner, so reverting on error would contradict that.
+
+### Migrations
+
+- `008-caddy-api-compression.sh` — adds `encode zstd gzip` on the
+  /birds/api/* handle.
+- `009-caddy-i18n-cache.sh` — adds a dedicated /birds/i18n/* handle
+  with `Cache-Control: public, max-age=3600`.
+- `010-caddy-vendor-cache.sh` — adds an `@vendor` matcher with
+  `Cache-Control: public, max-age=604800`.
+
+All three are idempotent, validate the Caddyfile before reloading,
+and roll back from a `.before-NNN` backup on validation failure.
+
 ## [1.53.0] — 2026-05-11
 
 Site-wide stabilization pass over every page in `public/`. Eighteen
