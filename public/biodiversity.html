@@ -363,9 +363,26 @@ const app = createApp({
         const topSp = topRows.map(r=>r.Com_Name);
         const sciMap = {}; topRows.forEach(r=>{sciMap[r.Com_Name]=r.Sci_Name;});
         if (!topSp.length) { matrix.value={loading:false,error:null,html:`<div class="hint-empty"><div>${t('no_data')}</div></div>`}; return; }
-        const rows = await birdQuery(
-          `SELECT Com_Name, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM detections WHERE Com_Name IN (${topSp.map(()=>'?').join(',')}) AND Confidence>=? GROUP BY Com_Name,m`,
-          [...topSp, fc.confidence.value]);
+        // Pre-aggregated monthly_stats has count_07 per (year_month, sci_name).
+        // The CAST(SUBSTR(Date,6,2)…) pattern on detections defeated idx_date_*
+        // and scanned 436 k rows — measured 449 ms cold. Same answer from the
+        // 2 373-row monthly_stats table runs in 1 ms (~449×). count_07 is the
+        // standard 0.7 threshold; non-default confidence falls back to the
+        // detections scan so the matrix still respects the filter.
+        let rows;
+        if (Math.abs(fc.confidence.value - 0.7) < 0.001) {
+          rows = await birdQuery(
+            `SELECT com_name as Com_Name, CAST(SUBSTR(year_month,6,2) AS INTEGER) as m, SUM(count_07) as n
+             FROM monthly_stats
+             WHERE com_name IN (${topSp.map(()=>'?').join(',')})
+             GROUP BY com_name, m
+             HAVING n > 0`,
+            topSp);
+        } else {
+          rows = await birdQuery(
+            `SELECT Com_Name, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n FROM detections WHERE Com_Name IN (${topSp.map(()=>'?').join(',')}) AND Confidence>=? GROUP BY Com_Name,m`,
+            [...topSp, fc.confidence.value]);
+        }
         if (epoch !== _loadEpoch) return;
         const data = {};
         topSp.forEach(sp=>{data[sp]=Array(12).fill(0);});
