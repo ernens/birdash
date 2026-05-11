@@ -1114,8 +1114,17 @@ const app = createApp({
 
     let svcRefreshTimer = null;
 
+    // Refresh-without-blanking policy: loadXxx functions don't toggle
+    // loading=true at the top — every ref's initial state already has
+    // loading:true, which paints the spinner on the very first mount.
+    // After that, the ref is replaced atomically on each successful fetch,
+    // so the card transitions old data → new data without an intermediate
+    // empty/spinner state. Errors still flip to the error branch (data
+    // hidden) — a future iteration can keep the stale data + show a
+    // discrete error pill, but for now this is already a major UX win
+    // over the previous "all 10 cards blank on every refresh" pattern.
+
     async function loadHealth() {
-      health.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/system-health`);
         const d = await res.json();
@@ -1138,7 +1147,6 @@ const app = createApp({
     let _svcLoadEpoch = 0;
     async function loadServices() {
       const epoch = ++_svcLoadEpoch;
-      services.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/services`);
         if (epoch !== _svcLoadEpoch) return;
@@ -1234,7 +1242,6 @@ const app = createApp({
     }
 
     async function loadAnalysis() {
-      analysis.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/analysis-status`);
         const d = await res.json();
@@ -1256,7 +1263,6 @@ const app = createApp({
     }
 
     async function loadAudio() {
-      audio.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/audio-device`);
         const d = await res.json();
@@ -1276,7 +1282,6 @@ const app = createApp({
     }
 
     async function loadBackup() {
-      backup.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/backup-status`);
         const d = await res.json();
@@ -1293,7 +1298,6 @@ const app = createApp({
     }
 
     async function loadNetwork() {
-      network.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/network-info`);
         const d = await res.json();
@@ -1311,7 +1315,6 @@ const app = createApp({
     }
 
     async function loadHardware() {
-      hw.value.loading = true;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/hardware`);
         const d = await res.json();
@@ -1320,7 +1323,6 @@ const app = createApp({
     }
 
     async function loadApi() {
-      api.value.loading = true;
       const t0 = Date.now();
       try {
         const res  = await fetch(`${BIRD_CONFIG.apiUrl}/health`);
@@ -1330,7 +1332,6 @@ const app = createApp({
     }
 
     async function loadFresh() {
-      fresh.value.loading = true;
       try {
         const [last]  = await birdQuery(`SELECT Date,Time,Com_Name FROM detections WHERE Date >= DATE('now','localtime','-7 days') ORDER BY Date DESC,Time DESC LIMIT 1`);
         const [today] = await birdQuery(`SELECT COUNT(*) as n FROM detections WHERE Date=?`, [localDateStr()]);
@@ -1352,7 +1353,6 @@ const app = createApp({
     const hrlyData = ref({ values:[] });
 
     async function loadDb() {
-      db.value.loading = true;
       try {
         const [s] = await birdQuery(
           `SELECT COUNT(*) as total, COUNT(DISTINCT Com_Name) as species,
@@ -1371,7 +1371,6 @@ const app = createApp({
     }
 
     async function loadGaps() {
-      gaps.value.loading = true;
       try {
         const rows  = await birdQuery(`SELECT DISTINCT date AS Date FROM daily_stats ORDER BY date ASC`);
         const found = [];
@@ -1487,7 +1486,6 @@ const app = createApp({
     });
 
     async function loadModelMonitor() {
-      mod.value.loading = true;
       try {
         // Fetch current model
         const settingsRes = await fetch(`${BIRD_CONFIG.apiUrl}/settings`);
@@ -1634,7 +1632,6 @@ const app = createApp({
     });
 
     async function loadModelCompare() {
-      cmp.value.loading = true;
       try {
         const splitDate = cmpDate.value;
         const afterStart = splitDate;
@@ -1753,7 +1750,6 @@ const app = createApp({
     const bw = ref({ loading:false, error:null, hasStation:false, stationId:'', stats:{}, species:[] });
 
     async function loadRareLocal() {
-      rareLocal.value.loading = true;
       try {
         const rows = await birdQuery(
           `SELECT Com_Name, MAX(Sci_Name) as sci, COUNT(*) as n, MAX(Date) as last_date
@@ -1766,7 +1762,6 @@ const app = createApp({
     }
 
     async function loadEbird() {
-      ebird.value.loading = true;
       try {
         const res  = await fetch(`${BIRD_CONFIG.apiUrl}/ebird-notable?days=7&maxResults=25`);
         const data = await res.json();
@@ -1798,7 +1793,6 @@ const app = createApp({
     }
 
     async function loadBirdWeather() {
-      bw.value.loading = true;
       try {
         const statsRes  = await fetch(`${BIRD_CONFIG.apiUrl}/birdweather?endpoint=stats&period=${bwPeriod.value}`);
         const statsData = await statsRes.json();
