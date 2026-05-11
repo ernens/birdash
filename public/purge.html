@@ -128,6 +128,43 @@
     .pg-spectro { width: 100%; height: 100px; grid-column: 1 / -1; grid-row: 2; }
     .pg-row-actions { grid-column: 1 / -1; grid-row: 3; }
   }
+
+  /* Progress overlay — shown during bulk trash/restore/empty operations. */
+  .pg-progress-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .pg-progress-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.5rem; min-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  }
+  .pg-progress-title {
+    font-size: .92rem; font-weight: 600; color: var(--text-main);
+    margin-bottom: .8rem;
+  }
+  .pg-progress-bar {
+    height: 8px; background: var(--bg-deep); border-radius: 4px;
+    overflow: hidden; margin-bottom: .5rem;
+  }
+  .pg-progress-fill {
+    height: 100%; background: var(--accent);
+    transition: width .15s ease-out;
+  }
+  .pg-progress-fill.indeterminate {
+    width: 30%;
+    animation: pg-indet 1.2s ease-in-out infinite;
+  }
+  @keyframes pg-indet {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+  .pg-progress-text {
+    font-size: .78rem; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    display: flex; justify-content: space-between;
+  }
 </style>
 <body>
 <div id="app" v-cloak>
@@ -269,6 +306,23 @@
       </button>
     </div>
 
+    <!-- Progress overlay (bulk trash/restore/empty) -->
+    <div v-if="progress.active" class="pg-progress-overlay">
+      <div class="pg-progress-card">
+        <div class="pg-progress-title">{{progress.title}}</div>
+        <div class="pg-progress-bar">
+          <div class="pg-progress-fill"
+               :class="{ indeterminate: !progress.total }"
+               :style="progress.total ? { width: (progress.done / progress.total * 100) + '%' } : {}"></div>
+        </div>
+        <div class="pg-progress-text">
+          <span v-if="progress.total">{{progress.done.toLocaleString()}} / {{progress.total.toLocaleString()}}</span>
+          <span v-else>{{t('purge_progress_starting')}}</span>
+          <span v-if="progress.total">{{Math.round(progress.done / progress.total * 100)}}%</span>
+        </div>
+      </div>
+    </div>
+
     <spectro-modal></spectro-modal>
   </birdash-shell>
 </div>
@@ -311,6 +365,10 @@ const app = createApp({
       Object.values(selected.value).filter(Boolean).length);
     const allVisibleSelected = computed(() =>
       rows.value.length > 0 && rows.value.every(r => selected.value[r.rowid]));
+
+    // Bulk-op progress overlay. `total = 0` → indeterminate (server hasn't
+    // sent the first progress event yet).
+    const progress = reactive({ active: false, title: '', done: 0, total: 0 });
 
     // Species autocomplete
     const speciesInput = ref('');
@@ -467,16 +525,76 @@ const app = createApp({
       return r;
     }
 
+    // Streaming variant of postDestructive. The server emits SSE
+    // `data: {progress, total}` per row, then a final `data: {done: true, ...}`.
+    // We drive the `progress` overlay from those events. Caddy passes the
+    // stream through unbuffered thanks to flush_interval -1 on /birds/api/*.
+    async function streamDestructive(endpoint, body, errKey, title) {
+      progress.active = true;
+      progress.title = title;
+      progress.done = 0;
+      progress.total = 0;
+      try {
+        const r = await fetch(`${API}${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            ...BIRDASH.authHeaders(),
+          },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          let msg = t(errKey);
+          try { const d = await r.json(); if (d?.error) msg += ' (' + d.error + ')'; } catch {}
+          console.error('[purge]', endpoint, r.status, msg);
+          alert(msg);
+          throw new Error(endpoint + ' failed: ' + r.status);
+        }
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let final = null;
+        // Parse SSE frames separated by \n\n; each frame has one `data: <json>` line.
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
+            const line = frame.split('\n').find(l => l.startsWith('data: '));
+            if (!line) continue;
+            let evt;
+            try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+            if (evt.done) { final = evt; }
+            else if (typeof evt.progress === 'number') {
+              progress.done = evt.progress;
+              if (evt.total) progress.total = evt.total;
+            }
+          }
+        }
+        if (final && final.error) {
+          alert(t(errKey) + ' (' + final.error + ')');
+          throw new Error(final.error);
+        }
+        return final;
+      } finally {
+        progress.active = false;
+      }
+    }
+
     async function trashSelected() {
       const rowids = selectedRowIds();
       if (!rowids.length) return;
       if (!confirm(t('purge_confirm_trash_n', { n: rowids.length }))) return;
-      try { await postDestructive('/purge/trash', { rowids }, 'purge_err_trash'); }
+      try { await streamDestructive('/purge/trash', { rowids }, 'purge_err_trash', t('purge_progress_trash')); }
       catch { return; }
       await Promise.all([load(), loadStats()]);
     }
 
     async function trashOne(r) {
+      // Single row is instant — no progress overlay, plain POST.
       if (!confirm(t('purge_confirm_trash_one', { name: r.Com_Name }))) return;
       try { await postDestructive('/purge/trash', { rowids: [r.rowid] }, 'purge_err_trash'); }
       catch { return; }
@@ -486,7 +604,7 @@ const app = createApp({
     async function restoreSelected() {
       const ids = selectedRowIds();
       if (!ids.length) return;
-      try { await postDestructive('/purge/restore', { ids }, 'purge_err_restore'); }
+      try { await streamDestructive('/purge/restore', { ids }, 'purge_err_restore', t('purge_progress_restore')); }
       catch { return; }
       await Promise.all([load(), loadStats()]);
     }
@@ -500,7 +618,7 @@ const app = createApp({
     async function emptyTrash() {
       const word = prompt(t('purge_empty_confirm_prompt'));
       if (word !== 'EMPTY') return;
-      try { await postDestructive('/purge/empty-trash', { confirm: 'EMPTY' }, 'purge_err_empty'); }
+      try { await streamDestructive('/purge/empty-trash', { confirm: 'EMPTY' }, 'purge_err_empty', t('purge_progress_empty')); }
       catch { return; }
       await Promise.all([load(), loadStats()]);
     }
@@ -546,7 +664,7 @@ const app = createApp({
     return {
       t, lang, view, filters, limit, page, loading, rows, total, stats,
       selected, selectedCount, allVisibleSelected, brokenSpectros,
-      orphanScanError,
+      orphanScanError, progress,
       speciesInput, speciesSuggestions, onSpeciesInput,
       setView, resetFilters, spName, spectroUrl, confColor, daysUntilPurge,
       toggleAllVisible, trashSelected, trashOne, restoreSelected, restoreOne,

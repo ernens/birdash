@@ -76,6 +76,25 @@ function readBody(req) {
   });
 }
 
+// SSE helper. The client opts in by sending `Accept: text/event-stream`; if
+// absent we stick with a single JSON reply so curl + tests keep working.
+// Caddy's /birds/api/* uses `flush_interval -1`, so writes hit the wire
+// immediately — no proxy buffering to fight.
+function wantsStream(req) {
+  return (req.headers.accept || '').includes('text/event-stream');
+}
+function openStream(res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+}
+function sseSend(res, obj) {
+  res.write(`data: ${JSON.stringify(obj)}\n\n`);
+}
+
 // ── Filter parsing — shared by /list (active + trash views) ─────────────────
 // Returns { whereSql, params } that work against either table since they
 // share column names.
@@ -200,8 +219,13 @@ function handle(req, res, pathname, ctx) {
   // ── POST /api/purge/trash ──────────────────────────────────────────────
   // Body: { rowids: [n, ...] }  (rowids of `detections`)
   // Moves rows to detections_trashed + mv files to Trashed/By_Date/.
+  //
+  // With `Accept: text/event-stream` streams `{progress, total}` per row +
+  // a final `{done: true, ok, trashed, fileWarnings}`. Without the header,
+  // replies with a single JSON object (back-compat).
   if (req.method === 'POST' && pathname === '/api/purge/trash') {
     if (!requireAuth(req, res)) return true;
+    const stream = wantsStream(req);
     readBody(req).then(async (body) => {
       const rowids = Array.isArray(body.rowids) ? body.rowids.filter(n => Number.isInteger(n)) : [];
       if (!rowids.length) {
@@ -221,6 +245,8 @@ function handle(req, res, pathname, ctx) {
         return;
       }
 
+      if (stream) openStream(res);
+
       const insertTrash = dbWrite.prepare(`
         INSERT INTO detections_trashed (
           Date, Time, Sci_Name, Com_Name, Confidence, Lat, Lon, Cutoff,
@@ -233,6 +259,8 @@ function handle(req, res, pathname, ctx) {
       const datesAffected = new Set();
       const fileWarnings = [];
       let trashed = 0;
+      let processed = 0;
+      const total = liveRows.length;
 
       // Per-row transaction so a single bad file doesn't kill the whole batch.
       // The mv happens BEFORE the row move so a failing mv doesn't leave the
@@ -241,6 +269,8 @@ function handle(req, res, pathname, ctx) {
         const paths = pathsForRow(row, SONGS_DIR);
         if (!paths) {
           fileWarnings.push({ rowid: row.rowid, error: 'unparseable filename: ' + row.File_Name });
+          processed++;
+          if (stream) sseSend(res, { progress: processed, total });
           continue;
         }
         try {
@@ -250,6 +280,8 @@ function handle(req, res, pathname, ctx) {
           );
         } catch (e) {
           fileWarnings.push({ rowid: row.rowid, error: e.message });
+          processed++;
+          if (stream) sseSend(res, { progress: processed, total });
           continue;
         }
         const tx = dbWrite.transaction(() => {
@@ -263,6 +295,8 @@ function handle(req, res, pathname, ctx) {
         tx();
         trashed++;
         datesAffected.add(row.Date);
+        processed++;
+        if (stream) sseSend(res, { progress: processed, total });
       }
 
       resultCache.clearAll();
@@ -271,19 +305,31 @@ function handle(req, res, pathname, ctx) {
       } catch {}
 
       console.log(`[purge] trashed ${trashed} detection(s)`);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, trashed, fileWarnings }));
+      if (stream) {
+        sseSend(res, { done: true, ok: true, trashed, fileWarnings });
+        res.end();
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, trashed, fileWarnings }));
+      }
     }).catch((e) => {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
+      if (stream && res.headersSent) {
+        sseSend(res, { done: true, error: e.message });
+        res.end();
+      } else {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
     });
     return true;
   }
 
   // ── POST /api/purge/restore ────────────────────────────────────────────
   // Body: { ids: [n, ...] }  (ids from detections_trashed)
+  // SSE-aware: see /api/purge/trash for the protocol.
   if (req.method === 'POST' && pathname === '/api/purge/restore') {
     if (!requireAuth(req, res)) return true;
+    const stream = wantsStream(req);
     readBody(req).then(async (body) => {
       const ids = Array.isArray(body.ids) ? body.ids.filter(n => Number.isInteger(n)) : [];
       if (!ids.length) {
@@ -301,6 +347,8 @@ function handle(req, res, pathname, ctx) {
         return;
       }
 
+      if (stream) openStream(res);
+
       const insertLive = dbWrite.prepare(`
         INSERT INTO detections (
           Date, Time, Sci_Name, Com_Name, Confidence, Lat, Lon, Cutoff,
@@ -311,6 +359,8 @@ function handle(req, res, pathname, ctx) {
       const datesAffected = new Set();
       const fileWarnings = [];
       let restored = 0;
+      let processed = 0;
+      const total = trashedRows.length;
 
       for (const row of trashedRows) {
         const paths = pathsForRow(row, SONGS_DIR);
@@ -337,6 +387,8 @@ function handle(req, res, pathname, ctx) {
         tx();
         restored++;
         datesAffected.add(row.Date);
+        processed++;
+        if (stream) sseSend(res, { progress: processed, total });
       }
 
       resultCache.clearAll();
@@ -345,11 +397,21 @@ function handle(req, res, pathname, ctx) {
       } catch {}
 
       console.log(`[purge] restored ${restored} detection(s)`);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, restored, fileWarnings }));
+      if (stream) {
+        sseSend(res, { done: true, ok: true, restored, fileWarnings });
+        res.end();
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, restored, fileWarnings }));
+      }
     }).catch((e) => {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
+      if (stream && res.headersSent) {
+        sseSend(res, { done: true, error: e.message });
+        res.end();
+      } else {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
     });
     return true;
   }
@@ -358,8 +420,10 @@ function handle(req, res, pathname, ctx) {
   // Body: { confirm: 'EMPTY' [, ids: [...]] }
   // Hard-deletes from detections_trashed + rm files. Optional ids restrict
   // to a subset; otherwise empties everything.
+  // SSE-aware: see /api/purge/trash for the protocol.
   if (req.method === 'POST' && pathname === '/api/purge/empty-trash') {
     if (!requireAuth(req, res)) return true;
+    const stream = wantsStream(req);
     readBody(req).then(async (body) => {
       if (body.confirm !== 'EMPTY') {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -371,7 +435,10 @@ function handle(req, res, pathname, ctx) {
         ? dbWrite.prepare(`SELECT * FROM detections_trashed WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids)
         : dbWrite.prepare('SELECT * FROM detections_trashed').all();
 
-      let purged = 0, removed = 0;
+      if (stream) openStream(res);
+
+      let purged = 0, removed = 0, processed = 0;
+      const total = rows.length;
       const trashRoot = trashDir(SONGS_DIR);
       for (const row of rows) {
         const paths = pathsForRow(row, SONGS_DIR);
@@ -382,6 +449,8 @@ function handle(req, res, pathname, ctx) {
         }
         dbWrite.prepare('DELETE FROM detections_trashed WHERE id = ?').run(row.id);
         purged++;
+        processed++;
+        if (stream) sseSend(res, { progress: processed, total });
       }
       // Best-effort: prune empty subdirs in the trash root.
       // spawnSync with an argv array — no shell, so trashRoot can't be
@@ -394,11 +463,21 @@ function handle(req, res, pathname, ctx) {
       } catch {}
 
       console.log(`[purge] empty-trash: purged ${purged} rows, removed ${removed} files`);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, purged, removed }));
+      if (stream) {
+        sseSend(res, { done: true, ok: true, purged, removed });
+        res.end();
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, purged, removed }));
+      }
     }).catch((e) => {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
+      if (stream && res.headersSent) {
+        sseSend(res, { done: true, error: e.message });
+        res.end();
+      } else {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
     });
     return true;
   }
