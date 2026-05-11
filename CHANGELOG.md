@@ -2,6 +2,39 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.54.2] — 2026-05-11
+
+Prevention layer for the mickey 404 incident (commit e443422 fixed
+migration 011's hardcoded /home/bjorn/ at runtime; this release makes
+the regression impossible to reintroduce).
+
+### Fixed — migrations 009 and 010
+
+- 009-caddy-i18n-cache.sh and 010-caddy-vendor-cache.sh had the same
+  hardcoded `/home/bjorn/birdash/public` pattern that broke mickey via
+  011 v1. They didn't surface as a separate incident because 011 v2
+  rewrites the whole Caddyfile from scratch — but on a fresh Pi install
+  where 009/010 run before 011, the broken paths would have hit. Both
+  now use the `DETECTED_HOME` extraction pattern.
+
+### Added — migration lint in CI
+
+- `scripts/lint-migrations.mjs`: static check that flags any literal
+  `/home/<name>/` path in `scripts/migrations/*.sh`. Allowlist:
+  comments, `$HOME` / `$DETECTED_HOME` references, regex character
+  classes (`[^/]+`). Wired into `npm run lint:migrations` and the CI
+  workflow.
+
+### Added — migration sandbox tests
+
+- `tests/migrations.test.js` + `tests/migrations-sandbox.sh`: end-to-end
+  test that runs each `caddy-*` migration against a fixture Caddyfile
+  with `root * /home/fake_user/birdash/public` and asserts (a) the
+  migration substitutes `fake_user` into new file_server blocks, and
+  (b) no `/home/bjorn/` leaks into the output. Also verifies the
+  idempotency check (`already applied` on second run). Stubs sudo /
+  caddy / systemctl onto PATH so the test runs unprivileged in CI.
+
 ## [1.54.1] — 2026-05-11
 
 ### Added — purge progress overlay
