@@ -158,34 +158,47 @@ function handle(req, res, pathname, ctx) {
       const names = favs.map(f => f.com_name);
       const placeholders = names.map(() => '?').join(',');
 
-      // Per-species stats
-      const detCounts = db.prepare(
-        `SELECT Com_Name, COUNT(*) as n, MAX(Date) as last_date, MAX(Time) as last_time,
-                AVG(Confidence) as avg_conf, MIN(Date) as first_date
-         FROM active_detections WHERE Com_Name IN (${placeholders}) GROUP BY Com_Name`
+      // Per-species lifetime stats from the pre-aggregated species_stats
+      // table (sub-millisecond) instead of GROUP BY over active_detections
+      // (the NOT EXISTS view was the dominant cost: measured 2.5 s for the
+      // full endpoint, of which ~2.3 s was the view's anti-join scan).
+      // last_time isn't pre-aggregated, so a small dedicated query against
+      // detections (idx_com_name) still gathers it — ~50 ms for 10 favs.
+      const lifetime = db.prepare(
+        `SELECT com_name, count_07 as n, first_date, last_date, avg_conf
+         FROM species_stats WHERE com_name IN (${placeholders})`
       ).all(...names);
-      const countMap = {};
-      for (const r of detCounts) countMap[r.Com_Name] = r;
+      const lifetimeMap = {};
+      for (const r of lifetime) lifetimeMap[r.com_name] = r;
+
+      const lastTimeRows = db.prepare(
+        `SELECT Com_Name, MAX(Time) as last_time
+         FROM detections WHERE Com_Name IN (${placeholders}) GROUP BY Com_Name`
+      ).all(...names);
+      const lastTimeMap = {};
+      for (const r of lastTimeRows) lastTimeMap[r.Com_Name] = r.last_time;
 
       const { localDateStr } = require('../lib/local-date');
       const todayStr = localDateStr();
+      // Today's counts from daily_stats (also pre-aggregated). count_07 is
+      // the standard 0.7 bucket, matching what the favorites UI displays.
       const todayCounts = db.prepare(
-        `SELECT Com_Name, COUNT(*) as n FROM active_detections
-         WHERE Com_Name IN (${placeholders}) AND Date=? GROUP BY Com_Name`
+        `SELECT com_name, SUM(count_07) as n FROM daily_stats
+         WHERE com_name IN (${placeholders}) AND date=? GROUP BY com_name`
       ).all(...names, todayStr);
       const todayMap = {};
-      for (const r of todayCounts) todayMap[r.Com_Name] = r.n;
+      for (const r of todayCounts) todayMap[r.com_name] = r.n;
 
       const enriched = favs.map(f => ({
         com_name: f.com_name,
         sci_name: f.sci_name,
         added_at: f.added_at,
-        total_detections: countMap[f.com_name]?.n || 0,
+        total_detections: lifetimeMap[f.com_name]?.n || 0,
         today_detections: todayMap[f.com_name] || 0,
-        last_date: countMap[f.com_name]?.last_date || null,
-        last_time: countMap[f.com_name]?.last_time || null,
-        first_date: countMap[f.com_name]?.first_date || null,
-        avg_conf: countMap[f.com_name]?.avg_conf || 0,
+        last_date: lifetimeMap[f.com_name]?.last_date || null,
+        last_time: lastTimeMap[f.com_name] || null,
+        first_date: lifetimeMap[f.com_name]?.first_date || null,
+        avg_conf: lifetimeMap[f.com_name]?.avg_conf || 0,
       }));
 
       const totalDets = enriched.reduce((s, f) => s + f.total_detections, 0);
