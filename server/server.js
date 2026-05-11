@@ -351,6 +351,27 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[BIRDASH] API démarrée sur http://127.0.0.1:${PORT}`);
+
+  // Prewarm the heavy result caches so users don't eat the cold-cache
+  // cost on first navigation after a restart. better-sqlite3's page
+  // cache, the per-route resultCache, and the timeline 60 s cache all
+  // get populated by these self-requests; the user-facing first hit
+  // then returns from cache in ~2 ms instead of ~15-20 s.
+  setTimeout(() => {
+    const http = require('http');
+    const { localDateStr } = require('./lib/local-date');
+    const today = localDateStr();
+    const targets = [
+      `/api/timeline?date=${today}&minConf=0.7&maxEvents=8`,
+      `/api/rare-today?date=${today}`,
+      `/api/calendar/month?from=${today.slice(0,8)}01&to=${today}&conf=0.7`,
+    ];
+    for (const path of targets) {
+      const req = http.get({ hostname: '127.0.0.1', port: PORT, path }, (r) => { r.resume(); });
+      req.on('error', () => { /* prewarm best-effort */ });
+    }
+    console.log('[BIRDASH] cache prewarm fired');
+  }, 5000);
 });
 
 // ── Graceful shutdown ────────────────────────────────────────────────────────
