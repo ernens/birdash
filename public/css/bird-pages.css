@@ -1528,6 +1528,23 @@
     }
     @media (max-width: 900px) { .sp-hero { grid-template-columns: 1fr; } }
 
+    /* Back link + personal-note textarea: hover/focus moved off inline JS */
+    .sp-back-link {
+      font-size: .8rem; color: var(--text-muted);
+      text-decoration: none; display: inline-flex; align-items: center; gap: .3rem;
+      transition: color .15s;
+    }
+    .sp-back-link:hover { color: var(--accent); }
+    .sp-back-link-arrow { font-size: 1rem; }
+    .sp-personal-note {
+      width: 100%; min-height: 80px; box-sizing: border-box; padding: .5rem;
+      font-size: .85rem; font-family: var(--font-body); line-height: 1.6; resize: vertical;
+      background: var(--bg-deep); color: var(--text-main);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      outline: none; transition: border-color .15s;
+    }
+    .sp-personal-note:focus { border-color: var(--accent); }
+
     /* Carousel */
     .sp-carousel { display: flex; flex-direction: column; gap: .5rem; }
     .sp-carousel-main {

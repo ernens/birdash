@@ -57,9 +57,8 @@
 
       <!-- Back button -->
       <div style="margin-bottom:.6rem;">
-        <a href="javascript:history.back()" style="font-size:.8rem;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;"
-           onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
-          <span style="font-size:1rem;">←</span> {{t('nav_detections')}}
+        <a href="javascript:history.back()" class="sp-back-link">
+          <span class="sp-back-link-arrow">←</span> {{t('nav_detections')}}
         </a>
       </div>
 
@@ -213,12 +212,7 @@
         <div class="card-title"><bird-icon name="file-text" :size="14" ></bird-icon> {{t('personal_notes')}}</div>
         <textarea v-model="personalNote" @blur="savePersonalNote"
                   :placeholder="t('personal_notes')+'...'"
-                  style="width:100%;min-height:80px;box-sizing:border-box;padding:.5rem;font-size:.85rem;
-                         font-family:var(--font-body);line-height:1.6;resize:vertical;
-                         background:var(--bg-deep);color:var(--text-main);border:1px solid var(--border);
-                         border-radius:var(--radius);outline:none;"
-                  @focus="$event.target.style.borderColor='var(--accent)'"
-                  @focusout="$event.target.style.borderColor='var(--border)'"></textarea>
+                  class="sp-personal-note"></textarea>
         <div v-if="noteSaving" style="font-size:.72rem;opacity:.6;margin-top:.25rem;">…</div>
         <div v-if="noteError" style="font-size:.75rem;color:var(--warning);margin-top:.25rem;">⚠ {{noteError}}</div>
       </div>
@@ -574,12 +568,12 @@ const { useI18n, useTheme, useNav, useChart, useAudio, useFavorites, useSpeciesN
 
 const app = createApp({
   setup() {
-    const { lang, t, setLang, langs } = useI18n();
-    const { theme, themes, setTheme } = useTheme();
-    const { navItems, siteName } = useNav('species');
+    const { lang, t } = useI18n();
+    useTheme();
+    useNav('species');
     const { spName } = useSpeciesNames();
     const { playingFile, toggleAudio }= useAudio();
-    const { favorites, toggleFavorite: _toggleFav, isFavorite: _isFav } = useFavorites();
+    const { toggleFavorite: _toggleFav, isFavorite: _isFav } = useFavorites();
     const isFav = computed(() => sp.value.name ? _isFav(sp.value.name) : false);
     function onToggleFav() { if (sp.value.name) _toggleFav(sp.value.name, sp.value.sci); }
     const { mountChart: mountHourly } = useChart();
@@ -611,7 +605,6 @@ const app = createApp({
     const videosLoading = ref(false);
     const videoModalOpen = ref(false);
     const wikiSummary    = ref('');
-    const wikiSummaryAlt = ref('');  // second language summary
     const conservationRaw = ref('');
     const speciesInfo    = reactive({ order: '', family: '', familyCom: '', size: '', wingspan: '', diet: '' });
 
@@ -645,32 +638,36 @@ const app = createApp({
     const speciesNotes = ref([]); // all notes for current species
     let _speciesNoteId = null;    // id of the species-level note (date=null)
 
-    async function loadPersonalNote(sciName) {
+    async function loadPersonalNote(sciName, epoch) {
       personalNote.value = '';
       speciesNotes.value = [];
       _speciesNoteId = null;
       if (!sp.value.name) return;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/notes?com_name=${encodeURIComponent(sp.value.name)}`);
+        if (epoch !== _loadEpoch) return;
         if (!res.ok) return;
         const rows = await res.json();
+        if (epoch !== _loadEpoch) return;
         speciesNotes.value = rows;
         const global = rows.find(r => !r.date);
         if (global) { personalNote.value = global.note; _speciesNoteId = global.id; }
         else { personalNote.value = localStorage.getItem('birdash_note_' + sciName) || ''; }
       } catch(e) {
-        personalNote.value = localStorage.getItem('birdash_note_' + (sciName || '')) || '';
+        if (epoch === _loadEpoch) personalNote.value = localStorage.getItem('birdash_note_' + (sciName || '')) || '';
       }
     }
 
     // ── Phase C: weather profile for the selected species ───────────────────
     const weatherProfile = ref(null);
-    async function loadWeatherProfile(speciesName) {
+    async function loadWeatherProfile(speciesName, epoch) {
       weatherProfile.value = null;
       try {
         const res = await fetch(`${BIRD_CONFIG.apiUrl}/weather/species-profile?species=${encodeURIComponent(speciesName)}`);
+        if (epoch !== _loadEpoch) return;
         if (!res.ok) return;
         const data = await res.json();
+        if (epoch !== _loadEpoch) return;
         if (!data.stats || !data.stats.total) return;
         // Pre-compute max values used by template for bar width normalization
         data.maxCond = Math.max(1, ...data.conditions.map(c => c.n));
@@ -839,8 +836,18 @@ const app = createApp({
       }
     }
 
+    // Many entry points trigger loadDetail concurrently: URL param on mount,
+    // last-species fallback, picker dropdown, prev/next buttons, ←/→ keyboard
+    // shortcuts, watch(lang), and post-delete reloads. Each call spawns 10+
+    // parallel network/SQL queries (stats, info, videos, 5 charts, feed,
+    // note, weather). Without an epoch a stale response from the previous
+    // species can land after the new species is shown, painting the wrong
+    // data into the new chart/photo/note. Epoch is captured here and rechecked
+    // by every sub-loader before it writes to a ref.
+    let _loadEpoch = 0;
     async function loadDetail(speciesName) {
       if (!speciesName) return;
+      const epoch = ++_loadEpoch;
       mode.value = 'loading';
       photos.value = [];
       photoIdx.value = 0;
@@ -848,7 +855,6 @@ const app = createApp({
       videos.value = [];
       videoModalOpen.value = false;
       wikiSummary.value = '';
-      wikiSummaryAlt.value = '';
       conservationRaw.value = '';
       Object.assign(speciesInfo, { order: '', family: '', familyCom: '', size: '', wingspan: '', diet: '' });
 
@@ -874,6 +880,7 @@ const app = createApp({
                   COUNT(DISTINCT Date) as days_detected
            FROM detections WHERE Com_Name=?`,
           [speciesName]);
+        if (epoch !== _loadEpoch) return;
         if (!stats?.total) { mode.value='picker'; return; }
 
         sp.value = {
@@ -884,8 +891,8 @@ const app = createApp({
         };
         document.title = `BIRDASH — ${speciesName}`;
         mode.value = 'detail';
-        loadPersonalNote(stats.sci || speciesName);
-        loadWeatherProfile(stats.sci || speciesName);
+        loadPersonalNote(stats.sci || speciesName, epoch);
+        loadWeatherProfile(stats.sci || speciesName, epoch);
 
         // Pre-populate taxonomy from cached eBird data (instant)
         const tax = BIRDASH_UTILS.getTaxonomy(stats.sci || speciesName);
@@ -896,25 +903,30 @@ const app = createApp({
         }
 
         // Load photos FIRST (user sees them immediately), then charts in parallel
-        loadSpeciesInfo(stats.sci || speciesName);
-        loadVideos(stats.sci || speciesName);
+        loadSpeciesInfo(stats.sci || speciesName, epoch);
+        loadVideos(stats.sci || speciesName, epoch);
         await Promise.all([
-          loadHourlyData(speciesName),
-          loadMonthlyData(speciesName),
-          load30dData(speciesName),
-          loadConfData(speciesName),
-          loadDayHourData(speciesName),
-          loadFeed(speciesName),
+          loadHourlyData(speciesName, epoch),
+          loadMonthlyData(speciesName, epoch),
+          load30dData(speciesName, epoch),
+          loadConfData(speciesName, epoch),
+          loadDayHourData(speciesName, epoch),
+          loadFeed(speciesName, epoch),
         ]);
-      } catch(e) { console.error('[species]', e); mode.value='picker'; }
+      } catch(e) {
+        console.error('[species]', e);
+        if (epoch === _loadEpoch) mode.value='picker';
+      }
     }
 
-    async function loadSpeciesInfo(sciName) {
+    async function loadSpeciesInfo(sciName, epoch) {
       try {
         const cachedUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
         const res = await fetch(BIRD_CONFIG.apiUrl + '/species-info?sci=' + encodeURIComponent(sciName) + '&lang=' + lang.value);
+        if (epoch !== _loadEpoch) return;
         if (res.ok) {
           const data = await res.json();
+          if (epoch !== _loadEpoch) return;
           if (data.photos?.length) {
             photos.value = data.photos;
           } else {
@@ -929,7 +941,6 @@ const app = createApp({
           } else {
             wikiSummary.value = data.summaryFr || data.summary || '';
           }
-          wikiSummaryAlt.value = '';
           conservationRaw.value = data.conservation || '';
           // Structured info
           // Only override taxonomy if the API provides more specific data
@@ -947,26 +958,30 @@ const app = createApp({
         }
       } catch(e) {
         console.warn('[species-info]', e);
-        const cachedUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
-        photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
+        if (epoch === _loadEpoch) {
+          const cachedUrl = BIRD_CONFIG.apiUrl + '/photo?sci=' + encodeURIComponent(sciName);
+          photos.value = [{ url: cachedUrl, attr: '', src: 'cache' }];
+        }
       } finally {
-        photosLoading.value = false;
+        if (epoch === _loadEpoch) photosLoading.value = false;
       }
     }
 
-    async function loadVideos(sciName) {
+    async function loadVideos(sciName, epoch) {
       if (!sciName) return;
       videosLoading.value = true;
       videos.value = [];
       try {
         const res = await fetch(BIRD_CONFIG.apiUrl + '/species-videos?sci=' + encodeURIComponent(sciName));
+        if (epoch !== _loadEpoch) return;
         if (!res.ok) return;
         const data = await res.json();
+        if (epoch !== _loadEpoch) return;
         videos.value = (data.videos || []).map(v => ({ ...v, _playing: false }));
       } catch (e) {
         console.warn('[species-videos]', e);
       } finally {
-        videosLoading.value = false;
+        if (epoch === _loadEpoch) videosLoading.value = false;
       }
     }
     function fmtVideoDur(s) {
@@ -979,24 +994,26 @@ const app = createApp({
       return title.replace(/\.(webm|ogv|ogg|mp4|mov)$/i, '').replace(/_/g, ' ');
     }
 
-    async function loadHourlyData(name) {
+    async function loadHourlyData(name, epoch) {
       try {
         // Pre-aggregated hourly_stats with raw fallback for upgrade safety
         const rows = await Q.withFallback(birdQuery,
           Q.hourlyBySpecies(name),
           Q.hourlyBySpeciesRaw(name)
         );
+        if (epoch !== _loadEpoch) return;
         const vals = Array(24).fill(0);
         rows.forEach(r=>{vals[r.h]=r.n;});
         hourlyData.value = vals;
       } catch(e) {}
     }
 
-    async function loadMonthlyData(name) {
+    async function loadMonthlyData(name, epoch) {
       try {
         const rows = await birdQuery(
           `SELECT SUBSTR(Date,1,4) as y, CAST(SUBSTR(Date,6,2) AS INTEGER) as m, COUNT(*) as n
            FROM detections WHERE Com_Name=? GROUP BY y, m ORDER BY y, m`, [name]);
+        if (epoch !== _loadEpoch) return;
         const thisYear = new Date().getFullYear().toString();
         const lastYear = (new Date().getFullYear() - 1).toString();
         const cur = Array(12).fill(0), prev = Array(12).fill(0), all = Array(12).fill(0);
@@ -1009,10 +1026,11 @@ const app = createApp({
       } catch(e) {}
     }
 
-    async function load30dData(name) {
+    async function load30dData(name, epoch) {
       try {
         const from = daysAgo(29);
         const rows = await birdQuery(...Q.dailyBySpecies(name, from));
+        if (epoch !== _loadEpoch) return;
         const map={};
         rows.forEach(r=>{map[r.Date]=r.n;});
         const vals=[];
@@ -1021,7 +1039,7 @@ const app = createApp({
       } catch(e) {}
     }
 
-    async function loadConfData(name) {
+    async function loadConfData(name, epoch) {
       try {
         const rows = await birdQuery(
           `SELECT
@@ -1036,11 +1054,12 @@ const app = createApp({
             COUNT(*) as n
            FROM detections WHERE Com_Name=?
            GROUP BY bucket ORDER BY bucket ASC`, [name]);
+        if (epoch !== _loadEpoch) return;
         confData.value = rows;
       } catch(e) {}
     }
 
-    async function loadDayHourData(name) {
+    async function loadDayHourData(name, epoch) {
       try {
         const rows = await birdQuery(
           `SELECT CAST(strftime('%m', Date) AS INTEGER) as mon,
@@ -1048,15 +1067,17 @@ const app = createApp({
                   COUNT(*) as n
            FROM detections WHERE Com_Name=?
            GROUP BY mon, h`, [name]);
+        if (epoch !== _loadEpoch) return;
         dayHourData.value = rows;
       } catch(e) {}
     }
 
-    async function loadFeed(name) {
+    async function loadFeed(name, epoch) {
       try {
         const rows = await birdQuery(...Q.speciesDetections(name, 15));
+        if (epoch !== _loadEpoch) return;
         feed.value = rows;
-      } catch(e) { feed.value=[]; }
+      } catch(e) { if (epoch === _loadEpoch) feed.value=[]; }
     }
 
     // ── Chart watchers ──────────────────────────────────────────────
@@ -1718,7 +1739,7 @@ const app = createApp({
       speciesNotes, detNoteMap, editingDetNote, detNoteText, toggleDetNote, saveDetNote, deleteDetNote,
       noteSaving, noteError,
       isFav, onToggleFav, banCurrentPhoto, setPreferredPhoto,
-      photos, photoIdx, photosLoading, wikiSummary, wikiSummaryAlt, conservation, conservationClass,
+      photos, photoIdx, photosLoading, wikiSummary, conservation, conservationClass,
       prevPhoto, nextPhoto, photoErr,
       videos, videosLoading, videoModalOpen, fmtVideoDur, cleanVideoTitle,
       playingFile, toggleAudio,
@@ -1728,7 +1749,7 @@ const app = createApp({
       deleteMode, showBulkModal, bulkConfirmName, bulkDeleting, deleteError,
       deleteResult, deleteToast, bulkTargetName, bulkTargetCount,
       openBulkModal, closeBulkModal, confirmDeleteOne, executeBulkDelete,
-      manageDets, openManageDets, manageToggle, manageSelectAll, manageDeleteSelected, openManageSpectro, shortModel,
+      manageDets, openManageDets, manageToggle, manageSelectAll, manageDeleteSelected, openManageSpectro,
       weatherProfile, wpIcon, wpLabel,
     };
   }
