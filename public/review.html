@@ -155,56 +155,26 @@
       </div>
     </div>
 
-    <!-- Delete confirmation / result modal -->
-    <div v-if="delOpen" class="tl-popup-overlay" @click.self="closeDeleteModal" @keydown.escape="closeDeleteModal" role="dialog" aria-modal="true">
-      <div class="tl-popup" style="max-width:520px;max-height:80vh;overflow-y:auto;">
-        <button class="tl-popup-close" @click="closeDeleteModal">✕</button>
-
-        <!-- Before deletion: preview -->
-        <template v-if="!delDone">
-          <div style="font-weight:600;font-size:1rem;margin-bottom:.5rem;color:#e53e3e;">
-            🗑 {{t('review_purge_title')}}
-          </div>
-          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem;">
-            {{t('review_purge_warning')}}
-          </div>
-          <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;">
-            <div v-for="det in delItems" :key="det.date+det.time+det.sci_name"
-                 style="display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid var(--border);font-size:.8rem;">
-              <span style="color:var(--text-muted);min-width:70px;">{{fmtDate(det.date)}}</span>
-              <span style="color:var(--text-muted);min-width:40px;">{{det.time.slice(0,5)}}</span>
-              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{spName(det.com_name, det.sci_name)}}</span>
-              <span style="font-size:.7rem;color:var(--text-faint);">{{fmtConf(det.confidence)}}</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:.5rem;justify-content:flex-end;">
-            <button class="rv-btn-outline" @click="closeDeleteModal" style="padding:.4rem 1rem;">{{t('cancel') || 'Annuler'}}</button>
-            <button class="rv-btn rv-btn-no" style="padding:.4rem 1rem;" @click="executeDelete" :disabled="delDeleting">
-              <template v-if="delDeleting">{{delProgress}}% ({{Math.round(delProgress * delItems.length / 100)}}/{{delItems.length}})</template>
-              <template v-else>{{t('review_purge_confirm')}} ({{delItems.length}})</template>
-            </button>
-          </div>
-        </template>
-
-        <!-- After deletion: results -->
-        <template v-else>
-          <div style="font-weight:600;font-size:1rem;margin-bottom:.5rem;color:#38a169;">
-            ✓ {{t('review_delete_done')}}
-          </div>
-          <div style="max-height:350px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;">
-            <div v-for="r in delResults" :key="r.file"
-                 style="display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border-bottom:1px solid var(--border);font-size:.8rem;">
-              <span :style="{color: r.ok ? '#38a169' : '#e53e3e'}">{{r.ok ? '✓' : '✗'}}</span>
-              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{r.name}}</span>
-              <span style="font-size:.7rem;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;direction:rtl;">{{r.file}}</span>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;">
-            <button class="rv-btn rv-btn-ok" @click="closeDeleteModal" style="padding:.4rem 1rem;">OK</button>
-          </div>
-        </template>
+    <!-- Bulk-validate overlay (delayed 200 ms so fast batches don't flash). -->
+    <!-- Indeterminate: server-side bulk-validate is a single SQL tx, so we    -->
+    <!-- can't stream per-row progress like Purge does.                       -->
+    <div v-if="bulkBusy.show" style="position:fixed;inset:0;background:rgba(0,0,0,.55);
+         display:flex;align-items:center;justify-content:center;z-index:1000;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;
+           padding:1.2rem 1.5rem;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+        <div style="font-size:.92rem;font-weight:600;color:var(--text-main);margin-bottom:.8rem;">
+          {{bulkBusy.title}}
+        </div>
+        <div style="height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:30%;background:var(--accent);
+               animation: rv-indet 1.2s ease-in-out infinite;"></div>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-muted);margin-top:.5rem;">
+          {{bulkBusy.count}} {{t('review_detections')}}
+        </div>
       </div>
     </div>
+    <style>@keyframes rv-indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }</style>
 
   </birdash-shell>
 </div>
@@ -291,6 +261,23 @@ const app = createApp({
       return data;
     }
 
+    // Delayed-show overlay for bulk operations: hidden if the request resolves
+    // in <200 ms (typical for small batches), shown otherwise so 300+ row
+    // operations don't feel frozen. Indeterminate because bulk-validate runs
+    // as one SQL transaction server-side — no per-row progress to emit.
+    const bulkBusy = reactive({ show: false, title: '', count: 0 });
+    async function _withBulkOverlay(title, count, fn) {
+      bulkBusy.title = title;
+      bulkBusy.count = count;
+      bulkBusy.show = false;
+      const timer = setTimeout(() => { bulkBusy.show = true; }, 200);
+      try { return await fn(); }
+      finally {
+        clearTimeout(timer);
+        bulkBusy.show = false;
+      }
+    }
+
     async function validate(det, status) {
       if (validatingKey.value) return;
       validatingKey.value = detKey(det);
@@ -313,7 +300,8 @@ const app = createApp({
       const labels = { confirmed: t('review_confirm'), rejected: t('review_reject'), doubtful: '?' };
       if (!confirm(`${labels[status] || status} ${dets.length} ?`)) return;
       try {
-        await _bulkPost(dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status);
+        await _withBulkOverlay(`${labels[status] || status}…`, dets.length, () =>
+          _bulkPost(dets.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), status));
         for (const d of dets) d.validation = status;
         selected.clear(); window.dispatchEvent(new Event('birdash:review-changed'));
         window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${labels[status]} — ${dets.length} ${t('review_detections')}`}));
@@ -327,7 +315,8 @@ const app = createApp({
       const matching = flagged.value.filter(d => d.reasons.includes(reason) && d.validation==='unreviewed');
       if (!matching.length || !confirm(`${t('review_reject')} ${matching.length} "${reason}" ?`)) return;
       try {
-        await _bulkPost(matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), 'rejected');
+        await _withBulkOverlay(`${t('review_reject')} "${reason}"…`, matching.length, () =>
+          _bulkPost(matching.map(d => ({date:d.date,time:d.time,sci_name:d.sci_name})), 'rejected'));
         for (const d of matching) d.validation = 'rejected'; window.dispatchEvent(new Event('birdash:review-changed'));
         window.dispatchEvent(new CustomEvent('birdash:success', {detail: `${t('review_reject')} — ${matching.length} "${reason}"`}));
       } catch(e) {
@@ -368,67 +357,6 @@ const app = createApp({
       BIRDASH.openSpectroModal({ fileName:det.file_name, speciesName:det.com_name, sciName:det.sci_name, confidence:det.confidence, date:det.date, time:det.time });
     }
 
-    // ── Delete modal (shared by "delete selected" and "purge rejected") ──
-    const delOpen = ref(false);
-    const delItems = ref([]);
-    const delDeleting = ref(false);
-    const delDone = ref(false);
-    const delResults = ref([]);
-
-    function deleteSelected() {
-      const items = flagged.value.filter(d => selected.has(detKey(d)));
-      if (!items.length) return;
-      openDeleteModal(items);
-    }
-
-    function openDeleteModal(items) {
-      delItems.value = items.map(d => ({ ...d }));
-      delDeleting.value = false;
-      delDone.value = false;
-      delResults.value = [];
-      delOpen.value = true;
-    }
-
-    async function closeDeleteModal() {
-      delOpen.value = false;
-      if (delDone.value) {
-        const ok = delResults.value.filter(r => r.ok).length;
-        const fail = delResults.value.filter(r => !r.ok).length;
-        selected.clear();
-        await loadFlagged();
-        window.dispatchEvent(new Event('birdash:review-changed'));
-        if (ok > 0) window.dispatchEvent(new CustomEvent('birdash:success', { detail: `${ok} ${t('review_deleted_count')}` }));
-        if (fail > 0) window.dispatchEvent(new CustomEvent('birdash:error', { detail: `${fail} ${t('review_delete_failed')}` }));
-      }
-    }
-
-    const delProgress = ref(0);
-    async function executeDelete() {
-      delDeleting.value = true;
-      delProgress.value = 0;
-      const results = [];
-      const total = delItems.value.length;
-      for (let i = 0; i < total; i++) {
-        const det = delItems.value[i];
-        delProgress.value = Math.round((i / total) * 100);
-        try {
-          const resp = await fetch(`${API}/detections`, { method:'DELETE', headers:BIRDASH.authHeaders(),
-            body: JSON.stringify({ date:det.date, time:det.time, comName:det.com_name }) });
-          const data = await resp.json().catch(() => ({}));
-          if (!resp.ok || data.error) {
-            throw new Error(data.error || `HTTP ${resp.status}`);
-          }
-          results.push({ name: det.com_name, file: det.file_name, ok: true });
-        } catch(e) {
-          results.push({ name: det.com_name, file: det.file_name, ok: false, error: e.message });
-        }
-      }
-      delProgress.value = 100;
-      delDeleting.value = false;
-      delResults.value = results;
-      delDone.value = true;
-    }
-
     onMounted(() => {
       // Deep-link support: ?species=CommonName&date=YYYY-MM-DD
       const u = new URL(window.location.href);
@@ -447,11 +375,10 @@ const app = createApp({
       flagged, filteredFlagged, pagedFlagged, loading, pageLimit, selected, playingDet,
       speciesFilter, clearSpeciesFilter,
       unreviewed, rejectedList, rejectedCount, confirmedCount, reasonGroups,
-      delOpen, delItems, delDeleting, delDone, delResults, delProgress,
       detKey, loadFlagged, validate, bulkAction, bulkRejectByReason, validatingKey,
       toggleSelect, selectAll, confThreshold, countBelow, selectByConfidence,
       playAudio, openSpectro,
-      deleteSelected, openDeleteModal, closeDeleteModal, executeDelete,
+      bulkBusy,
     };
   }
 });
