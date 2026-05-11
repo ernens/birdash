@@ -144,6 +144,11 @@ function handle(req, res, pathname, ctx) {
     const key      = photoCacheKey(sciName);
     const jpgPath  = path.join(PHOTO_CACHE_DIR, key + '.jpg');
     const metaPath = path.join(PHOTO_CACHE_DIR, key + '.json');
+    // Negative-cache marker. Without this, every visit to a page that
+    // shows an un-photographable species re-triggered the iNaturalist +
+    // Wikipedia cascade (2–5 s of HTTPS round-trips each time).
+    const missPath = path.join(PHOTO_CACHE_DIR, key + '.notfound');
+    const NEG_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     // Route photo entièrement async
     (async () => {
@@ -163,10 +168,34 @@ function handle(req, res, pathname, ctx) {
           return;
         } catch(e) { /* pas en cache, on résout */ }
 
+        // ── Cas 1b : negative cache (no photo found within last 7 days) ──
+        try {
+          const st = await fsp.stat(missPath);
+          if (Date.now() - st.mtimeMs < NEG_TTL_MS) {
+            res.writeHead(404, {
+              'Cache-Control': 'public, max-age=86400',
+              'X-Photo-Source': 'cache-miss',
+            });
+            res.end('no photo found');
+            return;
+          }
+          // Marker is stale — fall through to re-resolve (maybe the
+          // species got photographed since).
+        } catch(e) { /* no marker, resolve normally */ }
+
         // ── Cas 2 : résoudre + télécharger + mettre en cache ─────────────
         const resolved = await resolvePhotoUrl(sciName);
         if (!resolved) {
-          res.writeHead(404); res.end('no photo found'); return true;
+          // Write the negative-cache marker so subsequent requests skip
+          // the cascade. fire-and-forget; failure isn't worth crashing the
+          // request over.
+          fsp.writeFile(missPath, String(Date.now())).catch(() => {});
+          res.writeHead(404, {
+            'Cache-Control': 'public, max-age=86400',
+            'X-Photo-Source': 'cache-miss-new',
+          });
+          res.end('no photo found');
+          return;
         }
 
         const imgBuf = await fetchBuffer(resolved.url);
@@ -177,6 +206,8 @@ function handle(req, res, pathname, ctx) {
         // Sauvegarder sur disque (async)
         await fsp.writeFile(jpgPath, imgBuf);
         await fsp.writeFile(metaPath, JSON.stringify({ src: resolved.src, original: resolved.url }));
+        // Clear any stale negative-cache marker now that we have a photo.
+        fsp.unlink(missPath).catch(() => {});
         console.log(`[photo-cache] ${sciName} → ${resolved.src} (${imgBuf.length} bytes)`);
 
         res.writeHead(200, {
