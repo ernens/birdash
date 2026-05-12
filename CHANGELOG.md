@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.2] — 2026-05-12
+
+### Fixed — don't auto-enable on FULL_DISK=purge (close-call avoidance)
+
+Previous releases interpreted `FULL_DISK=purge` in birdnet.conf as an
+opt-in signal for the new auto-purge. That conflated two different
+semantics: `FULL_DISK=purge` historically meant "panic mode when the
+disk is saturated", not "apply rolling retention proactively". On a
+mature install (916 GB NVMe, 199 GB of BirdSongs going back to
+2023-09-18), tonight's 03:00 cron with retention=90 would have
+silently deleted ~150 GB of historical recordings.
+
+Auto-purge is now always opt-in: the only enable switch is the UI
+toggle (POST /api/settings/auto-purge {enabled:true}). Existing
+installs keep `enabled=false` until the user opts in explicitly.
+
 ## [1.55.1] — 2026-05-12
 
 ### Added — auto-purge UI in Settings → Services (Phase 2)

@@ -46,15 +46,18 @@ let _cronTimer = null;
 async function _readConfig(parseBirdnetConf) {
   let retention = DEFAULT_RETENTION;
   let threshold = DEFAULT_THRESHOLD;
-  let enabled   = false;       // opt-in by default — safer for fresh installs
+  let enabled   = false;       // Always opt-in. The UI toggle is the only switch.
   try {
     const conf = (await parseBirdnetConf?.()) || {};
     if (conf.AUDIO_RETENTION_DAYS) retention = parseInt(conf.AUDIO_RETENTION_DAYS, 10) || DEFAULT_RETENTION;
     if (conf.PURGE_THRESHOLD)      threshold = parseInt(conf.PURGE_THRESHOLD, 10) || DEFAULT_THRESHOLD;
-    // FULL_DISK=purge in birdnet.conf is the legacy auto-purge opt-in signal.
-    // Honour it so existing bird installs keep their behaviour after this
-    // module replaces purge_audio.sh.
-    if (conf.FULL_DISK === 'purge') enabled = true;
+    // Note: we deliberately do NOT honour the legacy FULL_DISK=purge as
+    // an auto-enable. That setting historically meant "panic mode when
+    // disk is full", not "apply rolling retention proactively" — two
+    // different semantics. Auto-enabling on existing bird-class installs
+    // (916 GB NVMe with 150 GB of years-old recordings) would silently
+    // delete history nobody asked to lose. User must opt in via the UI
+    // toggle (POST /api/settings/auto-purge {enabled:true}).
   } catch {}
   // Local override (set via /api/settings/auto-purge UI toggle).
   try {
