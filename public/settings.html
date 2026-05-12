@@ -2326,7 +2326,7 @@ const app = createApp({
     });
 
     onMounted(() => {
-      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles();
+      reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles(); loadAutoPurge();
       if (activeTab.value === 'station') setTimeout(initStationMap, 500);
     });
 
@@ -2682,6 +2682,63 @@ const app = createApp({
     settingsCtx.fmtMb = fmtMb;
     settingsCtx.loadZramStatus = loadZramStatus;
     settingsCtx.configureZram = configureZram;
+
+    // ── Auto-purge: toggle + last-run status + manual trigger ────────────
+    // Backend in server/lib/auto-purge.js. Daily cron at 03:00 local;
+    // here we just surface the on/off switch and the last-run summary.
+    const autoPurge = reactive({
+      loaded: false, loading: false,
+      config: { retention: 90, threshold: 95, enabled: false },
+      status: {},
+      running: false, msg: '', err: false,
+    });
+    async function loadAutoPurge() {
+      autoPurge.loading = true;
+      try {
+        const r = await fetch(API + '/settings/auto-purge');
+        const d = await r.json();
+        autoPurge.config = d.config || autoPurge.config;
+        autoPurge.status = d.status || {};
+        autoPurge.loaded = true;
+      } catch(e) { autoPurge.msg = e.message; autoPurge.err = true; }
+      autoPurge.loading = false;
+    }
+    async function toggleAutoPurge(enabled) {
+      autoPurge.err = false; autoPurge.msg = '';
+      try {
+        await fetch(API + '/settings/auto-purge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ enabled: !!enabled }),
+        });
+        autoPurge.config.enabled = !!enabled;
+      } catch(e) { autoPurge.msg = e.message; autoPurge.err = true; }
+    }
+    async function runAutoPurgeNow(dryRun = false) {
+      autoPurge.running = true; autoPurge.msg = ''; autoPurge.err = false;
+      try {
+        const q = dryRun ? '?dryRun=1' : '';
+        const r = await fetch(API + '/settings/auto-purge/run-now' + q, {
+          method: 'POST', headers: authHeaders(),
+        });
+        const d = await r.json();
+        if (!r.ok) { autoPurge.msg = d.error || 'HTTP ' + r.status; autoPurge.err = true; }
+        else if (dryRun) {
+          autoPurge.msg = t('auto_purge_dryrun_result')
+            .replace('{purged}', d.purged || 0)
+            .replace('{skipped}', d.skipped || 0);
+        } else {
+          autoPurge.msg = t('auto_purge_triggered');
+          // Status reflects last_run_started_at immediately; poll for completion.
+          setTimeout(loadAutoPurge, 3000);
+        }
+      } catch(e) { autoPurge.msg = e.message; autoPurge.err = true; }
+      autoPurge.running = false;
+    }
+    settingsCtx.autoPurge = autoPurge;
+    settingsCtx.loadAutoPurge = loadAutoPurge;
+    settingsCtx.toggleAutoPurge = toggleAutoPurge;
+    settingsCtx.runAutoPurgeNow = runAutoPurgeNow;
 
     provide('settingsCtx', settingsCtx);
 

@@ -2,6 +2,23 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.1] — 2026-05-12
+
+### Added — auto-purge UI in Settings → Services (Phase 2)
+
+- New section under "Gestion du disque": toggle, last-run summary
+  (timestamp + clip count, with a red "panic" badge when triggered by
+  disk pressure), and two buttons — "Simuler" (dry-run preview without
+  touching the DB) and "Purger maintenant" (fire-and-forget; status
+  auto-refreshes after 3 s).
+- i18n strings added to fr, en, nl, de.
+
+Audio-purged player placeholder is deferred to a Phase 2b ship — no
+test data yet, and the touch points across 12 templates aren't worth
+shipping blind. Bird's 03:00 cron tonight will produce the first real
+`Audio_Purged_At` rows; the placeholder ships once we can validate
+against them.
+
 ## [1.55.0] — 2026-05-12
 
 Birdash takes over the audio auto-purge policy end-to-end (was a legacy

@@ -108,6 +108,38 @@
               <option value="3">3</option>
             </select>
           </div>
+
+          <!-- ─── Auto-purge (Phase 2 UI; backend in server/lib/auto-purge.js) ─── -->
+          <hr style="border:none;border-top:1px solid var(--border, #2a2a2a);margin:.75rem 0;">
+          <div class="set-row">
+            <span class="set-label">{{t('auto_purge_enable')}}</span>
+            <label class="set-switch" style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer;">
+              <input type="checkbox" :checked="autoPurge.config.enabled" @change="toggleAutoPurge($event.target.checked)">
+            </label>
+          </div>
+          <div class="set-row" style="font-size:.9em;color:var(--text-secondary, #888);">
+            <span class="set-label">{{t('auto_purge_last_run')}}</span>
+            <span v-if="!autoPurge.status.last_run_at">{{t('auto_purge_never_run')}}</span>
+            <span v-else>
+              {{fmtDateTimeFull(autoPurge.status.last_run_at)}}
+              — {{t('auto_purge_clips_count').replace('{n}', autoPurge.status.last_run_count || 0)}}
+              <template v-if="autoPurge.status.last_run_mode === 'panic'">
+                — <strong style="color:var(--danger, #e87474);">{{t('auto_purge_mode_panic')}}</strong>
+              </template>
+            </span>
+          </div>
+          <div class="set-row" style="gap:.5rem;flex-wrap:wrap;">
+            <button class="btn-secondary" @click="runAutoPurgeNow(true)" :disabled="autoPurge.running" style="padding:.4em .8em;">
+              {{t('auto_purge_dryrun')}}
+            </button>
+            <button class="btn-secondary" @click="runAutoPurgeNow(false)" :disabled="autoPurge.running || !autoPurge.config.enabled" style="padding:.4em .8em;">
+              {{t('auto_purge_run_now')}}
+            </button>
+          </div>
+          <div v-if="autoPurge.msg"
+               :style="{marginTop:'.5rem',fontSize:'.9em',color: autoPurge.err ? 'var(--danger, #e87474)' : 'var(--ok, #74e8a0)'}">
+            {{autoPurge.msg}}
+          </div>
         </div>
 
       </div><!-- /settings-grid (system) -->
