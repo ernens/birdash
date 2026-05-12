@@ -2,6 +2,23 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.54.3] — 2026-05-12
+
+### Fixed — stability worker conn lifecycle (16 h of dropped detections)
+
+- `engine/stability.py` `worker_loop` opened one SQLite connection at
+  startup and reused it across the polling `time.sleep(30)`. In WAL
+  mode that pins a read snapshot through the sleep, blocks checkpoints,
+  and the WAL grows unbounded. After ~36 h on bird.local the engine's
+  own INSERTs started failing with `database is locked`; 16 h of
+  detections (2026-05-11 17:32 → 2026-05-12 07:20) were dropped before
+  recovery (`systemctl stop birdengine-stability` + `restart birdengine`
+  to clear the engine's contaminated read snapshots).
+- Fix: per-iteration open/close in a new `_drain_one` helper. Mirrors
+  the pattern `enqueue_for_check` already uses on the producer side
+  (proven safe). Perch model stays loaded across iterations; only the
+  SQLite conn lifecycle changes.
+
 ## [1.54.2] — 2026-05-11
 
 Prevention layer for the mickey 404 incident (commit e443422 fixed

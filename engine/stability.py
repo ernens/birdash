@@ -295,6 +295,48 @@ def _engine_busy(quiescent_s):
     return age < quiescent_s
 
 
+def _drain_one(perch, *, max_attempts, stable_th, unstable_th):
+    """Open conn, process at most one queue row, close conn. Returns True
+    if a row was visited, False if the queue was empty.
+
+    Per-iteration open/close is deliberate. A single long-lived conn
+    parked across the polling sleep pins a WAL read snapshot, blocks
+    checkpoints, and eventually freezes the engine's INSERTs with
+    "database is locked" (incident 2026-05-11 — WAL grew to 28 MB,
+    16 h of detections dropped).
+    """
+    conn = _open_db()
+    try:
+        row = _peek_next(conn)
+        if row is None:
+            return False
+        file_name, attempts = row
+        if attempts >= max_attempts:
+            log.warning("[stability] dropping %s after %d attempts",
+                        file_name, attempts)
+            _drop_from_queue(conn, file_name)
+            return True
+        _bump_attempts(conn, file_name)
+        try:
+            res = check_one(perch, conn, file_name,
+                            stable_th=stable_th, unstable_th=unstable_th)
+        except Exception as e:
+            log.exception("[stability] check_one crashed for %s: %s", file_name, e)
+            return True  # row stays in queue; attempts already incremented
+        if res is not None:
+            log.info("[stability] %s status=%s ratio=%.2f conf=%.3f→%.3f (%dms)",
+                     file_name, res["stability_status"], res["ratio_to_original"],
+                     res["original_confidence"], res["recentered_confidence"],
+                     res["inference_ms"])
+        # Drop on success OR on unrecoverable skip (no bbox / missing MP3 etc.) —
+        # check_one returns None for both, but the warning already fired so
+        # leaving it in queue would just spam. Bump-attempts already counted it.
+        _drop_from_queue(conn, file_name)
+        return True
+    finally:
+        conn.close()
+
+
 def worker_loop(perch, *, poll_interval_s=DEFAULT_POLL_INTERVAL_S,
                 quiescent_s=DEFAULT_ENGINE_QUIESCENT_S,
                 max_attempts=DEFAULT_MAX_ATTEMPTS,
@@ -303,40 +345,13 @@ def worker_loop(perch, *, poll_interval_s=DEFAULT_POLL_INTERVAL_S,
     """Forever loop: drain stability_queue one item at a time, sleep on empty."""
     log.info("[stability] worker starting (poll=%ds, max_attempts=%d)",
              poll_interval_s, max_attempts)
-    conn = _open_db()
-    try:
-        while True:
-            if _engine_busy(quiescent_s):
-                time.sleep(quiescent_s)
-                continue
-            row = _peek_next(conn)
-            if row is None:
-                time.sleep(poll_interval_s)
-                continue
-            file_name, attempts = row
-            if attempts >= max_attempts:
-                log.warning("[stability] dropping %s after %d attempts",
-                            file_name, attempts)
-                _drop_from_queue(conn, file_name)
-                continue
-            _bump_attempts(conn, file_name)
-            try:
-                res = check_one(perch, conn, file_name,
-                                stable_th=stable_th, unstable_th=unstable_th)
-            except Exception as e:
-                log.exception("[stability] check_one crashed for %s: %s", file_name, e)
-                continue  # keep row in queue, attempts incremented, retry next round
-            if res is not None:
-                log.info("[stability] %s status=%s ratio=%.2f conf=%.3f→%.3f (%dms)",
-                         file_name, res["stability_status"], res["ratio_to_original"],
-                         res["original_confidence"], res["recentered_confidence"],
-                         res["inference_ms"])
-            # Drop on success OR on unrecoverable skip (no bbox / missing MP3 etc.) —
-            # check_one returns None for both, but the warning already fired so
-            # leaving it in queue would just spam. Bump-attempts already counted it.
-            _drop_from_queue(conn, file_name)
-    finally:
-        conn.close()
+    while True:
+        if _engine_busy(quiescent_s):
+            time.sleep(quiescent_s)
+            continue
+        if not _drain_one(perch, max_attempts=max_attempts,
+                          stable_th=stable_th, unstable_th=unstable_th):
+            time.sleep(poll_interval_s)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────
