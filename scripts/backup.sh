@@ -27,7 +27,11 @@ if ! touch "$LOG_FILE" 2>/dev/null; then
 fi
 HISTORY_FILE="${CONFIG_FILE%/*}/backup-history.json"
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" 2>/dev/null || echo "$*"; }
+# Write directly to LOG_FILE — using tee -a here would double each line
+# because nohup redirects stdout via `>> $LOG_FILE 2>&1` when this script
+# is launched from backup-window-start.sh. Fallback to plain echo if the
+# file write fails (cron/nohup captures stdout anyway).
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE" 2>/dev/null || echo "$*"; }
 
 # ── Progress tracking ─────────────────────────────────────────────────────────
 # Writes a JSON status file that the API serves to the frontend

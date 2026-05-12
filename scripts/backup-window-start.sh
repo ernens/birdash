@@ -10,7 +10,10 @@ SCRIPT="/home/bjorn/birdash/scripts/backup.sh"
 LOG_FILE="$HOME/.local/share/birdash-backup.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [window-start] $*" | tee -a "$LOG_FILE"; }
+# Write directly to LOG_FILE — using tee -a here would double each line
+# because cron also redirects stdout via `>> $LOG_FILE 2>&1`. Stderr from
+# unexpected shell errors still reaches the log via cron's redirect.
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [window-start] $*" >> "$LOG_FILE"; }
 
 BASH_PIDS=$(pgrep -f "scripts/backup\.sh" 2>/dev/null || true)
 RSYNC_PIDS=$(pgrep -f "rsync.*birdash-backup\|rsync.*BirdSongs" 2>/dev/null || true)
