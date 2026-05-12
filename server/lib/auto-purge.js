@@ -123,7 +123,9 @@ function _daysAgo(n) {
 
 async function _runPurge(db, dbWrite, parseBirdnetConf, songsDir, { dryRun = false } = {}) {
   const cfg = await _readConfig(parseBirdnetConf);
-  if (!cfg.enabled) {
+  // dryRun bypasses the enabled gate: the "Simuler" UI button must work
+  // BEFORE the user opts in so they can preview the blast radius.
+  if (!cfg.enabled && !dryRun) {
     _log('disabled — skipping');
     return { skipped: true, reason: 'disabled' };
   }
@@ -170,12 +172,19 @@ async function _runPurge(db, dbWrite, parseBirdnetConf, songsDir, { dryRun = fal
     const paths = _pathsForRow(row, songsDir);
     if (!paths) { errored++; continue; }
     if (dryRun) { purged++; continue; }
-    // Best-effort unlink: ENOENT = legacy orphan (file already gone), we still
-    // mark the row as purged so the UI knows.
-    for (const p of [paths.livePath, paths.livePng]) {
-      try { fs.unlinkSync(p); }
-      catch (e) { if (e.code !== 'ENOENT') errored++; }
+    // Best-effort unlink on the MP3. ENOENT = legacy orphan, fine. Any
+    // other error (EACCES, EBUSY, EIO) means the file is still on disk —
+    // we must NOT mark the row as purged, otherwise the UI hides the
+    // player for a file that's actually there. .png sibling failures are
+    // cosmetic (spectrogram) and never block the row update.
+    let mp3Ok = true;
+    try { fs.unlinkSync(paths.livePath); }
+    catch (e) {
+      if (e.code !== 'ENOENT') { mp3Ok = false; errored++; }
     }
+    try { fs.unlinkSync(paths.livePng); }
+    catch (e) { /* spectrogram absence is fine, never block */ }
+    if (!mp3Ok) continue;
     update.run(now, row.rowid);
     purged++;
     if ((i + 1) % YIELD_EVERY === 0) {
@@ -230,6 +239,12 @@ function stop() {
 
 async function runNow(db, dbWrite, parseBirdnetConf, songsDir, opts = {}) {
   if (opts.dryRun) return _runPurge(db, dbWrite, parseBirdnetConf, songsDir, opts);
+  // Real run: refuse upfront when disabled, instead of kicking a background
+  // task that will no-op a second later and write misleading "last_run_*"
+  // timestamps to the state file (UI would render "Last run: 0 clips" with
+  // no actual run having happened).
+  const cfg = await _readConfig(parseBirdnetConf);
+  if (!cfg.enabled) return { skipped: true, reason: 'disabled' };
   _saveState({ last_run_started_at: new Date().toISOString(), last_run_completed_at: null });
   setImmediate(() => {
     _runPurge(db, dbWrite, parseBirdnetConf, songsDir, opts)

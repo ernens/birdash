@@ -226,8 +226,9 @@ _weatherWatcher.start(birdashDb, parseBirdnetConf, db);
 // Weekly digest: every Monday 08:00 local (opt-in via NOTIFY_DIGEST_ENABLED)
 _weeklyDigest.startWeeklyDigestCron(db, parseBirdnetConf);
 // Auto-purge: every day at 03:00 local, deletes MP3s past AUDIO_RETENTION_DAYS
-// (and marks Audio_Purged_At so UI shows a placeholder). Opt-in by default;
-// honours FULL_DISK=purge in birdnet.conf for back-compat with bird.
+// (and marks Audio_Purged_At so UI shows a placeholder). Strictly opt-in —
+// only the Settings → Services toggle enables it. Reads
+// AUDIO_RETENTION_DAYS and PURGE_THRESHOLD from birdnet.conf when present.
 _autoPurge.start(db, dbWrite, parseBirdnetConf, SONGS_DIR);
 // MQTT publisher: opt-in (MQTT_ENABLED=1), publishes detections to a broker
 _mqttPublisher.start(db, parseBirdnetConf);

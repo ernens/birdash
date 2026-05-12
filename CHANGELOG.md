@@ -2,6 +2,33 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.3] — 2026-05-12
+
+### Fixed — 5 residual bugs caught in post-ship audit
+
+1. **`auto-purge.js`** — when `fs.unlinkSync` failed with anything
+   other than ENOENT (EACCES, EBUSY, EIO), the row was still marked
+   `Audio_Purged_At`. The UI would have hidden the player for a file
+   that's still on disk. Fix: track a per-row `mp3Ok` flag and skip
+   the row update if the live MP3 unlink errored.
+2. **`auto-purge.js`** — `dryRun` was blocked when the toggle was
+   off. That defeated the point of the "Simuler" button: the user
+   wants to preview blast radius BEFORE opting in. Fix: dryRun
+   bypasses the enabled gate.
+3. **`auto-purge.js`** — calling `run-now` (real run) while disabled
+   returned `{triggered:true}` and wrote misleading `last_run_*`
+   timestamps to the state file, even though the background task
+   no-op'd a second later. Fix: refuse synchronously with
+   `{skipped:true, reason:'disabled'}` before kicking the
+   background.
+4. **`server/server.js`** — comment claimed `_autoPurge.start`
+   "honours FULL_DISK=purge for back-compat", which became false
+   in 1.55.2. Fix: doc drift.
+5. **`settings/services.html`** — toggle wrapped in `<label
+   class="set-switch">`, a class that doesn't exist in the CSS.
+   Other settings toggles use a bare checkbox. Fix: match the
+   existing pattern.
+
 ## [1.55.2] — 2026-05-12
 
 ### Fixed — don't auto-enable on FULL_DISK=purge (close-call avoidance)
