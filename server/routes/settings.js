@@ -6,11 +6,12 @@ const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
 const safeConfig = require('../lib/safe-config');
+const _autoPurge = require('../lib/auto-purge');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
 function handle(req, res, pathname, ctx) {
-  const { requireAuth, parseBirdnetConf, writeBirdnetConf, SETTINGS_VALIDATORS, BIRDNET_CONF, _alerts, reloadEbirdFreq } = ctx;
+  const { requireAuth, parseBirdnetConf, writeBirdnetConf, SETTINGS_VALIDATORS, BIRDNET_CONF, _alerts, reloadEbirdFreq, db, dbWrite, SONGS_DIR } = ctx;
 
   // Cross-tab safety (Phase 3): GET /api/settings advertises an etag of
   // the on-disk birdnet.conf, POST /api/settings honours an If-Match
@@ -374,8 +375,68 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/settings/auto-purge ──────────────────────────────────
+  // Returns merged config (birdnet.conf + JSON override) and last-run state.
+  if (req.method === 'GET' && pathname === '/api/settings/auto-purge') {
+    (async () => {
+      try {
+        const config = await _autoPurge.getConfig(parseBirdnetConf);
+        const status = _autoPurge.getStatus();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ config, status }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
 
+  // ── Route : POST /api/settings/auto-purge ─────────────────────────────────
+  // Body: { enabled: boolean }. Toggles the local override; retention and
+  // threshold come from birdnet.conf (existing UI panel writes those).
+  if (req.method === 'POST' && pathname === '/api/settings/auto-purge') {
+    if (requireAuth && !requireAuth(req, res)) return true;
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 1024) req.destroy(); });
+    req.on('end', () => {
+      try {
+        const { enabled } = JSON.parse(body || '{}');
+        if (typeof enabled !== 'boolean') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'enabled must be boolean' }));
+          return;
+        }
+        _autoPurge.setEnabled(enabled);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, enabled }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return true;
+  }
 
+  // ── Route : POST /api/settings/auto-purge/run-now ─────────────────────────
+  // Triggers a one-off purge synchronously (response after completion). The
+  // operation is bounded by the configured retention window so it can't run
+  // away. dryRun=1 query string returns counts without touching disk/DB.
+  if (req.method === 'POST' && pathname === '/api/settings/auto-purge/run-now') {
+    if (requireAuth && !requireAuth(req, res)) return true;
+    const dryRun = /[?&]dryRun=1/.test(req.url);
+    (async () => {
+      try {
+        const result = await _autoPurge.runNow(db, dbWrite, parseBirdnetConf, SONGS_DIR, { dryRun });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
 
 
 

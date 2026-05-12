@@ -82,6 +82,12 @@ def init_db(db_path):
     cols = {row[1] for row in conn.execute("PRAGMA table_info(detections)").fetchall()}
     if "Source" not in cols:
         conn.execute("ALTER TABLE detections ADD COLUMN Source TEXT")
+    # Audio_Purged_At: unix timestamp set by birdash's auto-purge when the
+    # MP3 is deleted. NULL means audio still on disk. Engine doesn't read
+    # or set it — purely a birdash concern — but the column lives on the
+    # detections table so the migration must happen here too.
+    if "Audio_Purged_At" not in cols:
+        conn.execute("ALTER TABLE detections ADD COLUMN Audio_Purged_At INTEGER")
 
     # Quality events — engine-emitted hourly counters consumed by the
     # Quality page. Definitions live in docs/QUALITY_METRICS.md; never

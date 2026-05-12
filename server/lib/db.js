@@ -171,6 +171,13 @@ setTimeout(() => _ensureQualityTable(), 6 * 1000);
     console.log('[BIRDASH] Migrating detections: adding Source column');
     dbWrite.exec('ALTER TABLE detections ADD COLUMN Source TEXT');
   }
+  // Audio_Purged_At: unix timestamp when auto-purge deleted the MP3. NULL
+  // = audio still on disk. The detection row stays intact so stats and
+  // history are preserved; only the player UI shows a "purged" placeholder.
+  if (!cols.has('Audio_Purged_At')) {
+    console.log('[BIRDASH] Migrating detections: adding Audio_Purged_At column');
+    dbWrite.exec('ALTER TABLE detections ADD COLUMN Audio_Purged_At INTEGER');
+  }
 }
 
 // ── Favorites table ──────────────────────────────────────────────────────────

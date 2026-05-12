@@ -2,6 +2,52 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.0] — 2026-05-12
+
+Birdash takes over the audio auto-purge policy end-to-end (was a legacy
+BirdNET-Pi shell cron that didn't exist on birdash-only installs). The
+mickey 2026-05-12 incident — 18 GB of clips filled a 29 GB SD card in
+3 weeks, ENOSPC corrupted git mid-fetch — wouldn't have happened with
+this feature active.
+
+### Added — `server/lib/auto-purge.js`
+
+- Daily check during the 03:00 local hour (debounced 20 h), opt-in.
+- Reads `AUDIO_RETENTION_DAYS` and `PURGE_THRESHOLD` from birdnet.conf
+  if present; honours `FULL_DISK=purge` as the legacy opt-in signal so
+  bird's existing config keeps working unchanged.
+- **Always-on retention** (the real fix vs the legacy cron, which only
+  triggered when disk > 95 %): deletes MP3s where `Date < today − N`
+  every run.
+- **Panic mode** when disk ≥ `PURGE_THRESHOLD`: halves the effective
+  retention to claw space back fast.
+- **Protected**: detections whose `Com_Name` is in the `favorites` table
+  are skipped — user explicitly chose to keep those clips.
+- **Stats preserved**: only the MP3 is unlinked; the detection row
+  stays. New `Audio_Purged_At` column (unix timestamp) marks the row so
+  the UI can show a placeholder instead of a broken player (UI work
+  ships in Phase 2).
+
+### Added — `/api/settings/auto-purge`
+
+- `GET` returns merged config (`retention`, `threshold`, `enabled`) and
+  last-run status (`last_run_at`, `last_run_count`, `last_run_mode`,
+  disk before/after).
+- `POST { enabled: boolean }` toggles the local opt-in override.
+- `POST /run-now` triggers a one-off purge synchronously (supports
+  `?dryRun=1`).
+
+### Added — schema migration
+
+- `detections.Audio_Purged_At INTEGER` (NULL = audio still on disk).
+  Idempotent migration in both `server/lib/db.js` and `engine/db.py`.
+
+### Added — `scripts/migrations/012-deprecate-cron-purge.sh`
+
+- Removes the legacy `purge_audio.sh` cron entry on machines that have
+  it (bird). The shell script itself stays in the repo for manual use,
+  but birdash is now the only scheduler.
+
 ## [1.54.3] — 2026-05-12
 
 ### Fixed — stability worker conn lifecycle (16 h of dropped detections)
