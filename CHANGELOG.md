@@ -2,6 +2,21 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.4] — 2026-05-12
+
+### Fixed — trash/restore roundtrip preserves Audio_Purged_At
+
+Caught in Tier 2 audit. Before this fix: if a detection was
+auto-purged (`Audio_Purged_At` set), then trashed via review.html,
+then restored, the marker silently disappeared on the way back —
+the row claimed audio was on disk while Caddy would 404 because
+the MP3 was gone. Once the Phase 2b placeholder ships, this would
+have produced a broken player instead of the "deleted" message.
+
+Fix: `Audio_Purged_At INTEGER` added to `detections_trashed` (idempotent
+ALTER), trash INSERT carries the value through, restore INSERT copies
+it back.
+
 ## [1.55.3] — 2026-05-12
 
 ### Fixed — 5 residual bugs caught in post-ship audit

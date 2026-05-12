@@ -104,7 +104,7 @@ const _trashSql = [
     Date DATE, Time TIME, Sci_Name VARCHAR(100) NOT NULL, Com_Name VARCHAR(100) NOT NULL,
     Confidence FLOAT, Lat FLOAT, Lon FLOAT, Cutoff FLOAT,
     Week INT, Sens FLOAT, Overlap FLOAT, File_Name VARCHAR(100) NOT NULL,
-    Model VARCHAR(50), Source TEXT,
+    Model VARCHAR(50), Source TEXT, Audio_Purged_At INTEGER,
     trashed_at INTEGER NOT NULL,
     original_path TEXT
   )`,
@@ -114,6 +114,15 @@ const _trashSql = [
 function _ensureTrashTable(attempt = 1) {
   try {
     for (const sql of _trashSql) dbWrite.exec(sql);
+    // Migration for existing detections_trashed tables: ensure Audio_Purged_At
+    // column exists so a trash+restore round-trip preserves the auto-purge
+    // marker. Without this the marker is silently dropped on restore.
+    try {
+      const cols = new Set(dbWrite.prepare("PRAGMA table_info(detections_trashed)").all().map(r => r.name));
+      if (!cols.has('Audio_Purged_At')) {
+        dbWrite.exec('ALTER TABLE detections_trashed ADD COLUMN Audio_Purged_At INTEGER');
+      }
+    } catch (e) { console.warn('[BIRDASH] detections_trashed Audio_Purged_At migration:', e.message); }
     if (attempt > 1) console.log('[BIRDASH] detections_trashed schema ready');
   } catch (e) {
     if (e.code === 'SQLITE_BUSY' && attempt < 60) {  // up to ~30 min of retries

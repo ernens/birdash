@@ -250,9 +250,9 @@ function handle(req, res, pathname, ctx) {
       const insertTrash = dbWrite.prepare(`
         INSERT INTO detections_trashed (
           Date, Time, Sci_Name, Com_Name, Confidence, Lat, Lon, Cutoff,
-          Week, Sens, Overlap, File_Name, Model, Source,
+          Week, Sens, Overlap, File_Name, Model, Source, Audio_Purged_At,
           trashed_at, original_path
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `);
       const deleteLive = dbWrite.prepare('DELETE FROM detections WHERE rowid = ?');
       const trashedAt = Math.floor(Date.now() / 1000);
@@ -288,7 +288,8 @@ function handle(req, res, pathname, ctx) {
           insertTrash.run(
             row.Date, row.Time, row.Sci_Name, row.Com_Name, row.Confidence,
             row.Lat, row.Lon, row.Cutoff, row.Week, row.Sens, row.Overlap,
-            row.File_Name, row.Model, row.Source, trashedAt, paths.livePath
+            row.File_Name, row.Model, row.Source, row.Audio_Purged_At,
+            trashedAt, paths.livePath
           );
           deleteLive.run(row.rowid);
         });
@@ -352,8 +353,8 @@ function handle(req, res, pathname, ctx) {
       const insertLive = dbWrite.prepare(`
         INSERT INTO detections (
           Date, Time, Sci_Name, Com_Name, Confidence, Lat, Lon, Cutoff,
-          Week, Sens, Overlap, File_Name, Model, Source
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          Week, Sens, Overlap, File_Name, Model, Source, Audio_Purged_At
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `);
       const deleteTrash = dbWrite.prepare('DELETE FROM detections_trashed WHERE id = ?');
       const datesAffected = new Set();
@@ -380,7 +381,7 @@ function handle(req, res, pathname, ctx) {
           insertLive.run(
             row.Date, row.Time, row.Sci_Name, row.Com_Name, row.Confidence,
             row.Lat, row.Lon, row.Cutoff, row.Week, row.Sens, row.Overlap,
-            row.File_Name, row.Model, row.Source
+            row.File_Name, row.Model, row.Source, row.Audio_Purged_At
           );
           deleteTrash.run(row.id);
         });
