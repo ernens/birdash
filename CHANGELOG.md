@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.13] — 2026-05-13
+
+### Changed — throttle bypass slider step 0.01 → 0.005
+
+The noisy-species throttle bypass threshold (Settings → Détection)
+already controlled which detections skip the cooldown. Audit showed
+76% of Fauvette à tête noire detections crossed the previous 0.99
+bypass, leaving the cooldown idle on the dominant species. Tightened
+runtime value to 0.995 (cuts bypass on top species by ~52% measured
+over 7 days) and widened the slider to step 0.005 so the new value
+can be displayed and edited from the UI. The toFixed precision moved
+from 2 to 3 decimals to match.
+
+This is a config-level change — no engine restart needed.
+`_should_throttle()` re-reads birdnet.conf on each call.
+
 ## [1.55.12] — 2026-05-13
 
 ### Changed — agreement bin width 3s → 5s (matches Perch chunk stride)
