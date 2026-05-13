@@ -762,9 +762,17 @@ const app = createApp({
 
     onMounted(() => {
       loadAll();
-      loadAnalytics();
-      readUrlParams();
-      runSearch();    // initial load with whatever URL params provided (or empty)
+      // Defer analytics + custom-search until after the main chart's first
+      // paint. The 6 API calls below all hit better-sqlite3 (synchronous),
+      // so leaving them in parallel with loadAll serialises them anyway and
+      // delays first contentful paint. requestIdleCallback yields to the
+      // browser's paint cycle; the 200 ms fallback covers older Safari.
+      const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+      idle(() => {
+        loadAnalytics();
+        readUrlParams();
+        runSearch();    // initial load with whatever URL params provided (or empty)
+      });
     });
 
     return {

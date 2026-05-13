@@ -5,11 +5,12 @@
 const https = require('https');
 const resultCache = require('../lib/result-cache');
 
-// Cache TTL for weather analytics endpoints (minutes).
-// Weather itself updates hourly and the underlying detections only
-// append, so a 5-min cache is safe and takes the weather page from
-// "25 s under load" to "instant after the first visitor warms it".
-const WEATHER_ANALYTICS_TTL = 5 * 60 * 1000;
+// Cache TTL for weather analytics endpoints.
+// Weather updates hourly and detections only append, so a 15-min cache
+// keeps the page snappy on reload without ever showing stale-by-an-hour
+// numbers. Lengthened from 5 min after the 2026-05-13 audit which
+// showed cold full-table scans of 60-70 s on weather.html.
+const WEATHER_ANALYTICS_TTL = 15 * 60 * 1000;
 
 // Wrapper: try cache by normalized URL key, fall through to compute.
 // Returns true if it served a cached response (caller should return).
@@ -37,7 +38,11 @@ const BW_TTL = 5 * 60 * 1000;
 let _ebirdCache = null, _ebirdCacheTs = 0;
 const EBIRD_TTL = 3600 * 1000;
 let _weatherCache = null, _weatherCacheTs = 0;
-const WEATHER_TTL = 3600 * 1000;
+// Open-Meteo proxy cache: 6 h. Historical days never change after the
+// fact and the 2-day forecast resolution is good enough on 6 h — see
+// weather-watcher.js for the hourly raw poller. Was 1 h until 2026-05-13
+// when we measured 83 s cold-start latency from Pi → Open-Meteo.
+const WEATHER_TTL = 6 * 3600 * 1000;
 
 // Fetch JSON from HTTPS URL
 function fetchJson(url, extraHeaders = {}) {
@@ -448,6 +453,13 @@ function handle(req, res, pathname, ctx) {
     try {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const { wherePred, args } = parseWeatherFilters(params);
+      // Implicit 30-day window when caller didn't pass date_from. Without
+      // it the COUNT(*) walks the full 350 k-row detections table on every
+      // miss — ~32-67 s in May 2026. The custom-search card on weather.html
+      // shows a 30-day chart above, so this window is the matching scope.
+      if (!params.get('date_from')) {
+        wherePred.push(`d.Date >= date('now','-30 days')`);
+      }
       const row = db.prepare(`SELECT COUNT(*) AS detections,
           COUNT(DISTINCT d.Sci_Name) AS species
         FROM active_detections d ${WEATHER_JOIN}
@@ -475,13 +487,19 @@ function handle(req, res, pathname, ctx) {
       const binSize = Math.min(10, Math.max(1, parseInt(params.get('bin_size') || '5')));
       const binMin = parseInt(params.get('bin_min') || '-15');
       const binMax = parseInt(params.get('bin_max') || '35');
+      // Window: default 30 d, override via ?days=N (use 0 for all-time).
+      // Without it both queries below scan the full 350 k detections × JOIN,
+      // measured at 60-73 s on Pi 4 in May 2026.
+      const daysParam = params.get('days');
+      const days = daysParam === null ? 30 : Math.max(0, parseInt(daysParam, 10) || 0);
+      const dateFloor = days > 0 ? ` AND d.Date >= date('now','-${days} days')` : '';
 
       // Step 1: top N species in the joined dataset (i.e. species with at
       // least one detection that has weather data).
       const topSpecies = db.prepare(`SELECT d.Sci_Name AS sci_name, d.Com_Name AS com_name,
           COUNT(*) AS total
         FROM active_detections d ${WEATHER_JOIN}
-        WHERE d.Confidence >= ?
+        WHERE d.Confidence >= ?${dateFloor}
         GROUP BY d.Sci_Name, d.Com_Name
         ORDER BY total DESC LIMIT ?`).all(minConf, top);
       if (!topSpecies.length) {
@@ -498,7 +516,7 @@ function handle(req, res, pathname, ctx) {
           MAX(0, MIN(?, CAST((w.temp_c - ?) / ? AS INT))) AS bin_idx,
           COUNT(*) AS n
         FROM active_detections d ${WEATHER_JOIN}
-        WHERE d.Confidence >= ? AND w.temp_c IS NOT NULL
+        WHERE d.Confidence >= ?${dateFloor} AND w.temp_c IS NOT NULL
           AND d.Sci_Name IN (${placeholders})
         GROUP BY d.Sci_Name, bin_idx`).all(
           Math.floor((binMax - binMin) / binSize) - 1, binMin, binSize, minConf, ...sciNames);

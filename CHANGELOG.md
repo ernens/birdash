@@ -2,6 +2,31 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.5] — 2026-05-13
+
+### Perf — weather.html cold start: ~150 s → <2 s
+
+Audit on 2026-05-13 showed weather.html locking the server for over
+two minutes at first load. Three culprits:
+
+1. **`/api/weather` (Open-Meteo proxy) — 83 s TTFB**. The 1 h cache was
+   correct but cold misses bypassed everything. Doubled the cache
+   window to 6 h (historical days never change after the fact, the
+   2-day forecast still refreshes 4× per day).
+2. **`/api/weather/species-heatmap` and `/api/weather/match-summary` —
+   60-73 s and 32-67 s respectively**. Both queries did a full JOIN
+   over 350 k detections × 23 k weather_hourly rows because no date
+   floor was set when the client didn't pass `date_from`. Added an
+   implicit 30-day window (matches the chart above on the page).
+   Heatmap accepts `?days=N` (or `?days=0` for all-time).
+3. **`loadAnalytics()` + `runSearch()` racing with `loadAll()` on
+   mount**. better-sqlite3 is synchronous, so "parallel" client calls
+   serialise on the server. Deferred the two non-critical loaders
+   behind `requestIdleCallback` so the main 30-day chart paints first.
+
+Also bumped `WEATHER_ANALYTICS_TTL` from 5 to 15 min — leaderboards
+and heatmap don't shift meaningfully on minute scales.
+
 ## [1.55.4] — 2026-05-12
 
 ### Fixed — trash/restore roundtrip preserves Audio_Purged_At
