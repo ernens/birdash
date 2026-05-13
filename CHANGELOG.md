@@ -2,6 +2,31 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.10] — 2026-05-13
+
+### Fixed — sensitivity split-brain between config.toml and birdnet.conf
+
+The engine boots with `sensitivity` from `config.toml` (baked into the
+TFLite model object), then each loop hot-reloads `birdnet.conf`
+SENSITIVITY into the in-memory dict. When the two files disagree, the
+running model uses the toml value but every detection's `Sens` DB
+column gets stamped with the conf value. Net effect on a 7-day window:
+85% of detections labelled Sens=1.0, 15% labelled Sens=1.3 — but
+inference always ran at 1.3 (the toml boot value). Any analysis on the
+Sens column was lying.
+
+Fix:
+- `_check_model_change` now rebuilds the model when `sensitivity` or
+  `sf_thresh` changes (previously only when MODEL name changed).
+- `birdnet.conf` overlay is applied at boot too, so the initial model
+  creation uses the same values the hot-reload would have picked.
+- Added `SF_THRESH` to the hot-reload set.
+- Extracted `_overlay_birdnet_conf` helper (shared boot + loop path).
+- Marked `config.toml [detection]` thresholds as boot-only fallback;
+  `birdnet.conf` is now documented as the authoritative source.
+- Aligned `birdnet.conf` SENSITIVITY=1.3, SF_THRESH=0.03 to match the
+  values the running model has actually been using.
+
 ## [1.55.9] — 2026-05-13
 
 ### Added — `/api/quality/random-sample` for unbiased calibration audits

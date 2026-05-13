@@ -120,39 +120,44 @@ class BirdEngine:
         self._shutdown_event = threading.Event()
 
         det = self.config["detection"]
+
+        # birdnet.conf is the authoritative source for runtime thresholds
+        # (UI-editable, hot-reloaded each loop). Merge it into `det` here
+        # so the initial model is created with the same values the loop
+        # will see — avoiding a split-brain where the model bakes in
+        # toml-value 1.3 but the DB labels each detection with conf-value 1.0.
+        birdnet_settings = self._read_birdnet_conf()
+        self._overlay_birdnet_conf(det, birdnet_settings)
+
         sensitivity = det.get("sensitivity", 1.0)
         sf_thresh = det.get("sf_thresh", 0.03)
         mdata_version = det.get("mdata_version", 2)
 
         # Load primary model — prefer birdnet.conf MODEL if it exists
-        primary_name = det["model"]
-        birdnet_conf = "/etc/birdnet/birdnet.conf"
-        if os.path.exists(birdnet_conf):
-            with open(birdnet_conf) as f:
-                for line in f:
-                    if line.startswith("MODEL="):
-                        primary_name = line.strip().split("=", 1)[1].strip('"')
-                        break
-        log.info("Loading primary model: %s", primary_name)
+        primary_name = birdnet_settings.get("MODEL") or det["model"]
+        log.info("Loading primary model: %s (sens=%.2f, sf=%.3f)",
+                 primary_name, sensitivity, sf_thresh)
         self.primary_model = get_model(primary_name, self.models_dir,
                                        sensitivity, sf_thresh, mdata_version)
+        self._primary_params = (primary_name, sensitivity, sf_thresh, mdata_version)
         log.info("Primary model loaded (sample_rate=%d, chunk=%ds)",
                  self.primary_model.sample_rate, self.primary_model.chunk_duration)
 
         # Load secondary model — prefer birdnet.conf, fallback to config.toml
         secondary_name = det.get("secondary_model", "")
-        birdnet_settings = self._read_birdnet_conf()
         if birdnet_settings.get("DUAL_MODEL_ENABLED", "1") == "0":
             secondary_name = ""
         elif birdnet_settings.get("SECONDARY_MODEL"):
             secondary_name = birdnet_settings["SECONDARY_MODEL"]
         self.secondary_model = None
+        self._secondary_params = None
         self._secondary_queue = None
         self._secondary_thread = None
         if secondary_name:
             log.info("Loading secondary model: %s", secondary_name)
             self.secondary_model = get_model(secondary_name, self.models_dir,
                                               sensitivity, sf_thresh, mdata_version)
+            self._secondary_params = (secondary_name, sensitivity, sf_thresh, mdata_version)
             log.info("Secondary model loaded (sample_rate=%d, chunk=%ds)",
                      self.secondary_model.sample_rate, self.secondary_model.chunk_duration)
             from queue import Queue
@@ -920,23 +925,46 @@ class BirdEngine:
                     result[key] = val.strip('"')
         return result
 
+    @staticmethod
+    def _overlay_birdnet_conf(det, conf):
+        """Apply birdnet.conf threshold overrides on top of the config.toml [detection] dict.
+
+        Keys mapped (conf is authoritative when present):
+          BIRDNET_CONFIDENCE → birdnet_confidence
+          PERCH_CONFIDENCE   → perch_confidence
+          PERCH_MIN_MARGIN   → perch_min_margin
+          SENSITIVITY        → sensitivity
+          OVERLAP            → overlap
+          SF_THRESH          → sf_thresh
+        """
+        mapping = {
+            "BIRDNET_CONFIDENCE": "birdnet_confidence",
+            "PERCH_CONFIDENCE":   "perch_confidence",
+            "PERCH_MIN_MARGIN":   "perch_min_margin",
+            "SENSITIVITY":        "sensitivity",
+            "OVERLAP":            "overlap",
+            "SF_THRESH":          "sf_thresh",
+        }
+        for conf_key, det_key in mapping.items():
+            if conf_key in conf:
+                try:
+                    det[det_key] = float(conf[conf_key])
+                except (ValueError, TypeError):
+                    pass
+
     def _check_model_change(self):
-        """Check if birdnet.conf MODEL or SECONDARY_MODEL has changed, reload if so."""
+        """Hot-reload birdnet.conf each loop: threshold overlays, model swaps,
+        and model rebuilds when sensitivity / sf_thresh change.
+
+        Without the rebuild, sensitivity edits in birdnet.conf would mutate
+        the in-memory dict (and the DB-stored Sens column) but the running
+        model object stays at its boot value — producing detections whose
+        recorded Sens contradicts the inference setting.
+        """
         try:
             conf = self._read_birdnet_conf()
             det = self.config["detection"]
-
-            # Hot-reload per-model thresholds from birdnet.conf
-            if "BIRDNET_CONFIDENCE" in conf:
-                det["birdnet_confidence"] = float(conf["BIRDNET_CONFIDENCE"])
-            if "PERCH_CONFIDENCE" in conf:
-                det["perch_confidence"] = float(conf["PERCH_CONFIDENCE"])
-            if "PERCH_MIN_MARGIN" in conf:
-                det["perch_min_margin"] = float(conf["PERCH_MIN_MARGIN"])
-            if "SENSITIVITY" in conf:
-                det["sensitivity"] = float(conf["SENSITIVITY"])
-            if "OVERLAP" in conf:
-                det["overlap"] = float(conf["OVERLAP"])
+            self._overlay_birdnet_conf(det, conf)
 
             # Hot-reload species-name language if DATABASE_LANG changed
             new_lang = (conf.get("DATABASE_LANG") or "")[:2]
@@ -952,39 +980,45 @@ class BirdEngine:
             sf_val = det.get("sf_thresh", 0.03)
             mdv = det.get("mdata_version", 2)
 
-            # Check primary model
-            new_primary = conf.get("MODEL", self.primary_model.name)
-            if new_primary != self.primary_model.name:
-                log.info("Primary model change: %s -> %s", self.primary_model.name, new_primary)
+            # Primary: rebuild if name OR sens OR sf_thresh changed since last load
+            new_primary = conf.get("MODEL", self._primary_params[0])
+            new_primary_params = (new_primary, sens, sf_val, mdv)
+            if new_primary_params != self._primary_params:
+                log.info("Primary model params change: %s -> %s",
+                         self._primary_params, new_primary_params)
                 self.primary_model = get_model(new_primary, self.models_dir, sens, sf_val, mdv)
-                log.info("Primary model reloaded: %s (sr=%d, chunk=%ds)",
+                self._primary_params = new_primary_params
+                log.info("Primary model reloaded: %s (sr=%d, chunk=%ds, sens=%.2f, sf=%.3f)",
                          new_primary, self.primary_model.sample_rate,
-                         self.primary_model.chunk_duration)
+                         self.primary_model.chunk_duration, sens, sf_val)
 
             # Check dual-model toggle + secondary model
             dual_enabled = conf.get("DUAL_MODEL_ENABLED", "1") == "1"
             new_secondary = conf.get("SECONDARY_MODEL", "")
 
             if dual_enabled and new_secondary:
-                current_name = self.secondary_model.name if self.secondary_model else ""
-                if new_secondary != current_name:
-                    log.info("Secondary model change: %s -> %s", current_name or "none", new_secondary)
+                new_secondary_params = (new_secondary, sens, sf_val, mdv)
+                if new_secondary_params != self._secondary_params:
+                    log.info("Secondary model params change: %s -> %s",
+                             self._secondary_params, new_secondary_params)
                     # Drain queue before swapping model
                     if self._secondary_queue:
                         self._secondary_queue.join()
                     self.secondary_model = get_model(new_secondary, self.models_dir, sens, sf_val, mdv)
+                    self._secondary_params = new_secondary_params
                     if not self._secondary_queue:
                         from queue import Queue
                         self._secondary_queue = Queue()
                         self._secondary_thread = threading.Thread(
                             target=self._secondary_worker, daemon=True)
                         self._secondary_thread.start()
-                    log.info("Secondary model reloaded: %s (sr=%d, chunk=%ds)",
+                    log.info("Secondary model reloaded: %s (sr=%d, chunk=%ds, sens=%.2f, sf=%.3f)",
                              new_secondary, self.secondary_model.sample_rate,
-                             self.secondary_model.chunk_duration)
+                             self.secondary_model.chunk_duration, sens, sf_val)
             elif not dual_enabled and self.secondary_model:
                 log.info("Dual-model disabled, stopping secondary model")
                 self.secondary_model = None
+                self._secondary_params = None
 
         except Exception as e:
             log.warning("Error checking model change: %s", e)

@@ -12,6 +12,13 @@ processed_dir = "BIRDASH_HOME/birdash/engine/audio/processed"
 rsync_interval = 30
 
 [detection]
+# Boot-only fallback values. Runtime thresholds are owned by
+# /etc/birdnet/birdnet.conf (UI-editable, hot-reloaded each loop).
+# When a key is present in birdnet.conf, the conf value wins for:
+#   BIRDNET_CONFIDENCE / PERCH_CONFIDENCE / PERCH_MIN_MARGIN /
+#   SENSITIVITY / OVERLAP / SF_THRESH / MODEL / SECONDARY_MODEL.
+# Edit birdnet.conf (or the Settings UI) to change runtime behaviour.
+
 # Primary model (fast, runs synchronously)
 model = "BirdNET_GLOBAL_6K_V2.4_Model_FP16"  # or FP32 if downloaded via dashboard
 # Secondary model (runs in background thread). Set to "" to disable.
