@@ -2,6 +2,35 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.7] — 2026-05-13
+
+### Perf — weather analytics: 10-17 s → 0.04-0.4 s on Pi 4
+
+Phase 3 of the weather.html cold-start audit. After Phase 1+2 fixed the
+external API and added a 30-day date floor, the chart and heatmap were
+still slow at first load. EXPLAIN QUERY PLAN revealed the planner was
+picking the wrong join direction.
+
+With `FROM active_detections d JOIN vdb.weather_hourly w ON ...`,
+SQLite synthesised an `AUTOMATIC PARTIAL COVERING INDEX (hour=?)` on
+the fly and scanned 23 k weather rows per detection — measured 17 s
+for the heatmap on a 30-day window.
+
+Flipping to `FROM vdb.weather_hourly w JOIN active_detections d ON ...`
+makes the planner use the primary key `(date, hour)` on weather_hourly
+and the composite expression index `idx_date_hour_conf` on detections.
+
+Measured after the rewrite:
+  heatmap cells (30 d):         349 ms  (was 17 s)
+  match-summary (30 d):          42 ms  (was 32-67 s, but already
+                                         fixed by Phase 1 date floor)
+  leaderboard temp_max=0:        77 ms  (was 1.8 s cold)
+  leaderboard wind_min=30:       17 ms  (was 0.3 s cold)
+
+Side-effect: the Météo & Activité chart on weather.html no longer
+appears to stall — its `birdQuery` for daily counts was blocked behind
+the heatmap query in the same better-sqlite3 (synchronous) event loop.
+
 ## [1.55.6] — 2026-05-13
 
 ### Perf — `/api/weather` no longer hits Open-Meteo at request time

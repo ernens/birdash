@@ -346,10 +346,19 @@ function handle(req, res, pathname, ctx) {
     WHEN w.weather_code >= 95 THEN 'storm'
     ELSE 'unknown' END`;
 
-  // Shared JOIN clause — used by every analytics query so we only have to
-  // change the join shape in one place if the schema ever moves.
-  const WEATHER_JOIN = `JOIN vdb.weather_hourly w
-      ON w.date = d.Date AND w.hour = CAST(SUBSTR(d.Time, 1, 2) AS INT)`;
+  // Shared FROM + JOIN clause — used by every analytics query so we only
+  // have to change the join shape in one place if the schema ever moves.
+  //
+  // Drives FROM weather_hourly (the small, 23 k-row side), then JOINs into
+  // active_detections via the composite expression index idx_date_hour_conf.
+  // Putting weather first is the only way SQLite's planner picks the right
+  // plan when a date floor is present: with `FROM detections d JOIN
+  // weather w` SQLite synthesised an automatic partial covering index on
+  // (hour) alone, scanning weather_hourly per row → 10-17 s on heatmap.
+  // Measured 2026-05-13; flipped layout brings the same query to 0.04-0.4 s.
+  const WEATHER_FROM_JOIN = `FROM vdb.weather_hourly w
+      JOIN active_detections d
+        ON d.Date = w.date AND CAST(SUBSTR(d.Time, 1, 2) AS INT) = w.hour`;
 
   // ── Route : GET /api/weather/condition-summary ───────────────────────────
   // Overall counts of detections + distinct species per WMO category.
@@ -361,7 +370,7 @@ function handle(req, res, pathname, ctx) {
       const minConf = parseFloat(params.get('conf') || '0.7');
       const rows = db.prepare(`SELECT ${WMO_CASE} AS condition,
           COUNT(*) AS detections, COUNT(DISTINCT d.Sci_Name) AS species
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE d.Confidence >= ? GROUP BY condition ORDER BY detections DESC`).all(minConf);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ rows }));
@@ -401,8 +410,10 @@ function handle(req, res, pathname, ctx) {
       if (!isNaN(h)) { wherePred.push(`CAST(SUBSTR(d.Time, 1, 2) AS INT) <= ?`); args.push(h); }
     }
     const dateFrom = params.get('date_from'), dateTo = params.get('date_to');
-    if (dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)) { wherePred.push(`d.Date >= ?`); args.push(dateFrom); }
-    if (dateTo   && /^\d{4}-\d{2}-\d{2}$/.test(dateTo))   { wherePred.push(`d.Date <= ?`); args.push(dateTo); }
+    // Filter on w.date (not d.Date) so the planner can drive from the PK
+    // on weather_hourly. They are equal by the JOIN ON clause.
+    if (dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom)) { wherePred.push(`w.date >= ?`); args.push(dateFrom); }
+    if (dateTo   && /^\d{4}-\d{2}-\d{2}$/.test(dateTo))   { wherePred.push(`w.date <= ?`); args.push(dateTo); }
     const codesRaw = (params.get('codes') || '').split(',').map(s => s.trim()).filter(s => /^\d+$/.test(s));
     if (codesRaw.length) {
       wherePred.push(`w.weather_code IN (${codesRaw.map(() => '?').join(',')})`);
@@ -430,7 +441,7 @@ function handle(req, res, pathname, ctx) {
       const limit = Math.min(500, Math.max(1, parseInt(params.get('limit') || '20')));
       const rows = db.prepare(`SELECT d.Sci_Name AS sci_name, d.Com_Name AS com_name,
           COUNT(*) AS detections, ROUND(AVG(d.Confidence) * 100, 1) AS avg_conf
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE ${wherePred.join(' AND ')}
         GROUP BY d.Sci_Name, d.Com_Name
         ORDER BY detections DESC LIMIT ?`).all(...args, limit);
@@ -458,11 +469,11 @@ function handle(req, res, pathname, ctx) {
       // miss — ~32-67 s in May 2026. The custom-search card on weather.html
       // shows a 30-day chart above, so this window is the matching scope.
       if (!params.get('date_from')) {
-        wherePred.push(`d.Date >= date('now','-30 days')`);
+        wherePred.push(`w.date >= date('now','-30 days')`);
       }
       const row = db.prepare(`SELECT COUNT(*) AS detections,
           COUNT(DISTINCT d.Sci_Name) AS species
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE ${wherePred.join(' AND ')}`).get(...args);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(row || { detections: 0, species: 0 }));
@@ -492,13 +503,13 @@ function handle(req, res, pathname, ctx) {
       // measured at 60-73 s on Pi 4 in May 2026.
       const daysParam = params.get('days');
       const days = daysParam === null ? 30 : Math.max(0, parseInt(daysParam, 10) || 0);
-      const dateFloor = days > 0 ? ` AND d.Date >= date('now','-${days} days')` : '';
+      const dateFloor = days > 0 ? ` AND w.date >= date('now','-${days} days')` : '';
 
       // Step 1: top N species in the joined dataset (i.e. species with at
       // least one detection that has weather data).
       const topSpecies = db.prepare(`SELECT d.Sci_Name AS sci_name, d.Com_Name AS com_name,
           COUNT(*) AS total
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE d.Confidence >= ?${dateFloor}
         GROUP BY d.Sci_Name, d.Com_Name
         ORDER BY total DESC LIMIT ?`).all(minConf, top);
@@ -515,7 +526,7 @@ function handle(req, res, pathname, ctx) {
       const cells = db.prepare(`SELECT d.Sci_Name AS sci_name,
           MAX(0, MIN(?, CAST((w.temp_c - ?) / ? AS INT))) AS bin_idx,
           COUNT(*) AS n
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE d.Confidence >= ?${dateFloor} AND w.temp_c IS NOT NULL
           AND d.Sci_Name IN (${placeholders})
         GROUP BY d.Sci_Name, bin_idx`).all(
@@ -559,14 +570,14 @@ function handle(req, res, pathname, ctx) {
       }
       // Look up by Sci_Name OR Com_Name (callers sometimes pass either)
       const cond = db.prepare(`SELECT ${WMO_CASE} AS condition, COUNT(*) AS n
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE (d.Sci_Name = ? OR d.Com_Name = ?) AND d.Confidence >= ?
         GROUP BY condition ORDER BY n DESC`).all(sciName, sciName, minConf);
       // Temperature distribution in 5°C bins (clamped -15…+35)
       const temps = db.prepare(`SELECT
           MAX(0, MIN(9, CAST((w.temp_c - (-15)) / 5 AS INT))) AS bin_idx,
           COUNT(*) AS n
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE (d.Sci_Name = ? OR d.Com_Name = ?) AND d.Confidence >= ? AND w.temp_c IS NOT NULL
         GROUP BY bin_idx ORDER BY bin_idx`).all(sciName, sciName, minConf);
       const tempBins = [];
@@ -579,7 +590,7 @@ function handle(req, res, pathname, ctx) {
           ROUND(MAX(w.temp_c), 1) AS max_temp,
           ROUND(AVG(w.wind_kmh), 1) AS avg_wind,
           ROUND(SUM(CASE WHEN w.precip_mm > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS pct_with_precip
-        FROM active_detections d ${WEATHER_JOIN}
+        ${WEATHER_FROM_JOIN}
         WHERE (d.Sci_Name = ? OR d.Com_Name = ?) AND d.Confidence >= ? AND w.temp_c IS NOT NULL`)
         .get(sciName, sciName, minConf);
       res.writeHead(200, { 'Content-Type': 'application/json' });
