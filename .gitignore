@@ -41,6 +41,7 @@ config/telemetry.json
 config/noise_profile.wav
 config/auto-purge.json
 config/auto-purge.log
+data/weather-cache.json
 
 # Auto-screenshot hook artifacts
 screenshots/.auto-capture.log

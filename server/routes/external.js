@@ -4,6 +4,7 @@
  */
 const https = require('https');
 const resultCache = require('../lib/result-cache');
+const weatherPrefetch = require('../lib/weather-prefetch');
 
 // Cache TTL for weather analytics endpoints.
 // Weather updates hourly and detections only append, so a 15-min cache
@@ -185,62 +186,61 @@ function handle(req, res, pathname, ctx) {
   }
 
   // ── Route : GET /api/weather?days=30 ─────────────────────────────────────
-  // Proxy Open-Meteo free API — daily weather data for the station location
-  // Cached for 1 hour (WEATHER_TTL)
+  // Serves the cached daily aggregate that weather-prefetch.js keeps warm
+  // on disk. The on-disk read is ~2 ms; the in-memory copy (_weatherCache)
+  // is even faster and avoids re-parsing JSON. A background refresh kicks
+  // in when the on-disk copy is older than half the prefetch tick, so the
+  // user never waits for the external API at request time.
+  //
+  // Cold-boot fallback: if the cache file isn't there yet (server just
+  // started, prefetch first tick hasn't run), trigger a refresh and await
+  // it. This is the only path that can still take 30+ s, and it happens
+  // at most once per process restart.
   if (req.method === 'GET' && pathname === '/api/weather') {
     (async () => {
       try {
         const params = new URL(req.url, 'http://localhost').searchParams;
         const days = Math.min(90, Math.max(1, parseInt(params.get('days') || '30')));
 
-        // Serve from cache if valid
-        if (_weatherCache && _weatherCache._days === days && (Date.now() - _weatherCacheTs) < WEATHER_TTL) {
+        // In-memory shortcut: same window, age below WEATHER_TTL.
+        if (_weatherCache && _weatherCache._days === days &&
+            (Date.now() - _weatherCacheTs) < WEATHER_TTL) {
           res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'HIT' });
           const { _days: _, ...cached } = _weatherCache;
           res.end(JSON.stringify(cached));
           return;
         }
 
-        // Read lat/lon from birdnet.conf
-        const conf = await parseBirdnetConf();
-        const lat = conf.LATITUDE  || conf.LAT || '50.85';
-        const lon = conf.LONGITUDE || conf.LON || '4.35';
-
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&past_days=${days}&forecast_days=2&timezone=auto`;
-
-        const data = await new Promise((resolve, reject) => {
-          https.get(url, (resp) => {
-            let body = '';
-            resp.on('data', chunk => { body += chunk; });
-            resp.on('end', () => {
-              try { resolve(JSON.parse(body)); }
-              catch(e) { reject(new Error('Invalid JSON from Open-Meteo')); }
-            });
-            resp.on('error', reject);
-          }).on('error', reject);
-        });
-
-        if (data.error) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'open_meteo_error', detail: data.reason || data.error }));
+        // Read the prefetched copy. It's refreshed every 30 min in the
+        // background by weather-prefetch.js, so unless we're seconds into
+        // a fresh boot it's always there. The prefetch window matches
+        // weather.html's default 30 d, but we serve it for any `days`
+        // value ≤ that — the page only ever slices, never extends.
+        const cached = weatherPrefetch.read();
+        if (cached && cached._days >= days) {
+          _weatherCache = cached;
+          _weatherCacheTs = Date.now() - cached.ageMs;
+          res.writeHead(200, { 'Content-Type': 'application/json',
+            'X-Cache': cached.ageMs < WEATHER_TTL ? 'HIT-DISK' : 'STALE-DISK' });
+          const { _days: _, ageMs: __, ...responseData } = cached;
+          res.end(JSON.stringify(responseData));
+          // Trigger a background refresh if the disk copy is past mid-life;
+          // keeps the on-disk copy fresher than the cron tick alone.
+          if (cached.ageMs > (15 * 60 * 1000)) weatherPrefetch.refresh(days);
           return;
         }
 
-        const result = {
-          daily: data.daily || {},
-          daily_units: data.daily_units || {},
-          latitude: data.latitude,
-          longitude: data.longitude,
-          timezone: data.timezone,
-          fetchedAt: new Date().toISOString(),
-          _days: days,
-        };
-
-        _weatherCache = result;
+        // Cold-boot fallback: no disk cache. Await an inline refresh.
+        const fresh = await weatherPrefetch.refresh(days);
+        if (!fresh) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'open_meteo_error' }));
+          return;
+        }
+        _weatherCache = fresh;
         _weatherCacheTs = Date.now();
-
         res.writeHead(200, { 'Content-Type': 'application/json', 'X-Cache': 'MISS' });
-        const { _days, ...responseData } = result;
+        const { _days: _, ...responseData } = fresh;
         res.end(JSON.stringify(responseData));
       } catch(e) {
         console.error('[weather]', e.message);

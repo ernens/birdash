@@ -38,6 +38,7 @@ const _tftDisplayRoutes = require('./routes/tft-display');
 const _telemetry = require('./lib/telemetry');
 const _notifWatcher = require('./lib/notification-watcher');
 const _weatherWatcher = require('./lib/weather-watcher');
+const _weatherPrefetch = require('./lib/weather-prefetch');
 const _weeklyDigest = require('./lib/weekly-digest');
 const _autoPurge = require('./lib/auto-purge');
 const _mqttPublisher = require('./lib/mqtt-publisher');
@@ -223,6 +224,10 @@ _notifWatcher.start(db, birdashDb, parseBirdnetConf, ebirdFreq);
 // the weather context they were recorded in. `db` (detections) is passed
 // so the archive backfill knows how far back to go.
 _weatherWatcher.start(birdashDb, parseBirdnetConf, db);
+// Daily-aggregate prefetch for /api/weather (Open-Meteo proxy).
+// Keeps a 30-day window on disk so the route never blocks on the
+// external API at request time. Refresh tick: 30 min.
+_weatherPrefetch.start(parseBirdnetConf);
 // Weekly digest: every Monday 08:00 local (opt-in via NOTIFY_DIGEST_ENABLED)
 _weeklyDigest.startWeeklyDigestCron(db, parseBirdnetConf);
 // Auto-purge: every day at 03:00 local, deletes MP3s past AUDIO_RETENTION_DAYS
@@ -390,6 +395,7 @@ function gracefulShutdown() {
   _telemetry.stopDailyCron();
   _notifWatcher.stop();
   _weatherWatcher.stop();
+  _weatherPrefetch.stop();
   _mqttPublisher.stop();
   closeAllDbs();
   process.exit(0);

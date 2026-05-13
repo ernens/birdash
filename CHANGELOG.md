@@ -2,6 +2,29 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.6] — 2026-05-13
+
+### Perf — `/api/weather` no longer hits Open-Meteo at request time
+
+Phase 2 of the weather.html cold-start audit. After Phase 1 (1.55.5),
+the only remaining 30-second wait was the Open-Meteo daily-aggregate
+proxy at first load (cache miss after 6 h, or after a server restart).
+
+New `server/lib/weather-prefetch.js` keeps the 30-day daily aggregate
+warm on disk (`data/weather-cache.json`), refreshed every 30 min in the
+background. The route reads the file synchronously (~2 ms) and never
+awaits the external API at request time — except once, on cold boot,
+before the first prefetch tick has run.
+
+The on-disk copy survives server restarts, so a `systemctl restart
+birdash` no longer makes the user wait 30+ s on the next weather.html
+visit. The in-memory `_weatherCache` is still primed from the disk read
+for the fastest possible repeated hits.
+
+Cache-status header now distinguishes `HIT` (memory) /
+`HIT-DISK` (fresh disk) / `STALE-DISK` (kicks a background refresh) /
+`MISS` (cold boot).
+
 ## [1.55.5] — 2026-05-13
 
 ### Perf — weather.html cold start: ~150 s → <2 s
