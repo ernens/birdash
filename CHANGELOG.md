@@ -2,6 +2,24 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.9] — 2026-05-13
+
+### Added — `/api/quality/random-sample` for unbiased calibration audits
+
+The cockpit's quality figures lean on the validations table, but humans
+only ever review what they suspect — so the resulting "% rejected" is a
+proxy for review choice, not detection quality. The new endpoint returns
+N uniformly-random detections from the last `days` window, alongside the
+same-3s-bin partner from the other engine (when present) and any
+validation status. Use it to measure baseline quality independent of
+review bias.
+
+`GET /api/quality/random-sample?n=50&days=7&model=perch|birdnet`
+
+n clamped to [1, 500], days to [1, 365]; garbage params fall back to
+defaults rather than 500-ing. Sample of n=200 over 7 days takes ~250 ms
+on Pi 4.
+
 ## [1.55.8] — 2026-05-13
 
 ### Fixed — `<strong>` tags showing as raw text on quality.html

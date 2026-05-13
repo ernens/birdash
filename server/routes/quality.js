@@ -23,7 +23,13 @@ const { localDateOffset } = require('../lib/local-date');
 function handle(req, res, pathname, ctx) {
   const { db, birdashDb, parseBirdnetConf } = ctx;
 
-  if (req.method !== 'GET' || pathname !== '/api/quality') return false;
+  if (req.method !== 'GET') return false;
+
+  if (pathname === '/api/quality/random-sample') {
+    return handleRandomSample(req, res, db, birdashDb);
+  }
+
+  if (pathname !== '/api/quality') return false;
 
   const url = new URL(req.url, 'http://x');
   const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get('days') || '30')));
@@ -452,6 +458,118 @@ function buildSynthesis({ review, agreement, prefilter, balance }) {
     severity: findings[0].severity,
     findings,    // full list — frontend can show secondary points
   };
+}
+
+// ── Random sample ─────────────────────────────────────────────────────────
+// Returns N random detections from the last `days` window. Designed for
+// calibration audits: unlike the review/validation table, the sample is
+// drawn uniformly so it isn't biased by what humans chose to inspect.
+// For each detection we also attach the partner detection (other model)
+// in the same 3-second time bin, when present, so the caller can judge
+// inter-model agreement on individual events. Validation status is
+// surfaced when the (Date, Time, Sci_Name) tuple was reviewed.
+function handleRandomSample(req, res, db, birdashDb) {
+  try {
+    const url = new URL(req.url, 'http://x');
+    const parseIntDefault = (v, d) => { const x = parseInt(v); return Number.isFinite(x) ? x : d; };
+    const days = Math.min(365, Math.max(1, parseIntDefault(url.searchParams.get('days'), 7)));
+    const n = Math.min(500, Math.max(1, parseIntDefault(url.searchParams.get('n'), 50)));
+    const model = (url.searchParams.get('model') || '').toLowerCase();
+    const fromDate = isoDateOffset(-days);
+
+    let where = 'WHERE Date >= ?';
+    const params = [fromDate];
+    if (model === 'birdnet') {
+      where += " AND (Model IS NULL OR Model NOT LIKE 'perch%')";
+    } else if (model === 'perch') {
+      where += " AND Model LIKE 'perch%'";
+    }
+
+    const rows = db.prepare(`
+      SELECT Date, Time, Sci_Name, Com_Name, Confidence, Model,
+             Overlap, Sens, Cutoff, File_Name
+      FROM detections
+      ${where}
+      ORDER BY RANDOM()
+      LIMIT ?
+    `).all(...params, n);
+
+    const valByKey = new Map();
+    if (birdashDb && rows.length) {
+      const placeholders = rows.map(() => '(?,?,?)').join(',');
+      const vparams = [];
+      for (const r of rows) vparams.push(r.Date, r.Time, r.Sci_Name);
+      try {
+        const vrows = birdashDb.prepare(`
+          SELECT date, time, sci_name, status
+          FROM validations
+          WHERE (date, time, sci_name) IN (VALUES ${placeholders})
+        `).all(...vparams);
+        for (const v of vrows) valByKey.set(`${v.date}|${v.time}|${v.sci_name}`, v.status);
+      } catch (_) { /* values-tuple unsupported in some sqlite builds; skip */ }
+    }
+
+    const partnerByKey = new Map();
+    for (const r of rows) {
+      const t = r.Time || '00:00:00';
+      const seconds = (parseInt(t.slice(0, 2)) || 0) * 3600
+                    + (parseInt(t.slice(3, 5)) || 0) * 60
+                    + (parseInt(t.slice(6, 8)) || 0);
+      const binStart = Math.floor(seconds / 3) * 3;
+      const binEnd = binStart + 3;
+      const fromTime = sec2hms(binStart);
+      const toTime = sec2hms(binEnd);
+      const isPerch = String(r.Model || '').toLowerCase().startsWith('perch');
+      const partner = db.prepare(`
+        SELECT Confidence, Model
+        FROM detections
+        WHERE Date = ? AND Sci_Name = ?
+          AND Time >= ? AND Time < ?
+          AND ${isPerch ? "(Model IS NULL OR Model NOT LIKE 'perch%')" : "Model LIKE 'perch%'"}
+        LIMIT 1
+      `).get(r.Date, r.Sci_Name, fromTime, toTime);
+      partnerByKey.set(`${r.Date}|${r.Time}|${r.Sci_Name}`, partner || null);
+    }
+
+    const sample = rows.map(r => {
+      const key = `${r.Date}|${r.Time}|${r.Sci_Name}`;
+      const partner = partnerByKey.get(key);
+      return {
+        date: r.Date,
+        time: r.Time,
+        sci_name: r.Sci_Name,
+        com_name: r.Com_Name,
+        confidence: r.Confidence,
+        model: r.Model,
+        overlap: r.Overlap,
+        sens: r.Sens,
+        cutoff: r.Cutoff,
+        file_name: r.File_Name,
+        partner: partner ? { confidence: partner.Confidence, model: partner.Model } : null,
+        validation_status: valByKey.get(key) || null,
+      };
+    });
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      source: 'observed',
+      days, n: sample.length,
+      from_date: fromDate,
+      sample,
+    }));
+  } catch (e) {
+    console.error('[quality/random-sample]', e);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: e.message }));
+  }
+  return true;
+}
+
+function sec2hms(s) {
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${h}:${m}:${ss}`;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────

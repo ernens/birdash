@@ -83,6 +83,7 @@ const ENDPOINTS = [
   '/api/model-comparison',
   // Cockpit / quality
   '/api/quality',
+  '/api/quality/random-sample?n=3&days=7',
   // Audio
   '/api/audio-device',
   '/api/audio/config',
