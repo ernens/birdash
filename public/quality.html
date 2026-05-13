@@ -524,7 +524,7 @@
           {{t('quality_volchange_title')}}
           <span class="qa-source" :class="data.throttle.source">{{t('quality_source_' + data.throttle.source)}}</span>
         </div>
-        <p class="qa-card-note">{{ data.throttle.note_key ? t(data.throttle.note_key) : '' }}</p>
+        <p v-if="data.throttle.note_key" class="qa-card-note" v-html="safeHtml(t(data.throttle.note_key))"></p>
 
         <div v-if="data.throttle_measured && data.throttle_measured.source === 'measured' && data.throttle_measured.dropped > 0"
              class="qa-measured-banner">

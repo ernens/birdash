@@ -2,6 +2,17 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.8] — 2026-05-13
+
+### Fixed — `<strong>` tags showing as raw text on quality.html
+
+The volume-change card on quality.html rendered its note via `{{ }}`,
+which escapes HTML. The translation string contains `<strong>Proxy</strong>`
+for emphasis, so users saw literal `<strong>` in the UI. Switched to
+`v-html="safeHtml(...)"` to match the other note paragraphs on the
+page. Safe because the value comes from the i18n files, never user
+input.
+
 ## [1.55.7] — 2026-05-13
 
 ### Perf — weather analytics: 10-17 s → 0.04-0.4 s on Pi 4
