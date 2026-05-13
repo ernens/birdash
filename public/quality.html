@@ -407,6 +407,54 @@
         </div>
       </div>
 
+      <!-- 1.5. Calibration baseline — unbiased quality estimate from random samples -->
+      <div class="qa-card" v-if="data.baseline">
+        <div class="qa-title">
+          <bird-icon name="target" :size="15"></bird-icon>
+          {{t('quality_baseline_title')}}
+          <span class="qa-source" :class="data.baseline.source">{{t('quality_source_' + data.baseline.source)}}</span>
+        </div>
+        <p class="qa-card-note">{{t('quality_baseline_note')}}</p>
+
+        <template v-if="data.baseline.reviewed > 0">
+          <p class="qa-card-note" style="font-size:.78rem;opacity:.7;">
+            {{t('quality_baseline_reviewed_n', { n: data.baseline.reviewed, days: data.baseline.days })}}
+          </p>
+          <div class="qa-bar">
+            <div class="qa-bar-seg confirmed" :style="{width: data.baseline.confirmed_pct + '%'}"
+                 :title="data.baseline.confirmed + ' confirmed'">
+              <template v-if="data.baseline.confirmed_pct > 8">{{data.baseline.confirmed_pct}}%</template>
+            </div>
+            <div class="qa-bar-seg doubtful" :style="{width: data.baseline.doubtful_pct + '%'}"
+                 :title="data.baseline.doubtful + ' doubtful'">
+              <template v-if="data.baseline.doubtful_pct > 8">{{data.baseline.doubtful_pct}}%</template>
+            </div>
+            <div class="qa-bar-seg rejected" :style="{width: data.baseline.rejected_pct + '%'}"
+                 :title="data.baseline.rejected + ' rejected'">
+              <template v-if="data.baseline.rejected_pct > 8">{{data.baseline.rejected_pct}}%</template>
+            </div>
+          </div>
+          <div class="qa-legend">
+            <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#4caf50;"></span>{{t('review_confirm')}} <strong>{{data.baseline.confirmed.toLocaleString()}}</strong></span>
+            <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#ff9800;"></span>{{t('review_doubtful_btn')}} <strong>{{data.baseline.doubtful.toLocaleString()}}</strong></span>
+            <span class="qa-legend-item"><span class="qa-legend-dot" style="background:#e53935;"></span>{{t('review_reject')}} <strong>{{data.baseline.rejected.toLocaleString()}}</strong></span>
+          </div>
+          <div class="qa-reading">
+            <details>
+              <summary>{{t('quality_how_to_read')}}</summary>
+              <div class="qa-reading-body" v-html="safeHtml(t('quality_baseline_reading'))"></div>
+            </details>
+          </div>
+        </template>
+        <template v-else>
+          <div class="qa-placeholder" style="text-align:left;padding:.8rem 0;">
+            <p style="margin:0 0 .5rem 0;"><strong>{{t('quality_baseline_empty_title')}}</strong></p>
+            <p style="margin:0 0 .8rem 0;font-size:.85rem;">{{t('quality_baseline_empty_body')}}</p>
+            <a href="review.html?mode=calibration" class="qa-cta primary">{{t('quality_baseline_cta')}}</a>
+          </div>
+        </template>
+      </div>
+
       <!-- 2. Species to watch — tabbed diagnostic -->
       <div class="qa-card" id="species-to-watch">
         <div class="qa-title">

@@ -44,13 +44,14 @@ function handle(req, res, pathname, ctx) {
       const throttle  = throttleEffect(db);
       const throttleMeasuredVal = throttleMeasured(db, days);
       const timeline  = dailyTimeline(db, days);
+      const baseline  = calibrationBaseline(birdashDb, days);
       const synthesis = buildSynthesis({ review, agreement, prefilter, balance });
 
       const result = {
         days, minVolume,
         review, agreement, prefilter, balance,
         throttle, throttle_measured: throttleMeasuredVal,
-        timeline, synthesis,
+        timeline, baseline, synthesis,
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
@@ -61,6 +62,48 @@ function handle(req, res, pathname, ctx) {
     }
   })();
   return true;
+}
+
+// ── Calibration baseline ──────────────────────────────────────────────────
+// Aggregates validations tagged with notes='calibration' (i.e. produced via
+// review.html?mode=calibration on the random-sample queue). Unlike the
+// `review` block, which counts the suspicion-driven queue and is biased
+// toward rejection, this baseline is uniformly sampled and therefore a
+// trustworthy quality estimate. Returns null until at least 1 such
+// validation exists, so the UI can render an explainer card rather than
+// stale zeros.
+function calibrationBaseline(birdashDb, days) {
+  if (!birdashDb) {
+    return { source: 'not_instrumented', reviewed: 0, note_key: 'quality_baseline_no_db' };
+  }
+  const fromDate = isoDateOffset(-days);
+  const rows = birdashDb.prepare(`
+    SELECT status, COUNT(*) AS n
+    FROM validations
+    WHERE notes = 'calibration' AND date >= ?
+    GROUP BY status
+  `).all(fromDate);
+  const counts = { confirmed: 0, doubtful: 0, rejected: 0 };
+  for (const r of rows) if (r.status in counts) counts[r.status] = r.n;
+  const reviewed = counts.confirmed + counts.doubtful + counts.rejected;
+  if (reviewed === 0) {
+    return {
+      source: 'not_instrumented',
+      reviewed: 0,
+      note_key: 'quality_baseline_no_data',
+    };
+  }
+  return {
+    source: 'observed',
+    days,
+    reviewed,
+    confirmed: counts.confirmed,
+    doubtful:  counts.doubtful,
+    rejected:  counts.rejected,
+    confirmed_pct: Math.round((counts.confirmed / reviewed) * 100),
+    doubtful_pct:  Math.round((counts.doubtful  / reviewed) * 100),
+    rejected_pct:  Math.round((counts.rejected  / reviewed) * 100),
+  };
 }
 
 // ── Review outcomes ─────────────────────────────────────────────────────────
@@ -475,6 +518,7 @@ function handleRandomSample(req, res, db, birdashDb) {
     const days = Math.min(365, Math.max(1, parseIntDefault(url.searchParams.get('days'), 7)));
     const n = Math.min(500, Math.max(1, parseIntDefault(url.searchParams.get('n'), 50)));
     const model = (url.searchParams.get('model') || '').toLowerCase();
+    const shape = (url.searchParams.get('shape') || '').toLowerCase();
     const fromDate = isoDateOffset(-days);
 
     let where = 'WHERE Date >= ?';
@@ -551,6 +595,33 @@ function handleRandomSample(req, res, db, birdashDb) {
     });
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (shape === 'review') {
+      // Match /api/flagged-detections shape so review.html can consume
+      // this endpoint without changes when in calibration mode.
+      const today = isoDateOffset(0);
+      const flagged = sample.map(r => ({
+        date: r.date,
+        time: r.time,
+        sci_name: r.sci_name,
+        com_name: r.com_name,
+        confidence: r.confidence,
+        file_name: r.file_name,
+        model: r.model,
+        reasons: ['calibration_random'],
+        truncated: 0,
+        stability_status: null,
+        validation: r.validation_status || 'unreviewed',
+      }));
+      res.end(JSON.stringify({
+        flagged,
+        dateFrom: fromDate,
+        dateTo: today,
+        total: flagged.length,
+        returned: flagged.length,
+        mode: 'calibration',
+      }));
+      return true;
+    }
     res.end(JSON.stringify({
       source: 'observed',
       days, n: sample.length,

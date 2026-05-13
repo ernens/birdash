@@ -645,19 +645,27 @@ function handle(req, res, pathname, ctx) {
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       try {
-        const { detections, status } = JSON.parse(body);
+        const { detections, status, notes } = JSON.parse(body);
         if (!detections || !Array.isArray(detections) || !['confirmed', 'rejected', 'doubtful'].includes(status)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'detections array and status required' }));
           return;
         }
+        const noteVal = typeof notes === 'string' ? notes : '';
+        // UPSERT preserves any existing non-empty notes value when the caller
+        // omits notes — so a normal review action on a previously
+        // calibration-tagged row doesn't strip the tag.
         const stmt = birdashDb.prepare(`
-          INSERT OR REPLACE INTO validations (date, time, sci_name, status, updated_at)
-          VALUES (?, ?, ?, ?, datetime('now'))
+          INSERT INTO validations (date, time, sci_name, status, notes, updated_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+          ON CONFLICT(date, time, sci_name) DO UPDATE SET
+            status     = excluded.status,
+            updated_at = excluded.updated_at,
+            notes      = CASE WHEN excluded.notes != '' THEN excluded.notes ELSE validations.notes END
         `);
         const tx = birdashDb.transaction(() => {
           for (const d of detections) {
-            stmt.run(d.date, d.time, d.sci_name, status);
+            stmt.run(d.date, d.time, d.sci_name, status, noteVal);
           }
         });
         tx();

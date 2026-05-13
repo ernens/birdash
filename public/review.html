@@ -26,16 +26,26 @@
 <div id="app" v-cloak>
   <birdash-shell page="review" :title="t('nav_review')">
 
+    <!-- Calibration mode banner -->
+    <div v-if="calibrationMode" style="margin:.5rem 1rem;padding:.6rem .8rem;border-radius:6px;
+                                       background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.35);
+                                       display:flex;align-items:center;gap:.5rem;font-size:.82rem;">
+      <bird-icon name="alert-circle" :size="14" style="color:#d97706;"></bird-icon>
+      <strong>Mode calibration</strong>
+      <span style="opacity:.8;">— échantillon aléatoire ({{flagged.length}} détections, 30 j). Tes choix tagués <code>calibration</code> alimentent la baseline qualité.</span>
+      <a href="review.html" style="margin-left:auto;font-size:.72rem;text-decoration:underline;color:var(--text-muted);">Revenir au mode normal</a>
+    </div>
+
     <!-- Toolbar -->
     <div class="rv-toolbar">
       <!-- Row 1: Period + stats -->
       <div class="rv-row">
-        <filter-period
+        <filter-period v-if="!calibrationMode"
           :period="fp.period.value" :quick-buttons="fp.quickButtons.value"
           :date-from="fp.dateFrom.value" :date-to="fp.dateTo.value"
           @set-period="fp.setPeriod" @set-custom-range="fp.setCustomRange"
         ></filter-period>
-        <span class="rv-pill">{{unreviewed}} suspectes</span>
+        <span class="rv-pill">{{unreviewed}} {{calibrationMode ? 'à valider' : 'suspectes'}}</span>
         <span v-if="rejectedCount" class="rv-pill" style="background:rgba(229,62,62,.15);color:#e53e3e;">{{rejectedCount}} ✗</span>
         <span v-if="confirmedCount" class="rv-pill" style="background:rgba(56,161,105,.15);color:#38a169;">{{confirmedCount}} ✓</span>
       </div>
@@ -63,7 +73,9 @@
       </div>
 
       <!-- Row 4: Reject by rule (deletion now lives on the Purge page) -->
-      <div class="rv-row" v-if="reasonGroups.length || rejectedCount">
+      <!-- Hidden in calibration mode: the single "reason" is the sample tag,
+           rejecting it all defeats the calibration purpose. -->
+      <div class="rv-row" v-if="!calibrationMode && (reasonGroups.length || rejectedCount)">
         <template v-if="reasonGroups.length">
           <span style="font-size:.72rem;color:var(--text-muted);">{{t('review_reject_rule')}} :</span>
           <button v-for="rg in reasonGroups" :key="rg.reason"
@@ -191,6 +203,11 @@ const app = createApp({
     const { spName } = useSpeciesNames();
     useTheme(); useNav();
 
+    // ?mode=calibration switches the data source from /flagged-detections
+    // to /quality/random-sample (unbiased baseline) and tags every validation
+    // with notes='calibration' so quality.html can report a baseline ratio
+    // independent of the suspicion-driven review queue.
+    const calibrationMode = new URL(window.location.href).searchParams.get('mode') === 'calibration';
     const flagged = ref([]);
     const totalDets = ref(0);
     const loading = ref(false);
@@ -233,10 +250,17 @@ const app = createApp({
       const epoch = ++_loadEpoch;
       loading.value = true; selected.clear(); pageLimit.value = 50;
       try {
-        const from = fp.dateFrom.value || new Date().toISOString().split('T')[0];
-        const to = fp.dateTo.value || from;
-        if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(from, to);
-        const resp = await fetch(`${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=2000`);
+        let url;
+        if (calibrationMode) {
+          // Random sample over 30 days, capped at endpoint's hard limit (500).
+          url = `${API}/quality/random-sample?n=500&days=30&shape=review`;
+        } else {
+          const from = fp.dateFrom.value || new Date().toISOString().split('T')[0];
+          const to = fp.dateTo.value || from;
+          if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(from, to);
+          url = `${API}/flagged-detections?dateFrom=${from}&dateTo=${to}&limit=2000`;
+        }
+        const resp = await fetch(url);
         const data = await resp.json();
         if (epoch !== _loadEpoch) return;
         flagged.value = data.flagged || [];
@@ -249,10 +273,12 @@ const app = createApp({
     // settings.html so review.html follows the same "real ack" rule:
     // we only update the UI once the server has acknowledged success.
     async function _bulkPost(detections, status) {
+      const body = { detections, status };
+      if (calibrationMode) body.notes = 'calibration';
       const resp = await fetch(`${API}/bulk-validate`, {
         method: 'POST',
         headers: BIRDASH.authHeaders(),
-        body: JSON.stringify({ detections, status }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok || data.error) {
@@ -372,6 +398,7 @@ const app = createApp({
 
     return {
       t, spName, fp, API, fmtDate, fmtConf,
+      calibrationMode,
       flagged, filteredFlagged, pagedFlagged, loading, pageLimit, selected, playingDet,
       speciesFilter, clearSpeciesFilter,
       unreviewed, rejectedList, rejectedCount, confirmedCount, reasonGroups,

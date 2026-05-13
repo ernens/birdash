@@ -2,6 +2,31 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.11] — 2026-05-13
+
+### Added — calibration mode in review.html + baseline quality card
+
+The cockpit's `% confirmed / rejected` reflects review choice, not
+detection quality — users only open detections they suspect, so the
+ratio is structurally biased toward rejection. Visit
+`/review?mode=calibration` to review a uniform-random sample of 500
+detections over the last 30 days instead of the suspicion queue.
+Validations made in this mode are tagged `notes='calibration'`.
+
+Quality.html now shows a "Baseline qualité" card that aggregates only
+the calibration-tagged validations — an unbiased measurement of model
+quality. Empty state links to `/review?mode=calibration` so the user
+knows what to do next.
+
+Backend changes:
+- `/api/quality/random-sample?shape=review` returns the sample in
+  the same shape as `/api/flagged-detections`, so review.html can
+  consume it with a single fetch-URL swap.
+- `/api/bulk-validate` accepts optional `notes` and UPSERTs (preserves
+  any existing non-empty notes when the new payload omits notes).
+- `/api/quality` adds a `baseline` block: `{reviewed, confirmed,
+  doubtful, rejected, *_pct}` filtered on `notes='calibration'`.
+
 ## [1.55.10] — 2026-05-13
 
 ### Fixed — sensitivity split-brain between config.toml and birdnet.conf
