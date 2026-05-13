@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.12] — 2026-05-13
+
+### Changed — agreement bin width 3s → 5s (matches Perch chunk stride)
+
+The model-agreement metric grouped detections into 3-second bins, but
+the secondary engine's chunk stride is 4.5 s (`chunk_duration=5`,
+`overlap=0.5`). A 3 s bin forced a near-perfect time alignment that the
+engine literally cannot produce — depressing the agreement rate by
+~50% relative on a structurally meaningless axis. Widened the bin to
+5 s in `modelAgreement()` and the same-bin partner lookup of
+`/api/quality/random-sample`.
+
+Measured 7-day improvement at the bin level (% BirdNET-paired with
+Perch): 1s=4.8% → 3s=10.5% → 5s=15.5% → 10s=19.9%. 5 s is the natural
+break-point matching Perch's cadence; widening further mostly catches
+unrelated calls in the same time window.
+
+This does **not** raise the per-species agreement percentages by
+much — those are bounded by the BirdNET/Perch volume ratio (currently
+1:21), which is the next structural lever (`BIRDNET_CONFIDENCE=0.8`
+keeps BirdNET 20× quieter than Perch). C1 fixes a stride/bin mismatch;
+C2 (threshold tuning, deferred until calibration baseline data exists)
+addresses the volume asymmetry that bounds the metric.
+
 ## [1.55.11] — 2026-05-13
 
 ### Added — calibration mode in review.html + baseline quality card

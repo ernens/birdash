@@ -168,6 +168,14 @@ async function reviewOutcomes(db, birdashDb, days) {
 // This matches the spec: "show diagnosis, not a brute table". The volume
 // guard (minVolume) still applies — species with < minVolume Perch hits
 // never appear, period.
+//
+// Bin size is 5s, not 3s: Perch's chunk stride is 4.5s (chunk_duration=5,
+// overlap=0.5), so a 3s grouping forced a near-perfect alignment that the
+// engine can't produce — depressing the agreement rate by ~50% relative.
+// 5s matches the natural Perch cadence; widening further yields diminishing
+// returns (measured: 1s=4.8% → 3s=10.5% → 5s=15.5% → 10s=19.9% BirdNET-
+// paired ratio over 7 days).
+const AGREEMENT_BIN_SECONDS = 5;
 async function modelAgreement(db, days, minVolume) {
   const fromDate = isoDateOffset(-days);
   const rows = db.prepare(`
@@ -175,13 +183,13 @@ async function modelAgreement(db, days, minVolume) {
     FROM detections WHERE Date >= ?
   `).all(fromDate);
 
-  const bins = new Map();   // date|sci|3s-bin → { com, birdnet, perch }
+  const bins = new Map();   // date|sci|bin → { com, birdnet, perch }
   for (const r of rows) {
     const t = r.Time || '00:00:00';
     const seconds = (parseInt(t.slice(0, 2)) || 0) * 3600
                   + (parseInt(t.slice(3, 5)) || 0) * 60
                   + (parseInt(t.slice(6, 8)) || 0);
-    const bin = Math.floor(seconds / 3);
+    const bin = Math.floor(seconds / AGREEMENT_BIN_SECONDS);
     const key = `${r.Date}|${r.Sci_Name}|${bin}`;
     if (!bins.has(key)) bins.set(key, { com: r.Com_Name, birdnet: false, perch: false });
     const e = bins.get(key);
@@ -234,7 +242,7 @@ async function modelAgreement(db, days, minVolume) {
 
   return {
     source: 'observed',
-    bin_seconds: 3,
+    bin_seconds: AGREEMENT_BIN_SECONDS,
     min_volume: minVolume,
     species_count: all.length,
     median_pct,
@@ -559,8 +567,9 @@ function handleRandomSample(req, res, db, birdashDb) {
       const seconds = (parseInt(t.slice(0, 2)) || 0) * 3600
                     + (parseInt(t.slice(3, 5)) || 0) * 60
                     + (parseInt(t.slice(6, 8)) || 0);
-      const binStart = Math.floor(seconds / 3) * 3;
-      const binEnd = binStart + 3;
+      // Same bin size as modelAgreement (matches Perch's 4.5s stride).
+      const binStart = Math.floor(seconds / AGREEMENT_BIN_SECONDS) * AGREEMENT_BIN_SECONDS;
+      const binEnd = binStart + AGREEMENT_BIN_SECONDS;
       const fromTime = sec2hms(binStart);
       const toTime = sec2hms(binEnd);
       const isPerch = String(r.Model || '').toLowerCase().startsWith('perch');
