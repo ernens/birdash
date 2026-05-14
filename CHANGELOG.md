@@ -2,6 +2,18 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.14] — 2026-05-14
+
+### Changed — root + 404 fallback both land on today.html
+
+`index.html` redirected to `overview.html`, and unknown paths under
+`/birds/*` returned a bare Caddy 404. Updated `index.html` to point
+at `today.html` so an explicit hit on `/birds/` lands on the daily
+view instead of the slower overview. The companion change lives in
+the Caddy config (out of repo): `redir / /birds/today.html permanent`
+and `try_files {path} /today.html` inside `handle @birds`, so any
+mistyped or removed page also falls back to today instead of 404-ing.
+
 ## [1.55.13] — 2026-05-13
 
 ### Changed — throttle bypass slider step 0.01 → 0.005
