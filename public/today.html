@@ -306,6 +306,8 @@
             <div v-for="s in filteredSpecies" :key="s.Com_Name"
                  class="sp-item" :class="['sp-item--' + (rowBadges(s)[0] || 'plain'),
                                           {active: selected && selected.Com_Name===s.Com_Name}]"
+                 data-testid="species-card"
+                 :data-species="s.sci"
                  @click="selectSpecies(s)">
               <div class="sp-thumb">
                 <bird-img v-if="s.imgUrl" :src="s.imgUrl" :alt="s.Com_Name" ></bird-img>

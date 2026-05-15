@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.16] — 2026-05-15
+
+### Added — Playwright testids for nav, review actions, species cards
+
+First pass of the test-selector audit (P0 partial): stable `data-testid`
+hooks on the highest-impact interactive elements.
+
+- **Header nav** — every desktop and drawer nav button gets
+  `data-testid="nav-{id}"` (driven by `bird-config.js` keys, e.g.
+  `nav-today`, `nav-review`, `nav-species`). Section toggles get
+  `data-testid="nav-section-{slug}"` (`home`, `realtime`, `history`, …).
+- **Review actions** — per-row verdict buttons get
+  `data-testid="review-action-{confirm|doubtful|reject}"`, bulk variants
+  get `data-testid="review-bulk-{confirm|doubtful|reject}"`. The
+  select-all button and the per-row checkbox get
+  `data-testid="review-select-all"` / `review-select-row`.
+- **Species cards** — every card-style species link on `today`,
+  `favorites`, and `dashboard` gets `data-testid="species-card"` plus
+  `data-species="<sci_name>"` for targeted filtering.
+
+Deferred: `settings.html` (10 lazy-loaded tab templates, ~138 fields)
+and the `live` spectrogram + audio control inventory, both meaningful
+chunks that warrant their own pass.
+
 ## [1.55.15] — 2026-05-15
 
 ### Added — in-app HTTPS toggle (Phase 1: backend)

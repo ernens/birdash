@@ -178,6 +178,12 @@
     { id:'solar-light', label:'Solar Light',  colors:['#2aa198','#fdf6e3'] },
     { id:'solar-dark',  label:'Solar Dark',   colors:['#2aa198','#002b36'] },
     { id:'nord',        label:'Nord',         colors:['#88c0d0','#2e3440'] },
+    { id:'midnight-galaxy',   label:'Midnight Galaxy',   colors:['#a490c2','#241734'] },
+    { id:'golden-hour',       label:'Golden Hour',       colors:['#f4a900','#2a2420'] },
+    { id:'modern-minimalist', label:'Modern Minimalist', colors:['#d3d3d3','#2a333a'] },
+    { id:'arctic-frost',      label:'Arctic Frost',      colors:['#4a6fa5','#e8f0fa'] },
+    { id:'desert-rose',       label:'Desert Rose',       colors:['#b87d6d','#e8d5c4'] },
+    { id:'botanical-garden',  label:'Botanical Garden',  colors:['#4a7c59','#f0ede0'] },
     { id:'hicontrast',  label:'High Contrast',colors:['#00ff88','#000000'] },
   ];
 
@@ -510,6 +516,7 @@
     const { t } = useI18n();
     const navSections = computed(() =>
       (BIRD_CONFIG.nav || []).map(sec => ({
+        sectionId: (sec.section || '').replace(/^nav_sec_/, ''),
         section: t(sec.section),
         icon: sec.icon || '',
         items: sec.items.map(p => ({
@@ -2047,6 +2054,7 @@
            @mouseenter="hoverSection=si" @mouseleave="hoverSection=-1">
         <button class="nav-section-btn"
                 :class="{active: openSection === si, 'has-active-page': sec.items.some(p => p.active)}"
+                :data-testid="'nav-section-' + sec.sectionId"
                 @click="navSectionClick(si)">
           <span class="nav-section-icon"><bird-icon :name="sec.icon" :size="16" ></bird-icon></span>
           {{sec.section}}
@@ -2055,6 +2063,7 @@
         <div v-show="openSection === si" class="nav-dropdown" @click.stop>
           <button v-for="p in sec.items" :key="p.id"
              class="nav-link" :class="{active:p.active}"
+             :data-testid="'nav-' + p.id"
              @click="navGo(p.file)">
             <span class="nav-icon" aria-hidden="true"><bird-icon :name="p.icon" :size="16" ></bird-icon></span>
             <span class="nav-label">{{p.label}}</span>
@@ -2229,13 +2238,16 @@
           <button class="mob-drawer-close" @click="drawerOpen=false" aria-label="Close">✕</button>
         </div>
         <div v-for="(sec, si) in navSections" :key="si" class="mob-drawer-section">
-          <button class="mob-drawer-sec-btn" @click="drawerNavClick(si)">
+          <button class="mob-drawer-sec-btn"
+                  :data-testid="'nav-drawer-section-' + sec.sectionId"
+                  @click="drawerNavClick(si)">
             <span><bird-icon :name="sec.icon" :size="16" ></bird-icon> {{sec.section}}</span>
             <svg :class="{rotated: openSection===si}" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           </button>
           <div v-if="openSection===si" class="mob-drawer-pages">
             <a v-for="p in sec.items" :key="p.id" :href="p.file"
-               class="mob-drawer-link" :class="{active: p.active}">
+               class="mob-drawer-link" :class="{active: p.active}"
+               :data-testid="'nav-drawer-' + p.id">
               <span><bird-icon :name="p.icon" :size="16" ></bird-icon> {{p.label}}</span>
               <span v-if="p.id==='review' && reviewCount > 0" class="nav-badge">{{reviewCount}}</span>
             </a>

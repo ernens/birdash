@@ -112,6 +112,8 @@
         <!-- Recent detections strip -->
         <div v-if="recentSpecies.length>1" class="bf-det-recent">
           <a v-for="sp in recentSpecies.slice(0,7)" :key="sp.sciName" class="bf-det-mini"
+             data-testid="species-card"
+             :data-species="sp.sciName"
              :href="'species.html?species='+encodeURIComponent(sp.comName)">
             <img class="bf-det-mini-img" :src="photoUrl(sp.sciName)" @error="e=>e.target.src='img/robin-logo.svg'">
             <div class="bf-det-mini-name">{{spName(sp.comName,sp.sciName)}}</div>
@@ -141,7 +143,7 @@
       </div>
       <div class="bf-card">
         <div class="bf-card-hdr"><span>{{t('dash_recent_species')}}</span><span style="font-size:.58rem">{{recentSpecies.length}}</span></div>
-        <a v-for="sp in recentSpecies" :key="sp.sciName" class="bf-sp-item" :href="'species.html?species='+encodeURIComponent(sp.comName)">
+        <a v-for="sp in recentSpecies" :key="sp.sciName" class="bf-sp-item" data-testid="species-card" :data-species="sp.sciName" :href="'species.html?species='+encodeURIComponent(sp.comName)">
           <img class="bf-sp-img" :src="photoUrl(sp.sciName)" @error="e=>e.target.src='img/robin-logo.svg'">
           <span class="bf-sp-name">{{spName(sp.comName,sp.sciName)}}</span>
           <span class="bf-sp-badge">{{sp.count}}</span>

@@ -52,7 +52,7 @@
 
       <!-- Row 2: Selection actions -->
       <div class="rv-row">
-        <button class="rv-btn-outline" @click="selectAll">
+        <button class="rv-btn-outline" data-testid="review-select-all" @click="selectAll">
           {{selected.size === filteredFlagged.length ? t('review_deselect') : t('review_select_all')}}
         </button>
         <span class="rv-sep"></span>
@@ -67,9 +67,9 @@
       <!-- Row 3: Bulk actions (only visible when items selected) -->
       <div class="rv-row" v-if="selected.size">
         <span style="font-size:.78rem;font-weight:600;">{{selected.size}} {{t('review_selected')}} :</span>
-        <button class="rv-btn rv-btn-ok" @click="bulkAction('confirmed')"><bird-icon name="check" :size="13"></bird-icon> {{t('review_confirm')}}</button>
-        <button class="rv-btn rv-btn-maybe" @click="bulkAction('doubtful')"><bird-icon name="help-circle" :size="13"></bird-icon> {{t('review_doubtful_btn')}}</button>
-        <button class="rv-btn rv-btn-no" @click="bulkAction('rejected')"><bird-icon name="x" :size="13"></bird-icon> {{t('review_reject')}}</button>
+        <button class="rv-btn rv-btn-ok" data-testid="review-bulk-confirm" @click="bulkAction('confirmed')"><bird-icon name="check" :size="13"></bird-icon> {{t('review_confirm')}}</button>
+        <button class="rv-btn rv-btn-maybe" data-testid="review-bulk-doubtful" @click="bulkAction('doubtful')"><bird-icon name="help-circle" :size="13"></bird-icon> {{t('review_doubtful_btn')}}</button>
+        <button class="rv-btn rv-btn-no" data-testid="review-bulk-reject" @click="bulkAction('rejected')"><bird-icon name="x" :size="13"></bird-icon> {{t('review_reject')}}</button>
       </div>
 
       <!-- Row 4: Reject by rule (deletion now lives on the Purge page) -->
@@ -118,7 +118,7 @@
       <div v-for="det in pagedFlagged" :key="det.date + det.time + det.sci_name"
            class="rv-card" :class="det.validation">
         <div style="display:flex;align-items:center;gap:.5rem;">
-          <input type="checkbox" :checked="selected.has(detKey(det))" @change="toggleSelect(det)">
+          <input type="checkbox" data-testid="review-select-row" :checked="selected.has(detKey(det))" @change="toggleSelect(det)">
           <bird-img :src="API+'/photo?sci='+encodeURIComponent(det.sci_name)" style="width:40px;height:40px;border-radius:50%;"></bird-img>
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;">
@@ -154,9 +154,9 @@
           <button v-if="det.file_name" class="rv-mini" @click="playAudio(det)" :aria-label="playingDet===detKey(det)?'Stop':'Play'">{{playingDet===detKey(det)?'⏹':'▶'}}</button>
           <button v-if="det.file_name" class="rv-mini" @click="openSpectro(det)" title="Spectrogramme" aria-label="Spectrogramme"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
           <div class="rv-actions">
-            <button class="rv-btn rv-btn-ok" @click="validate(det,'confirmed')" :disabled="det.validation==='confirmed' || validatingKey===detKey(det)">✓</button>
-            <button class="rv-btn rv-btn-maybe" @click="validate(det,'doubtful')" :disabled="det.validation==='doubtful' || validatingKey===detKey(det)">?</button>
-            <button class="rv-btn rv-btn-no" @click="validate(det,'rejected')" :disabled="det.validation==='rejected' || validatingKey===detKey(det)">✗</button>
+            <button class="rv-btn rv-btn-ok" data-testid="review-action-confirm" @click="validate(det,'confirmed')" :disabled="det.validation==='confirmed' || validatingKey===detKey(det)">✓</button>
+            <button class="rv-btn rv-btn-maybe" data-testid="review-action-doubtful" @click="validate(det,'doubtful')" :disabled="det.validation==='doubtful' || validatingKey===detKey(det)">?</button>
+            <button class="rv-btn rv-btn-no" data-testid="review-action-reject" @click="validate(det,'rejected')" :disabled="det.validation==='rejected' || validatingKey===detKey(det)">✗</button>
           </div>
         </div>
       </div>
