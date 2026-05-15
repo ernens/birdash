@@ -935,6 +935,279 @@
   --data-cat-8: #bf616a;
 }
 
+/* ── Midnight Galaxy — Deep purple cosmos, lavender accent ──────────────── */
+[data-theme="midnight-galaxy"] {
+  --bg-deep:      #1a1228;
+  --bg-page:      #241734;
+  --bg-card:      #2b1e3e;
+  --bg-card2:     #352647;
+  --bg-hover:     #403055;
+  --bg-input:     #2f2244;
+  --border:       #4a3a64;
+  --border-light: #5a4a78;
+
+  --accent:     #a490c2;
+  --accent-dim: #7c6aa0;
+  --on-accent:  #1a1228;
+
+  --danger:  #e08aa0;
+  --success: #8ad0a8;
+  --info:    #8a92d8;
+  --blue:    #8a92d8;
+
+  --text-main:  #e6e6fa;
+  --text-muted: #9c92b8;
+  --text-faint: #6c648a; /* decorative only */
+
+  --bg-spectro:      #100822;
+  --text-spectro:    #a490c280;
+  --scrollbar-thumb: #4a3a64;
+  --scrollbar-track: #241734;
+
+  --shadow:        0 4px 24px rgba(0,0,0,.55);
+  --shadow-card:   0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(16,8,34,.72);
+}
+
+/* ── Golden Hour — Warm autumnal, mustard accent on chocolate ──────────── */
+[data-theme="golden-hour"] {
+  --bg-deep:      #1f1a17;
+  --bg-page:      #2a2420;
+  --bg-card:      #352d28;
+  --bg-card2:     #3f3530;
+  --bg-hover:     #4a403a;
+  --bg-input:     #322a26;
+  --border:       #4a403a;
+  --border-light: #5a4e44;
+
+  --accent:     #f4a900;
+  --accent-dim: #b87c00;
+  --on-accent:  #1f1a17;
+
+  --danger:  #c1666b;
+  --success: #a8b870;
+  --info:    #c4a574;
+  --blue:    #c4a574;
+
+  --text-main:  #f0e4d4;
+  --text-muted: #b8a890; /* bumped for AA on --bg-card */
+  --text-faint: #7a6a54; /* decorative only */
+
+  --bg-spectro:      #1a1612;
+  --text-spectro:    #f4a90080;
+  --scrollbar-thumb: #5a4e44;
+  --scrollbar-track: #2a2420;
+
+  --shadow:        0 4px 24px rgba(0,0,0,.50);
+  --shadow-card:   0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(20,14,10,.70);
+}
+
+/* ── Modern Minimalist — Crisp grayscale, charcoal & slate ─────────────── */
+[data-theme="modern-minimalist"] {
+  --bg-deep:      #1f262c;
+  --bg-page:      #2a333a;
+  --bg-card:      #36454f;
+  --bg-card2:     #3f4f5a;
+  --bg-hover:     #4a5a66;
+  --bg-input:     #323e47;
+  --border:       #4a5a66;
+  --border-light: #5a6c78;
+
+  --accent:     #d3d3d3;
+  --accent-dim: #a0a0a0;
+  --on-accent:  #1f262c;
+
+  --danger:  #e0a0a0;
+  --success: #a0d0a8;
+  --info:    #a0c0e0;
+  --blue:    #a0c0e0;
+
+  --text-main:  #fafafa;
+  --text-muted: #b0bcc4; /* bumped for AA on charcoal */
+  --text-faint: #708090; /* decorative only — slate gray */
+
+  --bg-spectro:      #0e1418;
+  --text-spectro:    #d3d3d380;
+  --scrollbar-thumb: #5a6c78;
+  --scrollbar-track: #2a333a;
+
+  --shadow:        0 4px 24px rgba(0,0,0,.45);
+  --shadow-card:   0 1px 3px rgba(0,0,0,.30), 0 1px 2px rgba(0,0,0,.20);
+  --overlay-scrim: rgba(14,20,24,.68);
+}
+
+/* ── Arctic Frost — Cool crisp light, steel-blue accent ────────────────── */
+[data-theme="arctic-frost"] {
+  --bg-deep:      #c8d8eb;
+  --bg-page:      #e8f0fa;
+  --bg-card:      #fafafa;
+  --bg-card2:     #eef4fc;
+  --bg-hover:     #d4e4f7;
+  --bg-input:     #f4f8fd;
+  --border:       #c0c8d4;
+  --border-light: #a8b8c8;
+
+  --accent:     #4a6fa5;
+  --accent-dim: #365380;
+  --on-accent:  #fafafa;
+
+  --amber:     #b87a1a;
+  --amber-dim: #80540c;
+  --warning:   #b87a1a;
+
+  --danger:  #c44848;
+  --success: #4d8a5a;
+  --info:    #4a6fa5;
+  --blue:    #4a6fa5;
+
+  --text-main:  #1a2a40;
+  --text-muted: #4a5a70;
+  --text-faint: #7a8a9c; /* decorative only */
+
+  --bg-spectro:      #1a2a40;
+  --text-spectro:    #4a6fa580;
+  --scrollbar-thumb: #a8b8c8;
+  --scrollbar-track: #e8f0fa;
+
+  --shadow:        0 4px 24px rgba(26,42,64,.10);
+  --shadow-card:   0 1px 2px rgba(26,42,64,.06), 0 1px 3px rgba(26,42,64,.08);
+  --overlay-scrim: rgba(26,42,64,.45);
+  --overlay-line:  rgba(26,42,64,.10);
+}
+
+/* Arctic Frost data-viz: cool muted spectrum */
+[data-theme="arctic-frost"] {
+  --data-night:  #1a2a40;
+  --data-dawn:   #b87a1a;
+  --data-day:    #4d8a5a;
+  --data-dusk:   #c44848;
+
+  --data-abundance-0: #b8d0e8;
+  --data-abundance-1: #7898c0;
+  --data-abundance-2: #4a6fa5;
+  --data-abundance-3: #2a4878;
+
+  --data-cat-1: #4a6fa5; --data-cat-2: #4d8a5a;
+  --data-cat-3: #b87a1a; --data-cat-4: #c44848;
+  --data-cat-5: #6a7a90; --data-cat-6: #5a8aa8;
+  --data-cat-7: #8a6ab0; --data-cat-8: #a06848;
+}
+
+/* ── Desert Rose — Dusty rose & clay on sand ───────────────────────────── */
+[data-theme="desert-rose"] {
+  --bg-deep:      #d4bfa8;
+  --bg-page:      #e8d5c4;
+  --bg-card:      #f4e8db;
+  --bg-card2:     #ecddc8;
+  --bg-hover:     #dcc4ad;
+  --bg-input:     #ede0cf;
+  --border:       #c8a89a;
+  --border-light: #b89886;
+
+  --accent:     #b87d6d;
+  --accent-dim: #8a584a;
+  --on-accent:  #f4e8db;
+
+  --amber:     #a8742a;
+  --amber-dim: #704808;
+  --warning:   #a8742a;
+
+  --danger:  #5d2e46;
+  --success: #6a8a5a;
+  --info:    #6a7090;
+  --blue:    #6a7090;
+
+  --text-main:  #3a1e2c;
+  --text-muted: #6a4458;
+  --text-faint: #967268; /* decorative only */
+
+  --bg-spectro:      #3a1e2c;
+  --text-spectro:    #b87d6d80;
+  --scrollbar-thumb: #b89886;
+  --scrollbar-track: #e8d5c4;
+
+  --shadow:        0 4px 24px rgba(58,30,44,.12);
+  --shadow-card:   0 1px 2px rgba(58,30,44,.08), 0 1px 3px rgba(58,30,44,.10);
+  --overlay-scrim: rgba(58,30,44,.45);
+  --overlay-line:  rgba(58,30,44,.10);
+}
+
+/* Desert Rose data-viz: dusty earth tones */
+[data-theme="desert-rose"] {
+  --data-night:  #5d2e46;
+  --data-dawn:   #a8742a;
+  --data-day:    #6a8a5a;
+  --data-dusk:   #b87d6d;
+
+  --data-abundance-0: #e0c5b4;
+  --data-abundance-1: #c89884;
+  --data-abundance-2: #b87d6d;
+  --data-abundance-3: #8a584a;
+
+  --data-cat-1: #b87d6d; --data-cat-2: #6a8a5a;
+  --data-cat-3: #a8742a; --data-cat-4: #5d2e46;
+  --data-cat-5: #6a7090; --data-cat-6: #d4a5a5;
+  --data-cat-7: #8a6058; --data-cat-8: #4a4858;
+}
+
+/* ── Botanical Garden — Fern green, marigold accent on cream ───────────── */
+[data-theme="botanical-garden"] {
+  --bg-deep:      #dfdbcc;
+  --bg-page:      #f0ede0;
+  --bg-card:      #f5f3ed;
+  --bg-card2:     #eae6d4;
+  --bg-hover:     #e0dac0;
+  --bg-input:     #f0ece0;
+  --border:       #cdc6a8;
+  --border-light: #b8b090;
+
+  --accent:     #4a7c59;
+  --accent-dim: #345a40;
+  --on-accent:  #f5f3ed;
+
+  --amber:     #c47800;
+  --amber-dim: #8a5400;
+  --warning:   #c47800;
+
+  --danger:  #b7472a;
+  --success: #4a7c59;
+  --info:    #5a7090;
+  --blue:    #5a7090;
+
+  --text-main:  #1c2a1f;
+  --text-muted: #4a604f;
+  --text-faint: #7a8c7a; /* decorative only */
+
+  --bg-spectro:      #1c2a1f;
+  --text-spectro:    #4a7c5980;
+  --scrollbar-thumb: #b8b090;
+  --scrollbar-track: #f0ede0;
+
+  --shadow:        0 4px 24px rgba(28,42,31,.12);
+  --shadow-card:   0 1px 2px rgba(28,42,31,.08), 0 1px 3px rgba(28,42,31,.10);
+  --overlay-scrim: rgba(28,42,31,.45);
+  --overlay-line:  rgba(28,42,31,.10);
+}
+
+/* Botanical Garden data-viz: marigold + fern + terracotta */
+[data-theme="botanical-garden"] {
+  --data-night:  #2a4858;
+  --data-dawn:   #f9a620;
+  --data-day:    #4a7c59;
+  --data-dusk:   #b7472a;
+
+  --data-abundance-0: #c5d6b8;
+  --data-abundance-1: #8aac78;
+  --data-abundance-2: #4a7c59;
+  --data-abundance-3: #2a4a35;
+
+  --data-cat-1: #4a7c59; --data-cat-2: #f9a620;
+  --data-cat-3: #b7472a; --data-cat-4: #5a7090;
+  --data-cat-5: #8aac78; --data-cat-6: #c4a574;
+  --data-cat-7: #7a4858; --data-cat-8: #3a5a6a;
+}
+
 /* ── Tokens shared by every dark-mode theme ─────────────────────────────── */
 [data-theme="forest"],
 [data-theme="night"],
@@ -944,7 +1217,10 @@
 [data-theme="hicontrast"],
 [data-theme="solar-dark"],
 [data-theme="nord"],
-[data-theme="jungle"] {
+[data-theme="jungle"],
+[data-theme="midnight-galaxy"],
+[data-theme="golden-hour"],
+[data-theme="modern-minimalist"] {
   --overlay-line: rgba(255,255,255,.10);
 }
 
@@ -1301,6 +1577,296 @@
   to   { background-position: 52% center; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   WADDENZEE v2 — Affinage spécifique aux pages Birdash
+   Filtré: sections G (tabs génériques), N (gallery/recording cards),
+   O (.sec-label), et .station de L — sélecteurs absents du DOM Birdash.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── A) KPI strip & grid : sable→mer plus marqué + valeur en sérif ──── */
+[data-theme="waddenzee"] .kpi-strip,
+[data-theme="waddenzee"] .kpi-grid {
+  gap: .75rem;
+}
+[data-theme="waddenzee"] .kpi-card {
+  background:
+    linear-gradient(180deg,
+      #f1e8d8 0%,
+      #ece4d2 22%,
+      #e6e8e6 50%,
+      #dde5ec 78%,
+      #cfd9df 100%);
+  border: 1px solid #c8d2db;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.7) inset,
+    0 1px 2px rgba(60,88,110,.06),
+    0 4px 14px rgba(60,88,110,.08);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+[data-theme="waddenzee"] .kpi-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.7) inset,
+    0 2px 4px rgba(60,88,110,.10),
+    0 8px 22px rgba(60,88,110,.14);
+}
+[data-theme="waddenzee"] .kpi-value {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  font-weight: 400;
+  letter-spacing: -.022em;
+  font-size: 1.85rem;
+  line-height: 1.05;
+}
+[data-theme="waddenzee"] .kpi-value.amber  { color: #a07a3f; }
+[data-theme="waddenzee"] .kpi-value.blue   { color: #4f7088; }
+[data-theme="waddenzee"] .kpi-value.muted  { color: var(--text-muted); }
+[data-theme="waddenzee"] .kpi-label {
+  font-family: var(--font-body);
+  font-size: .72rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+[data-theme="waddenzee"] .bio-info-btn {
+  background: rgba(255,255,255,.7);
+  border-color: #c2cdd7;
+  color: var(--text-muted);
+}
+[data-theme="waddenzee"] .bio-info-btn:hover {
+  color: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* ── B) Dashboard BirdFlow cards (.bf-card, .bf-sys-row) ──────────── */
+[data-theme="waddenzee"] .bf-card,
+[data-theme="waddenzee"] .bf-sys-row {
+  background:
+    linear-gradient(180deg, #efe6d8 0%, #eaeef1 60%, #dde5ec 100%);
+  border-color: #c8d2db;
+}
+[data-theme="waddenzee"] .bf-sys-val.delayed { color: #a85a3a; font-weight: 600; }
+[data-theme="waddenzee"] .bf-sys-val.ok      { color: #5a7a52; font-weight: 600; }
+[data-theme="waddenzee"] .bf-sys-label       { color: var(--text-muted); }
+
+/* ── C) Species page — .sp-kpi avec halo mouette en filigrane ────── */
+[data-theme="waddenzee"] .sp-kpi {
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="waddenzee"] .sp-kpi::after {
+  content: "";
+  position: absolute;
+  right: -8px; bottom: -8px;
+  width: 44px; height: 44px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='%236b8fa8' opacity='.10'><ellipse cx='30' cy='40' rx='18' ry='8'/><circle cx='44' cy='32' r='6'/><path d='M 50 30 L 60 28 L 56 34 Z'/></g></svg>");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+}
+
+/* ── D) Status dots — palette mer ────────────────────────────────── */
+[data-theme="waddenzee"] .status-dot.dot-ok  { background: #8aa982; box-shadow: 0 0 0 3px rgba(138,169,130,.18); }
+[data-theme="waddenzee"] .status-dot.dot-err { background: #c47a7a; box-shadow: 0 0 0 3px rgba(196,122,122,.18); }
+[data-theme="waddenzee"] .status-dot.dot-warn{ background: #c9a36b; box-shadow: 0 0 0 3px rgba(201,163,107,.20); }
+
+/* ── E) Stat-chip (analyses) ─────────────────────────────────────── */
+[data-theme="waddenzee"] .stat-chip {
+  background: rgba(201,163,107,.18);
+  color: #6b4f2a;
+  border: 1px solid rgba(201,163,107,.40);
+  border-radius: 999px;
+  padding: .12rem .5rem;
+  font-size: .7rem;
+  font-weight: 500;
+}
+[data-theme="waddenzee"] .stat-chip.success { background: rgba(138,169,130,.20); color: #4f6a48; border-color: rgba(138,169,130,.45); }
+[data-theme="waddenzee"] .stat-chip.danger  { background: rgba(196,122,122,.18); color: #7a3838; border-color: rgba(196,122,122,.40); }
+[data-theme="waddenzee"] .stat-chip.info    { background: rgba(138,163,191,.20); color: #3f5a78; border-color: rgba(138,163,191,.45); }
+
+/* ── F) Spectrogramme — toolbar, fréquences, curseur, overlay ─────── */
+[data-theme="waddenzee"] .spectro-page,
+[data-theme="waddenzee"] .spectro-wrap {
+  background: linear-gradient(180deg, #1c2832 0%, #243440 100%);
+  border-radius: var(--radius);
+}
+[data-theme="waddenzee"] .spectro-toolbar {
+  background: rgba(28,40,50,.82);
+  border-bottom: 1px solid rgba(174,188,200,.18);
+  color: #cfd9df;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+[data-theme="waddenzee"] .spectro-toolbar button {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(174,188,200,.22);
+  color: #d8e1e8;
+}
+[data-theme="waddenzee"] .spectro-toolbar button:hover {
+  background: rgba(107,143,168,.32);
+  border-color: rgba(174,188,200,.45);
+}
+[data-theme="waddenzee"] .spectro-freq-labels span,
+[data-theme="waddenzee"] .spectro-freq-label {
+  color: rgba(207,217,223,.65);
+  font-family: var(--font-body);
+  font-size: .68rem;
+  letter-spacing: .03em;
+}
+[data-theme="waddenzee"] .spectro-cursor {
+  background: linear-gradient(180deg, #c47a7a, #c9a36b);
+  box-shadow: 0 0 8px rgba(196,122,122,.5);
+}
+[data-theme="waddenzee"] .spectro-overlay,
+[data-theme="waddenzee"] .spectro-placeholder {
+  background: rgba(28,40,50,.78);
+  color: #cfd9df;
+  font-style: italic;
+}
+[data-theme="waddenzee"] .spectro-loop-zone {
+  background: rgba(201,163,107,.22);
+  border: 1px dashed rgba(201,163,107,.55);
+}
+[data-theme="waddenzee"] .spectro-loop-btn,
+[data-theme="waddenzee"] .spectro-modal-dl,
+[data-theme="waddenzee"] .spectro-expand-btn {
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(174,188,200,.30);
+  color: #eaeef1;
+}
+[data-theme="waddenzee"] .spectro-expand-btn:hover { background: rgba(107,143,168,.40); }
+[data-theme="waddenzee"] .spectro-modal-header {
+  background: linear-gradient(180deg, #efe6d8, #e8dcc8);
+  border-bottom: 1px solid #c9b896;
+  color: var(--text-main);
+}
+[data-theme="waddenzee"] .spectro-modal-species {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -.01em;
+  color: var(--text-main);
+}
+[data-theme="waddenzee"] .spectro-modal-sci {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--text-muted);
+}
+[data-theme="waddenzee"] .spectro-modal-meta {
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+[data-theme="waddenzee"] .spectro-modal-close {
+  background: rgba(60,88,110,.10);
+  color: var(--text-main);
+  border-radius: 50%;
+  width: 28px; height: 28px;
+}
+[data-theme="waddenzee"] .spectro-modal-close:hover { background: rgba(196,122,122,.25); }
+[data-theme="waddenzee"] .spectro-modal-controls,
+[data-theme="waddenzee"] .spectro-modal-filters {
+  background: rgba(28,40,50,.92);
+  border-top: 1px solid rgba(174,188,200,.18);
+  color: #cfd9df;
+}
+[data-theme="waddenzee"] .spectro-modal-bboxinfo {
+  background: rgba(201,163,107,.85);
+  color: #3a2a18;
+  border-radius: 4px;
+  font-size: .72rem;
+}
+
+/* ── H) Tableaux ─────────────────────────────────────────────────── */
+[data-theme="waddenzee"] table {
+  background: transparent;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[data-theme="waddenzee"] thead th {
+  background: linear-gradient(180deg, #efe6d8, #e6dcc8);
+  color: #6b4f2a;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: .72rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #c9b896;
+}
+[data-theme="waddenzee"] tbody tr { transition: background .15s; }
+[data-theme="waddenzee"] tbody tr:hover { background: rgba(107,143,168,.08); }
+[data-theme="waddenzee"] tbody td { border-bottom: 1px solid rgba(174,188,200,.4); }
+
+/* ── I) Liens ────────────────────────────────────────────────────── */
+[data-theme="waddenzee"] a { color: var(--accent-dim); }
+[data-theme="waddenzee"] a:hover {
+  color: #c47a7a; /* huîtrier au survol */
+  opacity: 1;
+}
+
+/* ── J) Sélection ────────────────────────────────────────────────── */
+[data-theme="waddenzee"] ::selection {
+  background: rgba(201,163,107,.45);
+  color: #3a2a18;
+}
+
+/* ── K) Bio-tax legend rows ──────────────────────────────────────── */
+[data-theme="waddenzee"] .bio-tax-legend-row {
+  border-bottom-color: rgba(174,188,200,.35);
+}
+[data-theme="waddenzee"] .bio-tax-legend-row:hover {
+  background: rgba(107,143,168,.10);
+}
+[data-theme="waddenzee"] .bio-tax-legend-pct { color: var(--accent-dim); }
+
+/* ── L) Login page voile pastel (sans .station — absent du DOM) ─── */
+[data-theme="waddenzee"] body.login-body,
+[data-theme="waddenzee"] .login-shell {
+  background:
+    linear-gradient(180deg, rgba(216,225,232,.55) 0%, rgba(216,225,232,.65) 100%);
+}
+
+/* ── M) Logo halo de soleil derrière (.header-brand) ──────────────── */
+[data-theme="waddenzee"] .header-brand {
+  position: relative;
+}
+[data-theme="waddenzee"] .header-brand::before {
+  content: "";
+  position: absolute;
+  left: -8px; top: 50%;
+  width: 96px; height: 96px;
+  transform: translateY(-50%);
+  background: radial-gradient(circle, rgba(244,220,182,.45) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme="waddenzee"] .brand-logo,
+[data-theme="waddenzee"] .brand-text { position: relative; z-index: 1; }
+
+/* ── P) Loading / progress ───────────────────────────────────────── */
+[data-theme="waddenzee"] .spectro-modal-loading {
+  background: rgba(28,40,50,.85);
+  color: #cfd9df;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ── Q) Hairlines : détache les cartes du panorama ───────────────── */
+[data-theme="waddenzee"] .card,
+[data-theme="waddenzee"] .kpi-card,
+[data-theme="waddenzee"] .bf-card {
+  position: relative;
+}
+[data-theme="waddenzee"] .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.5) inset;
+}
+
 /* Paper needs slightly toned-down data colors so the cards don't glare. */
 [data-theme="paper"] {
   --data-night:  #1a237e;
@@ -1451,7 +2017,10 @@ select, input[type="text"], input[type="number"], textarea {
 }
 [data-theme="paper"] select,   [data-theme="paper"] input[type="text"],   [data-theme="paper"] input[type="number"],   [data-theme="paper"] textarea,
 [data-theme="sepia"] select,   [data-theme="sepia"] input[type="text"],   [data-theme="sepia"] input[type="number"],   [data-theme="sepia"] textarea,
-[data-theme="solar-light"] select, [data-theme="solar-light"] input[type="text"], [data-theme="solar-light"] input[type="number"], [data-theme="solar-light"] textarea {
+[data-theme="solar-light"] select, [data-theme="solar-light"] input[type="text"], [data-theme="solar-light"] input[type="number"], [data-theme="solar-light"] textarea,
+[data-theme="arctic-frost"] select, [data-theme="arctic-frost"] input[type="text"], [data-theme="arctic-frost"] input[type="number"], [data-theme="arctic-frost"] textarea,
+[data-theme="desert-rose"] select, [data-theme="desert-rose"] input[type="text"], [data-theme="desert-rose"] input[type="number"], [data-theme="desert-rose"] textarea,
+[data-theme="botanical-garden"] select, [data-theme="botanical-garden"] input[type="text"], [data-theme="botanical-garden"] input[type="number"], [data-theme="botanical-garden"] textarea {
   color-scheme: light;
 }
 
@@ -1772,6 +2341,12 @@ select, input[type="text"], input[type="number"], textarea {
 .theme-dot[data-t="solar-dark"]  { --preview-accent:#2aa198; --preview-card:#073642; --preview-bg:#002b36; }
 .theme-dot[data-t="solar-light"] { --preview-accent:#2aa198; --preview-card:#ffffff; --preview-bg:#fdf6e3; }
 .theme-dot[data-t="nord"]        { --preview-accent:#88c0d0; --preview-card:#3b4252; --preview-bg:#2e3440; }
+.theme-dot[data-t="midnight-galaxy"]   { --preview-accent:#a490c2; --preview-card:#2b1e3e; --preview-bg:#241734; }
+.theme-dot[data-t="golden-hour"]       { --preview-accent:#f4a900; --preview-card:#352d28; --preview-bg:#2a2420; }
+.theme-dot[data-t="modern-minimalist"] { --preview-accent:#d3d3d3; --preview-card:#36454f; --preview-bg:#2a333a; }
+.theme-dot[data-t="arctic-frost"]      { --preview-accent:#4a6fa5; --preview-card:#fafafa; --preview-bg:#e8f0fa; }
+.theme-dot[data-t="desert-rose"]       { --preview-accent:#b87d6d; --preview-card:#f4e8db; --preview-bg:#e8d5c4; }
+.theme-dot[data-t="botanical-garden"]  { --preview-accent:#4a7c59; --preview-card:#f5f3ed; --preview-bg:#f0ede0; }
 /* Colonial: three earth bands (moss / paper / darker paper) with a tiny red
    stamp dot in the top-right corner — evokes the carnet's defining marks. */
 .theme-dot[data-t="colonial"] {
