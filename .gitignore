@@ -4,6 +4,9 @@ node_modules/
 *BAK
 BAK/
 .DS_Store
+# Playwright run artifacts
+test-results/
+playwright-report/
 public/js/birdash-local.js
 config/birdash-local.js
 config/backup-config.json
