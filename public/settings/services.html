@@ -65,7 +65,7 @@
                 {{ zram.configuring ? '…' : t('set_zram_apply_recommended') }}
               </button>
               <label class="set-check" style="font-size:.74rem;cursor:pointer;">
-                <input type="checkbox" v-model="zram.force"> {{t('set_zram_force')}}
+                <input type="checkbox" v-model="zram.force" data-testid="settings-services-force"> {{t('set_zram_force')}}
               </label>
               <span v-if="zram.msg" :style="{fontSize:'.74rem',color: zram.err ? 'var(--danger)' : 'var(--accent)'}">{{ zram.msg }}</span>
             </div>
@@ -80,7 +80,7 @@
           <div class="section-title"><bird-icon name="save" :size="14" ></bird-icon> {{t('set_disk_mgmt')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_full_disk')}} <button class="info-btn" @click="helpKey='full_disk'">i</button></span>
-            <select v-model="conf.FULL_DISK" class="set-select" style="width:120px;">
+            <select v-model="conf.FULL_DISK" class="set-select" style="width:120px;" data-testid="settings-services-full-disk">
               <option value="purge">Purge</option>
               <option value="keep">Keep</option>
             </select>
@@ -88,20 +88,20 @@
           <div class="set-row">
             <span class="set-label">{{t('set_purge_threshold')}} <button class="info-btn" @click="helpKey='purge_threshold'">i</button></span>
             <span class="set-range-val">{{conf.PURGE_THRESHOLD}}%</span>
-            <input v-model="conf.PURGE_THRESHOLD" type="range" min="50" max="99" step="1" class="set-range" :aria-label="t('set_purge_threshold')">
+            <input v-model="conf.PURGE_THRESHOLD" type="range" min="50" max="99" step="1" class="set-range" :aria-label="t('set_purge_threshold')" data-testid="settings-services-purge-threshold">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('retention_days')}}</span>
             <span class="set-range-val">{{conf.AUDIO_RETENTION_DAYS}} j</span>
-            <input v-model="conf.AUDIO_RETENTION_DAYS" type="range" min="7" max="365" step="1" class="set-range">
+            <input v-model="conf.AUDIO_RETENTION_DAYS" type="range" min="7" max="365" step="1" class="set-range" data-testid="settings-services-audio-retention-days">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_max_files')}} <button class="info-btn" @click="helpKey='max_files'">i</button></span>
-            <input v-model="conf.MAX_FILES_SPECIES" type="number" min="0" class="set-input" style="width:80px;">
+            <input v-model="conf.MAX_FILES_SPECIES" type="number" min="0" class="set-input" style="width:80px;" data-testid="settings-services-max-files-species">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_privacy_threshold')}} <button class="info-btn" @click="helpKey='privacy'">i</button></span>
-            <select v-model="conf.PRIVACY_THRESHOLD" class="set-select" style="width:80px;">
+            <select v-model="conf.PRIVACY_THRESHOLD" class="set-select" style="width:80px;" data-testid="settings-services-privacy-threshold">
               <option value="0">0 (off)</option>
               <option value="1">1</option>
               <option value="2">2</option>

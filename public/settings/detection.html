@@ -5,6 +5,8 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem;">
           <div v-for="m in models" :key="m"
                class="model-card" :class="{ active: conf.MODEL === m }"
+               data-testid="settings-detection-model-option"
+               :data-model="m"
                @click="conf.MODEL = m">
             <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;">
               <span class="model-name">{{ modelLabel(m) }}</span>
@@ -32,7 +34,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:.5rem;">
             <label style="font-size:.78rem;display:flex;align-items:center;gap:.3rem;cursor:pointer;">
-              <input type="checkbox" v-model="birdnetLicenseAccepted"> {{t('set_birdnet_accept') || 'I accept the CC-NC-SA 4.0 license'}}
+              <input type="checkbox" v-model="birdnetLicenseAccepted" data-testid="settings-detection-birdnetlicenseaccepted"> {{t('set_birdnet_accept') || 'I accept the CC-NC-SA 4.0 license'}}
             </label>
           </div>
           <button class="btn btn-primary" style="margin-top:.5rem;font-size:.82rem;"
@@ -92,25 +94,25 @@
       </div>
 
       <!-- ═══ Detection Profiles ═══ -->
-      <div class="card" data-test="detection-profiles">
+      <div class="card" data-testid="settings-detection-profiles">
         <div class="section-title"><bird-icon name="bookmark" :size="14"></bird-icon> {{t('set_profile_title')}}</div>
         <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">{{t('set_profile_desc')}}</p>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;">
-          <select v-model="detectionProfileDropdown" class="set-select" data-test="profile-select" style="min-width:180px;">
+          <select v-model="detectionProfileDropdown" class="set-select" style="min-width:180px;" data-testid="settings-detection-profile-select">
             <option value="">{{t('set_profile_choose')}}</option>
             <option v-for="(p, id) in detectionProfiles" :key="id" :value="id">
               {{ p.label }}{{ p.builtin ? '' : ' ✎' }}
             </option>
           </select>
-          <button class="btn btn-primary" data-test="profile-load"
+          <button class="btn btn-primary" data-testid="settings-detection-profile-load"
                   :disabled="!detectionProfileDropdown"
                   @click="applyDetectionProfile(detectionProfileDropdown)">
             {{t('set_profile_load')}}
           </button>
-          <button class="btn-outline" data-test="profile-save-as" @click="saveAsDetectionProfile">
+          <button class="btn-outline" data-testid="settings-detection-profile-save-as" @click="saveAsDetectionProfile">
             {{t('set_profile_save_as')}}
           </button>
-          <button class="btn-outline" data-test="profile-delete"
+          <button class="btn-outline" data-testid="settings-detection-profile-delete"
                   v-if="detectionProfileDropdown && detectionProfiles[detectionProfileDropdown] && !detectionProfiles[detectionProfileDropdown].builtin"
                   @click="deleteDetectionProfile(detectionProfileDropdown)">
             {{t('set_profile_delete')}}
@@ -136,17 +138,17 @@
           <div class="set-row">
             <span class="set-label">{{t('set_birdnet_conf')}} <button class="info-btn" @click="helpKey='birdnet_confidence'">i</button></span>
             <span class="set-range-val">{{conf.BIRDNET_CONFIDENCE || conf.CONFIDENCE || 0.65}}</span>
-            <input v-model="conf.BIRDNET_CONFIDENCE" type="range" min="0.30" max="0.95" step="0.05" class="set-range">
+            <input v-model="conf.BIRDNET_CONFIDENCE" type="range" min="0.30" max="0.95" step="0.05" class="set-range" data-testid="settings-detection-birdnet-confidence">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_sensitivity')}} <button class="info-btn" @click="helpKey='sensitivity'">i</button></span>
             <span class="set-range-val">{{conf.SENSITIVITY}}</span>
-            <input v-model="conf.SENSITIVITY" type="range" min="0.5" max="1.5" step="0.05" class="set-range">
+            <input v-model="conf.SENSITIVITY" type="range" min="0.5" max="1.5" step="0.05" class="set-range" data-testid="settings-detection-sensitivity">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_overlap')}} <button class="info-btn" @click="helpKey='overlap'">i</button></span>
             <span class="set-range-val">{{conf.OVERLAP}}</span>
-            <input v-model="conf.OVERLAP" type="range" min="0" max="2.9" step="0.1" class="set-range">
+            <input v-model="conf.OVERLAP" type="range" min="0" max="2.9" step="0.1" class="set-range" data-testid="settings-detection-overlap">
           </div>
         </div>
 
@@ -156,12 +158,12 @@
           <div class="set-row">
             <span class="set-label">{{t('set_perch_conf')}} <button class="info-btn" @click="helpKey='perch_confidence'">i</button></span>
             <span class="set-range-val">{{conf.PERCH_CONFIDENCE || 0.50}}</span>
-            <input v-model="conf.PERCH_CONFIDENCE" type="range" min="0.05" max="0.90" step="0.01" class="set-range">
+            <input v-model="conf.PERCH_CONFIDENCE" type="range" min="0.05" max="0.90" step="0.01" class="set-range" data-testid="settings-detection-perch-confidence">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_perch_margin')}} <button class="info-btn" @click="helpKey='perch_margin'">i</button></span>
             <span class="set-range-val">{{conf.PERCH_MIN_MARGIN || 0.10}}</span>
-            <input v-model="conf.PERCH_MIN_MARGIN" type="range" min="0" max="0.20" step="0.01" class="set-range">
+            <input v-model="conf.PERCH_MIN_MARGIN" type="range" min="0" max="0.20" step="0.01" class="set-range" data-testid="settings-detection-perch-min-margin">
           </div>
         </div>
 
@@ -170,7 +172,7 @@
           <div class="section-title"><bird-icon name="check-check" :size="14"></bird-icon> {{t('set_dual_confirm_title')}}</div>
           <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('set_dual_confirm_desc')}}</p>
           <label class="set-check" style="cursor:pointer;">
-            <input type="checkbox" v-model="conf.DUAL_CONFIRM_ENABLED" true-value="1" false-value="0">
+            <input type="checkbox" v-model="conf.DUAL_CONFIRM_ENABLED" true-value="1" false-value="0" data-testid="settings-detection-dual-confirm-enabled">
             <span><bird-icon name="shield-check" :size="14"></bird-icon> <strong>{{t('set_dual_confirm_enable')}}</strong></span>
             <button class="info-btn" @click.prevent="helpKey='dual_confirm'" style="margin-left:.3rem;">i</button>
           </label>
@@ -178,12 +180,12 @@
             <div class="set-row">
               <span class="set-label">{{t('set_perch_standalone')}} <button class="info-btn" @click="helpKey='perch_standalone'">i</button></span>
               <span class="set-range-val">{{Number(conf.PERCH_STANDALONE_CONFIDENCE || 0.85).toFixed(2)}}</span>
-              <input v-model.number="conf.PERCH_STANDALONE_CONFIDENCE" type="range" min="0.50" max="0.99" step="0.01" class="set-range">
+              <input v-model.number="conf.PERCH_STANDALONE_CONFIDENCE" type="range" min="0.50" max="0.99" step="0.01" class="set-range" data-testid="settings-detection-perch-standalone-confidence">
             </div>
             <div class="set-row">
               <span class="set-label">{{t('set_birdnet_echo')}} <button class="info-btn" @click="helpKey='birdnet_echo'">i</button></span>
               <span class="set-range-val">{{Number(conf.BIRDNET_ECHO_CONFIDENCE || 0.15).toFixed(2)}}</span>
-              <input v-model.number="conf.BIRDNET_ECHO_CONFIDENCE" type="range" min="0.05" max="0.50" step="0.01" class="set-range">
+              <input v-model.number="conf.BIRDNET_ECHO_CONFIDENCE" type="range" min="0.05" max="0.50" step="0.01" class="set-range" data-testid="settings-detection-birdnet-echo-confidence">
             </div>
             <p style="font-size:.72rem;color:var(--text-faint);margin:.3rem 0 0;">{{t('set_dual_confirm_hint')}}</p>
           </div>
@@ -198,7 +200,7 @@
           <div class="set-row">
             <span class="set-label">{{t('set_range_threshold')}} <button class="info-btn" @click="helpKey='sf_thresh'">i</button></span>
             <span class="set-range-val">{{conf.SF_THRESH}}</span>
-            <input v-model="conf.SF_THRESH" @input="onRangePreviewDebounced" type="range" min="0" max="0.5" step="0.01" class="set-range">
+            <input v-model="conf.SF_THRESH" @input="onRangePreviewDebounced" type="range" min="0" max="0.5" step="0.01" class="set-range" data-testid="settings-detection-sf-thresh">
           </div>
 
           <!-- Live preview: count + collapsible species list -->
@@ -236,7 +238,7 @@
           <!-- Privacy filter -->
           <div class="set-toggle-card" :class="{'is-active': conf.PRIVACY_FILTER_ENABLED == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.PRIVACY_FILTER_ENABLED" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.PRIVACY_FILTER_ENABLED" true-value="1" false-value="0" data-testid="settings-detection-privacy-filter-enabled">
               <span><bird-icon name="user-check" :size="14"></bird-icon> <strong>{{t('set_yamnet_privacy')}}</strong></span>
               <button class="info-btn" @click.prevent="helpKey='yamnet_privacy'" style="margin-left:.3rem;">i</button>
             </label>
@@ -244,11 +246,11 @@
             <div v-if="conf.PRIVACY_FILTER_ENABLED == 1" style="margin:.5rem 0 0 1.5rem;">
               <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);min-width:90px;">{{t('set_yamnet_threshold')}}</span>
-                <input type="range" min="0.05" max="0.95" step="0.05" v-model.number="conf.PRIVACY_FILTER_THRESHOLD" class="set-range" style="flex:1;">
+                <input type="range" min="0.05" max="0.95" step="0.05" v-model.number="conf.PRIVACY_FILTER_THRESHOLD" class="set-range" style="flex:1;" data-testid="settings-detection-privacy-filter-threshold">
                 <span style="font-size:.78rem;font-family:monospace;min-width:36px;text-align:right;">{{Number(conf.PRIVACY_FILTER_THRESHOLD).toFixed(2)}}</span>
               </div>
               <label class="set-check" style="cursor:pointer;font-size:.78rem;">
-                <input type="checkbox" v-model="conf.PRIVACY_FILTER_DELETE_AUDIO" true-value="1" false-value="0">
+                <input type="checkbox" v-model="conf.PRIVACY_FILTER_DELETE_AUDIO" true-value="1" false-value="0" data-testid="settings-detection-privacy-filter-delete-audio">
                 <span><bird-icon name="trash-2" :size="13"></bird-icon> {{t('set_yamnet_delete_audio')}}</span>
               </label>
               <p style="font-size:.7rem;color:var(--text-faint);margin:.2rem 0 0 1.5rem;">{{t('set_yamnet_delete_audio_hint')}}</p>
@@ -258,7 +260,7 @@
           <!-- Dog bark filter -->
           <div class="set-toggle-card" :class="{'is-active': conf.DOG_FILTER_ENABLED == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.DOG_FILTER_ENABLED" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.DOG_FILTER_ENABLED" true-value="1" false-value="0" data-testid="settings-detection-dog-filter-enabled">
               <span><bird-icon name="filter" :size="14"></bird-icon> <strong>{{t('set_yamnet_dog')}}</strong></span>
               <button class="info-btn" @click.prevent="helpKey='yamnet_dog'" style="margin-left:.3rem;">i</button>
             </label>
@@ -266,13 +268,13 @@
             <div v-if="conf.DOG_FILTER_ENABLED == 1" style="margin:.5rem 0 0 1.5rem;">
               <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);min-width:90px;">{{t('set_yamnet_threshold')}}</span>
-                <input type="range" min="0.05" max="0.95" step="0.05" v-model.number="conf.DOG_FILTER_THRESHOLD" class="set-range" style="flex:1;">
+                <input type="range" min="0.05" max="0.95" step="0.05" v-model.number="conf.DOG_FILTER_THRESHOLD" class="set-range" style="flex:1;" data-testid="settings-detection-dog-filter-threshold">
                 <span style="font-size:.78rem;font-family:monospace;min-width:36px;text-align:right;">{{Number(conf.DOG_FILTER_THRESHOLD).toFixed(2)}}</span>
               </div>
               <div style="display:flex;align-items:center;gap:.5rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);min-width:90px;">{{t('set_yamnet_dog_cooldown')}}</span>
                 <input type="number" min="0" max="600" step="5" v-model.number="conf.DOG_FILTER_COOLDOWN_SEC"
-                       style="width:70px;font-size:.82rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.25rem .4rem;text-align:right;">
+                       style="width:70px;font-size:.82rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.25rem .4rem;text-align:right;" data-testid="settings-detection-dog-filter-cooldown-sec">
                 <span style="font-size:.72rem;color:var(--text-faint);">{{t('unit_seconds')}}</span>
               </div>
               <p style="font-size:.7rem;color:var(--text-faint);margin:.3rem 0 0 .2rem;">{{t('set_yamnet_dog_cooldown_hint')}}</p>
@@ -295,7 +297,7 @@
 
           <div class="set-toggle-card" :class="{'is-active': conf.NOISY_THROTTLE_ENABLED == 1}" style="margin-bottom:0;">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.NOISY_THROTTLE_ENABLED" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.NOISY_THROTTLE_ENABLED" true-value="1" false-value="0" data-testid="settings-detection-noisy-throttle-enabled">
               <span><strong>{{t('set_throttle_enable')}}</strong></span>
             </label>
             <p style="font-size:.74rem;color:var(--text-muted);margin:.25rem 0 0 1.5rem;">{{t('set_throttle_enable_desc')}}</p>
@@ -304,7 +306,7 @@
               <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
                 <span style="font-size:.78rem;color:var(--text-muted);min-width:150px;">{{t('set_throttle_cooldown')}}</span>
                 <input type="number" min="10" max="3600" step="10" v-model.number="conf.THROTTLE_COOLDOWN_SECONDS"
-                       style="width:80px;font-size:.82rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.25rem .4rem;text-align:right;">
+                       style="width:80px;font-size:.82rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.25rem .4rem;text-align:right;" data-testid="settings-detection-throttle-cooldown-seconds">
                 <span style="font-size:.72rem;color:var(--text-faint);">{{t('unit_seconds')}}</span>
               </div>
               <p style="font-size:.7rem;color:var(--text-faint);margin:-.25rem 0 .5rem .2rem;">{{t('set_throttle_cooldown_hint')}}</p>
@@ -314,7 +316,7 @@
                   {{t('set_throttle_bypass')}}
                   <button class="info-btn" @click.prevent="helpKey='noisy_throttle'">i</button>
                 </span>
-                <input type="range" min="0.50" max="1.00" step="0.005" v-model.number="conf.THROTTLE_BYPASS_CONFIDENCE" class="set-range" style="flex:1;">
+                <input type="range" min="0.50" max="1.00" step="0.005" v-model.number="conf.THROTTLE_BYPASS_CONFIDENCE" class="set-range" style="flex:1;" data-testid="settings-detection-throttle-bypass-confidence">
                 <span style="font-size:.78rem;font-family:monospace;min-width:48px;text-align:right;">{{Number(conf.THROTTLE_BYPASS_CONFIDENCE).toFixed(3)}}</span>
               </div>
               <p style="font-size:.7rem;color:var(--text-faint);margin:.25rem 0 0 .2rem;">{{t('set_throttle_bypass_hint')}}</p>
@@ -327,7 +329,7 @@
           <div class="section-title"><bird-icon name="filter" :size="14"></bird-icon> {{t('set_range_perch_title')}}</div>
           <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem;">{{t('set_range_perch_desc')}}</p>
           <label class="set-check" style="cursor:pointer;">
-            <input type="checkbox" v-model="conf.RANGE_FILTER_PERCH_EBIRD" true-value="1" false-value="0">
+            <input type="checkbox" v-model="conf.RANGE_FILTER_PERCH_EBIRD" true-value="1" false-value="0" data-testid="settings-detection-range-filter-perch-ebird">
             <span><bird-icon name="check-circle" :size="14"></bird-icon> <strong>{{t('set_range_perch_enable')}}</strong></span>
           </label>
           <p v-if="conf.RANGE_FILTER_PERCH_EBIRD == 1 && !conf.EBIRD_API_KEY"
@@ -343,15 +345,15 @@
           <div class="section-title"><bird-icon name="mic" :size="14" ></bird-icon> {{t('set_recording')}}</div>
           <div class="set-row">
             <span class="set-label">{{t('set_rec_length')}} <button class="info-btn" @click="helpKey='rec_length'">i</button></span>
-            <input v-model="conf.RECORDING_LENGTH" type="number" min="6" max="120" class="set-input">
+            <input v-model="conf.RECORDING_LENGTH" type="number" min="6" max="120" class="set-input" data-testid="settings-detection-recording-length">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_extraction_length')}} <button class="info-btn" @click="helpKey='extraction_length'">i</button></span>
-            <input v-model="conf.EXTRACTION_LENGTH" type="number" min="3" max="30" class="set-input" placeholder="6">
+            <input v-model="conf.EXTRACTION_LENGTH" type="number" min="3" max="30" class="set-input" placeholder="6" data-testid="settings-detection-extraction-length">
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_audio_format')}} <button class="info-btn" @click="helpKey='audio_format'">i</button></span>
-            <select v-model="conf.AUDIOFMT" class="set-select">
+            <select v-model="conf.AUDIOFMT" class="set-select" data-testid="settings-detection-audiofmt">
               <option value="mp3">MP3</option>
               <option value="wav">WAV</option>
               <option value="flac">FLAC</option>
@@ -360,7 +362,7 @@
           </div>
           <div class="set-row">
             <span class="set-label">{{t('set_channels')}} <button class="info-btn" @click="helpKey='channels'">i</button></span>
-            <select v-model="conf.CHANNELS" class="set-select">
+            <select v-model="conf.CHANNELS" class="set-select" data-testid="settings-detection-channels">
               <option value="1">Mono</option>
               <option value="2">Stereo</option>
             </select>

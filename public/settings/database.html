@@ -39,7 +39,7 @@
                     style="width:100%;font-family:monospace;font-size:.82rem;padding:.5rem;border:1px solid var(--border);border-radius:.4rem;background:var(--bg-deep);color:var(--text-main);resize:vertical;"
                     placeholder="SELECT * FROM detections ORDER BY Date DESC, Time DESC LIMIT 20"
                     @keydown.ctrl.enter="dbExec"
-                    @keydown.meta.enter="dbExec"></textarea>
+                    @keydown.meta.enter="dbExec" data-testid="settings-database-dbsql"></textarea>
           <div v-if="dbSqlWarning" style="margin-top:.4rem;padding:.4rem .6rem;border-radius:.3rem;background:rgba(229,62,62,.1);border:1px solid rgba(229,62,62,.3);font-size:.78rem;color:var(--danger);">
             {{dbSqlWarning}}
           </div>

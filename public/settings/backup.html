@@ -28,7 +28,7 @@
               <template v-if="bkp.destination === 'local'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_path')}}</span>
-                  <input v-model="bkp.local.path" class="set-input" style="width:220px;" placeholder="/mnt/backup">
+                  <input v-model="bkp.local.path" class="set-input" style="width:220px;" placeholder="/mnt/backup" data-testid="settings-backup-local-path">
                 </div>
               </template>
 
@@ -36,23 +36,23 @@
               <template v-if="bkp.destination === 'smb'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_host')}}</span>
-                  <input v-model="bkp.smb.host" class="set-input" placeholder="192.168.1.100">
+                  <input v-model="bkp.smb.host" class="set-input" placeholder="192.168.1.100" data-testid="settings-backup-smb-host">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_share')}}</span>
-                  <input v-model="bkp.smb.share" class="set-input" placeholder="backups">
+                  <input v-model="bkp.smb.share" class="set-input" placeholder="backups" data-testid="settings-backup-smb-share">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_user')}}</span>
-                  <input v-model="bkp.smb.user" class="set-input" placeholder="user">
+                  <input v-model="bkp.smb.user" class="set-input" placeholder="user" data-testid="settings-backup-smb-user">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_pass')}}</span>
-                  <input v-model="bkp.smb.pass" type="password" class="set-input" placeholder="••••••">
+                  <input v-model="bkp.smb.pass" type="password" class="set-input" placeholder="••••••" data-testid="settings-backup-smb-pass">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_remote_path')}}</span>
-                  <input v-model="bkp.smb.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                  <input v-model="bkp.smb.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup" data-testid="settings-backup-smb-remotepath">
                 </div>
               </template>
 
@@ -60,15 +60,15 @@
               <template v-if="bkp.destination === 'nfs'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_host')}}</span>
-                  <input v-model="bkp.nfs.host" class="set-input" placeholder="192.168.1.100">
+                  <input v-model="bkp.nfs.host" class="set-input" placeholder="192.168.1.100" data-testid="settings-backup-nfs-host">
                 </div>
                 <div class="set-row">
                   <span class="set-label">Export</span>
-                  <input v-model="bkp.nfs.exportPath" class="set-input" style="width:220px;" placeholder="/volume1/backups">
+                  <input v-model="bkp.nfs.exportPath" class="set-input" style="width:220px;" placeholder="/volume1/backups" data-testid="settings-backup-nfs-exportpath">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_remote_path')}}</span>
-                  <input v-model="bkp.nfs.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                  <input v-model="bkp.nfs.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup" data-testid="settings-backup-nfs-remotepath">
                 </div>
               </template>
 
@@ -76,23 +76,23 @@
               <template v-if="bkp.destination === 'sftp'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_host')}}</span>
-                  <input v-model="bkp.sftp.host" class="set-input" placeholder="backup.example.com">
+                  <input v-model="bkp.sftp.host" class="set-input" placeholder="backup.example.com" data-testid="settings-backup-sftp-host">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_port')}}</span>
-                  <input v-model="bkp.sftp.port" type="number" class="set-input" style="width:80px;" placeholder="22">
+                  <input v-model="bkp.sftp.port" type="number" class="set-input" style="width:80px;" placeholder="22" data-testid="settings-backup-sftp-port">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_user')}}</span>
-                  <input v-model="bkp.sftp.user" class="set-input" placeholder="user">
+                  <input v-model="bkp.sftp.user" class="set-input" placeholder="user" data-testid="settings-backup-sftp-user">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_pass')}}</span>
-                  <input v-model="bkp.sftp.pass" type="password" class="set-input" placeholder="••••••">
+                  <input v-model="bkp.sftp.pass" type="password" class="set-input" placeholder="••••••" data-testid="settings-backup-sftp-pass">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_remote_path')}}</span>
-                  <input v-model="bkp.sftp.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                  <input v-model="bkp.sftp.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup" data-testid="settings-backup-sftp-remotepath">
                 </div>
               </template>
 
@@ -100,23 +100,23 @@
               <template v-if="bkp.destination === 's3'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_bucket')}}</span>
-                  <input v-model="bkp.s3.bucket" class="set-input" placeholder="my-birdash-backups">
+                  <input v-model="bkp.s3.bucket" class="set-input" placeholder="my-birdash-backups" data-testid="settings-backup-s3-bucket">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_region')}}</span>
-                  <input v-model="bkp.s3.region" class="set-input" placeholder="eu-west-1">
+                  <input v-model="bkp.s3.region" class="set-input" placeholder="eu-west-1" data-testid="settings-backup-s3-region">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_access_key')}}</span>
-                  <input v-model="bkp.s3.accessKey" class="set-input" placeholder="AKIA...">
+                  <input v-model="bkp.s3.accessKey" class="set-input" placeholder="AKIA..." data-testid="settings-backup-s3-accesskey">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_secret_key')}}</span>
-                  <input v-model="bkp.s3.secretKey" type="password" class="set-input" placeholder="••••••">
+                  <input v-model="bkp.s3.secretKey" type="password" class="set-input" placeholder="••••••" data-testid="settings-backup-s3-secretkey">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_remote_path')}}</span>
-                  <input v-model="bkp.s3.remotePath" class="set-input" style="width:220px;" placeholder="birdash-backup">
+                  <input v-model="bkp.s3.remotePath" class="set-input" style="width:220px;" placeholder="birdash-backup" data-testid="settings-backup-s3-remotepath">
                 </div>
               </template>
 
@@ -124,7 +124,7 @@
               <template v-if="bkp.destination === 'gdrive'">
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_gdrive_folder')}}</span>
-                  <input v-model="bkp.gdrive.folderId" class="set-input" style="width:260px;" placeholder="1A2B3C...">
+                  <input v-model="bkp.gdrive.folderId" class="set-input" style="width:260px;" placeholder="1A2B3C..." data-testid="settings-backup-gdrive-folderid">
                 </div>
                 <div style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">
                   Requires <code>rclone</code> configured with Google Drive.
@@ -135,19 +135,19 @@
               <template v-if="bkp.destination === 'webdav'">
                 <div class="set-row">
                   <span class="set-label">URL</span>
-                  <input v-model="bkp.webdav.url" class="set-input" style="width:260px;" placeholder="https://cloud.example.com/remote.php/dav">
+                  <input v-model="bkp.webdav.url" class="set-input" style="width:260px;" placeholder="https://cloud.example.com/remote.php/dav" data-testid="settings-backup-webdav-url">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_user')}}</span>
-                  <input v-model="bkp.webdav.user" class="set-input" placeholder="user">
+                  <input v-model="bkp.webdav.user" class="set-input" placeholder="user" data-testid="settings-backup-webdav-user">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_pass')}}</span>
-                  <input v-model="bkp.webdav.pass" type="password" class="set-input" placeholder="••••••">
+                  <input v-model="bkp.webdav.pass" type="password" class="set-input" placeholder="••••••" data-testid="settings-backup-webdav-pass">
                 </div>
                 <div class="set-row">
                   <span class="set-label">{{t('set_backup_remote_path')}}</span>
-                  <input v-model="bkp.webdav.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup">
+                  <input v-model="bkp.webdav.remotePath" class="set-input" style="width:220px;" placeholder="/birdash-backup" data-testid="settings-backup-webdav-remotepath">
                 </div>
               </template>
 
@@ -181,7 +181,7 @@
             <div style="font-weight:600;margin-top:1.2rem;margin-bottom:.6rem;">{{t('set_backup_schedule')}}</div>
             <div class="set-row">
               <span class="set-label">{{t('set_backup_schedule')}}</span>
-              <select v-model="bkp.schedule" class="set-select" style="width:140px;">
+              <select v-model="bkp.schedule" class="set-select" style="width:140px;" data-testid="settings-backup-schedule">
                 <option value="manual">{{t('set_backup_schedule_manual')}}</option>
                 <option value="daily">{{t('set_backup_schedule_daily')}}</option>
                 <option value="weekly">{{t('set_backup_schedule_weekly')}}</option>
@@ -189,11 +189,11 @@
             </div>
             <div v-if="bkp.schedule !== 'manual'" class="set-row">
               <span class="set-label">{{t('set_backup_schedule_time')}}</span>
-              <input v-model="bkp.scheduleTime" type="time" class="set-input" style="width:110px;">
+              <input v-model="bkp.scheduleTime" type="time" class="set-input" style="width:110px;" data-testid="settings-backup-scheduletime">
             </div>
             <div class="set-row">
               <span class="set-label">{{t('set_backup_retention')}}</span>
-              <input v-model="bkp.retention" type="number" min="1" max="365" class="set-input" style="width:80px;">
+              <input v-model="bkp.retention" type="number" min="1" max="365" class="set-input" style="width:80px;" data-testid="settings-backup-retention">
             </div>
 
             <!-- Status & Actions -->

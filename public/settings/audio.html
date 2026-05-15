@@ -91,10 +91,10 @@
             <div class="section-title">{{t('audio_wiring')}}</div>
             <div style="display:flex;flex-direction:column;gap:.5rem;">
               <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
-                <input type="radio" v-model.number="audioConf.input_channels" :value="1"> {{t('audio_1ch')}}
+                <input type="radio" v-model.number="audioConf.input_channels" :value="1" data-testid="settings-audio-input-channels"> {{t('audio_1ch')}}
               </label>
               <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
-                <input type="radio" v-model.number="audioConf.input_channels" :value="2"> {{t('audio_2ch')}}
+                <input type="radio" v-model.number="audioConf.input_channels" :value="2" data-testid="settings-audio-input-channels"> {{t('audio_2ch')}}
               </label>
             </div>
             <div style="margin-top:.8rem;font-size:.82em;opacity:.6;">{{t('audio_sr_note')}}</div>
@@ -141,7 +141,7 @@
             <div class="section-title">{{t('audio_profile')}}</div>
             <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
               <select v-model="audioConf.profile_name" @change="activateAudioProfile(audioConf.profile_name)"
-                      style="padding:.4rem .6rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.9em;">
+                      style="padding:.4rem .6rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.9em;" data-testid="settings-audio-profile-name">
                 <option v-for="(p, name) in audioProfiles" :key="name" :value="name">{{ t('audio_prof_'+name) || p.label || name }}</option>
               </select>
               <button class="btn-outline" @click="duplicateAudioProfile" style="font-size:.78em;">{{t('audio_duplicate')}}</button>
@@ -165,7 +165,7 @@
               <label v-for="s in channelStrategies" :key="s.id"
                      class="audio-strategy-option"
                      :class="{'is-active': audioConf.channel_strategy === s.id}">
-                <input type="radio" v-model="audioConf.channel_strategy" :value="s.id" style="margin-top:3px;">
+                <input type="radio" v-model="audioConf.channel_strategy" :value="s.id" style="margin-top:3px;" data-testid="settings-audio-channel-strategy">
                 <div style="flex:1;">
                   <strong style="font-size:.85rem;">{{ s.label }}</strong>
                   <div style="font-size:.78em;color:var(--text-muted);margin-top:.15rem;">{{ s.desc }}</div>
@@ -207,14 +207,14 @@
             <div class="section-title">
               <bird-icon name="arrow-up" :size="14"></bird-icon> {{t('audio_highpass')}}
               <label style="margin-left:auto;display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;">
-                <input type="checkbox" v-model="audioConf.highpass_enabled"> {{t('audio_enabled')}}
+                <input type="checkbox" v-model="audioConf.highpass_enabled" data-testid="settings-audio-highpass-enabled"> {{t('audio_enabled')}}
               </label>
             </div>
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
               {{t('audio_highpass_desc')}}
             </p>
             <div v-if="audioConf.highpass_enabled">
-              <input type="range" v-model.number="audioConf.highpass_cutoff_hz" min="50" max="300" step="10" style="width:100%;">
+              <input type="range" v-model.number="audioConf.highpass_cutoff_hz" min="50" max="300" step="10" style="width:100%;" data-testid="settings-audio-highpass-cutoff-hz">
               <div style="display:flex;justify-content:space-between;font-size:.78em;opacity:.6;">
                 <span>50 Hz</span>
                 <strong style="color:var(--accent);">{{ audioConf.highpass_cutoff_hz }} Hz</strong>
@@ -233,14 +233,14 @@
             <div class="section-title">
               <bird-icon name="arrow-down" :size="14"></bird-icon> {{t('audio_lowpass')}}
               <label style="margin-left:auto;display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;">
-                <input type="checkbox" v-model="audioConf.lowpass_enabled"> {{t('audio_enabled')}}
+                <input type="checkbox" v-model="audioConf.lowpass_enabled" data-testid="settings-audio-lowpass-enabled"> {{t('audio_enabled')}}
               </label>
             </div>
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
               {{t('audio_lowpass_desc')}}
             </p>
             <div v-if="audioConf.lowpass_enabled">
-              <input type="range" v-model.number="audioConf.lowpass_cutoff_hz" min="4000" max="15000" step="500" style="width:100%;">
+              <input type="range" v-model.number="audioConf.lowpass_cutoff_hz" min="4000" max="15000" step="500" style="width:100%;" data-testid="settings-audio-lowpass-cutoff-hz">
               <div style="display:flex;justify-content:space-between;font-size:.78em;opacity:.6;">
                 <span>4 kHz</span>
                 <strong style="color:var(--accent);">{{ (audioConf.lowpass_cutoff_hz / 1000).toFixed(1) }} kHz</strong>
@@ -260,7 +260,7 @@
               <bird-icon name="mic" :size="14"></bird-icon> {{t('audio_noise_profile')}}
               <label style="margin-left:auto;display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;">
                 <input type="checkbox" v-model="audioConf.noise_profile_enabled"
-                       :disabled="!noiseProfileStatus.exists"> {{t('audio_enabled')}}
+                       :disabled="!noiseProfileStatus.exists" data-testid="settings-audio-noise-profile-enabled"> {{t('audio_enabled')}}
               </label>
             </div>
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
@@ -288,7 +288,7 @@
 
             <div v-if="audioConf.noise_profile_enabled && noiseProfileStatus.exists" style="margin-top:.6rem;">
               <div style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;">{{t('audio_denoise_strength')}}</div>
-              <input type="range" v-model.number="audioConf.denoise_strength" min="0.1" max="1.0" step="0.05" style="width:100%;">
+              <input type="range" v-model.number="audioConf.denoise_strength" min="0.1" max="1.0" step="0.05" style="width:100%;" data-testid="settings-audio-denoise-strength">
               <div style="display:flex;justify-content:space-between;font-size:.78em;opacity:.6;">
                 <span>{{t('audio_denoise_light')}}</span>
                 <strong>{{ audioConf.denoise_strength.toFixed(2) }}</strong>
@@ -303,7 +303,7 @@
               <bird-icon name="audio-lines" :size="14"></bird-icon> {{t('audio_denoise')}}
               <label style="margin-left:auto;display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;">
                 <input type="checkbox" v-model="audioConf.denoise_enabled"
-                       :disabled="audioConf.noise_profile_enabled"> {{t('audio_enabled')}}
+                       :disabled="audioConf.noise_profile_enabled" data-testid="settings-audio-denoise-enabled"> {{t('audio_enabled')}}
               </label>
             </div>
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
@@ -313,7 +313,7 @@
               {{t('audio_denoise_disabled_by_profile')}}
             </div>
             <div v-if="audioConf.denoise_enabled && !audioConf.noise_profile_enabled" style="margin-top:.5rem;">
-              <input type="range" v-model.number="audioConf.denoise_strength" min="0.1" max="1.0" step="0.05" style="width:100%;">
+              <input type="range" v-model.number="audioConf.denoise_strength" min="0.1" max="1.0" step="0.05" style="width:100%;" data-testid="settings-audio-denoise-strength">
               <div style="display:flex;justify-content:space-between;font-size:.78em;opacity:.6;">
                 <span>{{t('audio_denoise_light')}}</span>
                 <strong>{{ audioConf.denoise_strength.toFixed(2) }}</strong>
@@ -330,14 +330,14 @@
             <div class="section-title">
               <bird-icon name="sliders-horizontal" :size="14"></bird-icon> {{t('audio_rms')}}
               <label style="margin-left:auto;display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;">
-                <input type="checkbox" v-model="audioConf.rms_normalize"> {{t('audio_enabled')}}
+                <input type="checkbox" v-model="audioConf.rms_normalize" data-testid="settings-audio-rms-normalize"> {{t('audio_enabled')}}
               </label>
             </div>
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
               {{t('audio_rms_desc')}}
             </p>
             <div v-if="audioConf.rms_normalize">
-              <input type="range" v-model.number="audioConf.rms_target" min="0.01" max="0.20" step="0.01" style="width:100%;">
+              <input type="range" v-model.number="audioConf.rms_target" min="0.01" max="0.20" step="0.01" style="width:100%;" data-testid="settings-audio-rms-target">
               <div style="text-align:center;font-size:.82em;">
                 {{t('audio_target')}} : <strong style="color:var(--accent);">{{ audioConf.rms_target }}</strong>
               </div>
@@ -352,7 +352,7 @@
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;">
               {{t('audio_overlap_desc')}}
             </p>
-            <input type="range" v-model.number="audioConf.hop_size_s" min="1.0" max="5.0" step="0.5" style="width:100%;">
+            <input type="range" v-model.number="audioConf.hop_size_s" min="1.0" max="5.0" step="0.5" style="width:100%;" data-testid="settings-audio-hop-size-s">
             <div style="display:flex;justify-content:space-between;font-size:.82em;">
               <span>80% (1s)</span>
               <strong style="color:var(--accent);">{{ Math.round((1 - audioConf.hop_size_s / 5) * 100) }}% ({{ audioConf.hop_size_s }}s)</strong>
@@ -462,17 +462,17 @@
             <p style="font-size:.78rem;color:var(--text-muted);margin:0 0 .8rem 0;">{{t('ag_desc')}}</p>
 
             <div class="set-row"><label class="set-check">
-              <input type="checkbox" v-model="agConf.enabled"> {{t('ag_enabled')}}
+              <input type="checkbox" v-model="agConf.enabled" data-testid="settings-audio-enabled"> {{t('ag_enabled')}}
             </label></div>
 
             <div v-if="agConf.enabled">
               <div class="set-row"><label class="set-check">
-                <input type="checkbox" v-model="agConf.observer_only"> {{t('ag_observer')}}
+                <input type="checkbox" v-model="agConf.observer_only" data-testid="settings-audio-observer-only"> {{t('ag_observer')}}
               </label></div>
 
               <div class="set-row">
                 <span class="set-label">{{t('ag_mode')}}</span>
-                <select v-model="agConf.mode" style="padding:.3rem;border-radius:.3rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);">
+                <select v-model="agConf.mode" style="padding:.3rem;border-radius:.3rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);" data-testid="settings-audio-mode">
                   <option value="conservative">{{t('ag_conservative')}}</option>
                   <option value="balanced">{{t('ag_balanced')}}</option>
                   <option value="night">{{t('ag_night')}}</option>
@@ -481,30 +481,30 @@
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.5rem 0;">
                 <div class="set-row"><span class="set-label">{{t('ag_min')}}</span>
-                  <input type="number" v-model.number="agConf.min_db" min="-24" max="0" step="1" style="width:60px;" class="set-input"> dB</div>
+                  <input type="number" v-model.number="agConf.min_db" min="-24" max="0" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-min-db"> dB</div>
                 <div class="set-row"><span class="set-label">{{t('ag_max')}}</span>
-                  <input type="number" v-model.number="agConf.max_db" min="0" max="24" step="1" style="width:60px;" class="set-input"> dB</div>
+                  <input type="number" v-model.number="agConf.max_db" min="0" max="24" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-max-db"> dB</div>
                 <div class="set-row"><span class="set-label">{{t('ag_target')}}</span>
-                  <input type="number" v-model.number="agConf.target_floor_dbfs" min="-80" max="-10" step="1" style="width:60px;" class="set-input"> dBFS</div>
+                  <input type="number" v-model.number="agConf.target_floor_dbfs" min="-80" max="-10" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-target-floor-dbfs"> dBFS</div>
                 <div class="set-row"><span class="set-label">{{t('ag_clip_guard')}}</span>
-                  <input type="number" v-model.number="agConf.clip_guard_dbfs" min="-12" max="0" step="0.5" style="width:60px;" class="set-input"> dBFS</div>
+                  <input type="number" v-model.number="agConf.clip_guard_dbfs" min="-12" max="0" step="0.5" style="width:60px;" class="set-input" data-testid="settings-audio-clip-guard-dbfs"> dBFS</div>
                 <div class="set-row"><span class="set-label">{{t('ag_interval')}}</span>
-                  <input type="number" v-model.number="agConf.update_interval_s" min="2" max="120" step="1" style="width:60px;" class="set-input"> s</div>
+                  <input type="number" v-model.number="agConf.update_interval_s" min="2" max="120" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-update-interval-s"> s</div>
                 <div class="set-row"><span class="set-label">{{t('ag_hold')}}</span>
-                  <input type="number" v-model.number="agConf.activity_hold_s" min="0" max="120" step="1" style="width:60px;" class="set-input"> s</div>
+                  <input type="number" v-model.number="agConf.activity_hold_s" min="0" max="120" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-activity-hold-s"> s</div>
               </div>
 
               <details style="margin:.6rem 0 0 0;">
                 <summary style="cursor:pointer;font-size:.78rem;font-weight:600;opacity:.8;">{{t('ag_advanced')}}</summary>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.5rem 0;">
                   <div class="set-row"><span class="set-label">{{t('ag_step_up')}}</span>
-                    <input type="number" v-model.number="agConf.step_up_db" min="0.1" max="6" step="0.1" style="width:60px;" class="set-input"> dB</div>
+                    <input type="number" v-model.number="agConf.step_up_db" min="0.1" max="6" step="0.1" style="width:60px;" class="set-input" data-testid="settings-audio-step-up-db"> dB</div>
                   <div class="set-row"><span class="set-label">{{t('ag_step_down')}}</span>
-                    <input type="number" v-model.number="agConf.step_down_db" min="0.1" max="6" step="0.1" style="width:60px;" class="set-input"> dB</div>
+                    <input type="number" v-model.number="agConf.step_down_db" min="0.1" max="6" step="0.1" style="width:60px;" class="set-input" data-testid="settings-audio-step-down-db"> dB</div>
                   <div class="set-row"><span class="set-label">{{t('ag_history')}}</span>
-                    <input type="number" v-model.number="agConf.history_s" min="5" max="300" step="5" style="width:60px;" class="set-input"> s</div>
+                    <input type="number" v-model.number="agConf.history_s" min="5" max="300" step="5" style="width:60px;" class="set-input" data-testid="settings-audio-history-s"> s</div>
                   <div class="set-row"><span class="set-label">{{t('ag_noise_pct')}}</span>
-                    <input type="number" v-model.number="agConf.noise_percentile" min="1" max="50" step="1" style="width:60px;" class="set-input"> %</div>
+                    <input type="number" v-model.number="agConf.noise_percentile" min="1" max="50" step="1" style="width:60px;" class="set-input" data-testid="settings-audio-noise-percentile"> %</div>
                 </div>
               </details>
             </div>

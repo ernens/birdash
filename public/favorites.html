@@ -109,7 +109,7 @@
               </div>
               <div class="sp-sci-row">
                 {{f.sci_name}}
-                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')" data-testid="favorites-remove">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -142,7 +142,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')" data-testid="favorites-remove">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -175,7 +175,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')" data-testid="favorites-remove">★</button>
               </div>
             </div>
             <div class="sp-meta" style="text-align:right;">
@@ -207,7 +207,7 @@
               <div class="sp-sci-row">
                 {{f.sci_name}}
                 <span class="fav-status-text">{{statusFor(f)}}</span>
-                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')">★</button>
+                <button class="fav-remove-btn" @click.stop="removeFav(f.com_name)" :title="t('fav_remove')" data-testid="favorites-remove">★</button>
               </div>
             </div>
           </div>

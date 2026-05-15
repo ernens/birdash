@@ -43,9 +43,10 @@
     <template v-else>
 
       <!-- ── Tab Navigation ──────────────────────────────────────── -->
-      <div class="set-tabs">
+      <div class="set-tabs" data-testid="settings-tabs">
         <button v-for="tab in tabs" :key="tab.id"
                 class="set-tab-btn" :class="{active: activeTab === tab.id}"
+                :data-testid="'settings-tab-' + tab.id"
                 @click="switchTab(tab.id)">
           <span class="set-tab-icon"><bird-icon :name="tab.icon" :size="16" ></bird-icon></span>
           <span class="set-tab-label">{{tab.label || t(tab.labelKey)}}</span>
@@ -59,13 +60,13 @@
 
 
       <!-- ═══ Save bar ═══ -->
-      <div class="save-bar">
-        <button class="btn-save" @click="saveAll" :disabled="saving || !isDirty" :class="{'has-changes': isDirty}">
+      <div class="save-bar" data-testid="settings-save-bar">
+        <button class="btn-save" @click="saveAll" :disabled="saving || !isDirty" :class="{'has-changes': isDirty}" data-testid="settings-save">
           <span v-if="saving">…</span>
           <span v-else>{{t('set_save')}}<span v-if="isDirty" style="margin-left:.4em;color:var(--accent, #4a9eff);font-size:1.15em;line-height:1;">●</span></span>
         </button>
-        <button class="btn-outline" @click="resetDefaults">{{t('set_defaults')}}</button>
-        <span v-if="saveMsg" class="save-msg" :class="saveErr ? 'save-err' : 'save-ok'">{{saveMsg}}</span>
+        <button class="btn-outline" @click="resetDefaults" data-testid="settings-reset-defaults">{{t('set_defaults')}}</button>
+        <span v-if="saveMsg" class="save-msg" :class="saveErr ? 'save-err' : 'save-ok'" data-testid="settings-save-msg">{{saveMsg}}</span>
       </div>
 
     </template>

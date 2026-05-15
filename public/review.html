@@ -58,6 +58,7 @@
         <span class="rv-sep"></span>
         <span style="font-size:.72rem;color:var(--text-muted);">{{t('review_conf_select')}} :</span>
         <select style="font-size:.75rem;padding:.2rem .4rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);cursor:pointer;"
+                data-testid="review-confidence-filter"
                 @change="selectByConfidence(Number($event.target.value))" :value="confThreshold || ''">
           <option value="">—</option>
           <option v-for="th in [30,40,50,60,70]" :key="th" :value="th">&lt;{{th}}% ({{countBelow(th)}})</option>
@@ -65,7 +66,7 @@
       </div>
 
       <!-- Row 3: Bulk actions (only visible when items selected) -->
-      <div class="rv-row" v-if="selected.size">
+      <div class="rv-row" v-if="selected.size" data-testid="review-bulk-bar">
         <span style="font-size:.78rem;font-weight:600;">{{selected.size}} {{t('review_selected')}} :</span>
         <button class="rv-btn rv-btn-ok" data-testid="review-bulk-confirm" @click="bulkAction('confirmed')"><bird-icon name="check" :size="13"></bird-icon> {{t('review_confirm')}}</button>
         <button class="rv-btn rv-btn-maybe" data-testid="review-bulk-doubtful" @click="bulkAction('doubtful')"><bird-icon name="help-circle" :size="13"></bird-icon> {{t('review_doubtful_btn')}}</button>
@@ -79,12 +80,16 @@
         <template v-if="reasonGroups.length">
           <span style="font-size:.72rem;color:var(--text-muted);">{{t('review_reject_rule')}} :</span>
           <button v-for="rg in reasonGroups" :key="rg.reason"
-                  class="rv-btn rv-btn-no" style="font-size:.68rem;padding:.18rem .4rem;" @click="bulkRejectByReason(rg.reason)">
+                  class="rv-btn rv-btn-no" style="font-size:.68rem;padding:.18rem .4rem;"
+                  data-testid="review-reject-by-reason"
+                  :data-reason="rg.reason"
+                  @click="bulkRejectByReason(rg.reason)">
             <bird-icon name="x" :size="11"></bird-icon> {{rg.reason}} ({{rg.count}})
           </button>
         </template>
         <span v-if="rejectedCount" class="rv-sep"></span>
-        <a v-if="rejectedCount" href="purge.html" class="rv-btn rv-btn-no" style="font-size:.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem;">
+        <a v-if="rejectedCount" href="purge.html" class="rv-btn rv-btn-no" style="font-size:.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem;"
+           data-testid="review-go-purge">
           <bird-icon name="trash-2" :size="13"></bird-icon> {{t('review_manage_in_purge')}} ({{rejectedCount}}) →
         </a>
       </div>
@@ -93,13 +98,16 @@
     <!-- Active species filter banner -->
     <div v-if="speciesFilter" style="margin:.5rem 1rem;padding:.5rem .75rem;border-radius:6px;
                                      background:rgba(74,138,181,.1);border:1px solid rgba(74,138,181,.3);
-                                     display:flex;align-items:center;gap:.5rem;font-size:.82rem;">
+                                     display:flex;align-items:center;gap:.5rem;font-size:.82rem;"
+         data-testid="review-species-filter-banner"
+         :data-species="speciesFilter">
       <bird-icon name="filter" :size="14" style="color:#4a8ab5;"></bird-icon>
       <span>{{t('review_filter_species')}}:</span>
       <strong>{{speciesFilter}}</strong>
       <span style="opacity:.6;">({{filteredFlagged.length}} / {{flagged.length}})</span>
       <button @click="clearSpeciesFilter" style="margin-left:auto;background:none;border:none;cursor:pointer;
-                                                   color:var(--text-muted);font-size:.72rem;text-decoration:underline;">
+                                                   color:var(--text-muted);font-size:.72rem;text-decoration:underline;"
+              data-testid="review-clear-species-filter">
         {{t('clear_filter')}}
       </button>
     </div>
@@ -114,9 +122,14 @@
     </div>
 
     <!-- Detection list -->
-    <div v-else style="padding:.5rem 1rem;">
+    <div v-else style="padding:.5rem 1rem;" data-testid="review-list">
       <div v-for="det in pagedFlagged" :key="det.date + det.time + det.sci_name"
-           class="rv-card" :class="det.validation">
+           class="rv-card" :class="det.validation"
+           data-testid="review-row"
+           :data-sci="det.sci_name"
+           :data-date="det.date"
+           :data-time="det.time"
+           :data-validation="det.validation">
         <div style="display:flex;align-items:center;gap:.5rem;">
           <input type="checkbox" data-testid="review-select-row" :checked="selected.has(detKey(det))" @change="toggleSelect(det)">
           <bird-img :src="API+'/photo?sci='+encodeURIComponent(det.sci_name)" style="width:40px;height:40px;border-radius:50%;"></bird-img>
@@ -151,8 +164,8 @@
               </span>
             </div>
           </div>
-          <button v-if="det.file_name" class="rv-mini" @click="playAudio(det)" :aria-label="playingDet===detKey(det)?'Stop':'Play'">{{playingDet===detKey(det)?'⏹':'▶'}}</button>
-          <button v-if="det.file_name" class="rv-mini" @click="openSpectro(det)" title="Spectrogramme" aria-label="Spectrogramme"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
+          <button v-if="det.file_name" class="rv-mini" @click="playAudio(det)" :aria-label="playingDet===detKey(det)?'Stop':'Play'" data-testid="review-row-play">{{playingDet===detKey(det)?'⏹':'▶'}}</button>
+          <button v-if="det.file_name" class="rv-mini" @click="openSpectro(det)" title="Spectrogramme" aria-label="Spectrogramme" data-testid="review-row-spectro"><bird-icon name="maximize-2" :size="16" ></bird-icon></button>
           <div class="rv-actions">
             <button class="rv-btn rv-btn-ok" data-testid="review-action-confirm" @click="validate(det,'confirmed')" :disabled="det.validation==='confirmed' || validatingKey===detKey(det)">✓</button>
             <button class="rv-btn rv-btn-maybe" data-testid="review-action-doubtful" @click="validate(det,'doubtful')" :disabled="det.validation==='doubtful' || validatingKey===detKey(det)">?</button>
@@ -161,7 +174,7 @@
         </div>
       </div>
       <div v-if="filteredFlagged.length > pageLimit" style="text-align:center;padding:.75rem;">
-        <button class="rv-btn-outline" @click="pageLimit += 50" style="padding:.4rem 1.2rem;">
+        <button class="rv-btn-outline" @click="pageLimit += 50" style="padding:.4rem 1.2rem;" data-testid="review-show-more">
           {{t('review_show_more')}} ({{filteredFlagged.length - pageLimit}})
         </button>
       </div>

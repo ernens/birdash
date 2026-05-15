@@ -107,19 +107,23 @@
         </div>
 
         <!-- Info panel -->
-        <div class="sp-info-panel" v-swipe="{ left: nextSpecies, right: prevSpecies }">
+        <div class="sp-info-panel" v-swipe="{ left: nextSpecies, right: prevSpecies }"
+             data-testid="species-detail-header"
+             :data-species="sp.name"
+             :data-sci="sp.sci">
           <!-- Title + inline species picker -->
           <div class="sp-title-row">
-            <h1 class="sp-title">{{spName(sp.name, sp.sci)}}</h1>
+            <h1 class="sp-title" data-testid="species-detail-title">{{spName(sp.name, sp.sci)}}</h1>
             <div class="sp-picker-inline" v-if="speciesList.length" style="display:flex;align-items:center;gap:.3rem;">
-              <button class="date-nav-btn" @click="prevSpecies" :disabled="!hasPrevSpecies" title="←" style="width:26px;height:26px;font-size:.8rem;">←</button>
-              <select class="bird-select sp-picker-select" v-model="pickerVal" @change="onPickerChange">
+              <button class="date-nav-btn" @click="prevSpecies" :disabled="!hasPrevSpecies" title="←" style="width:26px;height:26px;font-size:.8rem;" data-testid="species-prev">←</button>
+              <select class="bird-select sp-picker-select" v-model="pickerVal" @change="onPickerChange" data-testid="species-picker">
                 <option v-for="s in speciesList" :key="s.com" :value="s.com">{{spName(s.com, s.sci)}}</option>
               </select>
-              <button class="date-nav-btn" @click="nextSpecies" :disabled="!hasNextSpecies" title="→" style="width:26px;height:26px;font-size:.8rem;">→</button>
+              <button class="date-nav-btn" @click="nextSpecies" :disabled="!hasNextSpecies" title="→" style="width:26px;height:26px;font-size:.8rem;" data-testid="species-next">→</button>
             </div>
             <button class="date-nav-btn" @click="onToggleFav" :title="isFav ? t('fav_remove') : t('fav_add')"
-                    style="width:30px;height:30px;font-size:1.1rem;margin-left:.3rem;">
+                    style="width:30px;height:30px;font-size:1.1rem;margin-left:.3rem;"
+                    data-testid="species-favorite">
               {{isFav ? '★' : '☆'}}
             </button>
           </div>
@@ -325,7 +329,10 @@
         </div>
         <div v-if="!feed.length" class="hint-empty"><bird-icon name="search" :size="24"></bird-icon><div>{{t('no_data')}}</div></div>
         <div v-else>
-          <div v-for="d in feed" :key="d.Date+d.Time" class="det-item">
+          <div v-for="d in feed" :key="d.Date+d.Time" class="det-item"
+               data-testid="species-detection-row"
+               :data-date="d.Date"
+               :data-time="d.Time">
             <button v-if="d.File_Name" class="play-btn"
                     style="width:22px;height:22px;font-size:.6rem;"
                     :class="{playing:playingFile===d.File_Name}"

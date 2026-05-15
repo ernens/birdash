@@ -12,14 +12,14 @@
             <p style="font-size:.72rem;color:var(--text-muted);margin:0 0 .4rem 0;">
               {{t('species_include_desc')}}
             </p>
-            <textarea v-model="includeList" class="set-textarea" rows="12" :placeholder="'Pica pica\nTurdus merula\nPhylloscopus collybita\n...'"></textarea>
+            <textarea v-model="includeList" class="set-textarea" rows="12" :placeholder="'Pica pica\nTurdus merula\nPhylloscopus collybita\n...'" data-testid="settings-species-includelist"></textarea>
           </div>
           <div>
             <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_exclude_list')}}</div>
             <p style="font-size:.72rem;color:var(--text-muted);margin:0 0 .4rem 0;">
               {{t('species_exclude_desc')}}
             </p>
-            <textarea v-model="excludeList" class="set-textarea" rows="12" :placeholder="'Homo sapiens\nCanis lupus familiaris\n...'"></textarea>
+            <textarea v-model="excludeList" class="set-textarea" rows="12" :placeholder="'Homo sapiens\nCanis lupus familiaris\n...'" data-testid="settings-species-excludelist"></textarea>
           </div>
         </div>
       </div>

@@ -18,7 +18,7 @@
           </p>
           <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;">
             <span style="font-size:.82em;white-space:nowrap;">Apprise URL :</span>
-            <input type="text" v-model="appriseUrls" style="flex:1;padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+            <input type="text" v-model="appriseUrls" style="flex:1;padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;" data-testid="settings-notif-appriseurls">
             <button class="btn-outline" @click="testApprise" :disabled="testingApprise" style="font-size:.75em;">
               {{ testingApprise ? '...' : t('notif_test') }}
             </button>
@@ -46,20 +46,20 @@
             <label style="font-size:.78rem;color:var(--text-muted);display:flex;flex-direction:column;gap:.2rem;">
               {{t('set_notif_title')}}
               <input type="text" v-model="conf.APPRISE_NOTIFICATION_TITLE"
-                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;" data-testid="settings-notif-apprise-notification-title">
             </label>
             <label style="font-size:.78rem;color:var(--text-muted);display:flex;flex-direction:column;gap:.2rem;">
               {{t('set_notif_body')}}
               <input type="text" v-model="conf.APPRISE_NOTIFICATION_BODY"
                      placeholder="A $comname ($sciname) was detected with confidence $confidence"
-                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+                     style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;" data-testid="settings-notif-apprise-notification-body">
               <span style="font-size:.7rem;color:var(--text-faint);">{{t('set_notif_body_help')}}</span>
             </label>
             <label style="font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.5rem;">
               <span style="flex:1;">{{t('set_notif_cooldown')}}</span>
               <input type="number" min="0" max="86400" step="1"
                      v-model="conf.APPRISE_MINIMUM_SECONDS_BETWEEN_NOTIFICATIONS_PER_SPECIES"
-                     style="width:90px;padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;">
+                     style="width:90px;padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;" data-testid="settings-notif-apprise-minimum-seconds-between-notifications-per-species">
             </label>
           </div>
         </div>
@@ -82,7 +82,7 @@
             </div>
             <div class="bf-conf-row">
               <input type="range" class="bf-conf-slider" min="0" max="100" step="5"
-                     v-model.number="notifyMinConfPct" :aria-label="t('notif_min_confidence')">
+                     v-model.number="notifyMinConfPct" :aria-label="t('notif_min_confidence')" data-testid="settings-notif-notifyminconfpct">
               <span class="bf-conf-pct">{{notifyMinConfPct}}%</span>
             </div>
           </div>
@@ -91,7 +91,7 @@
           <!-- Rule 1: Rare species -->
           <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_RARE_SPECIES == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.NOTIFY_RARE_SPECIES" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.NOTIFY_RARE_SPECIES" true-value="1" false-value="0" data-testid="settings-notif-notify-rare-species">
               <span><bird-icon name="gem" :size="14"></bird-icon> <strong>{{t('notif_rare')}}</strong></span>
               <span v-if="conf.NOTIFY_RARE_SPECIES == 1 && conf.EBIRD_API_KEY"
                     style="margin-left:auto;font-size:.68rem;padding:.1rem .45rem;border-radius:10px;background:rgba(52,211,153,.12);color:var(--accent);display:inline-flex;align-items:center;gap:.2rem;"
@@ -116,14 +116,14 @@
           <!-- Rule 2: First of season -->
           <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_FIRST_SEASON == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.NOTIFY_FIRST_SEASON" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.NOTIFY_FIRST_SEASON" true-value="1" false-value="0" data-testid="settings-notif-notify-first-season">
               <span><bird-icon name="sprout" :size="14"></bird-icon> <strong>{{t('notif_season')}}</strong></span>
             </label>
             <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_season_long')}}</p>
             <div v-if="conf.NOTIFY_FIRST_SEASON == 1" style="margin:.4rem 0 0 1.5rem;display:flex;align-items:center;gap:.5rem;">
               <span style="font-size:.78em;">{{t('notif_season_days_label')}} :</span>
               <input type="number" v-model.number="conf.NOTIFY_SEASON_DAYS" min="7" max="365" step="1"
-                     style="width:55px;font-size:.82em;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                     style="width:55px;font-size:.82em;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-notify-season-days">
               <span style="font-size:.72em;color:var(--text-faint);">{{t('unit_days')}}</span>
             </div>
           </div>
@@ -131,7 +131,7 @@
           <!-- Rule 3: New species ever -->
           <div class="set-toggle-card" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES" true-value="1" false-value="0" data-testid="settings-notif-apprise-notify-new-species">
               <span><bird-icon name="sparkles" :size="14"></bird-icon> <strong>{{t('notif_new')}}</strong></span>
             </label>
             <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_new_long')}}</p>
@@ -140,7 +140,7 @@
           <!-- Rule 4: First of the day -->
           <div class="set-toggle-card" :class="{'is-active': conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.APPRISE_NOTIFY_NEW_SPECIES_EACH_DAY" true-value="1" false-value="0" data-testid="settings-notif-apprise-notify-new-species-each-day">
               <span><bird-icon name="calendar-days" :size="14"></bird-icon> <strong>{{t('notif_daily')}}</strong></span>
             </label>
             <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_daily_long')}}</p>
@@ -152,7 +152,7 @@
           <!-- Rule 5: Favorites -->
           <div class="set-toggle-card" :class="{'is-active': conf.NOTIFY_FAVORITES == 1}">
             <label class="set-check" style="cursor:pointer;">
-              <input type="checkbox" v-model="conf.NOTIFY_FAVORITES" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.NOTIFY_FAVORITES" true-value="1" false-value="0" data-testid="settings-notif-notify-favorites">
               <span><bird-icon name="star" :size="14"></bird-icon> <strong>{{t('notif_favorites')}}</strong></span>
             </label>
             <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_favorites_long')}}</p>
@@ -170,49 +170,49 @@
           </p>
 
           <div class="set-row" style="gap:.4rem;">
-            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_temp" true-value="1" false-value="0">
+            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_temp" true-value="1" false-value="0" data-testid="settings-notif-alert-temp">
               <span><bird-icon name="thermometer" :size="14"></bird-icon> {{t('set_alert_temp_warn')}}</span></label>
             <input type="number" v-model.number="alertThresholds.temp_warn" min="40" max="90" step="1"
-                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-temp-warn">
             <span style="font-size:.72rem;color:var(--text-faint);">°C</span>
           </div>
           <div class="set-row" style="gap:.4rem;">
-            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_temp_crit" true-value="1" false-value="0">
+            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_temp_crit" true-value="1" false-value="0" data-testid="settings-notif-alert-temp-crit">
               <span><bird-icon name="flame" :size="14"></bird-icon> {{t('set_alert_temp_crit')}}</span></label>
             <input type="number" v-model.number="alertThresholds.temp_crit" min="50" max="100" step="1"
-                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-temp-crit">
             <span style="font-size:.72rem;color:var(--text-faint);">°C</span>
           </div>
           <div class="set-row" style="gap:.4rem;">
-            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_disk" true-value="1" false-value="0">
+            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_disk" true-value="1" false-value="0" data-testid="settings-notif-alert-disk">
               <span><bird-icon name="save" :size="14"></bird-icon> {{t('set_alert_disk_warn')}}</span></label>
             <input type="number" v-model.number="alertThresholds.disk_warn" min="50" max="99" step="1"
-                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-disk-warn">
             <span style="font-size:.72rem;color:var(--text-faint);">%</span>
           </div>
           <div class="set-row" style="gap:.4rem;">
-            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_ram" true-value="1" false-value="0">
+            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_ram" true-value="1" false-value="0" data-testid="settings-notif-alert-ram">
               <span><bird-icon name="brain" :size="14"></bird-icon> {{t('set_alert_ram_warn')}}</span></label>
             <input type="number" v-model.number="alertThresholds.ram_warn" min="50" max="99" step="1"
-                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-ram-warn">
             <span style="font-size:.72rem;color:var(--text-faint);">%</span>
           </div>
           <div class="set-row" style="gap:.4rem;">
-            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_no_det" true-value="1" false-value="0">
+            <label class="set-check" style="flex:1;"><input type="checkbox" v-model="alertThresholds.alert_no_det" true-value="1" false-value="0" data-testid="settings-notif-alert-no-det">
               <span><bird-icon name="volume-x" :size="14"></bird-icon> {{t('set_alert_no_det')}}</span></label>
             <input type="number" v-model.number="alertThresholds.no_detection_hours" min="1" max="48" step="1"
-                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;">
+                   style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.2rem .4rem;text-align:right;" data-testid="settings-notif-no-detection-hours">
             <span style="font-size:.72rem;color:var(--text-faint);">h</span>
           </div>
           <div class="set-row"><label class="set-check">
-            <input type="checkbox" v-model="alertThresholds.service_down" true-value="1" false-value="0">
+            <input type="checkbox" v-model="alertThresholds.service_down" true-value="1" false-value="0" data-testid="settings-notif-service-down">
             <span><bird-icon name="alert-triangle" :size="14"></bird-icon> {{t('set_alert_svc_down')}}</span>
           </label></div>
 
           <!-- Sound-level alert (mic dead + clipping, one toggle drives both) -->
           <div class="set-row" style="gap:.4rem;margin-top:.3rem;">
             <label class="set-check" style="flex:1;">
-              <input type="checkbox" v-model="alertThresholds.alert_sound" true-value="1" false-value="0">
+              <input type="checkbox" v-model="alertThresholds.alert_sound" true-value="1" false-value="0" data-testid="settings-notif-alert-sound">
               <span><bird-icon name="mic" :size="14"></bird-icon> {{t('set_alert_sound')}}</span>
             </label>
           </div>
@@ -221,19 +221,19 @@
             <label style="display:flex;align-items:center;gap:.3rem;">
               {{t('set_alert_sound_low')}}
               <input type="number" v-model.number="alertThresholds.sound_low_dbfs" min="-120" max="-20" step="1"
-                     style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;">
+                     style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;" data-testid="settings-notif-sound-low-dbfs">
               <span style="color:var(--text-faint);">dBFS</span>
             </label>
             <label style="display:flex;align-items:center;gap:.3rem;">
               {{t('set_alert_sound_high')}}
               <input type="number" v-model.number="alertThresholds.sound_high_dbfs" min="-30" max="0" step="1"
-                     style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;">
+                     style="width:55px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;" data-testid="settings-notif-sound-high-dbfs">
               <span style="color:var(--text-faint);">dBFS</span>
             </label>
             <label style="display:flex;align-items:center;gap:.3rem;">
               {{t('set_alert_sound_minutes')}}
               <input type="number" v-model.number="alertThresholds.sound_sustained_min" min="1" max="120" step="1"
-                     style="width:50px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;">
+                     style="width:50px;font-size:.78rem;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-main);border-radius:4px;padding:.15rem .3rem;text-align:right;" data-testid="settings-notif-sound-sustained-min">
               <span style="color:var(--text-faint);">min</span>
             </label>
           </div>
@@ -249,7 +249,7 @@
             {{t('notif_digest_desc')}}
           </p>
           <label class="set-check" style="cursor:pointer;">
-            <input type="checkbox" v-model="conf.NOTIFY_DIGEST_ENABLED" true-value="1" false-value="0">
+            <input type="checkbox" v-model="conf.NOTIFY_DIGEST_ENABLED" true-value="1" false-value="0" data-testid="settings-notif-notify-digest-enabled">
             <span>{{t('notif_digest_enable')}}</span>
           </label>
           <div style="margin-top:.6rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;">
@@ -258,7 +258,7 @@
               <input type="text" v-model="conf.NOTIFY_DIGEST_TAG"
                      :placeholder="t('notif_digest_tag_placeholder')"
                      style="margin-left:.4rem;padding:.18rem .4rem;font-size:.78rem;
-                            border:1px solid var(--border);border-radius:4px;width:120px;">
+                            border:1px solid var(--border);border-radius:4px;width:120px;" data-testid="settings-notif-notify-digest-tag">
             </label>
             <button class="btn btn-secondary" style="font-size:.72rem;padding:.25rem .55rem;"
                     @click="digestPreview">{{t('notif_digest_preview')}}</button>
@@ -276,7 +276,7 @@
             <bird-icon name="zap" :size="16"></bird-icon>
             <span>{{t('notif_mqtt')}}</span>
             <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.82rem;font-weight:normal;margin-left:auto;">
-              <input type="checkbox" v-model="conf.MQTT_ENABLED" true-value="1" false-value="0">
+              <input type="checkbox" v-model="conf.MQTT_ENABLED" true-value="1" false-value="0" data-testid="settings-notif-mqtt-enabled">
               <span :style="{color: conf.MQTT_ENABLED == 1 ? 'var(--accent)' : 'var(--text-muted)'}">
                 {{ conf.MQTT_ENABLED == 1 ? t('notif_on') : t('notif_off') }}
               </span>
@@ -292,12 +292,12 @@
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_broker')}}
                 <input type="text" v-model="conf.MQTT_BROKER" placeholder="mqtt.example.com"
-                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;" data-testid="settings-notif-mqtt-broker">
               </label>
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_port')}}
                 <input type="number" v-model.number="conf.MQTT_PORT" min="1" max="65535"
-                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;">
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;text-align:right;" data-testid="settings-notif-mqtt-port">
               </label>
             </div>
 
@@ -306,12 +306,12 @@
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_username')}}
                 <input type="text" v-model="conf.MQTT_USERNAME" autocomplete="off"
-                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;" data-testid="settings-notif-mqtt-username">
               </label>
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_password')}}
                 <input type="password" v-model="conf.MQTT_PASSWORD" autocomplete="new-password"
-                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;" data-testid="settings-notif-mqtt-password">
               </label>
             </div>
 
@@ -320,12 +320,12 @@
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_topic_prefix')}}
                 <input type="text" v-model="conf.MQTT_TOPIC_PREFIX" placeholder="birdash"
-                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;">
+                       style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;font-family:monospace;" data-testid="settings-notif-mqtt-topic-prefix">
               </label>
               <label style="display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text-muted);">
                 {{t('notif_mqtt_qos')}}
                 <select v-model="conf.MQTT_QOS"
-                        style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;">
+                        style="padding:.3rem .5rem;border-radius:.4rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);font-size:.82em;" data-testid="settings-notif-mqtt-qos">
                   <option value="0">0</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -335,11 +335,11 @@
 
             <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:.5rem;">
               <label class="set-check" style="cursor:pointer;">
-                <input type="checkbox" v-model="conf.MQTT_RETAIN" true-value="1" false-value="0">
+                <input type="checkbox" v-model="conf.MQTT_RETAIN" true-value="1" false-value="0" data-testid="settings-notif-mqtt-retain">
                 <span>{{t('notif_mqtt_retain')}}</span>
               </label>
               <label class="set-check" style="cursor:pointer;">
-                <input type="checkbox" v-model="conf.MQTT_TLS" true-value="1" false-value="0">
+                <input type="checkbox" v-model="conf.MQTT_TLS" true-value="1" false-value="0" data-testid="settings-notif-mqtt-tls">
                 <span>{{t('notif_mqtt_tls')}}</span>
               </label>
             </div>
@@ -352,7 +352,7 @@
               </div>
               <div class="bf-conf-row">
                 <input type="range" class="bf-conf-slider" min="0" max="100" step="5"
-                       v-model.number="mqttMinConfPct" :aria-label="t('notif_mqtt_min_conf')">
+                       v-model.number="mqttMinConfPct" :aria-label="t('notif_mqtt_min_conf')" data-testid="settings-notif-mqttminconfpct">
                 <span class="bf-conf-pct">{{mqttMinConfPct}}%</span>
               </div>
             </div>
@@ -360,7 +360,7 @@
             <!-- HA discovery -->
             <div class="set-toggle-card" :class="{'is-active': conf.MQTT_HASS_DISCOVERY == 1}">
               <label class="set-check" style="cursor:pointer;">
-                <input type="checkbox" v-model="conf.MQTT_HASS_DISCOVERY" true-value="1" false-value="0">
+                <input type="checkbox" v-model="conf.MQTT_HASS_DISCOVERY" true-value="1" false-value="0" data-testid="settings-notif-mqtt-hass-discovery">
                 <span><bird-icon name="zap" :size="14"></bird-icon> <strong>{{t('notif_mqtt_hass')}}</strong></span>
               </label>
               <p style="font-size:.75rem;color:var(--text-muted);margin:.2rem 0 0 1.5rem;">{{t('notif_mqtt_hass_hint')}}</p>
@@ -392,12 +392,12 @@
 
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;">
             <select v-model="alertHistory.filterType" @change="loadAlertHistory"
-                    style="font-size:.78rem;padding:.2rem .4rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;">
+                    style="font-size:.78rem;padding:.2rem .4rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;" data-testid="settings-notif-filtertype">
               <option value="">{{t('alert_history_all_types')}}</option>
               <option v-for="t in alertHistory.types" :key="t" :value="t">{{t}}</option>
             </select>
             <select v-model="alertHistory.filterAction" @change="loadAlertHistory"
-                    style="font-size:.78rem;padding:.2rem .4rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;">
+                    style="font-size:.78rem;padding:.2rem .4rem;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);border-radius:4px;" data-testid="settings-notif-filteraction">
               <option value="">{{t('alert_history_all_actions')}}</option>
               <option v-for="a in alertHistory.actions" :key="a" :value="a">{{a}}</option>
             </select>

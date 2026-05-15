@@ -1909,10 +1909,10 @@
       </div>
     </div>
     <div class="header-right">
-      <a v-if="modelName" class="brand-model" href="settings.html#detection" title="Detection settings">{{modelName}}</a>
+      <a v-if="modelName" class="brand-model" href="settings.html#detection" title="Detection settings" data-testid="header-model-link">{{modelName}}</a>
       <!-- Global species search -->
       <div class="gSearch" :class="{ expanded: searchExpanded }" v-click-outside="closeSearch">
-        <button class="gSearch-icon-btn" @click="toggleMobileSearch" aria-label="Search">
+        <button class="gSearch-icon-btn" @click="toggleMobileSearch" aria-label="Search" data-testid="header-search-toggle">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
         <div class="gSearch-field">
@@ -1923,14 +1923,17 @@
                  @input="onSearchInput"
                  @keydown="onSearchKeydown"
                  @focus="searchOpen = searchQuery.trim().length > 0"
-                 autocomplete="off" spellcheck="false">
-          <button v-if="searchQuery" class="gSearch-clear" @click="searchQuery='';searchOpen=false;searchHighlight=-1" aria-label="Clear">&times;</button>
+                 autocomplete="off" spellcheck="false"
+                 data-testid="header-search-input">
+          <button v-if="searchQuery" class="gSearch-clear" @click="searchQuery='';searchOpen=false;searchHighlight=-1" aria-label="Clear" data-testid="header-search-clear">&times;</button>
         </div>
-        <div class="gSearch-dropdown" v-show="searchOpen && searchResults.length">
+        <div class="gSearch-dropdown" v-show="searchOpen && searchResults.length" data-testid="header-search-results">
           <button v-for="(r, i) in searchResults" :key="r.sciName||r.comName"
                   class="gSearch-result" :class="{ highlighted: i === searchHighlight }"
                   @mousedown.prevent="selectSearchResult(r)"
-                  @mouseenter="searchHighlight = i">
+                  @mouseenter="searchHighlight = i"
+                  data-testid="header-search-result"
+                  :data-sci="r.sciName">
             <span class="gSearch-rname">{{ r.displayName }}</span>
             <span class="gSearch-rsci">{{ r.sciName }}</span>
           </button>
@@ -1945,10 +1948,10 @@
         <span v-else style="display:inline-flex;align-items:center;gap:.3rem;padding:.18rem .5rem;border-radius:10px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-size:.7rem;">
           <bird-icon name="eye" :size="11"></bird-icon>{{t('auth_anonymous')}}
         </span>
-        <button v-if="authStatus.authenticated" class="hdr-bug-btn" @click="logout" :title="t('auth_logout')">
+        <button v-if="authStatus.authenticated" class="hdr-bug-btn" @click="logout" :title="t('auth_logout')" data-testid="header-logout">
           <bird-icon name="log-out" :size="16"></bird-icon>
         </button>
-        <button v-else class="hdr-bug-btn" @click="gotoLogin" :title="t('auth_sign_in')">
+        <button v-else class="hdr-bug-btn" @click="gotoLogin" :title="t('auth_sign_in')" data-testid="header-login">
           <bird-icon name="log-in" :size="16"></bird-icon>
         </button>
       </div>
@@ -1956,24 +1959,25 @@
       <a v-if="birdweatherStationId" class="hdr-bug-btn"
          :href="'https://app.birdweather.com/stations/' + birdweatherStationId"
          target="_blank" rel="noopener noreferrer"
-         :title="t('header_birdweather_open') + ' (#' + birdweatherStationId + ')'">
+         :title="t('header_birdweather_open') + ' (#' + birdweatherStationId + ')'"
+         data-testid="header-birdweather">
         <bird-icon name="radio" :size="16"></bird-icon>
       </a>
       <!-- Bug report button -->
-      <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')">
+      <button v-if="bugReportEnabled" class="hdr-bug-btn" @click="openBugReport" :title="t('bug_report_title')" data-testid="header-bug-report">
         <bird-icon name="bug" :size="16"></bird-icon>
       </button>
       <!-- Power button — opens the same shell-level power modal -->
-      <button class="hdr-power-btn" @click="power.open()" :title="t('power_title')">
+      <button class="hdr-power-btn" @click="power.open()" :title="t('power_title')" data-testid="header-power">
         <bird-icon name="power" :size="16"></bird-icon>
       </button>
       <!-- Notification bell (unified, 3 severities) -->
       <div class="hdr-bell" v-click-outside="()=>bellOpen=false">
-        <button class="bell-btn" @click="toggleBell" :aria-label="t('notifications')">
+        <button class="bell-btn" @click="toggleBell" :aria-label="t('notifications')" data-testid="header-notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span v-if="bellUnseen > 0" class="bell-badge" :class="'sev-' + bellSeverity">{{bellUnseen}}</span>
         </button>
-        <div class="bell-panel" v-show="bellOpen">
+        <div class="bell-panel" v-show="bellOpen" data-testid="header-notifications-panel">
           <div v-if="bellCritical.length === 0 && bellWarning.length === 0 && bellBirds.length === 0" style="padding:1rem;text-align:center;opacity:.5;font-size:.8rem;">
             {{t('wn_empty')}}
           </div>
@@ -2014,15 +2018,17 @@
       </div>
       <div class="header-dropdowns">
         <div class="hdr-dropdown" :class="{open:themeOpen}" v-click-outside="()=>themeOpen=false">
-          <button class="hdr-toggle" @click="themeOpen=!themeOpen" :aria-expanded="themeOpen">
+          <button class="hdr-toggle" @click="themeOpen=!themeOpen" :aria-expanded="themeOpen" data-testid="header-theme-toggle">
             <span class="theme-dot" :data-t="theme"></span>
             <span class="hdr-label">{{currentTheme.label}}</span>
             <svg class="hdr-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           </button>
-          <div class="hdr-menu" v-show="themeOpen">
+          <div class="hdr-menu" v-show="themeOpen" data-testid="header-theme-menu">
             <button v-for="th in themes" :key="th.id" class="hdr-option"
                     :class="{active:theme===th.id}"
-                    @click="setTheme(th.id);themeOpen=false">
+                    @click="setTheme(th.id);themeOpen=false"
+                    data-testid="header-theme-option"
+                    :data-theme="th.id">
               <span class="theme-dot" :data-t="th.id"></span>
               <span class="hdr-option-label">{{th.label}}</span>
               <span class="hdr-check" v-if="theme===th.id">✓</span>
@@ -2030,15 +2036,17 @@
           </div>
         </div>
         <div class="hdr-dropdown" :class="{open:langOpen}" v-click-outside="()=>langOpen=false">
-          <button class="hdr-toggle lang-toggle" @click="langOpen=!langOpen" :aria-expanded="langOpen">
+          <button class="hdr-toggle lang-toggle" @click="langOpen=!langOpen" :aria-expanded="langOpen" data-testid="header-lang-toggle">
             <bird-icon name="globe" :size="15"></bird-icon>
             <span class="lang-code">{{lang.toUpperCase()}}</span>
             <svg class="hdr-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
           </button>
-          <div class="hdr-menu" v-show="langOpen">
+          <div class="hdr-menu" v-show="langOpen" data-testid="header-lang-menu">
             <button v-for="l in langs" :key="l.code" class="hdr-option"
                     :class="{active:lang===l.code}"
-                    @click="setLang(l.code);langOpen=false">
+                    @click="setLang(l.code);langOpen=false"
+                    data-testid="header-lang-option"
+                    :data-lang="l.code">
               <span class="lang-code" style="width:28px;text-align:center;">{{l.code.toUpperCase()}}</span>
               <span class="hdr-option-label">{{l.label}}</span>
               <span class="hdr-check" v-if="lang===l.code">✓</span>
@@ -2075,7 +2083,7 @@
   </nav>
   <main id="birdash-main" class="app-main" role="main">
     <!-- Update available banner — discreet, non-blocking -->
-    <div v-if="showUpdateBanner" class="update-banner">
+    <div v-if="showUpdateBanner" class="update-banner" data-testid="update-banner">
       <span class="update-banner-icon"><bird-icon name="arrow-up-circle" :size="16"></bird-icon></span>
       <span class="update-banner-text">
         <template v-if="updateInfo.currentVersion && updateInfo.latestVersion && updateInfo.currentVersion === updateInfo.latestVersion">
@@ -2085,7 +2093,7 @@
           {{t('update_banner_new_version')}} v{{updateInfo.latestVersion || updateInfo.latestShort}}
         </template>
       </span>
-      <button class="update-banner-btn" @click="openUpdateModal">{{t('update_banner_view')}}</button>
+      <button class="update-banner-btn" @click="openUpdateModal" data-testid="update-banner-view">{{t('update_banner_view')}}</button>
     </div>
     <h1 v-if="title" class="sr-only">{{title}}</h1>
     <slot></slot>
@@ -2093,7 +2101,7 @@
   <spectro-modal></spectro-modal>
   <setup-wizard></setup-wizard>
   <!-- Update modal -->
-  <div v-if="updateModalOpen" class="update-modal-backdrop" @click.self="closeUpdateModal">
+  <div v-if="updateModalOpen" class="update-modal-backdrop" @click.self="closeUpdateModal" data-testid="update-modal">
     <div class="update-modal">
       <div class="update-modal-hdr">
         <div>
@@ -2107,7 +2115,7 @@
             </template>
           </div>
         </div>
-        <button class="update-modal-close" @click="closeUpdateModal" aria-label="Close"><bird-icon name="x" :size="16"></bird-icon></button>
+        <button class="update-modal-close" @click="closeUpdateModal" aria-label="Close" data-testid="update-modal-close"><bird-icon name="x" :size="16"></bird-icon></button>
       </div>
       <div class="update-modal-body">
         <!-- Apply/rollback progress -->
@@ -2124,24 +2132,24 @@
               <bird-icon name="check-circle" :size="14" style="vertical-align:-2px;"></bird-icon> {{t('update_success_msg')}}
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:space-between;align-items:center;">
-              <button v-if="canRollback" class="update-btn-secondary" @click="rollbackUpdate" style="font-size:.8rem;">
+              <button v-if="canRollback" class="update-btn-secondary" @click="rollbackUpdate" style="font-size:.8rem;" data-testid="update-modal-rollback">
                 <bird-icon name="rotate-ccw" :size="14"></bird-icon> {{t('update_rollback')}}
               </button>
               <div v-else></div>
-              <button class="update-btn-primary" @click="reloadAfterUpdate">{{t('update_reload')}}</button>
+              <button class="update-btn-primary" @click="reloadAfterUpdate" data-testid="update-modal-reload">{{t('update_reload')}}</button>
             </div>
           </div>
           <!-- Failure actions -->
           <div v-if="updateProgress && updateProgress.state === 'failed'" style="margin-top:.8rem;">
             <div v-if="updateProgress.detail" class="update-error-detail">{{updateProgress.detail}}</div>
             <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap;">
-              <button v-if="canRollback" class="update-btn-danger" @click="rollbackUpdate">
+              <button v-if="canRollback" class="update-btn-danger" @click="rollbackUpdate" data-testid="update-modal-rollback-failed">
                 <bird-icon name="rotate-ccw" :size="14"></bird-icon> {{t('update_rollback')}}
               </button>
-              <button class="update-btn-secondary" @click="forceUpdate" style="font-size:.8rem;">
+              <button class="update-btn-secondary" @click="forceUpdate" style="font-size:.8rem;" data-testid="update-modal-force">
                 <bird-icon name="alert-triangle" :size="14"></bird-icon> {{t('update_force')}}
               </button>
-              <button class="update-btn-secondary" @click="dismissUpdateProgress" style="font-size:.8rem;">{{t('update_dismiss')}}</button>
+              <button class="update-btn-secondary" @click="dismissUpdateProgress" style="font-size:.8rem;" data-testid="update-modal-dismiss">{{t('update_dismiss')}}</button>
             </div>
             <div v-if="updateLog" style="margin-top:.6rem;">
               <button class="update-log-toggle" @click="updateShowLog = !updateShowLog">
@@ -2169,18 +2177,18 @@
         </div>
       </div>
       <div class="update-modal-footer" v-if="!updateApplying && !updateProgress">
-        <button class="update-btn-secondary" @click="skipUpdate">{{t('update_skip')}}</button>
-        <button class="update-btn-secondary" @click="deferUpdate(1)">{{t('update_defer')}}</button>
-        <button class="update-btn-primary" @click="applyUpdate" style="margin-left:auto;">{{t('update_install')}}</button>
+        <button class="update-btn-secondary" @click="skipUpdate" data-testid="update-modal-skip">{{t('update_skip')}}</button>
+        <button class="update-btn-secondary" @click="deferUpdate(1)" data-testid="update-modal-defer">{{t('update_defer')}}</button>
+        <button class="update-btn-primary" @click="applyUpdate" style="margin-left:auto;" data-testid="update-modal-install">{{t('update_install')}}</button>
       </div>
     </div>
   </div>
   <!-- Bug report modal -->
-  <div v-if="bugReportOpen" class="update-modal-backdrop" @click.self="closeBugReport">
+  <div v-if="bugReportOpen" class="update-modal-backdrop" @click.self="closeBugReport" data-testid="bug-report-modal">
     <div class="update-modal" style="max-width:480px;">
       <div class="update-modal-hdr">
         <div class="update-modal-title"><bird-icon name="bug" :size="16" style="color:var(--danger);"></bird-icon> {{t('bug_report_title')}}</div>
-        <button class="update-modal-close" @click="closeBugReport" aria-label="Close"><bird-icon name="x" :size="16"></bird-icon></button>
+        <button class="update-modal-close" @click="closeBugReport" aria-label="Close" data-testid="bug-report-close"><bird-icon name="x" :size="16"></bird-icon></button>
       </div>
       <div class="update-modal-body">
         <div v-if="bugReportForm.sent" style="text-align:center;padding:1rem 0;">
@@ -2197,21 +2205,23 @@
           </div>
           <label style="font-size:.82rem;font-weight:600;">{{t('bug_report_label_title')}}
             <input v-model="bugReportForm.title" type="text" required :placeholder="t('bug_report_ph_title')"
-                   style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;">
+                   style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;"
+                   data-testid="bug-report-title">
           </label>
           <label style="font-size:.82rem;font-weight:600;">{{t('bug_report_label_desc')}}
             <textarea v-model="bugReportForm.description" rows="5" required :placeholder="t('bug_report_ph_desc')"
-                      style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;resize:vertical;"></textarea>
+                      style="display:block;width:100%;margin-top:.3rem;padding:.45rem .6rem;border:1px solid var(--border,#333);border-radius:6px;background:var(--bg-card,#1a1a2e);color:inherit;font-size:.85rem;resize:vertical;"
+                      data-testid="bug-report-description"></textarea>
           </label>
           <p style="font-size:.75rem;opacity:.6;">{{t('bug_report_auto_info')}}</p>
           <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;">
-            <input type="checkbox" v-model="bugReportForm.attachLogs">
+            <input type="checkbox" v-model="bugReportForm.attachLogs" data-testid="bug-report-attach-logs">
             <bird-icon name="clipboard" :size="14" style="opacity:.6;"></bird-icon>
             {{t('bug_report_attach_logs')}}
           </label>
           <div style="display:flex;justify-content:flex-end;gap:.5rem;">
-            <button type="button" class="update-btn-secondary" @click="closeBugReport" :disabled="bugReportForm.sending">{{t('bug_report_cancel')}}</button>
-            <button type="submit" class="update-btn-primary" :disabled="bugReportForm.sending || !bugReportForm.title.trim()">
+            <button type="button" class="update-btn-secondary" @click="closeBugReport" :disabled="bugReportForm.sending" data-testid="bug-report-cancel">{{t('bug_report_cancel')}}</button>
+            <button type="submit" class="update-btn-primary" :disabled="bugReportForm.sending || !bugReportForm.title.trim()" data-testid="bug-report-submit">
               <span v-if="bugReportForm.sending">{{t('bug_report_sending')}}</span>
               <span v-else>{{t('bug_report_submit')}}</span>
             </button>
@@ -2223,12 +2233,12 @@
   <div v-if="toasts.length" style="position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:.4rem;max-width:90vw;">
     <div v-for="t in toasts" :key="t.id" :style="{padding:'.5rem 1rem',borderRadius:'8px',fontSize:'.82rem',boxShadow:'0 2px 12px rgba(0,0,0,.3)',color:'#fff',background:t.type==='error'?'var(--danger,#e53935)':t.type==='success'?'var(--accent,#4caf50)':'var(--warning,#ff9800)'}">{{t.msg}}</div>
   </div>
-  <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
-    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}"><span class="mob-nav-icon"><bird-icon name="home" :size="20" ></bird-icon></span>{{t('nav_overview')}}</a>
-    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}"><span class="mob-nav-icon"><bird-icon name="calendar-days" :size="20" ></bird-icon></span>{{t('nav_today')}}</a>
-    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}"><span class="mob-nav-icon"><bird-icon name="bird" :size="20" ></bird-icon></span>{{t('nav_species')}}</a>
-    <a href="stats.html" class="mob-nav-item" :class="{active: currentPage==='stats'}"><span class="mob-nav-icon"><bird-icon name="trending-up" :size="20"></bird-icon></span>{{t('nav_stats')}}</a>
-    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer"><span class="mob-nav-icon"><bird-icon name="menu" :size="20" ></bird-icon></span>{{t('nav_more')}}</button>
+  <nav class="mobile-bottom-nav" aria-label="Mobile navigation" data-testid="mobile-nav">
+    <a href="overview.html" class="mob-nav-item" :class="{active: currentPage==='overview'}" data-testid="mobile-nav-overview"><span class="mob-nav-icon"><bird-icon name="home" :size="20" ></bird-icon></span>{{t('nav_overview')}}</a>
+    <a href="today.html" class="mob-nav-item" :class="{active: currentPage==='today'}" data-testid="mobile-nav-today"><span class="mob-nav-icon"><bird-icon name="calendar-days" :size="20" ></bird-icon></span>{{t('nav_today')}}</a>
+    <a href="species.html" class="mob-nav-item" :class="{active: currentPage==='species'}" data-testid="mobile-nav-species"><span class="mob-nav-icon"><bird-icon name="bird" :size="20" ></bird-icon></span>{{t('nav_species')}}</a>
+    <a href="stats.html" class="mob-nav-item" :class="{active: currentPage==='stats'}" data-testid="mobile-nav-stats"><span class="mob-nav-icon"><bird-icon name="trending-up" :size="20"></bird-icon></span>{{t('nav_stats')}}</a>
+    <button class="mob-nav-item" :class="{active: drawerOpen}" @click="toggleDrawer" data-testid="mobile-nav-more"><span class="mob-nav-icon"><bird-icon name="menu" :size="20" ></bird-icon></span>{{t('nav_more')}}</button>
   </nav>
   <transition name="drawer">
     <div v-if="drawerOpen" class="mob-drawer-overlay" @click.self="drawerOpen=false">
@@ -2259,9 +2269,9 @@
 
   <!-- Power modal — reachable from the header power icon on every page -->
   <transition name="pw-fade">
-    <div v-if="power.modalOpen" class="pw-backdrop" @click.self="power.step === 'choose' && power.close()">
+    <div v-if="power.modalOpen" class="pw-backdrop" @click.self="power.step === 'choose' && power.close()" data-testid="power-modal">
       <div class="pw-modal" role="dialog" aria-modal="true">
-        <button v-if="power.step === 'choose'" class="pw-close" @click="power.close()" :aria-label="t('power_cancel')">
+        <button v-if="power.step === 'choose'" class="pw-close" @click="power.close()" :aria-label="t('power_cancel')" data-testid="power-close">
           <bird-icon name="x" :size="16"></bird-icon>
         </button>
 
@@ -2269,21 +2279,23 @@
           <div class="pw-station">{{power.stationName || brandName}}</div>
           <div class="pw-prompt">{{t('power_prompt')}}</div>
           <div class="pw-tiles">
-            <button class="pw-tile pw-tile-svc" @click="power.selectAction('restart-service')">
+            <button class="pw-tile pw-tile-svc" @click="power.selectAction('restart-service')" data-testid="power-restart-service">
               <div class="pw-tile-icon"><bird-icon name="rotate-cw" :size="32"></bird-icon></div>
               <div class="pw-tile-label">{{t('power_restart_svc')}}</div>
               <div class="pw-tile-dur">~5 s</div>
             </button>
             <button class="pw-tile pw-tile-reboot" :disabled="!power.available.sudoReady"
                     :title="!power.available.sudoReady ? t('power_sudo_required') : ''"
-                    @click="power.selectAction('reboot')">
+                    @click="power.selectAction('reboot')"
+                    data-testid="power-reboot">
               <div class="pw-tile-icon"><bird-icon name="refresh-cw" :size="32"></bird-icon></div>
               <div class="pw-tile-label">{{t('power_reboot')}}</div>
               <div class="pw-tile-dur">~45 s</div>
             </button>
             <button class="pw-tile pw-tile-shutdown" :disabled="!power.available.sudoReady"
                     :title="!power.available.sudoReady ? t('power_sudo_required') : ''"
-                    @click="power.selectAction('shutdown')">
+                    @click="power.selectAction('shutdown')"
+                    data-testid="power-shutdown">
               <div class="pw-tile-icon"><bird-icon name="power" :size="32"></bird-icon></div>
               <div class="pw-tile-label">{{t('power_shutdown')}}</div>
               <div class="pw-tile-dur">{{t('power_permanent')}}</div>
@@ -2300,21 +2312,21 @@
           <div class="pw-progress">
             <div class="pw-progress-bar" :style="{width: ((power.countdownMax - power.countdown) / power.countdownMax * 100) + '%'}"></div>
           </div>
-          <button class="pw-btn pw-btn-cancel" @click="power.cancel()">{{t('power_cancel')}}</button>
+          <button class="pw-btn pw-btn-cancel" @click="power.cancel()" data-testid="power-confirm-cancel">{{t('power_cancel')}}</button>
         </div>
 
         <div v-else-if="power.step === 'confirm-slide'" class="pw-step pw-step-confirm">
           <div class="pw-confirm-icon pw-ci-shutdown"><bird-icon name="power" :size="48"></bird-icon></div>
           <div class="pw-confirm-title">{{t('power_action_shutdown')}}</div>
           <div class="pw-confirm-sub">{{t('power_slide_hint')}}</div>
-          <div class="pw-slider-track" @pointerdown="power.sliderBegin($event)">
+          <div class="pw-slider-track" @pointerdown="power.sliderBegin($event)" data-testid="power-slide-track">
             <div class="pw-slider-fill" :style="{width: power.sliderValue + '%'}"></div>
             <div class="pw-slider-thumb" :style="{left: 'calc(4px + (100% - 52px) * ' + (power.sliderValue / 100) + ')'}">
               <bird-icon name="power" :size="18"></bird-icon>
             </div>
             <div class="pw-slider-label" :class="{dim: power.sliderValue > 40}">{{t('power_slide_label')}}</div>
           </div>
-          <button class="pw-btn pw-btn-cancel" @click="power.cancel()">{{t('power_cancel')}}</button>
+          <button class="pw-btn pw-btn-cancel" @click="power.cancel()" data-testid="power-slide-cancel">{{t('power_cancel')}}</button>
         </div>
 
         <div v-else-if="power.step === 'applying' || power.step === 'offline'" class="pw-step pw-step-applying">
@@ -2451,18 +2463,21 @@
       return { t, props, emit };
     },
     template: `
-<div class="bf-period">
+<div class="bf-period" data-testid="filter-period">
   <div class="bf-period-btns">
     <button v-for="b in quickButtons" :key="b.key"
             class="bf-period-btn" :class="{active: b.active}"
+            :data-testid="'filter-period-' + b.key"
             @click="$emit('set-period', b.key)">{{b.label}}</button>
   </div>
   <div v-if="period==='custom'" class="bf-period-custom">
     <input type="date" class="bf-date-input" :value="dateFrom"
-           @change="$emit('set-custom', $event.target.value, dateTo)">
+           @change="$emit('set-custom', $event.target.value, dateTo)"
+           data-testid="filter-period-date-from">
     <span class="bf-date-sep">→</span>
     <input type="date" class="bf-date-input" :value="dateTo"
-           @change="$emit('set-custom', dateFrom, $event.target.value)">
+           @change="$emit('set-custom', dateFrom, $event.target.value)"
+           data-testid="filter-period-date-to">
   </div>
 </div>`
   };
@@ -2480,19 +2495,22 @@
       return { t, onSlider };
     },
     template: `
-<div class="bf-confidence">
+<div class="bf-confidence" data-testid="filter-confidence">
   <div class="bf-conf-row">
     <input type="range" class="bf-conf-slider" min="0" max="1" step="0.05"
            :value="confidence" @input="onSlider($event)"
-           :aria-label="t('avg_confidence')">
+           :aria-label="t('avg_confidence')"
+           data-testid="filter-confidence-slider">
     <span v-if="!confEditing" class="bf-conf-pct" @click="$emit('start-edit')"
-          :title="t('click_to_edit')">{{Math.round(confidence*100)}}%</span>
+          :title="t('click_to_edit')"
+          data-testid="filter-confidence-pct">{{Math.round(confidence*100)}}%</span>
     <input v-else type="number" class="bf-conf-edit" min="0" max="100"
            :value="confEditVal"
            @input="$emit('update:confEditVal', parseInt($event.target.value)||0)"
            @keydown.enter="$emit('commit-edit')"
            @blur="$emit('commit-edit')"
-           ref="confInput">
+           ref="confInput"
+           data-testid="filter-confidence-edit">
   </div>
 </div>`
   };

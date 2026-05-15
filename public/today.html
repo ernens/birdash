@@ -328,6 +328,7 @@
                   <button @click.stop="toggleFavorite(s.Com_Name, s.sci)"
                           :title="isFavorite(s.Com_Name) ? t('fav_remove') : t('fav_add')"
                           :aria-label="isFavorite(s.Com_Name) ? t('fav_remove') : t('fav_add')"
+                          data-testid="today-species-favorite"
                           class="sp-fav" :class="{'is-empty': !isFavorite(s.Com_Name)}">{{isFavorite(s.Com_Name) ? '★' : '☆'}}</button>
                 </div>
               </div>
