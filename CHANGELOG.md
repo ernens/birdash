@@ -2,6 +2,30 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.17] — 2026-05-15
+
+### Fixed — update/rollback never leave the UI stuck on "Restarting"
+
+On the canary (mickey, 1.55.14 → 1.55.16), the update applied cleanly
+through pull + migrations + restart, but the final `git rev-parse
+--short HEAD` + `git log -1 --format=%s` at the summary stage returned
+"Needed a single revision" / HEAD reported as ambiguous. Under `set -e`,
+the script aborted before writing the terminal `done` state, leaving
+the UI polling "Restarting birdengine" until the 10-minute stale
+timeout flipped it to `failed`. Root cause of the transient git
+breakage is still unclear (nothing in birdash/birdengine startup
+touches `.git`), but the fix is independent: we no longer need
+post-restart git introspection.
+
+- Capture `NEW_SHORT` / `NEW_SUBJECT` immediately after the pull,
+  using `$NEW_HEAD` as the source of truth (it's what we just
+  fast-forwarded to). No re-derivation from `HEAD` once we cross the
+  service-restart boundary.
+- Belt-and-braces EXIT trap in both `update.sh` and `rollback.sh`:
+  if the script exits without having written a `done` or `failed`
+  state (set -e abort, signal, unexpected sub-step failure), the trap
+  writes a generic `failed` so the UI never gets stuck again.
+
 ## [1.55.16] — 2026-05-15
 
 ### Added — Playwright testids for nav, review actions, species cards

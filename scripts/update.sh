@@ -43,7 +43,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # write_status STATE STEP DETAIL [extra JSON fields]
-# Atomic write so a poller never reads a half-written file.
+# Atomic write so a poller never reads a half-written file. Sets
+# TERMINAL_WRITTEN=1 on done/failed so the EXIT trap doesn't clobber it.
+TERMINAL_WRITTEN=0
 write_status() {
     [ -z "$STATUS_FILE" ] && return 0
     local state="$1" step="$2" detail="$3" extra="${4:-}"
@@ -54,7 +56,13 @@ write_status() {
 {"state":"$state","step":"$step","detail":"$esc"${extra:+,$extra},"updatedAt":"$(date -Iseconds)"}
 STATUSEOF
     mv "$tmp" "$STATUS_FILE"
+    case "$state" in done|failed) TERMINAL_WRITTEN=1 ;; esac
 }
+
+# Safety net: if the script exits without having written a terminal state
+# (set -e abort, signal, unexpected failure in a sub-step), write a generic
+# failed state so the UI doesn't poll "running" forever.
+trap '[ "$TERMINAL_WRITTEN" = "0" ] && write_status failed error "Update script exited unexpectedly — see config/update.log"' EXIT
 
 info() { echo -e "${BLUE}▶${NC} $1"; write_status running "${1%%...*}" "$1"; }
 ok()   { echo -e "${GREEN}✓${NC} $1"; }
@@ -155,6 +163,15 @@ if ! _attempt_merge; then
     fi
 fi
 ok "Pulled $(git rev-list --count "$OLD_HEAD..$NEW_HEAD") commit(s)"
+
+# Capture summary info NOW, while git is healthy. Re-querying after the
+# birdash restart has historically failed on the canary (mickey, 1.55.16):
+# git rev-parse returned "Needed a single revision" / HEAD reported as
+# ambiguous, set -e aborted the script, and the UI was left stuck on
+# "running" until the 10-minute stale-timeout. NEW_HEAD is what we just
+# fast-forwarded to, so it's the truth — no need to re-derive from HEAD.
+NEW_SHORT=$(echo "$NEW_HEAD" | cut -c1-7)
+NEW_SUBJECT=$(git log -1 --format=%s "$NEW_HEAD" 2>/dev/null || echo "")
 
 # ── 3. Decide what changed ────────────────────────────────────────────────
 CHANGED=$(git diff --name-only "$OLD_HEAD" "$NEW_HEAD")
@@ -311,14 +328,13 @@ _ping_update &
 
 # ── 8. Summary ────────────────────────────────────────────────────────────
 echo ""
-echo "Updated to $(git rev-parse --short HEAD): $(git log -1 --format=%s)"
+echo "Updated to ${NEW_SHORT}: ${NEW_SUBJECT}"
 echo "Changed files:"
 echo "$CHANGED" | sed 's/^/  /'
 
 if [ -n "$STATUS_FILE" ]; then
-    NEW_SHORT=$(git rev-parse --short HEAD)
     OLD_SHORT=$(echo "$OLD_HEAD" | cut -c1-7)
-    NEW_SUBJECT=$(git log -1 --format=%s | sed 's/\\/\\\\/g; s/"/\\"/g')
+    NEW_SUBJECT_ESC=$(printf '%s' "$NEW_SUBJECT" | sed 's/\\/\\\\/g; s/"/\\"/g')
     write_status done complete "Updated to $NEW_SHORT" \
-        "\"newCommit\":\"$NEW_SHORT\",\"subject\":\"$NEW_SUBJECT\",\"previousCommit\":\"$OLD_HEAD\",\"previousShort\":\"$OLD_SHORT\""
+        "\"newCommit\":\"$NEW_SHORT\",\"subject\":\"$NEW_SUBJECT_ESC\",\"previousCommit\":\"$OLD_HEAD\",\"previousShort\":\"$OLD_SHORT\""
 fi

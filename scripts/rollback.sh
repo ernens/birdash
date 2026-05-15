@@ -36,6 +36,7 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+TERMINAL_WRITTEN=0
 write_status() {
     [ -z "$STATUS_FILE" ] && return 0
     local state="$1" step="$2" detail="$3" extra="${4:-}"
@@ -46,7 +47,11 @@ write_status() {
 {"state":"$state","step":"$step","detail":"$esc"${extra:+,$extra},"updatedAt":"$(date -Iseconds)"}
 STATUSEOF
     mv "$tmp" "$STATUS_FILE"
+    case "$state" in done|failed) TERMINAL_WRITTEN=1 ;; esac
 }
+
+# See update.sh for rationale.
+trap '[ "$TERMINAL_WRITTEN" = "0" ] && write_status failed error "Rollback script exited unexpectedly — see config/update.log"' EXIT
 
 info() { echo -e "${BLUE}▶${NC} $1"; write_status running "${1%%...*}" "$1"; }
 ok()   { echo -e "${GREEN}✓${NC} $1"; }
@@ -70,7 +75,11 @@ fi
 
 info "Rolling back to $(echo "$TARGET_COMMIT" | cut -c1-7)..."
 git reset --hard "$TARGET_COMMIT"
-ok "Git reset to $(git rev-parse --short HEAD)"
+# Capture the resolved SHA NOW, before any post-restart git introspection.
+# Matches the update.sh fix: post-restart git can be transiently degenerate,
+# and set -e + stuck UI is the worst-case combo.
+NEW_SHORT=$(git rev-parse --short HEAD)
+ok "Git reset to $NEW_SHORT"
 
 # Reinstall dependencies to match the rolled-back code
 info "Installing Node dependencies..."
@@ -109,7 +118,6 @@ else
     echo "  birdengine state: $(systemctl is-active birdengine)"
 fi
 
-NEW_SHORT=$(git rev-parse --short HEAD)
 ok "Rollback complete — now on $NEW_SHORT"
 
 if [ -n "$STATUS_FILE" ]; then
