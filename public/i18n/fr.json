@@ -161,6 +161,7 @@
   "purge_loading": "Chargement…",
   "purge_no_results": "Aucun résultat",
   "purge_no_spectro": "Pas de spectro",
+  "purge_open_spectro": "Ouvrir le spectrogramme",
   "purge_will_be_purged": "Suppression définitive dans {days} j",
   "purge_prev": "Précédent",
   "purge_next": "Suivant",

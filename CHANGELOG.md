@@ -2,6 +2,17 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.18] — 2026-05-15
+
+### Added — dedicated spectrogram button on purge rows
+
+Each row in `purge.html` already let you click the thumbnail to open
+the shared spectrogram modal, but the affordance was unclear and the
+"missing spectro" state had no way in. Added a `maximize-2` icon
+button next to the trash/restore action — same pattern as `review.html`'s
+per-row spectro button. Only renders when `r.File_Name` is set so we
+don't surface a dead button on rows that have no audio file at all.
+
 ## [1.55.17] — 2026-05-15
 
 ### Fixed — update/rollback never leave the UI stuck on "Restarting"

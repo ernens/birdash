@@ -154,6 +154,7 @@
   "purge_loading": "Loading…",
   "purge_no_results": "No results",
   "purge_no_spectro": "No spectro",
+  "purge_open_spectro": "Open spectrogram",
   "purge_will_be_purged": "Permanent removal in {days} d",
   "purge_prev": "Previous",
   "purge_next": "Next",

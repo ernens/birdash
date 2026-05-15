@@ -283,6 +283,11 @@
           </span>
         </div>
         <div class="pg-row-actions">
+          <button v-if="r.File_Name" class="pg-action-btn" @click="openModal(r)"
+                  :title="t('purge_open_spectro')" :aria-label="t('purge_open_spectro')"
+                  data-testid="purge-row-spectro">
+            <bird-icon name="maximize-2" :size="13"></bird-icon>
+          </button>
           <button v-if="view==='active'" class="pg-action-btn danger" @click="trashOne(r)">
             <bird-icon name="trash-2" :size="13"></bird-icon>
           </button>
