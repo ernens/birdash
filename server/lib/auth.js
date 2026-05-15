@@ -60,6 +60,7 @@ const SENSITIVE_GET = new Set([
   '/api/backup-status',
   '/api/audio/devices',
   '/api/audio/profiles',
+  '/api/security/https',
 ]);
 
 // Auth endpoints that bypass the gate (login is allowed for unauthenticated

@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.15] — 2026-05-15
+
+### Added — in-app HTTPS toggle (Phase 1: backend)
+
+New `/api/security/https` endpoint reads and writes the marker-delimited
+`# BIRDASH-MANAGED:HTTPS-MODE` block in `/etc/caddy/Caddyfile`, so the
+non-technical owner can enable or disable the HTTP→HTTPS redirect from
+the future Settings → Sécurité page without touching a shell. The write
+flow is `caddy validate` (on a temp file) → `sudo cp` → deferred
+`sudo systemctl restart caddy` after the POST response has flushed.
+Restart (not reload) sidesteps a Caddy 2.6.2 PKI context-cleanup panic
+that fires when the `:80` block flips between `redir https://…` and
+`import birdash_site`. Endpoint is added to `SENSITIVE_GET` so it stays
+gated in `public-read` mode. UI (Phase 3) and root-CA download (Phase 2)
+come next.
+
 ## [1.55.14] — 2026-05-14
 
 ### Changed — root + 404 fallback both land on today.html
