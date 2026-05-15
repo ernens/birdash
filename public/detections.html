@@ -38,7 +38,7 @@
           <!-- Ecological guild filter -->
           <div v-if="taxonomyOrders.length">
             <span class="fp-label">{{t('guild_filter')}}</span>
-            <select class="fp-select" v-model="fGuild" @change="onGuildChange" :aria-label="t('guild_filter')">
+            <select class="fp-select" v-model="fGuild" @change="onGuildChange" :aria-label="t('guild_filter')" data-testid="filter-guild">
               <option value="">{{t('guild_all')}}</option>
               <option v-for="g in guildOptions" :key="g.key" :value="g.key">{{g.icon}} {{g.label}}</option>
             </select>
@@ -46,14 +46,14 @@
           <!-- Taxonomy cascade -->
           <div v-if="taxonomyOrders.length">
             <span class="fp-label">{{t('filter_order')}}</span>
-            <select class="fp-select" v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')">
+            <select class="fp-select" v-model="fOrder" @change="onOrderChange" :aria-label="t('filter_order')" data-testid="filter-order">
               <option value="">{{t('all_orders')}}</option>
               <option v-for="o in taxonomyOrders" :key="o" :value="o">{{o}}</option>
             </select>
           </div>
           <div v-if="taxonomyAllFamilies.length">
             <span class="fp-label">{{t('filter_family')}}</span>
-            <select class="fp-select" v-model="fFamily" @change="onFamilyChange" :aria-label="t('filter_family')">
+            <select class="fp-select" v-model="fFamily" @change="onFamilyChange" :aria-label="t('filter_family')" data-testid="filter-family">
               <option value="">{{t('all_families')}}</option>
               <option v-for="f in taxonomyAllFamilies" :key="f.sci" :value="f.sci">{{f.com}}</option>
             </select>
@@ -61,32 +61,36 @@
           <!-- Species picker filtered by taxonomy -->
           <div>
             <span class="fp-label">{{t('filter_species')}}</span>
-            <div class="ms-wrap" v-click-outside="closeSpDropdown">
+            <div class="ms-wrap" v-click-outside="closeSpDropdown" data-testid="filter-species">
               <div class="ms-trigger" :class="{open:spDropdownOpen}"
-                   @click="spDropdownOpen=!spDropdownOpen">
-                <span v-if="!fSpecies.length" class="ms-placeholder">{{t('all_species_placeholder')}}</span>
-                <span v-for="s in fSpecies" :key="s" class="ms-tag">
+                   @click="spDropdownOpen=!spDropdownOpen"
+                   data-testid="filter-species-trigger">
+                <span v-if="!fSpecies.length" class="ms-placeholder" data-testid="filter-species-placeholder">{{t('all_species_placeholder')}}</span>
+                <span v-for="s in fSpecies" :key="s" class="ms-tag" data-testid="filter-species-tag" :data-species="s">
                   {{s}}
-                  <button class="ms-tag-x" @click.stop="removeSpecies(s)">×</button>
+                  <button class="ms-tag-x" @click.stop="removeSpecies(s)" data-testid="filter-species-tag-remove">×</button>
                 </span>
                 <span class="ms-caret">{{spDropdownOpen?'▲':'▼'}}</span>
               </div>
-              <div v-if="spDropdownOpen" class="ms-dropdown">
+              <div v-if="spDropdownOpen" class="ms-dropdown" data-testid="filter-species-dropdown">
                 <div class="ms-search-wrap">
                   <input ref="spSearchInput" class="ms-search" type="search"
                          :placeholder="'🔍 '+t('search_species_ph')"
-                         v-model="spSearch" @click.stop>
+                         v-model="spSearch" @click.stop
+                         data-testid="filter-species-search">
                 </div>
                 <div class="ms-actions">
                   <button class="ms-action-btn" :class="{'is-active': allSpeciesSelected}"
-                          @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))">
+                          @click.stop="allSpeciesSelected ? (fSpecies=[]) : (fSpecies=filteredSpeciesList.map(s=>s))"
+                          data-testid="filter-species-toggle-all">
                     {{allSpeciesSelected ? t('deselect_all') : t('select_all')+' ('+filteredSpeciesList.length+')'}}
                   </button>
                 </div>
-                <div class="ms-list">
+                <div class="ms-list" data-testid="filter-species-list">
                   <label v-for="s in filteredSpeciesList" :key="s"
                          class="ms-item" :class="{checked:fSpecies.includes(s)}"
-                         @click.stop>
+                         @click.stop
+                         data-testid="filter-species-option" :data-species="s">
                     <input type="checkbox" :value="s" v-model="fSpecies">
                     {{s}}
                   </label>
@@ -101,11 +105,11 @@
           <h4 class="fp-section-title">{{t('det_section_status')}}</h4>
           <div style="display:flex;gap:.8rem;flex-wrap:wrap;">
             <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:0;">
-              <input type="checkbox" v-model="favOnly" @change="applyFilters" style="accent-color:var(--accent);">
+              <input type="checkbox" v-model="favOnly" @change="applyFilters" style="accent-color:var(--accent);" data-testid="filter-favorites-only">
               ★ {{t('fav_only')}}
             </label>
             <label class="fp-label" style="cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:0;">
-              <input type="checkbox" v-model="newSpOnly" @change="applyFilters" style="accent-color:var(--danger);">
+              <input type="checkbox" v-model="newSpOnly" @change="applyFilters" style="accent-color:var(--danger);" data-testid="filter-new-species-only">
               <bird-icon name="sparkles" :size="12"></bird-icon> {{t('new_species')}}
             </label>
           </div>
@@ -151,7 +155,7 @@
              à la fermeture du dropdown). Plus de bouton Appliquer — Réinitialiser
              reste comme reset global clair. -->
         <div class="fp-actions">
-          <button class="btn btn-secondary fp-reset-btn" @click="resetFilters">{{t('reset_filter')}}</button>
+          <button class="btn btn-secondary fp-reset-btn" @click="resetFilters" data-testid="filter-reset">{{t('reset_filter')}}</button>
         </div>
       </div>
 
@@ -159,25 +163,25 @@
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:.82rem;color:var(--text-muted);">
           <span>
-            {{displayTotal.toLocaleString()}} {{t('results')}}
+            <span data-testid="detections-result-count" :data-count="displayTotal">{{displayTotal.toLocaleString()}}</span> {{t('results')}}
             <span v-if="uniqueMode" style="font-size:.72rem;color:var(--accent);margin-left:.4rem;">✦ Unique</span>
           </span>
           <span style="display:flex;align-items:center;gap:.6rem;">
-            <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;">⬇ CSV</button>
-            <button @click="exportEbird" class="dl-btn" :title="t('ebird_export')" style="font-size:.72rem;">⬇ eBird</button>
-            <span v-if="!uniqueMode">{{t('page')}} {{page}} {{t('of')}} {{totalPages}}</span>
+            <button @click="exportCsv" class="dl-btn" title="Export CSV" style="font-size:.72rem;" data-testid="detections-export-csv">⬇ CSV</button>
+            <button @click="exportEbird" class="dl-btn" :title="t('ebird_export')" style="font-size:.72rem;" data-testid="detections-export-ebird">⬇ eBird</button>
+            <span v-if="!uniqueMode" data-testid="detections-pagination">{{t('page')}} {{page}} {{t('of')}} {{totalPages}}</span>
           </span>
         </div>
 
         <!-- Bandeau de filtres actifs : visible uniquement quand au moins un
              filtre s'écarte de l'état par défaut. Chaque chip est cliquable pour
              retirer ce filtre seul. "Tout effacer" n'apparaît qu'à partir de 2. -->
-        <div v-if="activeChips.length" class="det-active-chips">
-          <span v-for="c in activeChips" :key="c.key" class="det-chip">
+        <div v-if="activeChips.length" class="det-active-chips" data-testid="filter-active-chips">
+          <span v-for="c in activeChips" :key="c.key" class="det-chip" data-testid="filter-active-chip" :data-chip="c.key">
             <span class="det-chip-label">{{c.label}}</span>
-            <button class="det-chip-x" :aria-label="t('det_chip_aria_remove')" @click="c.clear()">×</button>
+            <button class="det-chip-x" :aria-label="t('det_chip_aria_remove')" @click="c.clear()" data-testid="filter-active-chip-remove">×</button>
           </span>
-          <button v-if="activeChips.length>1" class="det-chip-clear-all" @click="resetFilters">{{t('det_chip_clear_all')}}</button>
+          <button v-if="activeChips.length>1" class="det-chip-clear-all" @click="resetFilters" data-testid="filter-chip-clear-all">{{t('det_chip_clear_all')}}</button>
         </div>
 
         <div class="card" style="padding:0;overflow:hidden;">
@@ -190,11 +194,11 @@
               <div class="skeleton" style="width:55px;height:1.1rem;border-radius:10px;"></div>
             </div>
           </div>
-          <div v-else-if="!displayRows.length" class="hint-empty" style="padding:2rem;">
+          <div v-else-if="!displayRows.length" class="hint-empty" style="padding:2rem;" data-testid="detections-empty">
             <div class="hint-icon"><bird-icon name="search" :size="24"></bird-icon></div>
             <div>{{t('no_data')}}</div>
           </div>
-          <div v-else class="det-table-wrap">
+          <div v-else class="det-table-wrap" data-testid="detections-list">
           <table class="bird-table">
             <thead><tr>
               <th style="width:44px;"></th>
@@ -208,7 +212,11 @@
               <th class="hide-sm" style="width:70px;">{{t('set_model_choice')}}</th>
             </tr></thead>
             <tbody>
-              <tr v-for="d in displayRows" :key="d._key">
+              <tr v-for="d in displayRows" :key="d._key"
+                  data-testid="detections-row"
+                  :data-sci="d.Sci_Name" :data-species="d.Com_Name"
+                  :data-date="d.Date" :data-time="d.Time"
+                  :data-confidence="d.Confidence">
                 <td style="padding:.3rem .4rem;">
                   <bird-img v-if="d.photoUrl" :src="d.photoUrl" class="det-thumb" :alt="d.Com_Name" ></bird-img>
                   <div v-else class="det-thumb-ph"><bird-icon name="bird" :size="16" ></bird-icon></div>
