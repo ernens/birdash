@@ -1,12 +1,12 @@
 # Birdash — Inventaire UI pour tests Playwright
 
-Source : repo `birdash` à HEAD (v1.55.17, commit `2911554`).
+Source : repo `birdash` à HEAD (v1.55.18, commit `3bd245d`).
 Dernière mise à jour : 2026-05-15 (rafraîchi depuis le Pi en production READ-ONLY).
 
-> **TL;DR sélecteurs** : ~285 `data-testid` posés (commits `591e684`, `59697d7`,
-> `cb60fd6` + ajouts `detections.html` / `purge.html`). Le shell global
-> (nav + header + mobile-nav + modals) en plombe ~53. Les compléments
-> P0/P1/P2 restants sont listés en § 7.
+> **TL;DR sélecteurs** : 297 `data-testid` posés (commits `591e684`, `59697d7`,
+> `cb60fd6`, `2911554`, `3bd245d`). Le shell global (nav + header +
+> mobile-nav + modals) en plombe 64. Les compléments P0/P1/P2 restants
+> sont listés en § 7.
 
 ---
 
@@ -39,9 +39,12 @@ est respectée intégralement.
   `useFilterPeriod`, `useFilterConfidence`, `useChart`, `useAudio`,
   `useFavorites`, etc.). `public/js/bird-config.js` déclare la nav.
 - **Caddy** sert n'importe quel chemin `*.html` avec le shell ; un fichier
-  inexistant donne **200** et le `index.html`. Toujours **vérifier
-  `document.title`** ou `<h1>` après navigation pour distinguer un 404 silencieux.
-- **Redirections observées au boot** :
+  inexistant donne **200** et fallback sur **`today.html`** (via
+  `try_files {path} /today.html` dans le bloc `@birds`, et
+  `redir / /birds/today.html` pour la racine — commit `84ce71e`).
+  Toujours **vérifier `document.title`** ou `<h1>` après navigation pour
+  distinguer un 404 silencieux.
+- **Redirections observées au boot** (côté JS, en plus du fallback Caddy) :
   - `index.html` → `today.html`
   - `login.html` → `overview.html` (si déjà authentifié)
   - `recent.html` → `calendar.html`
@@ -173,7 +176,7 @@ mobile-nav + modals) ajoute systématiquement **53** testids à chaque page.
 | `settings.html` | 153 | 96 | 0 | 10 | 42 spécifiques onglet `detection` au boot — `settings-tab-{detection|audio|notif|station|services|species|backup|database|terminal|external-display|monitoring}`, `settings-save-bar`, `settings-save`, `settings-reset-defaults`, `settings-tabs`, et tous les `settings-detection-*` listés ci-dessous |
 | `system.html` | 93 | 53 | 0 | 10 | — |
 | `log.html` | 96 | 53 | 0 | 10 | — |
-| `purge.html` | 252 | 54 | 0 | 10 | `purge-row-spectro` |
+| `purge.html` | 252 | 54 | 0 | 10 | `purge-row-spectro` (commit `3bd245d`) |
 | `biodiversity.html` | 110 | 64 | 5 | 13 | — |
 
 **Settings — testids présents au boot (onglet `detection` actif)** :
