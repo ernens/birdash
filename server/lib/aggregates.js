@@ -78,6 +78,7 @@ function createTables(dbWrite) {
       sci_name    TEXT NOT NULL,
       com_name    TEXT NOT NULL,
       count       INTEGER DEFAULT 0,
+      count_07    INTEGER DEFAULT 0,
       avg_conf    REAL DEFAULT 0,
       max_conf    REAL DEFAULT 0,
       first_time  TEXT,
@@ -92,6 +93,7 @@ function createTables(dbWrite) {
       sci_name    TEXT NOT NULL,
       com_name    TEXT NOT NULL,
       count       INTEGER DEFAULT 0,
+      count_07    INTEGER DEFAULT 0,
       avg_conf    REAL DEFAULT 0,
       day_count   INTEGER DEFAULT 0,
       PRIMARY KEY (year_month, sci_name)
@@ -101,6 +103,7 @@ function createTables(dbWrite) {
       sci_name     TEXT PRIMARY KEY,
       com_name     TEXT NOT NULL,
       total_count  INTEGER DEFAULT 0,
+      count_07     INTEGER DEFAULT 0,
       first_date   TEXT,
       last_date    TEXT,
       avg_conf     REAL DEFAULT 0,

@@ -2,6 +2,36 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.30] — 2026-05-16
+
+### Fixed — fresh installs missing `count_07` on `daily/monthly/species_stats`
+
+`server/lib/aggregates.js:createTables` builds the four aggregate
+tables on first server start. Migration `004` added a `count_07`
+column to `daily_stats`, `monthly_stats`, `species_stats` (and
+`hourly_stats`, which kept the column in `createTables` correctly).
+The other three CREATE TABLE statements were never updated, so a
+fresh install — which doesn't run migrations — got the OLD schema,
+then immediately hit
+`Aggregate refresh error: table daily_stats has no column named count_07`
+on the first refresh cycle. Knock-on: `/api/whats-new` 500s on
+`species_of_month`.
+
+Fix: add `count_07 INTEGER DEFAULT 0` to the three CREATE TABLE
+statements so fresh installs match the post-migration schema.
+Existing installs are already covered by migration `004` running on
+the next `update.sh` pass.
+
+Recovery for any install that already hit this (mickey):
+
+```bash
+bash ~/birdash/scripts/migrations/004-daily-stats-filtered-count.sh
+sudo systemctl restart birdash
+```
+
+That ALTERs the columns in and triggers an aggregates rebuild on the
+next start (via the `.rebuild-aggregates` sentinel).
+
 ## [1.55.29] — 2026-05-16
 
 ### Fixed — header dropdowns (theme / lang / bell) clipped behind nav
