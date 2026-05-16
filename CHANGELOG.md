@@ -2,6 +2,19 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.19] — 2026-05-16
+
+### Added — expected frequency band overlay in spectrogram modal
+
+The "bande attendue" green dashed band (driven by
+`BIRDASH_UTILS.SPECIES_FREQ_RANGES[sci]`) was only rendered on the
+inline spectrogram in `today.html`. Ported the exact same overlay
+to the full-size modal so users get the species frequency context
+when they expand a clip. Shares the `birdash_freq_overlay`
+localStorage flag with today.html — toggling in either place sticks.
+Eye-icon button top-right of the canvas, hidden when no range is
+known for the species.
+
 ## [1.55.18] — 2026-05-15
 
 ### Added — dedicated spectrogram button on purge rows

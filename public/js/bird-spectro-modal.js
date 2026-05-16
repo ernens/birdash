@@ -54,6 +54,21 @@
       let _rawSr = 0;
       let _rawAudioBuf = null;
 
+      // Expected-frequency overlay — mirrors the one on today.html so users
+      // get the same visual context when they expand a clip. Shares the
+      // `birdash_freq_overlay` localStorage key so toggling in either place
+      // sticks. Lookup is by scientific name via BIRDASH_UTILS.SPECIES_FREQ_RANGES.
+      const speciesFreqRange = computed(() => {
+        const sci = modal.sciName;
+        if (!sci || !U.SPECIES_FREQ_RANGES) return null;
+        return U.SPECIES_FREQ_RANGES[sci] || null;
+      });
+      const freqOverlayOn = ref(localStorage.getItem('birdash_freq_overlay') !== '0');
+      function toggleFreqOverlay() {
+        freqOverlayOn.value = !freqOverlayOn.value;
+        localStorage.setItem('birdash_freq_overlay', freqOverlayOn.value ? '1' : '0');
+      }
+
       // Bbox overlay toggle (Phase 1B) — pref persisted globally via localStorage.
       // Switching off re-renders the spectro without the bbox; switching on
       // re-renders, then re-paints the bbox over the fresh pixels.
@@ -496,6 +511,7 @@
         weather, wmoIcon, wmoLabel,
         cleanMode, cleanStrength, processingClean,
         bboxEnabled, toggleBbox, bboxMeta,
+        speciesFreqRange, freqOverlayOn, toggleFreqOverlay,
         togglePlay, seek, setFilter, close, t,
         onCanvasMousedown, onCanvasMousemove, onCanvasMouseup, clearLoop,
         toggleClean, reapplyClean
@@ -575,6 +591,29 @@
       <div v-if="loopStart != null && loopEnd != null && loopEnd > loopStart"
            class="spectro-loop-zone"
            :style="{left: (loopStart*100)+'%', width: ((loopEnd-loopStart)*100)+'%'}"></div>
+      <!-- Expected frequency band overlay (mirrors today.html) -->
+      <div v-if="speciesFreqRange && !loading && freqOverlayOn"
+           :style="{position:'absolute', left:'0', right:'0', zIndex:2, pointerEvents:'none',
+                    top: ((1 - speciesFreqRange.max/12)*100)+'%',
+                    bottom: ((speciesFreqRange.min/12)*100)+'%',
+                    background:'rgba(52,211,153,.18)', borderTop:'2px dashed rgba(52,211,153,.75)',
+                    borderBottom:'2px dashed rgba(52,211,153,.75)'}">
+        <span style="position:absolute;right:6px;top:3px;font-size:.7rem;color:#fff;background:rgba(16,64,48,.8);
+                     font-weight:600;padding:.15rem .45rem;border-radius:3px;white-space:nowrap;">
+          {{t('freq_expected')}}: {{speciesFreqRange.min}}–{{speciesFreqRange.max}} kHz
+        </span>
+      </div>
+      <button v-if="speciesFreqRange && !loading"
+              @click.stop="toggleFreqOverlay"
+              :title="freqOverlayOn ? t('freq_hide') : t('freq_show')"
+              :class="{'freq-toggle-on': freqOverlayOn}"
+              data-testid="spectro-modal-freq-toggle"
+              style="position:absolute;top:8px;right:50px;z-index:4;
+                     background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);
+                     color:rgba(255,255,255,.75);padding:.25rem .4rem;border-radius:4px;
+                     cursor:pointer;display:inline-flex;align-items:center;">
+        <bird-icon :name="freqOverlayOn ? 'eye' : 'eye-off'" :size="14"></bird-icon>
+      </button>
       <div class="spectro-freq-labels">
         <span>12kHz</span><span>9</span><span>6</span><span>3</span><span>0</span>
       </div>
