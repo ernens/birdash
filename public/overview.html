@@ -1242,16 +1242,9 @@ const app = createApp({
     onMounted(async () => {
       loadAll();
       if (BIRDASH.loadWeatherRange) BIRDASH.loadWeatherRange(today);
-      // Auto-trigger setup wizard on first launch when essentials are
-      // missing (no setup flag, lat/lon = 0, no audio device). User can
-      // dismiss; we suppress re-pop in this session via sessionStorage.
-      if (BIRDASH.checkSetupStatus && BIRDASH.openSetupWizard
-          && !sessionStorage.getItem('birdash_wizard_dismissed')) {
-        try {
-          const status = await BIRDASH.checkSetupStatus();
-          if (status.needed) BIRDASH.openSetupWizard();
-        } catch {}
-      }
+      // Setup-wizard auto-launch is wired globally inside
+      // bird-setup-wizard.js so it fires on whichever page the user
+      // lands on (typically today.html), not just here.
     });
     onUnmounted(() => {
       if (_richAudio) { _richAudio.pause(); _richAudio = null; }

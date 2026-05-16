@@ -2,6 +2,38 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.23] — 2026-05-16
+
+### Fixed — first-run wizard didn't auto-launch + offered no way to start the engine
+
+Two gaps in the fresh-install path, surfaced after reflashing a Pi:
+
+- **Auto-launch hook was overview-only.** `index.html` redirects to
+  `today.html` on load, but the `BIRDASH.checkSetupStatus()` →
+  `openSetupWizard()` call only existed inside `overview.html`'s
+  `onMounted`. Result: fresh installs never saw the modal until the
+  user manually navigated to overview or hit the Settings button. The
+  hook is now wired inside `bird-setup-wizard.js` itself (every page
+  loads the script, and the `<setup-wizard>` tag lives in the shared
+  shell), so it fires from whichever page the user lands on. The
+  existing `sessionStorage('birdash_wizard_dismissed')` guard prevents
+  re-pops within a session.
+- **No engine-start CTA on completion.** Once the wizard wrote
+  `birdnet.conf` / `audio_config.json`, the recap screen just said
+  "you can close this wizard" — but on a fresh install neither
+  `birdengine` nor `birdengine-recording` was running, so the user
+  ended up with a configured-but-idle station. The recap now shows a
+  primary "Démarrer la détection" button (focused, with a "Plus tard"
+  ghost button) that POSTs `/api/services/restart` for both units in
+  sequence and reports `started` / `partial` / `failed` inline with a
+  retry. The user keeps the choice — auto-start was rejected because
+  the wizard sometimes runs before the USB mic is plugged in.
+
+### Changed — service-worker precache picks up `bird-setup-wizard.js`
+
+The wizard script was previously fetched lazy per-page. Pre-caching it
+keeps the auto-launch decision instant on subsequent loads.
+
 ## [1.55.22] — 2026-05-16
 
 ### Changed — header feels persistent between page navigations

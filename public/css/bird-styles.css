@@ -2946,6 +2946,19 @@ select, input[type="text"], input[type="number"], textarea {
 .sw-restart-note { display: flex; align-items: center; gap: .4rem; padding: .5rem .75rem;
   background: rgba(74,138,181,.1); border: 1px solid rgba(74,138,181,.3); border-radius: 6px;
   font-size: .78rem; color: var(--text-main); margin: .5rem 0; }
+/* Engine-start card (post-apply prompt) */
+.sw-engine-card { margin-top: .75rem; padding: .75rem .9rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg-deep); }
+.sw-engine-card > div { display: flex; align-items: flex-start; gap: .6rem; }
+.sw-engine-body { flex: 1; }
+.sw-engine-title { font-weight: 600; font-size: .9rem; }
+.sw-engine-sub { font-size: .78rem; color: var(--text-muted); margin-top: .2rem; line-height: 1.4; }
+.sw-engine-msg { font-size: .72rem; color: var(--text-muted); margin-top: .2rem; font-family: monospace; }
+.sw-engine-idle  { color: var(--text-main); }
+.sw-engine-card.sw-engine-starting { border-color: var(--accent); background: rgba(90,158,58,.06); }
+.sw-engine-card.sw-engine-started  { border-color: var(--accent); background: rgba(90,158,58,.10); color: var(--accent); }
+.sw-engine-card.sw-engine-partial  { border-color: rgba(217,153,57,.5); background: rgba(217,153,57,.08); }
+.sw-engine-card.sw-engine-failed   { border-color: rgba(229,62,62,.5); background: rgba(229,62,62,.08); color: #e53e3e; }
 /* Filter rows */
 .sw-filter-rows { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
 .sw-filter-row { display: flex; align-items: flex-start; gap: .65rem; padding: .65rem .75rem;

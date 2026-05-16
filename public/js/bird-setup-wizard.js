@@ -27,6 +27,8 @@
     applying: false,
     results: null,
     errors: [],
+    engineStatus: null,   // null | 'starting' | 'started' | 'partial' | 'failed'
+    engineMessage: '',
     // Accumulated user choices — defaults populated when we open the
     // wizard (so reopening starts fresh from current config).
     choices: {
@@ -175,11 +177,43 @@
     state.applying = false;
   }
 
+  // Start both engine services after the wizard has written config.
+  // On a fresh install the units exist but were never started (or were
+  // running with empty config and idle). We hit /api/services/restart
+  // for each — `restart` works whether the unit is active or inactive.
+  // engineStatus values: null (idle) | 'starting' | 'started' | 'partial' | 'failed'
+  async function startEngine() {
+    state.engineStatus = 'starting';
+    state.engineMessage = '';
+    const targets = ['birdengine', 'birdengine-recording'];
+    const results = [];
+    for (const svc of targets) {
+      try {
+        const r = await fetch('/birds/api/services/restart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service: svc }),
+        });
+        const d = await r.json().catch(() => ({}));
+        results.push({ svc, ok: r.ok && d.ok, message: d.error || '' });
+      } catch (e) {
+        results.push({ svc, ok: false, message: e.message || 'network_error' });
+      }
+    }
+    const okCount = results.filter(r => r.ok).length;
+    if (okCount === targets.length) state.engineStatus = 'started';
+    else if (okCount === 0)         state.engineStatus = 'failed';
+    else                            state.engineStatus = 'partial';
+    state.engineMessage = results.filter(r => !r.ok).map(r => `${r.svc}: ${r.message || 'failed'}`).join(' · ');
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────
   async function openSetupWizard() {
     state.step = 0;
     state.results = null;
     state.errors = [];
+    state.engineStatus = null;
+    state.engineMessage = '';
     state.open = true;
     // Load hardware + current config + available models in parallel;
     // wizard renders the welcome step immediately and the data lands
@@ -329,6 +363,10 @@
         // closes manually when they've read the results.
       }
 
+      async function onStartEngine() {
+        await startEngine();
+      }
+
       function tryClose() {
         if (state.applying) return;
         if (state.results) { closeWizard(true); return; }
@@ -343,7 +381,7 @@
         canAdvance, hwSummary, recapItems,
         availableModels, availableModelsForSecondary,
         advancedModel, shortModelLabel, appriseText,
-        nextStep, prevStep, onApply, tryClose,
+        nextStep, prevStep, onApply, onStartEngine, tryClose,
       };
     },
     template: `
@@ -588,7 +626,37 @@
               <strong>{{k}}</strong>: {{v}}
             </li>
           </ul>
-          <p class="sw-p">{{t('setup_done_restart_hint')}}</p>
+          <div class="sw-engine-card" :class="'sw-engine-' + (state.engineStatus || 'idle')">
+            <div v-if="!state.engineStatus" class="sw-engine-idle">
+              <bird-icon name="play-circle" :size="18"></bird-icon>
+              <div class="sw-engine-body">
+                <div class="sw-engine-title">{{t('setup_engine_prompt_title')}}</div>
+                <div class="sw-engine-sub">{{t('setup_engine_prompt_sub')}}</div>
+              </div>
+            </div>
+            <div v-else-if="state.engineStatus === 'starting'" class="sw-engine-running">
+              <span class="spinner-inline"><i></i><i></i><i></i></span>
+              <span>{{t('setup_engine_starting')}}</span>
+            </div>
+            <div v-else-if="state.engineStatus === 'started'" class="sw-engine-ok">
+              <bird-icon name="check-circle" :size="18"></bird-icon>
+              <span>{{t('setup_engine_started')}}</span>
+            </div>
+            <div v-else-if="state.engineStatus === 'partial'" class="sw-engine-warn">
+              <bird-icon name="alert-triangle" :size="18"></bird-icon>
+              <div>
+                <div>{{t('setup_engine_partial')}}</div>
+                <div class="sw-engine-msg" v-if="state.engineMessage">{{state.engineMessage}}</div>
+              </div>
+            </div>
+            <div v-else-if="state.engineStatus === 'failed'" class="sw-engine-err">
+              <bird-icon name="x-circle" :size="18"></bird-icon>
+              <div>
+                <div>{{t('setup_engine_failed')}}</div>
+                <div class="sw-engine-msg" v-if="state.engineMessage">{{state.engineMessage}}</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div v-if="state.errors.length" class="sw-errors">
           <div class="sw-errors-title">{{t('setup_apply_errors')}}</div>
@@ -602,15 +670,36 @@
         ← {{t('setup_back')}}
       </button>
       <span class="sw-spacer"></span>
-      <button v-if="state.results" class="sw-btn sw-btn-primary" @click="tryClose">
-        {{t('close')}}
-      </button>
-      <button v-else-if="!isLast" class="sw-btn sw-btn-primary" @click="nextStep" :disabled="!canAdvance">
-        {{t('setup_next')}} →
-      </button>
-      <button v-else class="sw-btn sw-btn-primary" @click="onApply" :disabled="state.applying">
-        {{state.applying ? t('setup_applying') : t('setup_apply')}}
-      </button>
+      <!-- Pre-apply: Next / Apply -->
+      <template v-if="!state.results">
+        <button v-if="!isLast" class="sw-btn sw-btn-primary" @click="nextStep" :disabled="!canAdvance">
+          {{t('setup_next')}} →
+        </button>
+        <button v-else class="sw-btn sw-btn-primary" @click="onApply" :disabled="state.applying">
+          {{state.applying ? t('setup_applying') : t('setup_apply')}}
+        </button>
+      </template>
+      <!-- Post-apply, engine not yet started: Later (ghost) + Start engine (primary, focused) -->
+      <template v-else-if="state.engineStatus === null || state.engineStatus === 'starting'">
+        <button class="sw-btn sw-btn-ghost" @click="tryClose" :disabled="state.engineStatus === 'starting'">
+          {{t('setup_engine_later')}}
+        </button>
+        <button class="sw-btn sw-btn-primary" @click="onStartEngine"
+                :disabled="state.engineStatus === 'starting'"
+                ref="engineBtn" data-testid="setup-start-engine">
+          {{state.engineStatus === 'starting' ? t('setup_engine_starting') : t('setup_engine_start')}}
+        </button>
+      </template>
+      <!-- Post-start: Close (or Retry if failed) -->
+      <template v-else>
+        <button v-if="state.engineStatus === 'failed' || state.engineStatus === 'partial'"
+                class="sw-btn sw-btn-ghost" @click="onStartEngine">
+          {{t('setup_engine_retry')}}
+        </button>
+        <button class="sw-btn sw-btn-primary" @click="tryClose">
+          {{t('close')}}
+        </button>
+      </template>
     </footer>
   </div>
 </div>`,
@@ -630,5 +719,29 @@
       app.component('setup-wizard', SetupWizard);
       return ret || app;
     };
+  }
+
+  // ── Auto-launch on first run ──────────────────────────────────────────
+  // Fires from every page that includes this script (the <setup-wizard>
+  // tag lives in the shared shell). The previous hook was overview-only,
+  // which meant fresh installs landing on today.html never saw the modal.
+  // sessionStorage flag prevents re-pop after the user dismisses it.
+  async function maybeAutoLaunch() {
+    if (sessionStorage.getItem('birdash_wizard_dismissed')) return;
+    if (state.open) return;
+    try {
+      const status = await checkSetupStatus();
+      if (status && status.needed) openSetupWizard();
+    } catch {}
+  }
+  function scheduleAutoLaunch() {
+    // Let the page's Vue app mount first (it's set up synchronously from
+    // each *.html, so a single microtask after DOMContentLoaded is enough).
+    setTimeout(maybeAutoLaunch, 250);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleAutoLaunch, { once: true });
+  } else {
+    scheduleAutoLaunch();
   }
 })(window.Vue, window.BIRDASH);
