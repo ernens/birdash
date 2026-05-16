@@ -2,6 +2,23 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.21] — 2026-05-16
+
+### Fixed — phenology page slow on common species
+
+All seven phenology queries filtered the year via
+`strftime('%Y', Date) = ?`, which is non-sargable: SQLite can't use
+`idx_date_com (Date, Com_Name)` when `Date` is wrapped in a function,
+so every visit did a full scan of the species' history. On a common
+species like Sylvia atricapilla (Fauvette à tête noire, ~10k rows on
+the production Pi) this added ~700 ms before the first paint.
+
+Rewrote the year filter as a half-open range
+(`Date >= 'YYYY-01-01' AND Date < '(YYYY+1)-01-01'`) in all seven
+queries. The week-zoom queries keep the `strftime('%W', …)` filter
+on top, but the planner now reaches the week predicate against a
+small index-bounded slice instead of the full per-species history.
+
 ## [1.55.20] — 2026-05-16
 
 ### Added — frequency ranges for the 4 European flycatchers
