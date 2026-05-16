@@ -64,8 +64,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_FP16="$SCRIPT_DIR/models/BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite"
 DST_FP16="$MODELS_DIR/BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite"
 if [ -f "$REPO_FP16" ] && [ ! -L "$REPO_FP16" ]; then
-    cp --remove-destination "$REPO_FP16" "$DST_FP16"
-    echo "  ✓ Real FP16 model installed (smaller + faster than FP32)"
+    # When MODELS_DIR is the same directory the bundled FP16 lives in
+    # (typical bootstrap layout: engine/models/), source and destination
+    # are the same file — `cp` would error and set -e would kill the rest
+    # of the script before the l18n download. Detect via -ef (same inode)
+    # and skip the copy. Without this, the user sees "BirdNET download
+    # failed" even though FP32/MData/Labels were all already copied.
+    if [ "$REPO_FP16" -ef "$DST_FP16" ]; then
+        echo "  ✓ Real FP16 model already in place (bundled with repo)"
+    else
+        cp --remove-destination "$REPO_FP16" "$DST_FP16"
+        echo "  ✓ Real FP16 model installed (smaller + faster than FP32)"
+    fi
 else
     # Fallback when running an older clone without the bundled FP16: keep
     # the legacy symlink so the model picker still resolves the name.

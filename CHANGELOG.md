@@ -2,6 +2,27 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.26] — 2026-05-16
+
+### Fixed — BirdNET download spuriously reported as failed on fresh install
+
+`download_birdnet.sh` copies the bundled real-FP16 model from
+`engine/models/` into the runtime models dir to give users selecting
+"FP16" actual FP16 inference instead of an FP32 symlink. The script
+assumed those were two separate directories — but in the standard
+bootstrap layout (`MODELS_DIR=engine/models/`) they're the same path.
+`cp` refused (`'... are the same file'`), `set -e` killed the rest of
+the script, and the l18n labels never downloaded. install.sh logged
+"BirdNET download failed" even though FP32 / MData / Labels.txt were
+already in place.
+
+Fix: `-ef` (same-inode) test before the copy. If source and dest are
+the same file, log it and move on. Re-run safe.
+
+To recover on mickey (after pulling this): rerun the BirdNET fetch
+from the dashboard (Settings → Detection → Download BirdNET) or
+`bash engine/download_birdnet.sh engine/models/` from the shell.
+
 ## [1.55.25] — 2026-05-16
 
 ### Fixed — birdengine crash-loop on fresh install (Perch label naming mismatch)
