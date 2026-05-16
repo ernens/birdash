@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.28] — 2026-05-16
+
+### Fixed — misleading install warnings
+
+Two stale warnings in `install.sh` that contradicted the rest of the
+script:
+
+- Step 7 emitted "BirdNET V2.4 not installed yet" and "l18n labels
+  not found" — pointing at `kahst/BirdNET-Analyzer` (old fork) — even
+  though step 11 was about to install both. Removed; step 11 has its
+  own (now-correct) messaging.
+- Step 9 used `systemctl reload caddy` to pick up the new Caddyfile,
+  which hits the known Caddy 2.6.2 PKI panic on every reload and
+  prints "Caddy reload failed". Switched to `restart` (already the
+  pattern used by the in-app HTTPS toggle for the same reason).
+
 ## [1.55.27] — 2026-05-16
 
 ### Fixed — BirdNET species-label translations: 0/40 downloaded (upstream path changed)

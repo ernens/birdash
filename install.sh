@@ -484,28 +484,10 @@ if [ -f "$MODELS_DIR/bird_indices.json" ] && [ ! -e "$MODELS_DIR/Perch_v2_bird_i
     ln -sf bird_indices.json "$MODELS_DIR/Perch_v2_bird_indices.json"
 fi
 
-# BirdNET V2.4 (CC-NC-SA license)
-# Can be downloaded automatically via Settings → Detection in the dashboard,
-# or via the birdnetlib pip package (which bundles the models).
-BIRDNET_FOUND=0
-for bn in BirdNET_GLOBAL_6K_V2.4_Model_FP16.tflite BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite; do
-    if [ -f "$MODELS_DIR/$bn" ] && [ "$(stat -c%s "$MODELS_DIR/$bn" 2>/dev/null || echo 0)" -gt 1000000 ]; then
-        BIRDNET_FOUND=1; break
-    fi
-done
-if [ "$BIRDNET_FOUND" = "0" ]; then
-    warn "BirdNET V2.4 not installed yet."
-    echo "    → Use the dashboard: Settings → Detection → 'Download BirdNET V2.4' button"
-    echo "    → Or manually: pip install birdnetlib and copy models to $MODELS_DIR/"
-    echo "    → License: CC-NC-SA 4.0 (non-commercial use only)"
-fi
-
-# Labels l18n directory
-if [ ! -d "$MODELS_DIR/l18n" ] || [ "$(ls "$MODELS_DIR/l18n/" 2>/dev/null | wc -l)" -lt 5 ]; then
-    warn "Species translation labels (l18n/) not found or incomplete."
-    echo "    Download from: https://github.com/kahst/BirdNET-Analyzer (model/l18n/)"
-    echo "    To: $MODELS_DIR/l18n/"
-fi
+# BirdNET V2.4 + l18n translated labels are handled by step 11
+# (download_birdnet.sh). Pre-step-11 warnings used to live here, but they
+# fired even on installs where step 11 was about to install everything,
+# which was misleading. Step 11 has its own clearer messaging.
 
 # ══════════════════════════════════════════════════════════════════════════
 # Step 8: Install systemd services
@@ -566,10 +548,14 @@ EOF
 # Allow Caddy to read user files
 chmod 711 "$BIRDASH_HOME"
 
-# Reload caddy if already running, so it picks up the new Caddyfile.
-# (systemctl enable --now in step 11 would NOT reload an already-active service.)
+# Apply the new Caddyfile if caddy is already running.
+# (systemctl enable --now in step 12 would NOT re-read config on an
+# already-active service.) We use `restart` not `reload` because Caddy
+# 2.6.2's reload path panics on PKI updates (known upstream bug); restart
+# is safe here since this is a non-interactive install and the brief
+# outage is part of the install footprint.
 if systemctl is-active caddy >/dev/null 2>&1; then
-    sudo systemctl reload caddy >/dev/null 2>&1 && ok "Caddy configured and reloaded" || warn "Caddy reload failed"
+    sudo systemctl restart caddy >/dev/null 2>&1 && ok "Caddy configured and restarted" || warn "Caddy restart failed"
 else
     ok "Caddy configured"
 fi
