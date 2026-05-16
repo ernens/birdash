@@ -551,6 +551,13 @@
     'Acrocephalus scirpaceus': { min: 2, max: 7 },
     'Acrocephalus schoenobaenus': { min: 2, max: 8 },
 
+    // ── Flycatchers ────────────────────────────────────
+    // High-pitched, thin "tsee" notes — Muscicapa is the narrowest.
+    'Muscicapa striata': { min: 4, max: 9 },
+    'Ficedula hypoleuca': { min: 3, max: 8 },
+    'Ficedula albicollis': { min: 3, max: 8 },
+    'Ficedula parva': { min: 2, max: 7 },
+
     // ── Finches ────────────────────────────────────────
     'Fringilla coelebs': { min: 2, max: 8 },
     'Fringilla montifringilla': { min: 2, max: 6 },

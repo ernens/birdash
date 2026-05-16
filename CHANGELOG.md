@@ -2,6 +2,16 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.20] — 2026-05-16
+
+### Added — frequency ranges for the 4 European flycatchers
+
+`SPECIES_FREQ_RANGES` had no Muscicapidae entries, so Muscicapa striata
+(Gobemouche gris) showed no expected-band overlay on its spectrogram.
+Added Muscicapa striata (4–9 kHz, narrowest of the family — high-pitched
+"tsee") and the three Ficedula species (hypoleuca, albicollis, parva)
+in a new "Flycatchers" section, between warblers and finches.
+
 ## [1.55.19] — 2026-05-16
 
 ### Added — expected frequency band overlay in spectrogram modal
