@@ -2,6 +2,23 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.24] — 2026-05-16
+
+### Fixed — nav dropdown clipped behind the page content
+
+Regression introduced by 1.55.22's View Transitions opt-in.
+`view-transition-name` on `.app-header` and `.app-nav` creates a new
+stacking context per the View Transitions spec, which trapped the
+`z-index: 100` on `.nav-dropdown` and `.hdr-dropdown` inside their
+parent. The `.app-main` sibling (no z-index, later in DOM order) then
+painted on top, so opening a section dropdown showed page widgets
+poking through.
+
+Fix: keep the named transitions (still want the cross-fade) but lift
+the header + nav stacking contexts above the main with
+`position: relative; z-index: 20`. Now the dropdowns float over the
+page as expected without losing the smooth transition.
+
 ## [1.55.23] — 2026-05-16
 
 ### Fixed — first-run wizard didn't auto-launch + offered no way to start the engine

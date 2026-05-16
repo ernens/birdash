@@ -2162,6 +2162,11 @@ select, input[type="text"], input[type="number"], textarea {
 /* ── Header ──────────────────────────────────────────────────────────────── */
 .app-header {
   view-transition-name: birdash-header;
+  /* view-transition-name creates a stacking context, which would otherwise
+   * trap .hdr-dropdown inside the header and let .app-main paint over it.
+   * Lifting header + nav above main fixes that. */
+  position:        relative;
+  z-index:         20;
   display:         flex;
   align-items:     center;
   justify-content: space-between;
@@ -2407,6 +2412,10 @@ select, input[type="text"], input[type="number"], textarea {
 /* ── Navigation ──────────────────────────────────────────────────────────── */
 .app-nav {
   view-transition-name: birdash-nav;
+  /* See .app-header: lift the nav stacking context above .app-main so
+   * .nav-dropdown is not clipped by the page content below. */
+  position:      relative;
+  z-index:       20;
   background:    var(--bg-deep);
   border-bottom: 1px solid var(--border);
 }
