@@ -2,6 +2,27 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.27] — 2026-05-16
+
+### Fixed — BirdNET species-label translations: 0/40 downloaded (upstream path changed)
+
+`download_birdnet.sh` fetches the translated species labels from
+`birdnet-team/BirdNET-Analyzer`. The script targeted `main` —
+`labels/V2.4/BirdNET_GLOBAL_6K_V2.4_Labels_{lang}.txt`. Upstream
+removed that directory from `main` (post-v2.0 they delegate to a
+separate `birdnet` PyPI package), so every fetch 404'd. Result:
+species shown only by scientific name in any non-default UI language.
+
+Fix: pin to tag `v1.5.1` (Dec 2024), the last release that still ships
+`labels/V2.4/`. Labels themselves are V2.4-model-specific and don't
+change between Analyzer releases, so the pin is content-stable.
+
+Also corrected the language list to match what `v1.5.1` actually
+contains (dropped `ca`, `en_us`, `et`, `gl`, `lv`, `pt`; added `in`,
+`ml`, fixed `pt_br` → `pt_BR`, `pt` → `pt_PT`). The legacy ISO code
+`in` is normalized to modern `id` on disk, and all output filenames
+are lowercased so engine lookups don't break on case-sensitive paths.
+
 ## [1.55.26] — 2026-05-16
 
 ### Fixed — BirdNET download spuriously reported as failed on fresh install

@@ -86,12 +86,22 @@ echo "▶ Downloading l18n species label translations..."
 "$VENV_DIR/bin/python3" - "$L18N_DIR" <<'PY'
 import sys, os, json, urllib.request
 out_dir = sys.argv[1]
-langs = ['af','ar','bg','ca','cs','da','de','el','en_uk','en_us','es','et',
-         'fi','fr','gl','he','hr','hu','id','is','it','ja','ko','lt','lv',
-         'nl','no','pl','pt_br','pt','ro','ru','sk','sl','sr','sv','th',
-         'tr','uk','zh']
+# Source: birdnet-team/BirdNET-Analyzer @ v1.5.1 (Dec 2024) — last release
+# that still ships the V2.4 translated labels under labels/V2.4/. The labels
+# were removed from `main` in 2025-04 when the project switched to a
+# different label-loading mechanism, so pinning to v1.5.1 is the stable
+# fallback. (The labels themselves are V2.4-model-specific and don't
+# change between Analyzer releases.)
+#
+# The list below matches exactly what v1.5.1 ships — anything outside this
+# set 404s and is logged. `in` is the legacy ISO code for Indonesian as
+# named upstream; we save it as `labels_id.json` (modern ISO) for the
+# engine's lookup.
+langs = ['af','ar','bg','cs','da','de','el','en_uk','es','fi','fr','he',
+         'hr','hu','in','is','it','ja','ko','lt','ml','nl','no','pl',
+         'pt_BR','pt_PT','ro','ru','sk','sl','sr','sv','th','tr','uk','zh']
 base = ('https://raw.githubusercontent.com/birdnet-team/BirdNET-Analyzer/'
-        'main/birdnet_analyzer/labels/V2.4/'
+        'v1.5.1/birdnet_analyzer/labels/V2.4/'
         'BirdNET_GLOBAL_6K_V2.4_Labels_{}.txt')
 ok = 0
 for lang in langs:
@@ -102,7 +112,12 @@ for lang in langs:
             parts = line.split('_', 1)
             if len(parts) == 2:
                 d[parts[0]] = parts[1]
-        fname = 'labels_' + lang.replace('_', '-') + '.json'
+        # Normalize output to lowercase modern locale codes the engine looks
+        # up: pt_BR -> pt-br, in -> id, en_uk -> en-uk.
+        out_lang = lang.replace('_', '-').lower()
+        if out_lang == 'in':
+            out_lang = 'id'
+        fname = f'labels_{out_lang}.json'
         with open(os.path.join(out_dir, fname), 'w', encoding='utf-8') as f:
             json.dump(d, f, ensure_ascii=False, indent=2)
         ok += 1
