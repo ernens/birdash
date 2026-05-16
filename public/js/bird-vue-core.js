@@ -398,14 +398,43 @@
     return `${Math.abs(a).toFixed(4)}° ${ns} / ${Math.abs(b).toFixed(4)}° ${ew}`;
   }
 
+  // Stale-while-revalidate fetch helper for header-driving endpoints.
+  // The shell re-mounts on every page navigation (MPA architecture); without
+  // this cache the header bell/badge/update banner appear ~200 ms after the
+  // page renders, which reads as a flicker. We hand the cached payload to
+  // `applyFn` synchronously when available, then refresh in background so
+  // the next mount has fresh data. TTL is short on purpose (60 s default) —
+  // long enough to span a typical navigation, short enough that stale data
+  // doesn't outlive a real change. sessionStorage so the cache dies with
+  // the tab; no quota pressure, no need to evict.
+  function _ssApply(url, applyFn, ttl) {
+    ttl = ttl || 60000;
+    const key = 'shell:' + url;
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const o = JSON.parse(raw);
+        if (o && (Date.now() - o.ts) < ttl) applyFn(o.data, true);
+      }
+    } catch {}
+    return fetch(url).then(r => r.ok ? r.json() : null).then(data => {
+      if (data == null) return;
+      try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+      applyFn(data, false);
+      return data;
+    }).catch(() => {});
+  }
+
   function _loadSiteIdentity() {
     if (_siteIdentityLoaded) return;
     _siteIdentityLoaded = true;
     // Init from config
     _siteName.value = BIRD_CONFIG.siteName || (BIRD_CONFIG.location && BIRD_CONFIG.location.name) || 'BirdStation';
     _brandName.value = BIRD_CONFIG.brandName || 'BirdStation';
-    // Override from API
-    fetch(BIRD_CONFIG.apiUrl + '/settings').then(r => r.ok ? r.json() : {}).then(conf => {
+    // Override from API — long TTL: SITE_NAME / SITE_BRAND / coords basically
+    // never change. Cached value lands sync, so the header text is right on
+    // first paint after the first visit of the session.
+    _ssApply(BIRD_CONFIG.apiUrl + '/settings', (conf) => {
       if (conf.SITE_NAME) {
         _siteName.value = conf.SITE_NAME;
         _applyPageTitle();
@@ -416,7 +445,7 @@
         if (Number.isFinite(n)) _siteElev.value = Math.round(n);
       }
       _siteCoords.value = _formatCoords(conf.LATITUDE, conf.LONGITUDE);
-    }).catch(() => {});
+    }, 300000);
   }
 
   // Update site identity (called from settings page after save)
@@ -1145,9 +1174,9 @@
       // /api/update-status (which calls git describe). Updated when the
       // user applies an update via the dashboard.
       const appVersion = ref('');
-      fetch(`${BIRD_CONFIG.apiUrl}/update-status`).then(r => r.json()).then(d => {
+      _ssApply(`${BIRD_CONFIG.apiUrl}/update-status`, (d) => {
         if (d && d.currentVersion) appVersion.value = d.currentVersion;
-      }).catch(() => {});
+      });
       window.addEventListener('birdash:settings-changed', () => {
         fetch(`${BIRD_CONFIG.apiUrl}/update-status?refresh=1`).then(r => r.json()).then(d => {
           if (d && d.currentVersion) appVersion.value = d.currentVersion;
@@ -1664,25 +1693,21 @@
       const bugReportOpen = ref(false);
       const bugReportForm = reactive({ title: '', description: '', attachLogs: false, sending: false, sent: false, error: '', issueUrl: '' });
       const bugReportEnabled = ref(false);
-      fetch(`${BIRD_CONFIG.apiUrl}/bug-report/status`).then(r => r.json()).then(d => { bugReportEnabled.value = d.enabled; }).catch(() => {});
+      _ssApply(`${BIRD_CONFIG.apiUrl}/bug-report/status`, (d) => { bugReportEnabled.value = !!d.enabled; });
 
       // BirdWeather status — drives the header button visibility + URL.
       // Live from birdnet.conf (no restart needed when the user updates
       // BIRDWEATHER_ID in Settings → Station).
       const birdweatherStationId = ref('');
-      fetch(`${BIRD_CONFIG.apiUrl}/birdweather/status`).then(r => r.json())
-        .then(d => { birdweatherStationId.value = d.stationId || ''; })
-        .catch(() => {});
+      _ssApply(`${BIRD_CONFIG.apiUrl}/birdweather/status`, (d) => { birdweatherStationId.value = d.stationId || ''; });
 
       // ── Auth status (for header badge + login/logout button) ─────────
       const authStatus = reactive({ mode: 'off', authenticated: false, user: null, configured: false, canWrite: true });
       async function refreshAuthStatus() {
-        try {
-          const r = await fetch(`${BIRD_CONFIG.apiUrl}/auth/status`);
-          if (!r.ok) return;
-          const d = await r.json();
-          Object.assign(authStatus, d);
-        } catch {}
+        // Cached value lands sync so the login/logout button doesn't pop in
+        // half a second after the rest of the header. 30 s TTL is short
+        // enough that a fresh login from another tab is visible quickly.
+        return _ssApply(`${BIRD_CONFIG.apiUrl}/auth/status`, (d) => Object.assign(authStatus, d), 30000);
       }
       refreshAuthStatus();
       async function logout() {

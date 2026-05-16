@@ -4,7 +4,7 @@
  * Stratégie : cache-first pour les assets, network-first pour l'API.
  */
 
-const CACHE_NAME = 'birdash-v271';
+const CACHE_NAME = 'birdash-v272';
 
 // Assets statiques à pré-cacher à l'installation
 const PRECACHE = [

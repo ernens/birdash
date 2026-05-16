@@ -2149,8 +2149,19 @@ select, input[type="text"], input[type="number"], textarea {
   min-height: 100vh;
 }
 
+/* Cross-document View Transitions — browser animates between navigations
+ * so the header/nav appear visually stable even though Vue re-mounts on
+ * each page. Opt-in; browsers without support (older Firefox) just see
+ * a normal page load. The `@view-transition` rule must be on BOTH source
+ * and destination — bird-styles.css is shared by every page so this
+ * covers all 26 routes uniformly. Named transitions on `.app-header` and
+ * `.app-nav` tell the browser these elements should cross-fade in place
+ * rather than fade out + fade in. */
+@view-transition { navigation: auto; }
+
 /* ── Header ──────────────────────────────────────────────────────────────── */
 .app-header {
+  view-transition-name: birdash-header;
   display:         flex;
   align-items:     center;
   justify-content: space-between;
@@ -2395,6 +2406,7 @@ select, input[type="text"], input[type="number"], textarea {
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
 .app-nav {
+  view-transition-name: birdash-nav;
   background:    var(--bg-deep);
   border-bottom: 1px solid var(--border);
 }

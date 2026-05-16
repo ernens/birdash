@@ -2,6 +2,31 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.22] — 2026-05-16
+
+### Changed — header feels persistent between page navigations
+
+Two complementary tweaks so the header no longer reads as
+"flashing/reloading" when the user navigates between pages, without
+the cost of a full SPA refactor.
+
+- **Cross-document View Transitions API**: opted in globally via
+  `@view-transition { navigation: auto }` in `bird-styles.css`, with
+  named transitions `birdash-header` and `birdash-nav` on `.app-header`
+  / `.app-nav`. Chromium and Safari now cross-fade the header in place
+  on navigation instead of doing a hard repaint. Firefox is a no-op
+  (graceful degradation).
+- **sessionStorage cache for shell-driving APIs**: new
+  `_ssApply(url, applyFn, ttl)` helper does stale-while-revalidate
+  against sessionStorage. Wrapped the 5 endpoints whose results
+  paint the header: `/api/settings` (site name/brand/coords, 5 min
+  TTL), `/api/update-status` (app version), `/api/bug-report/status`,
+  `/api/birdweather/status`, and `/api/auth/status` (30 s TTL — short
+  enough that a fresh login from another tab is visible quickly).
+  Cached payloads apply synchronously; the network fetch still fires
+  in background to refresh. Cache dies with the tab — no quota
+  pressure, no eviction logic.
+
 ## [1.55.21] — 2026-05-16
 
 ### Fixed — phenology page slow on common species
