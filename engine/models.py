@@ -19,8 +19,18 @@ log = logging.getLogger("birdengine")
 # ---------------------------------------------------------------------------
 
 def load_labels(model_name, models_dir):
-    """Load species labels for a model."""
+    """Load species labels for a model.
+
+    Tries the per-variant name first ({model_name}_Labels.txt). Falls back
+    to a generic labels.txt — the HF Perch release ships a single shared
+    label file for all variants, and install.sh symlinks each variant
+    name to it. Fallback is the safety net for installs that predate the
+    symlinking step (and for non-bootstrap deployments)."""
     label_path = os.path.join(models_dir, f"{model_name}_Labels.txt")
+    if not os.path.exists(label_path):
+        generic = os.path.join(models_dir, "labels.txt")
+        if os.path.exists(generic):
+            label_path = generic
     with open(label_path) as f:
         labels = [line.strip() for line in f.readlines()]
     # Strip common name suffix if present (e.g. "Pica pica_Eurasian Magpie")
@@ -213,9 +223,13 @@ class PerchModel:
         log.info("Perch temperature=%.2f (sensitivity=%.2f)", self._temperature, sensitivity)
 
         # Bird-only filter — prefer variant-specific index, fallback to generic
+        # ("Perch_v2_bird_indices.json"), then to the HF-release filename
+        # ("bird_indices.json") for installs that didn't run the symlink step.
         idx_path = os.path.join(models_dir, f"{self.name}_bird_indices.json")
         if not os.path.exists(idx_path):
             idx_path = os.path.join(models_dir, "Perch_v2_bird_indices.json")
+        if not os.path.exists(idx_path):
+            idx_path = os.path.join(models_dir, "bird_indices.json")
         if os.path.exists(idx_path):
             with open(idx_path) as f:
                 self._bird_indices = np.array(json.load(f), dtype=int)

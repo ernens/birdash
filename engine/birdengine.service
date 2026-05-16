@@ -10,6 +10,9 @@ WorkingDirectory=BIRDASH_HOME/birdash/engine
 ExecStart=BIRDASH_HOME/birdash/engine/venv/bin/python BIRDASH_HOME/birdash/engine/engine.py
 Restart=on-failure
 RestartSec=10
+# Exit 78 = EX_CONFIG: model files missing / config error.
+# Don't restart-loop on conditions a human has to fix.
+RestartPreventExitStatus=78
 TimeoutStopSec=60
 UMask=0022
 StandardOutput=journal

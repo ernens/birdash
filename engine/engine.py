@@ -1265,7 +1265,20 @@ def main():
     config_path = sys.argv[1] if len(sys.argv) > 1 else "config.toml"
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), config_path)
 
-    engine = BirdEngine(config_path)
+    # Missing model files are a configuration problem, not a transient
+    # failure — restarting won't fix it. Exit with 78 (EX_CONFIG); the
+    # systemd unit lists this in RestartPreventExitStatus so journal/CPU
+    # aren't flooded with retries on a fresh install that skipped the
+    # download step. Operator sees one clear line and can act.
+    try:
+        engine = BirdEngine(config_path)
+    except FileNotFoundError as e:
+        path = getattr(e, "filename", "") or str(e)
+        log.error("Missing model file: %s", path)
+        log.error("Run install.sh step 7 (Perch download) or use the dashboard "
+                  "Settings -> Detection to fetch the missing files, then "
+                  "'systemctl start birdengine'.")
+        sys.exit(78)
 
     def handle_signal(sig, frame):
         log.info("Received signal %d, shutting down...", sig)

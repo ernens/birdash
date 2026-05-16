@@ -2,6 +2,36 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.25] — 2026-05-16
+
+### Fixed — birdengine crash-loop on fresh install (Perch label naming mismatch)
+
+Mickey crash-looped 95 times in 20 minutes after a fresh bootstrap
+install. `engine/models.py` opens
+`{model_name}_Labels.txt` and `Perch_v2_bird_indices.json`, but the
+HuggingFace Perch release ships `labels.txt` and `bird_indices.json`
+(shared content across all Perch variants), and `install.sh` was
+downloading them under the HF names without bridging. Result:
+`FileNotFoundError` in `BirdEngine.__init__`, immediate exit,
+`Restart=on-failure` re-attempts every 10 s indefinitely.
+
+Three coordinated changes so this never bites again:
+
+- **`install.sh` step 7** — after the Perch downloads, create symlinks
+  for each variant: `{variant}_Labels.txt` → `labels.txt` and
+  `Perch_v2_bird_indices.json` → `bird_indices.json`. Single physical
+  file on disk, multiple names; survives re-downloads.
+- **`engine/models.py`** — fallback path in `load_labels()` (try
+  `labels.txt` if `{name}_Labels.txt` is absent) and a third fallback
+  in the bird-indices block (`bird_indices.json`). Covers installs
+  that predate the symlinking step and any non-bootstrap deployment.
+- **Fail-fast on missing models** — `engine/engine.py main()` catches
+  `FileNotFoundError` from `BirdEngine.__init__`, logs a clear
+  one-liner pointing at the file path + remediation, and exits 78
+  (EX_CONFIG). `engine/birdengine.service` adds
+  `RestartPreventExitStatus=78` so systemd doesn't loop on a
+  configuration problem a human has to fix.
+
 ## [1.55.24] — 2026-05-16
 
 ### Fixed — nav dropdown clipped behind the page content

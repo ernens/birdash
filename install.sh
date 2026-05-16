@@ -467,6 +467,23 @@ else
     ok "Perch V2 INT8 downloaded (best for $(echo $PI_MODEL | grep -oP 'Pi \d+' || echo 'this hardware'))"
 fi
 
+# engine/models.py expects per-variant label/index filenames
+# ({variant}_Labels.txt, Perch_v2_bird_indices.json). The HF release ships
+# them under the shared names labels.txt and bird_indices.json — content
+# is identical across Perch variants, so we just symlink each variant
+# back to the shared file. Symlink not copy: zero extra disk, zero risk
+# of stale duplicates after a re-download.
+if [ -f "$MODELS_DIR/labels.txt" ]; then
+    for variant in perch_v2_dynint8 perch_v2_fp16 perch_v2_original; do
+        if [ -f "$MODELS_DIR/${variant}.tflite" ]; then
+            ln -sf labels.txt "$MODELS_DIR/${variant}_Labels.txt"
+        fi
+    done
+fi
+if [ -f "$MODELS_DIR/bird_indices.json" ] && [ ! -e "$MODELS_DIR/Perch_v2_bird_indices.json" ]; then
+    ln -sf bird_indices.json "$MODELS_DIR/Perch_v2_bird_indices.json"
+fi
+
 # BirdNET V2.4 (CC-NC-SA license)
 # Can be downloaded automatically via Settings → Detection in the dashboard,
 # or via the birdnetlib pip package (which bundles the models).
