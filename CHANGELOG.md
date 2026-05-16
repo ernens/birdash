@@ -2,6 +2,20 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.29] — 2026-05-16
+
+### Fixed — header dropdowns (theme / lang / bell) clipped behind nav
+
+Follow-up to 1.55.24. Lifting both `.app-header` and `.app-nav` to
+`z-index: 20` fixed `.nav-dropdown`'s clipping by `.app-main`, but
+left the header's own popovers (`.hdr-menu` theme picker, language
+picker, `.bell-panel` notifications) clipped by `.app-nav` instead —
+those panels open downward past the header bottom edge, and `.app-nav`
+(same z-index, later in DOM) painted on top.
+
+Header stacking context must sit above the nav's, so `.app-header`
+goes to `z-index: 30` while `.app-nav` stays at 20.
+
 ## [1.55.28] — 2026-05-16
 
 ### Fixed — misleading install warnings

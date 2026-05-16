@@ -2163,10 +2163,12 @@ select, input[type="text"], input[type="number"], textarea {
 .app-header {
   view-transition-name: birdash-header;
   /* view-transition-name creates a stacking context, which would otherwise
-   * trap .hdr-dropdown inside the header and let .app-main paint over it.
-   * Lifting header + nav above main fixes that. */
+   * trap .hdr-dropdown / .bell-panel / .hdr-menu inside the header and let
+   * .app-nav (next sibling, also a stacking-context owner since 1.55.24)
+   * paint over them as they extend below the header bottom edge. Header
+   * stacking context must sit ABOVE the nav's, hence z-index 30 vs 20. */
   position:        relative;
-  z-index:         20;
+  z-index:         30;
   display:         flex;
   align-items:     center;
   justify-content: space-between;
