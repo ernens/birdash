@@ -274,19 +274,19 @@
                     @click="setFilterMode('all')">{{t('td_filter_all')}}</button>
             <button v-if="newSpeciesSet.size" class="td-pill" :class="{'td-pill--active': filterMode==='new'}"
                     @click="setFilterMode(filterMode==='new'?'all':'new')">
-              <bird-icon name="sparkles" :size="11"></bird-icon> {{t('td_filter_new')}}<span class="td-pill-n"> {{newSpeciesSet.size}}</span>
+              <bird-icon name="sparkles" :size="11"></bird-icon> {{t('td_filter_new')}} <span class="td-pill-n">{{newSpeciesSet.size}}</span>
             </button>
             <button v-if="rareCount" class="td-pill" :class="{'td-pill--active': filterMode==='rare'}"
                     @click="setFilterMode(filterMode==='rare'?'all':'rare')">
-              <bird-icon name="gem" :size="11"></bird-icon> {{t('td_filter_rare')}}<span class="td-pill-n"> {{rareCount}}</span>
+              <bird-icon name="gem" :size="11"></bird-icon> {{t('td_filter_rare')}} <span class="td-pill-n">{{rareCount}}</span>
             </button>
             <button v-if="toReviewCount" class="td-pill" :class="{'td-pill--active': filterMode==='review'}"
                     @click="setFilterMode(filterMode==='review'?'all':'review')">
-              <bird-icon name="alert-triangle" :size="11"></bird-icon> {{t('td_filter_review')}}<span class="td-pill-n"> {{toReviewCount}}</span>
+              <bird-icon name="alert-triangle" :size="11"></bird-icon> {{t('td_filter_review')}} <span class="td-pill-n">{{toReviewCount}}</span>
             </button>
             <button v-if="strongCount" class="td-pill" :class="{'td-pill--active': filterMode==='strong'}"
                     @click="setFilterMode(filterMode==='strong'?'all':'strong')">
-              <bird-icon name="check-circle" :size="11"></bird-icon> {{t('td_filter_strong')}}<span class="td-pill-n"> {{strongCount}}</span>
+              <bird-icon name="check-circle" :size="11"></bird-icon> {{t('td_filter_strong')}} <span class="td-pill-n">{{strongCount}}</span>
             </button>
           </div>
 

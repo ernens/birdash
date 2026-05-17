@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.31] — 2026-05-17
+
+### Fixed — number glued to label in dawn-chorus card & today filter pills
+
+Vue 3's default template compiler condenses leading/trailing whitespace
+inside an element's content. Five spots wrapped the unit label in a
+`<span>` and put the separator space *inside* that span — so it
+silently disappeared at render. Rendered "16espèces détectées",
+"Nouvelles3", etc.
+
+Fix: move the space outside the wrapping `<span>` (between the
+preceding mustache and the opening tag, which Vue does preserve).
+
+Affected: `overview.html` (dawn chorus card), `today.html` (4 filter
+pills: new / rare / review / strong).
+
 ## [1.55.30] — 2026-05-16
 
 ### Fixed — fresh installs missing `count_07` on `daily/monthly/species_stats`
