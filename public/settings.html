@@ -146,7 +146,6 @@ const app = createApp({
     const saveErr = ref(false);
     const includeList = ref('');
     const excludeList = ref('');
-    const savingLists = ref(false);
 
     // ── Species picker (multi-select from already-detected) ─────────
     const speciesPickerOpen = ref(false);
@@ -878,10 +877,19 @@ const app = createApp({
     let _savedSnapshot = null;
     let _savedAudioSnapshot = null;
     let _savedAgSnapshot = null;
+    // Species lists travel separately from `conf` (they live in their own
+    // text files, written via the species-include / species-exclude POST
+    // ops inside saveAll). They must be tracked here too, otherwise editing
+    // a textarea — or adding species via the picker — would leave the
+    // global Save button grey, hiding the unsaved state.
+    let _savedIncludeListSnapshot = null;
+    let _savedExcludeListSnapshot = null;
     function _snapshotSavedState() {
       try { _savedSnapshot = JSON.stringify(conf); } catch { _savedSnapshot = null; }
       try { _savedAudioSnapshot = JSON.stringify(audioConf); } catch { _savedAudioSnapshot = null; }
       try { _savedAgSnapshot = JSON.stringify(agConf); } catch { _savedAgSnapshot = null; }
+      try { _savedIncludeListSnapshot = includeList.value; } catch { _savedIncludeListSnapshot = null; }
+      try { _savedExcludeListSnapshot = excludeList.value; } catch { _savedExcludeListSnapshot = null; }
       _savedModel = conf.MODEL;
       _savedSecondary = conf.SECONDARY_MODEL;
       _savedDual = String(conf.DUAL_MODEL_ENABLED);
@@ -892,6 +900,8 @@ const app = createApp({
         if (JSON.stringify(conf) !== _savedSnapshot) return true;
         if (_savedAudioSnapshot && JSON.stringify(audioConf) !== _savedAudioSnapshot) return true;
         if (_savedAgSnapshot && JSON.stringify(agConf) !== _savedAgSnapshot) return true;
+        if (_savedIncludeListSnapshot !== null && includeList.value !== _savedIncludeListSnapshot) return true;
+        if (_savedExcludeListSnapshot !== null && excludeList.value !== _savedExcludeListSnapshot) return true;
         return false;
       } catch { return false; }
     });
@@ -929,28 +939,6 @@ const app = createApp({
       setTimeout(loadServices, 1500);
     }
 
-    async function saveSpeciesLists() {
-      savingLists.value = true;
-      try {
-        const inc = includeList.value.split('\n').map(l => l.trim()).filter(Boolean);
-        const exc = excludeList.value.split('\n').map(l => l.trim()).filter(Boolean);
-        const results = await Promise.allSettled([
-          _postJson(API + '/species-lists', { list: 'include', species: inc }),
-          _postJson(API + '/species-lists', { list: 'exclude', species: exc }),
-        ]);
-        const failures = results
-          .map((r, i) => r.status === 'rejected' ? `${i ? 'exclude' : 'include'}: ${r.reason.message}` : null)
-          .filter(Boolean);
-        if (failures.length) {
-          saveMsg.value = 'species lists: ' + failures.join('; ');
-          saveErr.value = true;
-        }
-      } catch(e) {
-        saveMsg.value = e.message;
-        saveErr.value = true;
-      }
-      savingLists.value = false;
-    }
 
     // ── Help system ──────────────────────────────────────────────────────
     const helpKey = ref(null);
@@ -2733,7 +2721,7 @@ const app = createApp({
       startCalibration, applyCalibration,
       startMonitor, stopMonitor, testAudio,
       loading, saving, svcLoading, saveMsg, saveErr,
-      includeList, excludeList, savingLists,
+      includeList, excludeList,
       speciesPickerOpen, speciesPickerList, speciesPickerSelected, speciesPickerSearch,
       speciesPickerFilter, speciesPickerLoaded, speciesPickerError, speciesPickerToast,
       speciesIncludeSet, speciesExcludeSet, filteredPickerSpecies,
@@ -2753,7 +2741,7 @@ const app = createApp({
       agConf, agState, loadAgState,
       dbTables, dbSelectedTable, dbSchema, dbSql, dbSqlWarning, dbColumns, dbRows, dbLoading, dbError, dbExecTime,
       dbLoadTables, dbSelectTable, dbExec,
-      saveAll, resetDefaults, restartService, saveSpeciesLists, isDirty,
+      saveAll, resetDefaults, restartService, isDirty,
       detectionProfiles, activeDetectionProfileId, detectionProfileDropdown,
       detectionProfileMsg, detectionProfileErr, detectionProfileModified,
       applyDetectionProfile, saveAsDetectionProfile, deleteDetectionProfile,

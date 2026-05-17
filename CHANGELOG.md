@@ -2,6 +2,29 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.40] — 2026-05-17
+
+### Fixed — Save button stayed grey after editing species lists
+
+`isDirty` only tracked `conf`, `audioConf`, and `agConf`. The include /
+exclude species textareas (and now the picker, which writes into them)
+were ignored entirely — so the user could rewrite the whole exclusion
+list, the global Save button kept the disabled grey state, hiding the
+unsaved change. The species lists still made it to disk on the next
+unrelated edit (because `saveAll` always re-POSTs them) but the UX was
+backwards.
+
+Track `includeList` and `excludeList` snapshots in `_snapshotSavedState`,
+compare them in the `isDirty` computed. The Save button now lights up
+the moment any textarea or picker action touches a species list.
+
+### Removed — dead `saveSpeciesLists` helper
+
+A standalone `saveSpeciesLists` function was defined and exported but
+never bound to any UI element — the save bar uses `saveAll` which
+already handles species lists in its parallel POST batch. Dropped the
+helper and its `savingLists` ref to keep the setup state honest.
+
 ## [1.55.39] — 2026-05-17
 
 ### Added — multi-select species picker for inclusion / exclusion lists
