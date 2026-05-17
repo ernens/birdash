@@ -2,6 +2,25 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.35] — 2026-05-17
+
+### Fixed — bbox & stability sub-modules ignored the configured DB path
+
+`engine/bbox.py` and `engine/stability.py` both hardcoded
+`/home/bjorn/BirdNET-Pi/scripts/birds.db` at module load. On legacy
+installs upgraded from BirdNET-Pi this happened to be the active DB,
+so the bug was invisible. On fresh installs (where the canonical DB
+sits at `~/birdash/data/birds.db` per `engine/config.toml.example`),
+every bbox write logged `[bbox] unexpected error for ...mp3: unable to
+open database file` and every stability worker poll missed its target.
+On mickey it spammed once per detection (~one log line every 7s).
+
+Add `db.resolve_db_path()` that reads `[output] local_db` from
+`engine/config.toml` (the same source `engine.py` boots from) and falls
+back to `$BIRDASH_DB` env / `~/BirdNET-Pi/scripts/birds.db` legacy /
+`~/birdash/data/birds.db` fresh-install in that order. bbox.py and
+stability.py now resolve through this helper at import time.
+
 ## [1.55.34] — 2026-05-17
 
 ### Fixed — sudo-check polled once per session instead of once per page load

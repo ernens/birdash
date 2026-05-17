@@ -28,7 +28,8 @@ import numpy as np
 # the heavy TFLite import path on every help/syntax-check.
 log = logging.getLogger("birdengine-stability")
 
-DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
+from db import resolve_db_path
+DB_PATH = resolve_db_path()
 CLIPS_ROOT = Path("/home/bjorn/BirdSongs/Extracted/By_Date")
 
 ALGORITHM_VERSION = "stability_v1"

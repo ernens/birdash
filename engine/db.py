@@ -10,6 +10,35 @@ import sqlite3
 log = logging.getLogger("birdengine")
 
 
+def resolve_db_path():
+    """Resolve the canonical birds.db path the same way the engine does at
+    boot — reading `[output] local_db` from `engine/config.toml` — so
+    sub-modules (bbox, stability) can't drift onto a stale fixture by
+    accident. Falls back to env var / legacy / fresh-install paths only if
+    the TOML can't be read.
+
+    Order: $BIRDASH_DB → config.toml output.local_db → ~/BirdNET-Pi/scripts/birds.db
+    (legacy upgrade path) → ~/birdash/data/birds.db (fresh install layout).
+    """
+    env = os.environ.get("BIRDASH_DB")
+    if env:
+        return env
+    cfg_path = os.path.join(os.path.dirname(__file__), "config.toml")
+    try:
+        import toml
+        cfg = toml.load(cfg_path)
+        configured = cfg.get("output", {}).get("local_db")
+        if configured:
+            return os.path.expanduser(configured)
+    except Exception:
+        pass
+    for p in (os.path.expanduser("~/BirdNET-Pi/scripts/birds.db"),
+              os.path.expanduser("~/birdash/data/birds.db")):
+        if os.path.exists(p):
+            return p
+    return os.path.expanduser("~/birdash/data/birds.db")
+
+
 def init_db(db_path):
     """Create the detections database if it doesn't exist + run idempotent migrations."""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)

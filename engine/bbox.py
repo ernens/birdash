@@ -38,7 +38,8 @@ MIN_SNR = 2.0
 # (Phase 0 case 0120: 0.15 s bbox starting at 0.03 s — boundary artifact).
 MIN_TRUNCATED_DURATION_S = 0.3
 
-DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
+from db import resolve_db_path
+DB_PATH = resolve_db_path()
 TAXONOMY_CSV = Path("/home/bjorn/birdash/config/ebird-taxonomy.csv")
 
 # Per-family overrides for taxa whose ORDER fallback band misses their actual
