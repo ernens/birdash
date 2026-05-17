@@ -90,6 +90,15 @@ echo "════════════════════════�
 echo "  Update started at $(date -Iseconds)"
 echo "════════════════════════════════════════════════════"
 
+# ── 0. Pre-flight: passwordless sudo ──────────────────────────────────────
+# Migrations 009-011 (Caddy) and the final birdash/birdengine restarts call
+# sudo. Without a TTY (the UI launches us in the background) every sudo
+# blocks. Bail loudly here rather than letting half the migrations apply.
+if ! sudo -n true 2>/dev/null; then
+    USER_NAME=$(whoami)
+    fail "Passwordless sudo is not configured for $USER_NAME, so this in-app update cannot apply Caddy migrations or restart services. Run on the Pi (one time): echo '$USER_NAME ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/010_pi-nopasswd && sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd"
+fi
+
 # ── 1. Handle uncommitted changes in tracked files ───────────────────────
 if ! git diff --quiet || ! git diff --cached --quiet; then
     dirty=$(git diff --name-only; git diff --cached --name-only)

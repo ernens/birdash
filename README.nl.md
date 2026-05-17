@@ -309,6 +309,17 @@ Alle andere afhankelijkheden worden automatisch geïnstalleerd door de installer
 
 ## Installatie
 
+### Vereiste: sudo zonder wachtwoord
+
+In-app updates (gestart vanuit de dashboard-UI) draaien zonder terminal, dus `sudo` moet werken zonder wachtwoordprompt. Anders falen updates stil bij de Caddy-migraties en de finale service-restart.
+
+Als je in Raspberry Pi Imager **"Sta deze gebruiker toe in te loggen zonder wachtwoord"** hebt aangevinkt, is het al geregeld. Anders biedt het installatieprogramma aan dit te configureren (schrijft `/etc/sudoers.d/010_pi-nopasswd`). Handmatig instellen:
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+```
+
 ### One-line install (aanbevolen)
 
 ```bash

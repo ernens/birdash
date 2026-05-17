@@ -63,6 +63,47 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════
+# Pre-flight: Passwordless sudo (required for in-app updates)
+# ══════════════════════════════════════════════════════════════════════════
+# The dashboard's in-app updater launches scripts without a TTY, so any
+# sudo call that needs a password hangs forever. Without NOPASSWD configured
+# now, future in-app updates will fail at the Caddy migrations and at the
+# final `systemctl restart birdash`.
+echo -e "\n${BLUE}[pre]${NC} Checking passwordless sudo for in-app updates..."
+
+if sudo -n true 2>/dev/null; then
+    ok "Passwordless sudo already configured for $BIRDASH_USER"
+else
+    echo ""
+    echo "  In-app updates (from the dashboard UI) run without a terminal,"
+    echo "  so sudo must work without a password prompt. Without this, the"
+    echo "  next update will fail at the Caddy migrations and the service"
+    echo "  restart."
+    echo ""
+    echo "  This will write /etc/sudoers.d/010_pi-nopasswd:"
+    echo "      $BIRDASH_USER ALL=(ALL) NOPASSWD: ALL"
+    echo ""
+    echo "  Same as the Raspberry Pi Imager \"passwordless sudo\" option."
+    echo ""
+    if [ "$ASSUME_YES" = "1" ]; then
+        REPLY="y"
+    else
+        read -p "  Configure passwordless sudo for $BIRDASH_USER? [Y/n] " -n 1 -r
+        echo
+    fi
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        echo "$BIRDASH_USER ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd > /dev/null
+        sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+        ok "Passwordless sudo configured (/etc/sudoers.d/010_pi-nopasswd)"
+    else
+        warn "Skipped — in-app updates from the UI will fail until you set this up"
+        warn "Manual setup later:"
+        warn "  echo '$BIRDASH_USER ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/010_pi-nopasswd"
+        warn "  sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd"
+    fi
+fi
+
+# ══════════════════════════════════════════════════════════════════════════
 # Step 1: System packages
 # ══════════════════════════════════════════════════════════════════════════
 step 1 "Installing system packages..."

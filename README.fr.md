@@ -310,6 +310,17 @@ Toutes les autres dépendances sont installées automatiquement par l'installeur
 
 ## Installation
 
+### Prérequis : sudo sans mot de passe
+
+Les mises à jour lancées depuis l'interface du dashboard tournent sans terminal, donc `sudo` doit fonctionner sans demander de mot de passe. Sinon les updates échoueront silencieusement aux migrations Caddy et au redémarrage final des services.
+
+Si tu as coché **« Autoriser cet utilisateur à se connecter sans mot de passe »** dans Raspberry Pi Imager, c'est déjà fait. Sinon l'installeur te proposera de le configurer (écrit `/etc/sudoers.d/010_pi-nopasswd`). Pour le faire manuellement :
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+```
+
 ### Installation en une commande (recommandée)
 
 ```bash

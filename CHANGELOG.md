@@ -2,6 +2,40 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.32] — 2026-05-17
+
+### Fixed — in-app updates silently fail when passwordless sudo is missing
+
+If `bjorn ALL=(ALL) NOPASSWD: ALL` isn't in `/etc/sudoers.d/` (e.g.
+the Raspberry Pi Imager "passwordless sudo" box wasn't ticked), the
+in-app updater — which runs without a TTY — blocks on every `sudo`
+call. The Caddy migrations (009/010/011) fail, the final
+`systemctl restart birdash` fails, and the user keeps seeing the
+"new version available" banner because the new code is pulled but
+the service was never restarted to load it.
+
+Two preventive fixes:
+
+1. `install.sh` now runs a pre-flight check before step 1. If sudo
+   requires a password, it offers (interactive) or auto-writes
+   (non-interactive, e.g. bootstrap.sh) `/etc/sudoers.d/010_pi-nopasswd`
+   with the same content the Pi Imager option would have set.
+2. `scripts/update.sh` checks `sudo -n true` first and bails with a
+   clear actionable error pointing at the one-liner fix, rather than
+   letting individual migrations fail one by one.
+
+README (en/fr/de/nl) gains a new "Prerequisite: passwordless sudo"
+section under Installation explaining the requirement and providing
+the manual one-liner for users who don't want the installer to do it.
+
+Recovery on an already-broken install:
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+# then click "Force update" in the UI
+```
+
 ## [1.55.31] — 2026-05-17
 
 ### Fixed — number glued to label in dawn-chorus card & today filter pills

@@ -322,13 +322,24 @@ All other dependencies are installed automatically by the installer.
 
 ## Installation
 
+### Prerequisite: passwordless sudo
+
+In-app updates (triggered from the dashboard UI) run without a terminal, so `sudo` must work without a password prompt. Otherwise updates will silently fail at the Caddy migrations and the final service restart.
+
+If you ticked **"Allow this user to log in without a password"** in Raspberry Pi Imager, you already have it. Otherwise the installer will offer to configure it (writes `/etc/sudoers.d/010_pi-nopasswd`). To set it up by hand:
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+```
+
 ### One-line install (recommended)
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ernens/birdash/main/bootstrap.sh | bash
 ```
 
-That's it. The bootstrap installs git if needed, clones the repo into `~/birdash`, runs `install.sh` non-interactively, downloads the BirdNET V2.4 model, enables dual-model detection (BirdNET + Perch), and starts all services. When it finishes, open the dashboard URL printed at the end and tweak GPS/audio from **Settings**.
+That's it. The bootstrap installs git if needed, clones the repo into `~/birdash`, runs `install.sh` non-interactively (which auto-configures passwordless sudo if missing), downloads the BirdNET V2.4 model, enables dual-model detection (BirdNET + Perch), and starts all services. When it finishes, open the dashboard URL printed at the end and tweak GPS/audio from **Settings**.
 
 BirdNET V2.4 is under **CC-BY-NC-SA 4.0** (non-commercial use — see the [BirdNET-Analyzer repo](https://github.com/kahst/BirdNET-Analyzer)). To skip the BirdNET download and use Perch-only:
 

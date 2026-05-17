@@ -309,6 +309,17 @@ Alle anderen Abhängigkeiten werden automatisch vom Installer installiert.
 
 ## Installation
 
+### Voraussetzung: passwortloses sudo
+
+In-App-Updates (aus dem Dashboard ausgelöst) laufen ohne Terminal, daher muss `sudo` ohne Passwortabfrage funktionieren. Sonst schlagen Updates stillschweigend bei den Caddy-Migrationen und dem finalen Dienst-Neustart fehl.
+
+Wenn du im Raspberry Pi Imager **„Diesem Benutzer Anmeldung ohne Passwort erlauben"** angehakt hast, ist es bereits konfiguriert. Andernfalls bietet der Installer an, dies einzurichten (schreibt `/etc/sudoers.d/010_pi-nopasswd`). Manuelle Einrichtung:
+
+```bash
+echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+sudo chmod 0440 /etc/sudoers.d/010_pi-nopasswd
+```
+
 ### Ein-Zeilen-Install (empfohlen)
 
 ```bash
