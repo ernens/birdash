@@ -14,18 +14,40 @@
         </div>
         <div class="settings-grid">
           <div>
-            <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_include_list')}}</div>
+            <div style="font-weight:600;margin-bottom:.4rem;" data-testid="settings-species-include-label">
+              {{t('set_include_list')}} <span style="color:var(--text-muted);font-weight:400;">({{includeListParsed.length}})</span>
+            </div>
             <p style="font-size:.72rem;color:var(--text-muted);margin:0 0 .4rem 0;">
               {{t('species_include_desc')}}
             </p>
             <textarea v-model="includeList" class="set-textarea" rows="12" :placeholder="'Pica pica\nTurdus merula\nPhylloscopus collybita\n...'" data-testid="settings-species-includelist"></textarea>
+            <!-- Resolved preview: shows com_name for each parsed sci_name.
+                 Source of truth stays the textarea (one sci_name per line);
+                 this is a read-only annotation so the user knows which
+                 species they're listing. -->
+            <div v-if="includeListParsed.length" class="species-preview" style="margin-top:.4rem;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-deep);max-height:14rem;overflow-y:auto;" data-testid="settings-species-include-preview">
+              <div v-for="(item, i) in includeListParsed" :key="i" style="display:flex;align-items:baseline;gap:.4rem;padding:.15rem 0;border-bottom:1px solid color-mix(in srgb, var(--border) 50%, transparent);font-size:.78rem;">
+                <span v-if="item.com" style="font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{item.com}}</span>
+                <span v-else style="font-style:italic;color:var(--text-muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{t('species_unknown_name') || '(unknown)'}}</span>
+                <span style="color:var(--text-muted);font-family:var(--font-mono,monospace);font-size:.72rem;flex-shrink:0;">{{item.sci}}</span>
+              </div>
+            </div>
           </div>
           <div>
-            <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_exclude_list')}}</div>
+            <div style="font-weight:600;margin-bottom:.4rem;" data-testid="settings-species-exclude-label">
+              {{t('set_exclude_list')}} <span style="color:var(--text-muted);font-weight:400;">({{excludeListParsed.length}})</span>
+            </div>
             <p style="font-size:.72rem;color:var(--text-muted);margin:0 0 .4rem 0;">
               {{t('species_exclude_desc')}}
             </p>
             <textarea v-model="excludeList" class="set-textarea" rows="12" :placeholder="'Homo sapiens\nCanis lupus familiaris\n...'" data-testid="settings-species-excludelist"></textarea>
+            <div v-if="excludeListParsed.length" class="species-preview" style="margin-top:.4rem;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-deep);max-height:14rem;overflow-y:auto;" data-testid="settings-species-exclude-preview">
+              <div v-for="(item, i) in excludeListParsed" :key="i" style="display:flex;align-items:baseline;gap:.4rem;padding:.15rem 0;border-bottom:1px solid color-mix(in srgb, var(--border) 50%, transparent);font-size:.78rem;">
+                <span v-if="item.com" style="font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{item.com}}</span>
+                <span v-else style="font-style:italic;color:var(--text-muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{t('species_unknown_name') || '(unknown)'}}</span>
+                <span style="color:var(--text-muted);font-family:var(--font-mono,monospace);font-size:.72rem;flex-shrink:0;">{{item.sci}}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

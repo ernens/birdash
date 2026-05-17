@@ -2,6 +2,41 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.43] — 2026-05-17
+
+### Added — counters and localized name preview on the Species page
+
+Companion UI ship to 1.55.42 (which made the engine actually honor the
+lists). The list editor was scientific-names-only — useful for power
+users pasting from BirdNET-Pi configs, but opaque to anyone who didn't
+already know that `Cygnus olor` was a mute swan or that
+`Phylloscopus collybita` was a common chiffchaff.
+
+* Inclusion / exclusion labels gain a live counter: "Include list (N)"
+  / "Exclude list (M)". Updates as the user types in the textarea or
+  pulls species in via the picker.
+* Below each textarea, a read-only preview lists every parsed
+  scientific name with its localized common name resolved from the
+  station's own detection history (via the existing
+  `/api/species-detected-summary` endpoint, loaded once per session
+  via the new `loadSpeciesSummary` helper):
+
+  ```
+  Cygne tuberculé          Cygnus olor
+  Pie bavarde              Pica pica
+  (jamais détectée ici)    Foobaria notarealus
+  ```
+
+  Lines that don't resolve (e.g. a species the station has never
+  recorded, or a typo) get an italic "(never detected here)" / "(jamais
+  détectée ici)" placeholder so the user spots the issue.
+
+* The textarea stays the source of truth — one `sci_name` per line —
+  so the existing paste-from-spreadsheet workflow keeps working. The
+  preview is purely informational.
+
+i18n: 1 new key × 4 languages (`species_unknown_name`).
+
 ## [1.55.42] — 2026-05-17
 
 ### Fixed — engine now honors the Species inclusion / exclusion lists

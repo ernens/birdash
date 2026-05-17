@@ -157,9 +157,10 @@ const app = createApp({
     const speciesPickerError = ref('');
     const speciesPickerToast = ref('');
 
-    async function openSpeciesPicker() {
-      speciesPickerOpen.value = true;
-      speciesPickerError.value = '';
+    async function loadSpeciesSummary() {
+      // Cached: load once per session. The picker AND the textarea
+      // preview-below-each-list (counter + com_name resolution) share
+      // this dataset.
       if (speciesPickerLoaded.value) return;
       try {
         const r = await fetch(API + '/species-detected-summary');
@@ -171,6 +172,29 @@ const app = createApp({
         speciesPickerError.value = e.message;
       }
     }
+    async function openSpeciesPicker() {
+      speciesPickerOpen.value = true;
+      speciesPickerError.value = '';
+      await loadSpeciesSummary();
+    }
+    // sci_name → com_name lookup table for the preview rendering below
+    // each textarea. Built once per session from the picker dataset.
+    const speciesSciToCom = computed(() => {
+      const m = Object.create(null);
+      for (const s of speciesPickerList.value) m[s.sci_name] = s.com_name;
+      return m;
+    });
+    function _parseSpeciesLines(text) {
+      return (text || '').split('\n').map(s => s.trim()).filter(Boolean);
+    }
+    const includeListParsed = computed(() => {
+      const map = speciesSciToCom.value;
+      return _parseSpeciesLines(includeList.value).map(sci => ({ sci, com: map[sci] || null }));
+    });
+    const excludeListParsed = computed(() => {
+      const map = speciesSciToCom.value;
+      return _parseSpeciesLines(excludeList.value).map(sci => ({ sci, com: map[sci] || null }));
+    });
     function closeSpeciesPicker() {
       speciesPickerOpen.value = false;
       speciesPickerSelected.value = new Set();
@@ -2571,6 +2595,10 @@ const app = createApp({
 
     onMounted(() => {
       reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles(); loadAutoPurge();
+      // Species summary feeds both the picker AND the textarea-preview
+      // counter + com_name resolution under each list — load eagerly so
+      // navigating to Settings → Species shows resolved names immediately.
+      loadSpeciesSummary();
       if (activeTab.value === 'station') setTimeout(initStationMap, 500);
     });
 
@@ -2738,6 +2766,7 @@ const app = createApp({
       speciesPickerOpen, speciesPickerList, speciesPickerSelected, speciesPickerSearch,
       speciesPickerFilter, speciesPickerLoaded, speciesPickerError, speciesPickerToast,
       speciesIncludeSet, speciesExcludeSet, filteredPickerSpecies,
+      speciesSciToCom, includeListParsed, excludeListParsed, loadSpeciesSummary,
       openSpeciesPicker, closeSpeciesPicker, togglePickerSelection,
       selectAllVisibleSpecies, clearPickerSelection,
       addPickerSelectionToInclude, addPickerSelectionToExclude,

@@ -2166,5 +2166,6 @@
   "species_picker_added_inc": "{n} soorten toegevoegd aan inclusielijst",
   "species_picker_added_exc": "{n} soorten toegevoegd aan exclusielijst",
   "species_picker_loading": "Laden…",
-  "species_picker_empty": "Geen soorten komen overeen met het filter."
+  "species_picker_empty": "Geen soorten komen overeen met het filter.",
+  "species_unknown_name": "(hier nooit gedetecteerd)"
 }

@@ -2166,5 +2166,6 @@
   "species_picker_added_inc": "{n} species added to inclusion list",
   "species_picker_added_exc": "{n} species added to exclusion list",
   "species_picker_loading": "Loading…",
-  "species_picker_empty": "No species match the current filter."
+  "species_picker_empty": "No species match the current filter.",
+  "species_unknown_name": "(never detected here)"
 }

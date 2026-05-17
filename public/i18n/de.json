@@ -2166,5 +2166,6 @@
   "species_picker_added_inc": "{n} Arten zur Einschlussliste hinzugefügt",
   "species_picker_added_exc": "{n} Arten zur Ausschlussliste hinzugefügt",
   "species_picker_loading": "Wird geladen…",
-  "species_picker_empty": "Keine Arten entsprechen dem Filter."
+  "species_picker_empty": "Keine Arten entsprechen dem Filter.",
+  "species_unknown_name": "(hier nie erkannt)"
 }

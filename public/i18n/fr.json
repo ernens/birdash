@@ -2168,5 +2168,6 @@
   "species_picker_added_inc": "{n} espèces ajoutées à la liste d'inclusion",
   "species_picker_added_exc": "{n} espèces ajoutées à la liste d'exclusion",
   "species_picker_loading": "Chargement…",
-  "species_picker_empty": "Aucune espèce ne correspond au filtre."
+  "species_picker_empty": "Aucune espèce ne correspond au filtre.",
+  "species_unknown_name": "(jamais détectée ici)"
 }
