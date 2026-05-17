@@ -354,6 +354,10 @@ const app = createApp({
           throw new Error(data.error || ('apprise: HTTP ' + res.status));
         }
         appriseMsg.value = '✓'; appriseErr.value = false;
+        // Refresh just the apprise snapshot so toggle-driven saves (e.g.
+        // toggleAllApprise → saveApprise) don't leave isDirty stuck "true"
+        // after a clean persist.
+        try { _savedAppriseSnapshot = appriseUrls.value; } catch {}
       } catch(e) {
         appriseMsg.value = e.message; appriseErr.value = true;
         _thrown = e;
@@ -422,6 +426,9 @@ const app = createApp({
           throw new Error(data.error || ('alert-thresholds: HTTP ' + res.status));
         }
         alertSaveMsg.value = '✓'; alertSaveErr.value = false;
+        // Same drift fix as saveApprise — toggle-driven saves (e.g.
+        // saveNotifSettings calling us inline) must not leave isDirty stuck.
+        try { _savedAlertsSnapshot = JSON.stringify(alertThresholds); } catch {}
       } catch(e) {
         alertSaveMsg.value = e.message; alertSaveErr.value = true;
         _thrown = e;
@@ -877,19 +884,23 @@ const app = createApp({
     let _savedSnapshot = null;
     let _savedAudioSnapshot = null;
     let _savedAgSnapshot = null;
-    // Species lists travel separately from `conf` (they live in their own
-    // text files, written via the species-include / species-exclude POST
-    // ops inside saveAll). They must be tracked here too, otherwise editing
-    // a textarea — or adding species via the picker — would leave the
-    // global Save button grey, hiding the unsaved state.
+    // Inputs that travel as their own files / endpoints rather than through
+    // POST /settings — these must be tracked separately, otherwise editing
+    // them would leave the global Save button grey, hiding the unsaved
+    // state. saveAll always re-POSTs them, but isDirty has to know they
+    // changed so the user sees there's something to save.
     let _savedIncludeListSnapshot = null;
     let _savedExcludeListSnapshot = null;
+    let _savedAppriseSnapshot = null;
+    let _savedAlertsSnapshot = null;
     function _snapshotSavedState() {
       try { _savedSnapshot = JSON.stringify(conf); } catch { _savedSnapshot = null; }
       try { _savedAudioSnapshot = JSON.stringify(audioConf); } catch { _savedAudioSnapshot = null; }
       try { _savedAgSnapshot = JSON.stringify(agConf); } catch { _savedAgSnapshot = null; }
       try { _savedIncludeListSnapshot = includeList.value; } catch { _savedIncludeListSnapshot = null; }
       try { _savedExcludeListSnapshot = excludeList.value; } catch { _savedExcludeListSnapshot = null; }
+      try { _savedAppriseSnapshot = appriseUrls.value; } catch { _savedAppriseSnapshot = null; }
+      try { _savedAlertsSnapshot = JSON.stringify(alertThresholds); } catch { _savedAlertsSnapshot = null; }
       _savedModel = conf.MODEL;
       _savedSecondary = conf.SECONDARY_MODEL;
       _savedDual = String(conf.DUAL_MODEL_ENABLED);
@@ -902,6 +913,8 @@ const app = createApp({
         if (_savedAgSnapshot && JSON.stringify(agConf) !== _savedAgSnapshot) return true;
         if (_savedIncludeListSnapshot !== null && includeList.value !== _savedIncludeListSnapshot) return true;
         if (_savedExcludeListSnapshot !== null && excludeList.value !== _savedExcludeListSnapshot) return true;
+        if (_savedAppriseSnapshot !== null && appriseUrls.value !== _savedAppriseSnapshot) return true;
+        if (_savedAlertsSnapshot !== null && JSON.stringify(alertThresholds) !== _savedAlertsSnapshot) return true;
         return false;
       } catch { return false; }
     });

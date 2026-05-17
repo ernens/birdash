@@ -2,6 +2,50 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.41] — 2026-05-17
+
+### Fixed — Save button stayed grey after editing Apprise URLs or alert thresholds
+
+Follow-up audit to 1.55.40 covering every Settings tab. Same class of
+bug surfaced on the Notifications tab:
+
+* `appriseUrls` — the text input for Apprise notification URLs. Save
+  button ignored any edit until the user touched another conf-tracked
+  field elsewhere.
+* `alertThresholds` — system-alert thresholds (CPU temp / disk / RAM /
+  backlog / no-detection / sound) and the bird notification toggles
+  (favorites, new-species, each-detection, daily digest). Same story:
+  Save grey, no indicator.
+
+Track both in `_snapshotSavedState` / `isDirty` and refresh their
+snapshots inside `saveApprise` / `saveAlertThresholds` on success so
+toggle-driven inline saves (e.g. `toggleAllApprise` → `saveApprise`,
+`saveNotifSettings` → `saveAlertThresholds`) don't leave `isDirty`
+stuck `true` after a clean persist.
+
+### Audit summary
+
+Verified the Save bar covers what it claims for every tab:
+
+| Tab | State | saveAll | isDirty | Status |
+|--|--|--|--|--|
+| detection | `conf.*` + profiles | ✓ + dedicated | ✓ + n/a | OK |
+| audio | `audioConf`, `agConf`, boost | ✓ / per-click | ✓ / n/a | OK |
+| notif | `conf.NOTIFY_*`, MQTT, BW | ✓ | ✓ | OK |
+| notif | `appriseUrls`, `alertThresholds` | ✓ | ✓ this ship | OK |
+| station | `conf.*` + auth creds | ✓ + dedicated | ✓ + n/a | OK |
+| species | include/exclude lists | ✓ | ✓ 1.55.40 | OK |
+| backup | `bkp` config | dedicated Save | n/a *by design* | OK |
+| external-display | TFT | dedicated Save | n/a *by design* | OK |
+| services / database / terminal | n/a | — | — | OK |
+
+Backup and TFT keep tab-local Save buttons because they have their own
+multi-step ergonomics (destinations, schedules, install flow) that
+don't compose well with the global form. Boost is per-click. Auth
+creds and detection profile save-as are explicit actions. Everything
+else now goes through one button that tells the truth about pending
+changes.
+
 ## [1.55.40] — 2026-05-17
 
 ### Fixed — Save button stayed grey after editing species lists
