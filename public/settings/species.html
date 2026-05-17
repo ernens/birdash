@@ -6,6 +6,12 @@
           {{t('species_include_desc')}}
           {{t('species_exclude_desc')}}
         </p>
+        <div style="margin-bottom:.8rem;">
+          <button class="btn-outline" @click="openSpeciesPicker" data-testid="settings-species-picker-open">
+            <bird-icon name="check-square" :size="14"></bird-icon>
+            {{t('species_picker_open') || 'Add from detected species…'}}
+          </button>
+        </div>
         <div class="settings-grid">
           <div>
             <div style="font-weight:600;margin-bottom:.4rem;">{{t('set_include_list')}}</div>
@@ -24,3 +30,89 @@
         </div>
       </div>
 
+      <!-- Species picker modal -->
+      <div v-if="speciesPickerOpen" class="update-modal-backdrop" @click.self="closeSpeciesPicker" data-testid="species-picker-modal">
+        <div class="update-modal" style="max-width:680px;width:95vw;">
+          <div class="update-modal-hdr">
+            <div class="update-modal-title"><bird-icon name="check-square" :size="16"></bird-icon> {{t('species_picker_title') || 'Add detected species'}}</div>
+            <button class="update-modal-close" @click="closeSpeciesPicker" aria-label="Close" data-testid="species-picker-close"><bird-icon name="x" :size="16"></bird-icon></button>
+          </div>
+          <div class="update-modal-body" style="display:flex;flex-direction:column;gap:.6rem;">
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+              <input
+                type="search"
+                v-model="speciesPickerSearch"
+                :placeholder="t('species_picker_search') || 'Search…'"
+                data-testid="species-picker-search"
+                style="flex:1 1 200px;min-width:120px;padding:.45rem .65rem;background:var(--bg-input,var(--surface));border:1px solid var(--border);border-radius:6px;font-size:.9rem;color:var(--text);"
+              />
+              <select v-model="speciesPickerFilter" class="set-select" data-testid="species-picker-filter" style="min-width:160px;">
+                <option value="all">{{t('species_picker_filter_all') || 'All'}}</option>
+                <option value="unlisted">{{t('species_picker_filter_unlisted') || 'Not yet listed'}}</option>
+                <option value="in_include">{{t('species_picker_filter_in_include') || 'Already included'}}</option>
+                <option value="in_exclude">{{t('species_picker_filter_in_exclude') || 'Already excluded'}}</option>
+              </select>
+            </div>
+
+            <div v-if="speciesPickerError" style="color:var(--danger);font-size:.85rem;">
+              <bird-icon name="alert-circle" :size="14"></bird-icon> {{speciesPickerError}}
+            </div>
+            <div v-else-if="!speciesPickerLoaded" style="color:var(--text-muted);font-size:.85rem;padding:1rem 0;text-align:center;">
+              <bird-icon name="loader-circle" :size="14"></bird-icon> {{t('species_picker_loading') || 'Loading…'}}
+            </div>
+            <div v-else-if="!filteredPickerSpecies.length" style="color:var(--text-muted);font-size:.85rem;padding:1rem 0;text-align:center;">
+              {{t('species_picker_empty') || 'No species match the filter.'}}
+            </div>
+            <div v-else style="max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:6px;background:var(--bg-deep);">
+              <label
+                v-for="s in filteredPickerSpecies"
+                :key="s.sci_name"
+                style="display:flex;align-items:center;gap:.6rem;padding:.45rem .7rem;cursor:pointer;border-bottom:1px solid var(--border);"
+                :style="{ background: speciesPickerSelected.has(s.sci_name) ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : '' }"
+                data-testid="species-picker-row"
+              >
+                <input
+                  type="checkbox"
+                  :checked="speciesPickerSelected.has(s.sci_name)"
+                  @change="togglePickerSelection(s.sci_name)"
+                  style="margin:0;flex-shrink:0;"
+                />
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{s.com_name}}</div>
+                  <div style="font-size:.72rem;color:var(--text-muted);font-family:var(--font-mono,monospace);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{s.sci_name}}</div>
+                </div>
+                <span v-if="speciesIncludeSet.has(s.sci_name)" class="species-pill species-pill--inc" style="font-size:.65rem;padding:.1rem .4rem;border-radius:10px;background:color-mix(in srgb, var(--accent) 20%, var(--bg-card));color:var(--accent);border:1px solid var(--accent);">
+                  {{t('species_picker_in_include') || 'incl.'}}
+                </span>
+                <span v-if="speciesExcludeSet.has(s.sci_name)" class="species-pill species-pill--exc" style="font-size:.65rem;padding:.1rem .4rem;border-radius:10px;background:color-mix(in srgb, var(--warning) 20%, var(--bg-card));color:var(--warning);border:1px solid var(--warning);">
+                  {{t('species_picker_in_exclude') || 'excl.'}}
+                </span>
+                <span style="font-size:.78rem;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:3.2rem;text-align:right;flex-shrink:0;">{{s.count}}</span>
+              </label>
+            </div>
+
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;font-size:.8rem;color:var(--text-muted);">
+              <span data-testid="species-picker-counter">{{speciesPickerSelected.size}} {{t('species_picker_selected') || 'selected'}}</span>
+              <span style="opacity:.6;">·</span>
+              <button class="btn-link" @click="selectAllVisibleSpecies" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;padding:0;">
+                {{t('species_picker_select_visible') || 'Select visible'}}
+              </button>
+              <button class="btn-link" @click="clearPickerSelection" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.8rem;padding:0;">
+                {{t('species_picker_clear') || 'Clear'}}
+              </button>
+              <span v-if="speciesPickerToast" style="margin-left:auto;color:var(--accent);" data-testid="species-picker-toast">
+                <bird-icon name="check-circle" :size="14"></bird-icon> {{speciesPickerToast}}
+              </span>
+            </div>
+          </div>
+          <div class="update-modal-footer" style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="update-btn-secondary" @click="closeSpeciesPicker" data-testid="species-picker-cancel">{{t('species_picker_cancel') || 'Cancel'}}</button>
+            <button class="update-btn-primary" :disabled="!speciesPickerSelected.size" @click="addPickerSelectionToInclude" data-testid="species-picker-add-include">
+              → {{t('species_picker_add_to_include') || 'Include'}}
+            </button>
+            <button class="update-btn-primary" :disabled="!speciesPickerSelected.size" @click="addPickerSelectionToExclude" data-testid="species-picker-add-exclude" style="background:var(--warning);">
+              → {{t('species_picker_add_to_exclude') || 'Exclude'}}
+            </button>
+          </div>
+        </div>
+      </div>

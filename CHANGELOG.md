@@ -2,6 +2,42 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.39] — 2026-05-17
+
+### Added — multi-select species picker for inclusion / exclusion lists
+
+The inclusion / exclusion species lists were two textareas requiring the
+user to type or paste scientific names. Adding nuisance species (Homo
+sapiens, dog, traffic-classified-as-bird) meant looking up
+`Sci_Name` by hand or copy-pasting from detection logs.
+
+New "Add detected species…" button at the top of Settings → Species
+opens a modal that lists every species ever detected on the station,
+sorted by total detection count descending — so the loudest false
+positives float to the top:
+
+* Sortable list of `{sci_name, com_name, total_count}` from
+  `species_stats`, with a small `incl. / excl.` chip on rows already in
+  one of the lists.
+* Live search filters both common and scientific names.
+* Filter dropdown: All / Not yet listed / Already included / Already excluded.
+* Multi-select with checkboxes; "Select visible" / "Clear" helpers.
+* Two CTAs — `→ Include` and `→ Exclude` — that append the selection
+  to the matching textarea (deduplicated, preserving original order).
+* Modal stays open after each batch with a toast confirming the count
+  added, so the user can do several include/exclude lots without
+  re-opening.
+* The textareas remain the source of truth and remain editable; the
+  picker only writes to them. User still clicks the global Save button
+  to persist into the BirdNET-Pi list files.
+
+Server: new `GET /api/species-detected-summary` endpoint reading
+`species_stats` directly (no taxonomy join) — fast enough that the
+picker opens in tens of milliseconds even with 500+ species. Cached
+60 s.
+
+i18n: 19 new keys × 4 languages for the modal copy and toasts.
+
 ## [1.55.38] — 2026-05-17
 
 ### Changed — detection profiles are now model-context aware

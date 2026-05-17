@@ -148,6 +148,108 @@ const app = createApp({
     const excludeList = ref('');
     const savingLists = ref(false);
 
+    // ── Species picker (multi-select from already-detected) ─────────
+    const speciesPickerOpen = ref(false);
+    const speciesPickerList = ref([]);  // [{sci_name, com_name, count, last_date}]
+    const speciesPickerSelected = ref(new Set());
+    const speciesPickerSearch = ref('');
+    const speciesPickerFilter = ref('all');  // all | unlisted | in_include | in_exclude
+    const speciesPickerLoaded = ref(false);
+    const speciesPickerError = ref('');
+    const speciesPickerToast = ref('');
+
+    async function openSpeciesPicker() {
+      speciesPickerOpen.value = true;
+      speciesPickerError.value = '';
+      if (speciesPickerLoaded.value) return;
+      try {
+        const r = await fetch(API + '/species-detected-summary');
+        const d = await r.json();
+        if (!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
+        speciesPickerList.value = d.species || [];
+        speciesPickerLoaded.value = true;
+      } catch (e) {
+        speciesPickerError.value = e.message;
+      }
+    }
+    function closeSpeciesPicker() {
+      speciesPickerOpen.value = false;
+      speciesPickerSelected.value = new Set();
+      speciesPickerSearch.value = '';
+      speciesPickerFilter.value = 'all';
+      speciesPickerToast.value = '';
+    }
+    function togglePickerSelection(sci) {
+      const s = new Set(speciesPickerSelected.value);
+      if (s.has(sci)) s.delete(sci); else s.add(sci);
+      speciesPickerSelected.value = s;
+    }
+    // Sets derived from the current textareas — read-only views the picker
+    // uses to show "déjà inclus / déjà exclus" badges and filter accordingly.
+    const speciesIncludeSet = computed(() => new Set(
+      includeList.value.split('\n').map(s => s.trim()).filter(Boolean)
+    ));
+    const speciesExcludeSet = computed(() => new Set(
+      excludeList.value.split('\n').map(s => s.trim()).filter(Boolean)
+    ));
+    const filteredPickerSpecies = computed(() => {
+      const q = speciesPickerSearch.value.trim().toLowerCase();
+      const inc = speciesIncludeSet.value;
+      const exc = speciesExcludeSet.value;
+      const filter = speciesPickerFilter.value;
+      return speciesPickerList.value.filter(s => {
+        if (q) {
+          const sci = (s.sci_name || '').toLowerCase();
+          const com = (s.com_name || '').toLowerCase();
+          if (!sci.includes(q) && !com.includes(q)) return false;
+        }
+        if (filter === 'unlisted' && (inc.has(s.sci_name) || exc.has(s.sci_name))) return false;
+        if (filter === 'in_include' && !inc.has(s.sci_name)) return false;
+        if (filter === 'in_exclude' && !exc.has(s.sci_name)) return false;
+        return true;
+      });
+    });
+    function selectAllVisibleSpecies() {
+      const s = new Set(speciesPickerSelected.value);
+      for (const sp of filteredPickerSpecies.value) s.add(sp.sci_name);
+      speciesPickerSelected.value = s;
+    }
+    function clearPickerSelection() {
+      speciesPickerSelected.value = new Set();
+    }
+    function _appendSpeciesToList(targetRef, scis) {
+      const current = new Set(targetRef.value.split('\n').map(s => s.trim()).filter(Boolean));
+      let added = 0;
+      for (const sci of scis) {
+        if (!current.has(sci)) { current.add(sci); added++; }
+      }
+      // Preserve original order: existing entries first, new ones appended.
+      const ordered = Array.from(current);
+      targetRef.value = ordered.join('\n');
+      return added;
+    }
+    function _showPickerToast(template, n) {
+      const msg = (t(template) || '').replace('{n}', n) || `${n} added`;
+      speciesPickerToast.value = msg;
+      setTimeout(() => {
+        if (speciesPickerToast.value === msg) speciesPickerToast.value = '';
+      }, 2500);
+    }
+    function addPickerSelectionToInclude() {
+      const scis = Array.from(speciesPickerSelected.value);
+      if (!scis.length) return;
+      const added = _appendSpeciesToList(includeList, scis);
+      speciesPickerSelected.value = new Set();
+      _showPickerToast('species_picker_added_inc', added);
+    }
+    function addPickerSelectionToExclude() {
+      const scis = Array.from(speciesPickerSelected.value);
+      if (!scis.length) return;
+      const added = _appendSpeciesToList(excludeList, scis);
+      speciesPickerSelected.value = new Set();
+      _showPickerToast('species_picker_added_exc', added);
+    }
+
     // ── Range Filter preview (Detection tab) ───────────────────
     const rangePreview = reactive({ loading: false, error: '', data: null });
     let _rangePreviewTimer = null;
@@ -2632,6 +2734,12 @@ const app = createApp({
       startMonitor, stopMonitor, testAudio,
       loading, saving, svcLoading, saveMsg, saveErr,
       includeList, excludeList, savingLists,
+      speciesPickerOpen, speciesPickerList, speciesPickerSelected, speciesPickerSearch,
+      speciesPickerFilter, speciesPickerLoaded, speciesPickerError, speciesPickerToast,
+      speciesIncludeSet, speciesExcludeSet, filteredPickerSpecies,
+      openSpeciesPicker, closeSpeciesPicker, togglePickerSelection,
+      selectAllVisibleSpecies, clearPickerSelection,
+      addPickerSelectionToInclude, addPickerSelectionToExclude,
       appriseUrls, savingApprise, testingApprise, appriseMsg, appriseErr, saveApprise, testApprise,
       alertThresholds, savingAlerts, alertSaveMsg, alertSaveErr, saveAlertThresholds,
       modelLabel, modelDescription, secondaryModelOptions,

@@ -715,6 +715,32 @@ function handle(req, res, pathname, ctx) {
     return true;
   }
 
+  // ── Route : GET /api/species-detected-summary ───────────────────────────────
+  // Lightweight payload for the inclusion/exclusion picker: every species
+  // ever detected on this station, with its lifetime detection count and
+  // last-seen date. Reads species_stats directly (no taxonomy join) so the
+  // picker opens in tens of milliseconds even with 500+ species.
+  if (req.method === 'GET' && pathname === '/api/species-detected-summary') {
+    (async () => {
+      try {
+        const rows = db.prepare(`
+          SELECT sci_name, com_name, total_count AS count, last_date
+          FROM species_stats
+          ORDER BY total_count DESC, sci_name ASC
+        `).all();
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=60',
+        });
+        res.end(JSON.stringify({ species: rows }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return true;
+  }
+
   // ── Route : POST /api/species-lists ─────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/species-lists') {
     if (!requireAuth(req, res)) return true;
