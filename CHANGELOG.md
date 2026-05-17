@@ -2,6 +2,22 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.34] — 2026-05-17
+
+### Fixed — sudo-check polled once per session instead of once per page load
+
+`fetchSudoStatus()` ran on every Vue mount, which means every page
+navigation triggered another `GET /api/system/sudo-check`. On a healthy
+install that's just wasted round-trips; during a bootstrap window
+(new client JS served by Caddy but the Node process still on old code
+that doesn't have the route), every page navigation logged a 404 in
+the browser console.
+
+Cache the healthy outcome in `sessionStorage` — once we know sudo is
+OK (or the endpoint is unavailable), we skip the fetch for the rest of
+the session. Broken installs keep polling so the banner reflects
+reality if the user fixes things in another tab.
+
 ## [1.55.33] — 2026-05-17
 
 ### Added — in-app passwordless-sudo bootstrap (self-heal for fresh installs)

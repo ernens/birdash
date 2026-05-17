@@ -1512,10 +1512,29 @@
       const sudoError = ref('');
       const sudoSuccess = ref(false);
       async function fetchSudoStatus() {
+        // Cache the healthy result for the session: skip the network round-trip
+        // on every page navigation. We only re-probe if we haven't confirmed
+        // sudo is OK yet — broken installs keep probing on each page load so
+        // the banner reflects reality if the user fixes things in another tab.
+        try {
+          const cached = sessionStorage.getItem('birdash_sudo_ok');
+          if (cached === '1') return;
+        } catch {}
         try {
           const r = await fetch(`${BIRD_CONFIG.apiUrl}/system/sudo-check`);
+          if (!r.ok) {
+            // Older server doesn't have this route (typical during the
+            // bootstrap window where new static JS is served but the Node
+            // process hasn't restarted yet). Cache so we don't spam the
+            // console with 404s on every page navigation this session.
+            try { sessionStorage.setItem('birdash_sudo_ok', '1'); } catch {}
+            return;
+          }
           const d = await r.json();
-          if (d && typeof d.ok === 'boolean') sudoStatus.value = d;
+          if (d && typeof d.ok === 'boolean') {
+            sudoStatus.value = d;
+            if (d.ok) { try { sessionStorage.setItem('birdash_sudo_ok', '1'); } catch {} }
+          }
         } catch {}
       }
       fetchSudoStatus();
