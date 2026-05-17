@@ -4,7 +4,8 @@
 # losing in-memory state. Status is updated to "paused" so the UI shows it.
 set -uo pipefail
 
-STATUS_FILE="/home/bjorn/birdash/config/backup-status.json"
+BIRDASH_DIR="${BIRDASH_DIR:-$HOME/birdash}"
+STATUS_FILE="$BIRDASH_DIR/config/backup-status.json"
 LOG_FILE="$HOME/.local/share/birdash-backup.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 

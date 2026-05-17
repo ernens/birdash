@@ -30,7 +30,13 @@ log = logging.getLogger("birdengine-stability")
 
 from db import resolve_db_path
 DB_PATH = resolve_db_path()
-CLIPS_ROOT = Path("/home/bjorn/BirdSongs/Extracted/By_Date")
+CLIPS_ROOT = Path.home() / "BirdSongs" / "Extracted" / "By_Date"
+
+# Engine config file — same logic as engine.py: sibling to this module. Bird
+# legacy installs that keep a separate /home/{user}/birdengine/config.toml
+# need to keep this file in sync (or symlink) — that's a one-time legacy
+# concern; fresh installs always read this canonical path.
+_CONFIG_TOML = Path(__file__).parent / "config.toml"
 
 ALGORITHM_VERSION = "stability_v1"
 
@@ -62,7 +68,7 @@ def _producer_settings():
     global _producer_cache
     if _producer_cache is not None:
         return _producer_cache
-    cfg_path = "/home/bjorn/birdengine/config.toml"
+    cfg_path = str(_CONFIG_TOML)
     enabled = False
     threshold = DEFAULT_CONFIDENCE_THRESHOLD
     try:
@@ -360,7 +366,7 @@ def worker_loop(perch, *, poll_interval_s=DEFAULT_POLL_INTERVAL_S,
 def _load_config():
     """Read [stability_check] section from engine config.toml. Returns dict
     of overrides (empty if section missing)."""
-    cfg_path = "/home/bjorn/birdengine/config.toml"
+    cfg_path = str(_CONFIG_TOML)
     try:
         import toml
         with open(cfg_path) as f:
@@ -377,7 +383,7 @@ def _load_perch():
     cfg = _load_config()
     # Models live in the engine runtime dir alongside config.toml — same path
     # the main engine derives from its own base_dir. Override via config.
-    models_dir = cfg.get("models_dir", "/home/bjorn/birdengine/models")
+    models_dir = cfg.get("models_dir", str(Path(__file__).parent / "models"))
     model_name = cfg.get("model", "perch_v2_fp16")
     sensitivity = cfg.get("sensitivity", 1.3)
     log.info("[stability] loading %s from %s …", model_name, models_dir)

@@ -38,7 +38,7 @@ async function updateBackupCron(config) {
       if (config.schedule === 'daily') cronExpr = `${min} ${hour} * * *`;
       else if (config.schedule === 'weekly') cronExpr = `${min} ${hour} * * 0`;
       else return;
-      const logPath = path.join(process.env.HOME || '/home/bjorn', '.local', 'share', 'birdash-backup.log');
+      const logPath = path.join(require('os').homedir(), '.local', 'share', 'birdash-backup.log');
       result.push(`${cronExpr} BACKUP_CONFIG=${cfgPath} bash ${scriptPath} >> ${logPath} 2>&1 ${cronTag}`);
     }
     const tmpCron = '/tmp/birdash-crontab.tmp';

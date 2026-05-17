@@ -252,7 +252,7 @@ async function _refreshSystem() {
 
 function _refreshSoundLevel() {
   try {
-    const soundPath = path.join(process.env.HOME || '/home/bjorn', 'birdash/config/sound_level.json');
+    const soundPath = path.join(require('os').homedir(), 'birdash/config/sound_level.json');
     if (!fs.existsSync(soundPath)) return;
     const raw = fs.readFileSync(soundPath, 'utf8');
     const state = JSON.parse(raw);

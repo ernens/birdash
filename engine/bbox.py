@@ -40,7 +40,9 @@ MIN_TRUNCATED_DURATION_S = 0.3
 
 from db import resolve_db_path
 DB_PATH = resolve_db_path()
-TAXONOMY_CSV = Path("/home/bjorn/birdash/config/ebird-taxonomy.csv")
+# Sibling-relative — the CSV ships with the repo under config/, regardless of
+# which user runs the engine.
+TAXONOMY_CSV = Path(__file__).parent.parent / "config" / "ebird-taxonomy.csv"
 
 # Per-family overrides for taxa whose ORDER fallback band misses their actual
 # vocal range. Looked up before ORDER_BANDS. Keep additions narrow — only add

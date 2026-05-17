@@ -16,7 +16,7 @@ Sécurité :
 
 Usage :
     nice -n 19 ionice -c 3 \\
-        /home/bjorn/birdengine/venv/bin/python3 \\
+        ~/birdash/engine/venv/bin/python3 \\
         scripts/refinement/backfill_bbox.py \\
         [--limit N] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--dry-run]
 """
@@ -36,8 +36,9 @@ import scipy.signal
 
 # ── Chemins ────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
-CLIPS_ROOT = Path("/home/bjorn/BirdSongs/Extracted/By_Date")
+_HOME = Path.home()
+DB_PATH = str(_HOME / "BirdNET-Pi" / "scripts" / "birds.db") if (_HOME / "BirdNET-Pi" / "scripts" / "birds.db").exists() else str(_HOME / "birdash" / "data" / "birds.db")
+CLIPS_ROOT = _HOME / "BirdSongs" / "Extracted" / "By_Date"
 TAXONOMY_CSV = PROJECT_ROOT / "config" / "ebird-taxonomy.csv"
 
 ALGORITHM_VERSION = "heuristic_v1_1"

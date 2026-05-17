@@ -61,7 +61,7 @@ fi
 # rewritten so the unit works regardless of where birdash lives (mickey
 # puts it under /home/mickey/, dev machine under /home/bjorn/, etc.).
 BIRDASH_USER=$(systemctl show -p User --value birdash.service 2>/dev/null)
-[ -z "$BIRDASH_USER" ] && BIRDASH_USER="bjorn"
+[ -z "$BIRDASH_USER" ] && BIRDASH_USER="$(whoami)"
 TFT_DIR="$PROJECT_ROOT/tft-display"
 tmp_unit=$(mktemp)
 sed -e "s/^User=.*/User=${BIRDASH_USER}/" \

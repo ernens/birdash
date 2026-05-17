@@ -28,9 +28,10 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DEFAULT_DB = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
-DEFAULT_AUDIO_ROOT = "/home/bjorn/BirdSongs/Extracted/By_Date"
-DEFAULT_BACKUP_ROOT = "/home/bjorn/birdash/data/cleanup-backup"
+_HOME = Path.home()
+DEFAULT_DB = str(_HOME / "BirdNET-Pi" / "scripts" / "birds.db") if (_HOME / "BirdNET-Pi" / "scripts" / "birds.db").exists() else str(_HOME / "birdash" / "data" / "birds.db")
+DEFAULT_AUDIO_ROOT = str(_HOME / "BirdSongs" / "Extracted" / "By_Date")
+DEFAULT_BACKUP_ROOT = str(_HOME / "birdash" / "data" / "cleanup-backup")
 DEFAULT_COOLDOWN = 120
 DEFAULT_BYPASS = 0.95
 

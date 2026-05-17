@@ -4,9 +4,10 @@
 # Otherwise, launch a fresh backup.sh in the background.
 set -uo pipefail
 
-CONFIG_FILE="/home/bjorn/birdash/config/backup.json"
-STATUS_FILE="/home/bjorn/birdash/config/backup-status.json"
-SCRIPT="/home/bjorn/birdash/scripts/backup.sh"
+BIRDASH_DIR="${BIRDASH_DIR:-$HOME/birdash}"
+CONFIG_FILE="$BIRDASH_DIR/config/backup.json"
+STATUS_FILE="$BIRDASH_DIR/config/backup-status.json"
+SCRIPT="$BIRDASH_DIR/scripts/backup.sh"
 LOG_FILE="$HOME/.local/share/birdash-backup.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 

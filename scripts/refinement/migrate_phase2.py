@@ -17,8 +17,10 @@ Usage : python3 scripts/refinement/migrate_phase2.py
 
 import sqlite3
 import sys
+from pathlib import Path
 
-DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
+_HOME = Path.home()
+DB_PATH = str(_HOME / "BirdNET-Pi" / "scripts" / "birds.db") if (_HOME / "BirdNET-Pi" / "scripts" / "birds.db").exists() else str(_HOME / "birdash" / "data" / "birds.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS detection_stability_v1 (

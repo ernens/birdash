@@ -2,6 +2,39 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.36] — 2026-05-17
+
+### Fixed — purge remaining `/home/bjorn/...` vestiges across the codebase
+
+Companion sweep after the bbox/stability DB-path fix in 1.55.35. Same
+class of bug (hardcoded paths that happened to match the author's dev
+machine layout), found and fixed wherever they leaked into runtime
+code:
+
+* `engine/bbox.py` — `TAXONOMY_CSV` derived from `__file__` (was
+  `/home/bjorn/birdash/config/ebird-taxonomy.csv`).
+* `engine/stability.py` — `CLIPS_ROOT` uses `Path.home()`, the two
+  `cfg_path` literals and the `models_dir` fallback now derive from
+  `__file__` (sibling to the module).
+* `scripts/backup-window-start.sh` & `backup-window-stop.sh` — use
+  `${BIRDASH_DIR:-$HOME/birdash}`. These run from cron at fixed times,
+  so the leak silently broke nightly backup pause/resume on any
+  non-`bjorn` host.
+* `scripts/cleanup_throttle.py` — default paths derived from
+  `Path.home()`; legacy `BirdNET-Pi/scripts/birds.db` is preferred when
+  it exists.
+* `scripts/refinement/{migrate_phase1a,migrate_phase2,phase0_eval,backfill_bbox}.py`
+  — same legacy-first probe; usage docstrings reference `~/birdash/engine/venv`
+  instead of `/home/bjorn/birdengine/venv`.
+* `scripts/tft-install.sh` — final fallback uses `$(whoami)` instead of
+  literal `bjorn`.
+* `server/routes/sound-level.js`, `server/routes/backup.js`,
+  `server/lib/metrics.js` — `os.homedir()` instead of
+  `process.env.HOME || '/home/bjorn'`.
+* `tft-display/birdash-tft.service` — placeholder `BIRDASH_HOME` instead
+  of `/home/bjorn` (the line gets rewritten by `tft-install.sh` anyway,
+  but the source no longer misleads readers).
+
 ## [1.55.35] — 2026-05-17
 
 ### Fixed — bbox & stability sub-modules ignored the configured DB path

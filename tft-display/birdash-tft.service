@@ -15,9 +15,10 @@ User=bjorn
 SupplementaryGroups=video
 # WorkingDirectory and ExecStart paths are rewritten by tft-install.sh to
 # match the actual project location on this host (may be /home/bjorn,
-# /home/mickey, /home/pi… depending on the install).
-WorkingDirectory=/home/bjorn/birdash/tft-display
-ExecStart=/usr/bin/python3 /home/bjorn/birdash/tft-display/tft-display.py
+# /home/mickey, /home/pi… depending on the install). The BIRDASH_HOME
+# placeholder below is a hint — tft-install.sh replaces the whole line.
+WorkingDirectory=BIRDASH_HOME/birdash/tft-display
+ExecStart=/usr/bin/python3 BIRDASH_HOME/birdash/tft-display/tft-display.py
 Restart=on-failure
 RestartSec=5
 # Keep the memory budget tight — we target under 50 MB on a 1 GB Pi3.

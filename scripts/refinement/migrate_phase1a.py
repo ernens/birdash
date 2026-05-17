@@ -14,8 +14,10 @@ Usage : nice -n 19 ionice -c 3 python3 scripts/refinement/migrate_phase1a.py
 
 import sqlite3
 import sys
+from pathlib import Path
 
-DB_PATH = "/home/bjorn/BirdNET-Pi/scripts/birds.db"
+_HOME = Path.home()
+DB_PATH = str(_HOME / "BirdNET-Pi" / "scripts" / "birds.db") if (_HOME / "BirdNET-Pi" / "scripts" / "birds.db").exists() else str(_HOME / "birdash" / "data" / "birds.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS detection_bbox_v1 (

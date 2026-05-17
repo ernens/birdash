@@ -9,12 +9,10 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
-const SOUND_LEVEL_PATH = path.join(
-  process.env.HOME || '/home/bjorn',
-  'birdash/config/sound_level.json'
-);
+const SOUND_LEVEL_PATH = path.join(os.homedir(), 'birdash/config/sound_level.json');
 
 function _read() {
   try {
