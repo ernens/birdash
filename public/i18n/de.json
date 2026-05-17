@@ -2131,5 +2131,15 @@
   "td_filter_review": "Zu prüfen",
   "td_filter_strong": "Starkes Signal",
   "today_dets_full_link": "Mehrtägige Ansicht",
-  "today_dets_full_title": "Vollständige mehrtägige Liste für diese Art anzeigen"
+  "today_dets_full_title": "Vollständige mehrtägige Liste für diese Art anzeigen",
+  "sudo_banner_text": "Konfiguration für automatische Updates erforderlich",
+  "sudo_banner_btn": "Einrichten",
+  "sudo_modal_title": "Automatische Updates aktivieren",
+  "sudo_modal_intro": "Aus diesem Dashboard ausgelöste Updates benötigen sudo ohne Passwortabfrage. Gib dein Passwort einmal ein — es wird verwendet, um die Konfigurationsdatei zu schreiben, und niemals gespeichert.",
+  "sudo_modal_password": "Passwort für",
+  "sudo_modal_submit": "Einrichten",
+  "sudo_modal_cancel": "Abbrechen",
+  "sudo_modal_wrong_password": "Falsches Passwort",
+  "sudo_modal_error": "Fehler — Server-Logs prüfen",
+  "sudo_modal_success": "Einrichtung abgeschlossen. Automatische Updates sind jetzt aktiv."
 }

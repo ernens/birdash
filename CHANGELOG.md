@@ -2,6 +2,41 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.33] — 2026-05-17
+
+### Added — in-app passwordless-sudo bootstrap (self-heal for fresh installs)
+
+1.55.32 made `install.sh` configure passwordless sudo so future installs
+don't hit the broken-update problem. But anyone whose install is already
+in the bad state (NOPASSWD missing, in-app updates broken) couldn't
+recover without SSHing in and typing a one-liner — which is exactly the
+kind of friction that makes users give up.
+
+This release adds a self-heal path that lives entirely in the UI:
+
+- New endpoint `GET /api/system/sudo-check` returns `{ ok, user }` —
+  the UI polls it on load and shows an amber banner if `ok=false`.
+- New endpoint `POST /api/system/configure-sudo` accepts `{ password }`,
+  stages the sudoers content in a temp file with mode 0600, and runs
+  `sudo -S install -m 0440 -o root -g root <tmp> /etc/sudoers.d/010_pi-nopasswd`.
+  The password lives only on the spawned process's stdin — never on
+  argv, never logged, never on disk. Uses `install(1)` (not `tee`) so
+  if `sudo -S` decides not to consume the password (e.g. NOPASSWD is
+  already in effect through some other path), the password can't leak
+  into the destination file. The endpoint is idempotent: if sudo
+  already works without password, it returns `{ ok: true, alreadyConfigured: true }`
+  without touching anything.
+- New banner + modal in the shell. Banner reuses the existing
+  `.update-banner` skeleton in an amber-toned variant so it reads as
+  "attention, not urgent" rather than competing with the red
+  "new version" banner.
+
+i18n: 10 new keys for the banner + modal copy in fr/en/de/nl.
+
+UX path on a broken install now: open the dashboard → banner shows →
+click "Configure" → type password once → modal closes → next in-app
+update works end-to-end. No terminal, no scary commands.
+
 ## [1.55.32] — 2026-05-17
 
 ### Fixed — in-app updates silently fail when passwordless sudo is missing

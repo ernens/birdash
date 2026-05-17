@@ -2131,5 +2131,15 @@
   "td_filter_review": "To review",
   "td_filter_strong": "Strong signal",
   "today_dets_full_link": "Multi-day view",
-  "today_dets_full_title": "See the full multi-day list for this species"
+  "today_dets_full_title": "See the full multi-day list for this species",
+  "sudo_banner_text": "Setup required for automatic updates",
+  "sudo_banner_btn": "Configure",
+  "sudo_modal_title": "Enable automatic updates",
+  "sudo_modal_intro": "Updates triggered from this dashboard need sudo to work without a password prompt. Enter your password once — it will be used to write the configuration file and never stored.",
+  "sudo_modal_password": "Password for",
+  "sudo_modal_submit": "Configure",
+  "sudo_modal_cancel": "Cancel",
+  "sudo_modal_wrong_password": "Wrong password",
+  "sudo_modal_error": "Error — check server logs",
+  "sudo_modal_success": "Setup complete. Automatic updates are now enabled."
 }

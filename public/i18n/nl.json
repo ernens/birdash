@@ -2131,5 +2131,15 @@
   "td_filter_review": "Te beoordelen",
   "td_filter_strong": "Sterk signaal",
   "today_dets_full_link": "Meerdaagse weergave",
-  "today_dets_full_title": "Volledige meerdaagse lijst voor deze soort bekijken"
+  "today_dets_full_title": "Volledige meerdaagse lijst voor deze soort bekijken",
+  "sudo_banner_text": "Configuratie vereist voor automatische updates",
+  "sudo_banner_btn": "Configureren",
+  "sudo_modal_title": "Automatische updates inschakelen",
+  "sudo_modal_intro": "Updates die vanuit dit dashboard worden gestart, vereisen dat sudo zonder wachtwoordprompt werkt. Voer je wachtwoord één keer in — het wordt gebruikt om het configuratiebestand te schrijven en nooit opgeslagen.",
+  "sudo_modal_password": "Wachtwoord voor",
+  "sudo_modal_submit": "Configureren",
+  "sudo_modal_cancel": "Annuleren",
+  "sudo_modal_wrong_password": "Onjuist wachtwoord",
+  "sudo_modal_error": "Fout — controleer serverlogs",
+  "sudo_modal_success": "Configuratie voltooid. Automatische updates zijn nu ingeschakeld."
 }

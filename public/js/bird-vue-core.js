@@ -1504,6 +1504,59 @@
         updateInfo.value.hasUpdate && !updateInfo.value.snoozed && !updateApplying.value
       );
 
+      // ── Passwordless sudo bootstrap (self-heal for fresh installs) ─────────
+      const sudoStatus = ref({ ok: true, user: '' });
+      const sudoModalOpen = ref(false);
+      const sudoPassword = ref('');
+      const sudoSubmitting = ref(false);
+      const sudoError = ref('');
+      const sudoSuccess = ref(false);
+      async function fetchSudoStatus() {
+        try {
+          const r = await fetch(`${BIRD_CONFIG.apiUrl}/system/sudo-check`);
+          const d = await r.json();
+          if (d && typeof d.ok === 'boolean') sudoStatus.value = d;
+        } catch {}
+      }
+      fetchSudoStatus();
+      const showSudoBanner = computed(() => !sudoStatus.value.ok);
+      function openSudoModal() {
+        sudoPassword.value = '';
+        sudoError.value = '';
+        sudoSuccess.value = false;
+        sudoModalOpen.value = true;
+      }
+      function closeSudoModal() {
+        sudoModalOpen.value = false;
+        sudoPassword.value = '';
+        sudoError.value = '';
+      }
+      async function submitSudoConfig() {
+        if (!sudoPassword.value || sudoSubmitting.value) return;
+        sudoSubmitting.value = true;
+        sudoError.value = '';
+        try {
+          const r = await fetch(`${BIRD_CONFIG.apiUrl}/system/configure-sudo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
+            body: JSON.stringify({ password: sudoPassword.value }),
+          });
+          const d = await r.json().catch(() => ({}));
+          sudoPassword.value = '';
+          if (r.ok && d.ok) {
+            sudoSuccess.value = true;
+            await fetchSudoStatus();
+            setTimeout(() => { sudoModalOpen.value = false; sudoSuccess.value = false; }, 1500);
+          } else {
+            sudoError.value = d.error === 'wrong_password' ? 'wrong_password' : 'server_error';
+          }
+        } catch (e) {
+          sudoError.value = 'server_error';
+        } finally {
+          sudoSubmitting.value = false;
+        }
+      }
+
       function openUpdateModal() { updateModalOpen.value = true; }
       function closeUpdateModal() { updateModalOpen.value = false; }
 
@@ -1911,7 +1964,7 @@
       // Expose openPower so child pages (e.g. the Settings → Station
       // 'Manage power' button) can trigger the shell-level modal.
       if (window.BIRDASH) window.BIRDASH.openPower = () => power.open();
-      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, siteCoords, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power, authStatus, logout, gotoLogin, birdweatherStationId };
+      return { lang, t, setLang, langs, theme, themes, setTheme, navItems, navSections, openSection, hoverSection, navSectionClick, navGo, siteName, siteElev, siteCoords, langOpen, themeOpen, currentLang, currentTheme, modelName, currentPage, reviewCount, searchQuery, searchOpen, searchExpanded, searchHighlight, searchResults, onSearchInput, selectSearchResult, onSearchKeydown, closeSearch, toggleMobileSearch, bellOpen, bellCritical, bellWarning, bellBirds, bellUnseen, bellUnseenCritical, bellUnseenWarning, bellUnseenBirds, bellSeverity, toggleBell, bellItemClick, toasts, brandName, refreshReviewCount, drawerOpen, toggleDrawer, drawerNavClick, updateInfo, updateModalOpen, openUpdateModal, closeUpdateModal, showUpdateBanner, deferUpdate, skipUpdate, applyUpdate, forceUpdate, rollbackUpdate, canRollback, updateApplying, updateProgress, updateLog, updateShowLog, updateGroupedChanges, reloadAfterUpdate, dismissUpdateProgress, appVersion, progressLabel, bugReportOpen, bugReportForm, bugReportEnabled, openBugReport, closeBugReport, submitBugReport, power, authStatus, logout, gotoLogin, birdweatherStationId, sudoStatus, sudoModalOpen, sudoPassword, sudoSubmitting, sudoError, sudoSuccess, showSudoBanner, openSudoModal, closeSudoModal, submitSudoConfig };
     },
     directives: {
       'click-outside': {
@@ -2107,6 +2160,12 @@
     </div>
   </nav>
   <main id="birdash-main" class="app-main" role="main">
+    <!-- Sudo bootstrap banner — appears only on fresh installs that skipped Pi Imager's NOPASSWD option -->
+    <div v-if="showSudoBanner" class="update-banner update-banner--warn" data-testid="sudo-banner">
+      <span class="update-banner-icon"><bird-icon name="alert-triangle" :size="16"></bird-icon></span>
+      <span class="update-banner-text">{{t('sudo_banner_text')}}</span>
+      <button class="update-banner-btn" @click="openSudoModal" data-testid="sudo-banner-btn">{{t('sudo_banner_btn')}}</button>
+    </div>
     <!-- Update available banner — discreet, non-blocking -->
     <div v-if="showUpdateBanner" class="update-banner" data-testid="update-banner">
       <span class="update-banner-icon"><bird-icon name="arrow-up-circle" :size="16"></bird-icon></span>
@@ -2205,6 +2264,44 @@
         <button class="update-btn-secondary" @click="skipUpdate" data-testid="update-modal-skip">{{t('update_skip')}}</button>
         <button class="update-btn-secondary" @click="deferUpdate(1)" data-testid="update-modal-defer">{{t('update_defer')}}</button>
         <button class="update-btn-primary" @click="applyUpdate" style="margin-left:auto;" data-testid="update-modal-install">{{t('update_install')}}</button>
+      </div>
+    </div>
+  </div>
+  <!-- Sudo bootstrap modal -->
+  <div v-if="sudoModalOpen" class="update-modal-backdrop" @click.self="closeSudoModal" data-testid="sudo-modal">
+    <div class="update-modal" style="max-width:480px;">
+      <div class="update-modal-hdr">
+        <div class="update-modal-title"><bird-icon name="alert-triangle" :size="16" style="color:var(--warn);"></bird-icon> {{t('sudo_modal_title')}}</div>
+        <button class="update-modal-close" @click="closeSudoModal" aria-label="Close" data-testid="sudo-modal-close"><bird-icon name="x" :size="16"></bird-icon></button>
+      </div>
+      <div class="update-modal-body">
+        <div v-if="sudoSuccess" style="text-align:center;padding:1rem 0;">
+          <bird-icon name="check-circle" :size="32" style="color:var(--accent);"></bird-icon>
+          <div style="margin-top:.6rem;color:var(--accent);">{{t('sudo_modal_success')}}</div>
+        </div>
+        <form v-else @submit.prevent="submitSudoConfig">
+          <p style="margin:0 0 1rem 0;font-size:.9rem;color:var(--text-muted);line-height:1.5;">{{t('sudo_modal_intro')}}</p>
+          <label style="display:block;font-size:.85rem;margin-bottom:.3rem;">
+            {{t('sudo_modal_password')}} <strong v-if="sudoStatus.user">{{sudoStatus.user}}</strong>
+          </label>
+          <input
+            type="password"
+            v-model="sudoPassword"
+            autocomplete="current-password"
+            :disabled="sudoSubmitting"
+            data-testid="sudo-modal-password"
+            style="width:100%;padding:.55rem .7rem;background:var(--bg-input,var(--surface));border:1px solid var(--border);border-radius:8px;font-size:.95rem;color:var(--text);"
+            :placeholder="t('sudo_modal_password')"
+          />
+          <div v-if="sudoError" style="margin-top:.6rem;color:var(--danger);font-size:.85rem;" data-testid="sudo-modal-error">
+            <bird-icon name="alert-circle" :size="14" style="vertical-align:-2px;"></bird-icon>
+            {{ sudoError === 'wrong_password' ? t('sudo_modal_wrong_password') : t('sudo_modal_error') }}
+          </div>
+          <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;">
+            <button type="button" class="update-btn-secondary" @click="closeSudoModal" :disabled="sudoSubmitting" data-testid="sudo-modal-cancel">{{t('sudo_modal_cancel')}}</button>
+            <button type="submit" class="update-btn-primary" :disabled="!sudoPassword || sudoSubmitting" data-testid="sudo-modal-submit">{{ sudoSubmitting ? '…' : t('sudo_modal_submit') }}</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

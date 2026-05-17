@@ -113,6 +113,113 @@ function handle(req, res, pathname, ctx) {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── PASSWORDLESS SUDO BOOTSTRAP ────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Fresh installs that skipped the Pi Imager "passwordless sudo" option end
+  // up with broken in-app updates (every sudo blocks waiting for a password
+  // on a TTY-less process). These two endpoints let the user fix it without
+  // touching a terminal: detect via GET sudo-check, fix via POST configure-sudo.
+
+  // ── Route : GET /api/system/sudo-check ─────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/system/sudo-check') {
+    (async () => {
+      let ok = false;
+      try { await execCmd('sudo', ['-n', 'true']); ok = true; } catch(_) {}
+      const user = process.env.USER || require('os').userInfo().username;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok, user }));
+    })();
+    return true;
+  }
+
+  // ── Route : POST /api/system/configure-sudo ────────────────────────────────
+  // Stages the sudoers content in a temp file and installs it as root using
+  // `sudo -S install(1)`. Stdin only carries the password (never the file
+  // content) — so even if sudo decides not to consume the password (e.g.
+  // NOPASSWD is already in effect), the password can't leak into the
+  // destination file the way `sudo -S tee` would have allowed.
+  if (req.method === 'POST' && pathname === '/api/system/configure-sudo') {
+    if (!requireAuth(req, res)) return true;
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      (async () => {
+        // Idempotency: if NOPASSWD already works, nothing to do.
+        try {
+          await execCmd('sudo', ['-n', 'true']);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, alreadyConfigured: true }));
+          return;
+        } catch(_) {}
+
+        let password;
+        try {
+          const parsed = JSON.parse(body);
+          password = parsed.password;
+        } catch(_) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'bad_request' }));
+          return;
+        }
+        if (typeof password !== 'string' || password.length < 1 || password.length > 256) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'password_required' }));
+          return;
+        }
+        const os = require('os');
+        const user = process.env.USER || os.userInfo().username;
+        const sudoersContent = `${user} ALL=(ALL) NOPASSWD: ALL\n`;
+        const tmpFile = path.join(os.tmpdir(), `birdash-sudoers-${process.pid}-${Date.now()}`);
+        fs.writeFileSync(tmpFile, sudoersContent, { mode: 0o600 });
+
+        try { await execCmd('sudo', ['-k']); } catch(_) {}
+
+        try {
+          await new Promise((resolve, reject) => {
+            const proc = spawn('sudo', ['-S', '-p', '', 'install', '-m', '0440', '-o', 'root', '-g', 'root', tmpFile, '/etc/sudoers.d/010_pi-nopasswd'], {
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            let stderr = '';
+            proc.stderr.on('data', d => { stderr += d.toString(); });
+            proc.stdin.write(password + '\n');
+            proc.stdin.end();
+            proc.on('error', reject);
+            proc.on('exit', code => {
+              if (code === 0) return resolve();
+              if (/incorrect password|Sorry, try again|authentication failure|3 incorrect/i.test(stderr)) {
+                return reject(new Error('wrong_password'));
+              }
+              reject(new Error(stderr.trim() || `sudo_exit_${code}`));
+            });
+          });
+        } catch(e) {
+          password = null;
+          try { fs.unlinkSync(tmpFile); } catch(_) {}
+          const isWrong = e.message === 'wrong_password';
+          console.error('[system] configure-sudo: %s', isWrong ? 'wrong password' : e.message);
+          res.writeHead(isWrong ? 401 : 500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: isWrong ? 'wrong_password' : 'server_error' }));
+          return;
+        }
+        password = null;
+        try { fs.unlinkSync(tmpFile); } catch(_) {}
+
+        let verified = false;
+        try { await execCmd('sudo', ['-n', 'true']); verified = true; } catch(_) {}
+        if (!verified) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'verification_failed' }));
+          return;
+        }
+        console.log(`[system] passwordless sudo configured for ${user}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      })();
+    });
+    return true;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── SYSTEM HEALTH ENDPOINTS ────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 

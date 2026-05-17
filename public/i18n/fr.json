@@ -2133,5 +2133,15 @@
   "td_filter_review": "À revoir",
   "td_filter_strong": "Signal solide",
   "today_dets_full_link": "Voir multi-jour",
-  "today_dets_full_title": "Voir la liste complète multi-jour pour cette espèce"
+  "today_dets_full_title": "Voir la liste complète multi-jour pour cette espèce",
+  "sudo_banner_text": "Configuration requise pour les mises à jour automatiques",
+  "sudo_banner_btn": "Configurer",
+  "sudo_modal_title": "Activer les mises à jour automatiques",
+  "sudo_modal_intro": "Les mises à jour lancées depuis cette interface nécessitent que sudo fonctionne sans mot de passe. Saisis ton mot de passe une seule fois — il sera utilisé pour écrire le fichier de configuration et ne sera jamais stocké.",
+  "sudo_modal_password": "Mot de passe de",
+  "sudo_modal_submit": "Configurer",
+  "sudo_modal_cancel": "Annuler",
+  "sudo_modal_wrong_password": "Mot de passe incorrect",
+  "sudo_modal_error": "Erreur — vérifie les logs serveur",
+  "sudo_modal_success": "Configuration terminée. Les mises à jour automatiques sont maintenant activées."
 }

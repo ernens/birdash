@@ -4466,6 +4466,20 @@ select, input[type="text"], input[type="number"], textarea {
   .update-banner { animation: none; }
 }
 
+/* Warning-tone variant for the sudo-bootstrap banner — same shape,
+   amber palette so users distinguish it from the red "new version" banner. */
+.update-banner--warn { border-color: #e0a01a; border-left-color: #e0a01a; animation: sudo-banner-pulse 3s ease-in-out infinite; }
+.update-banner--warn .update-banner-icon { color: #e0a01a; }
+.update-banner--warn .update-banner-btn { background: #e0a01a; }
+.update-banner--warn .update-banner-btn:hover { background: #f5b53a; }
+@keyframes sudo-banner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 160, 26, 0); border-color: #e0a01a; }
+  50% { box-shadow: 0 0 0 4px rgba(224, 160, 26, 0.18); border-color: #f5b53a; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-banner--warn { animation: none; }
+}
+
 /* ── Categorized changes inside the modal ───────────────────────────── */
 .update-changes-group { margin-bottom: 1rem; }
 .update-changes-label {
