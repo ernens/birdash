@@ -219,6 +219,15 @@ class BirdEngine:
         self._throttle_last = {}        # {com_name: last_insert_epoch}
         self._throttle_dropped = 0       # session counter (Prom-readable later)
 
+        # ── User species inclusion / exclusion lists ──────────────────────
+        # Lives next to config.toml so legacy installs (~/birdengine/) and
+        # fresh ones (~/birdash/engine/) both find their lists at base_dir.
+        # Hot-reloaded by file mtime so saving from the dashboard takes
+        # effect on the next WAV without restarting the engine. Empty
+        # include = no whitelist; exclude always drops.
+        self._species_lists = {'include': set(), 'exclude': set()}
+        self._species_lists_mtimes = None
+
         # ── Quality counters (Phase B) ────────────────────────────────────
         # Per-hour accumulator flushed by _quality_flush() into the
         # quality_events table. Definitions are spec'd in
@@ -295,6 +304,48 @@ class BirdEngine:
             except Exception as e:
                 log.warning("[yamnet] init failed: %s — pre-filter disabled", e)
                 self._yamnet = None
+
+    def _get_user_species_lists(self):
+        """Return the user's include/exclude sci_name sets.
+
+        Reads `include_species_list.txt` and `exclude_species_list.txt`
+        from `self.base_dir` (next to config.toml). Hot-reloads via
+        mtime — cheap because we only stat two files once per WAV (not
+        per chunk). Empty `include` means no whitelist; `exclude`
+        always drops.
+        """
+        inc_path = os.path.join(self.base_dir, "include_species_list.txt")
+        exc_path = os.path.join(self.base_dir, "exclude_species_list.txt")
+        try:
+            cur_mtimes = (
+                os.path.getmtime(inc_path) if os.path.exists(inc_path) else 0,
+                os.path.getmtime(exc_path) if os.path.exists(exc_path) else 0,
+            )
+        except OSError:
+            cur_mtimes = (0, 0)
+        if cur_mtimes == self._species_lists_mtimes:
+            return self._species_lists
+
+        def _read(p):
+            try:
+                with open(p) as f:
+                    return set(line.strip() for line in f if line.strip())
+            except FileNotFoundError:
+                return set()
+            except OSError as e:
+                log.warning("[species-lists] could not read %s: %s", p, e)
+                return set()
+
+        self._species_lists = {
+            'include': _read(inc_path),
+            'exclude': _read(exc_path),
+        }
+        self._species_lists_mtimes = cur_mtimes
+        inc_n = len(self._species_lists['include'])
+        exc_n = len(self._species_lists['exclude'])
+        if inc_n or exc_n:
+            log.info("[species-lists] loaded: include=%d, exclude=%d", inc_n, exc_n)
+        return self._species_lists
 
     def _dual_confirm_active(self):
         """True only when DUAL_CONFIRM_ENABLED=1 AND BirdNET is primary AND
@@ -378,6 +429,10 @@ class BirdEngine:
         # check, no IO if unchanged).
         if self.perch_ebird_filter:
             self._reload_perch_ebird()
+        # User inclusion / exclusion lists from the dashboard. Hot-reloaded
+        # by file mtime — saving the lists in Settings → Species takes
+        # effect on the next WAV without restarting the engine.
+        user_lists = self._get_user_species_lists()
         detections = []
 
         # Model-specific thresholds
@@ -417,6 +472,25 @@ class BirdEngine:
                     if margin < min_margin:
                         break  # ambiguous detection, skip entire chunk
                 if species_list and sci_name not in species_list:
+                    continue
+                # User exclude list — hard rejection regardless of model or
+                # confidence. The user explicitly marked this species as
+                # "don't detect", so we drop early before building the det
+                # dict (saves work) and before any post-processing kicks off.
+                if sci_name in user_lists['exclude']:
+                    com_for_log = self.names.get(sci_name, sci_name)
+                    log.info("  [%s] %s — %s (%.1f%%) DROPPED by exclude list",
+                             tag, com_for_log, sci_name, confidence * 100)
+                    self._quality_inc("species_excluded")
+                    continue
+                # User include list (whitelist mode) — when non-empty, only
+                # listed species pass. Empty include list is a no-op (default
+                # "detect everything").
+                if user_lists['include'] and sci_name not in user_lists['include']:
+                    com_for_log = self.names.get(sci_name, sci_name)
+                    log.info("  [%s] %s — %s (%.1f%%) DROPPED — not in include list",
+                             tag, com_for_log, sci_name, confidence * 100)
+                    self._quality_inc("species_not_in_include")
                     continue
                 # Perch eBird range filter — opt-in via RANGE_FILTER_PERCH_EBIRD.
                 # Drops sci_names absent from the eBird "recently observed

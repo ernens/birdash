@@ -2,6 +2,49 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.42] — 2026-05-17
+
+### Fixed — engine now honors the Species inclusion / exclusion lists
+
+The Settings → Species page has been writing
+`include_species_list.txt` / `exclude_species_list.txt` next to the
+engine config for a long time, but `engine.py` never read them. Same
+dead-feature pattern as the dual-confirm settings before 1.55.37: the
+UI promised filtering, the engine ignored it, every species detected
+landed in the DB and got a clip extracted regardless of the user's
+explicit "don't detect" / "only detect these" preferences.
+
+Implemented:
+
+* `_get_user_species_lists()` reads both files from `self.base_dir`
+  (the directory holding `config.toml`), with mtime-based hot-reload —
+  saving the lists in the dashboard takes effect on the next WAV
+  without needing to restart the engine.
+* `_analyze_with_model` calls it once per WAV (cached) and applies the
+  filter on every prediction, right after the MData geographic filter
+  and before the Perch eBird filter / det-dict build:
+  - in `exclude` → drop, log `DROPPED by exclude list`, bump
+    `species_excluded` quality counter
+  - `include` non-empty AND not in it → drop, log
+    `DROPPED — not in include list`, bump `species_not_in_include`
+* Empty `include` = no whitelist (default "detect everything except
+  exclude"). Both empty = no-op.
+
+Verified live on bird: boot log shows `[species-lists] loaded:
+include=0, exclude=1` after the test exclude of `Cygnus olor`.
+
+7 unit tests in `engine/test_species_lists.py` cover empty state,
+whitespace + dedup parsing, mtime hot-reload (picks up new file, picks
+up edits, cache-hit when unchanged).
+
+Quality dashboard gains two new counters.
+
+### Hot-reload contract
+
+User saves the list in Settings → Species → file mtime changes →
+within one WAV cycle (15-45 s typically), the engine's cached sets
+refresh. No engine restart needed.
+
 ## [1.55.41] — 2026-05-17
 
 ### Fixed — Save button stayed grey after editing Apprise URLs or alert thresholds
