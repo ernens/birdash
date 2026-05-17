@@ -5,45 +5,78 @@
       "label": "Permissif",
       "builtin": true,
       "values": {
-        "BIRDNET_CONFIDENCE": 0.50,
-        "PERCH_CONFIDENCE": 0.15,
-        "PERCH_MIN_MARGIN": 0.05,
-        "DUAL_CONFIRM_ENABLED": 1,
-        "PERCH_STANDALONE_CONFIDENCE": 0.75,
-        "BIRDNET_ECHO_CONFIDENCE": 0.10,
-        "SENSITIVITY": 1.4,
-        "OVERLAP": 0.5,
-        "SF_THRESH": 0.01
+        "shared": {
+          "SENSITIVITY": 1.4,
+          "SF_THRESH": 0.01
+        },
+        "birdnet": {
+          "BIRDNET_CONFIDENCE": 0.45,
+          "OVERLAP": 0.5
+        },
+        "perch": {
+          "PERCH_CONFIDENCE": 0.35,
+          "PERCH_MIN_MARGIN": 0.05
+        },
+        "dual": {
+          "BIRDNET_CONFIDENCE": 0.5,
+          "PERCH_CONFIDENCE": 0.15,
+          "PERCH_MIN_MARGIN": 0.05,
+          "DUAL_CONFIRM_ENABLED": 1,
+          "PERCH_STANDALONE_CONFIDENCE": 0.75,
+          "BIRDNET_ECHO_CONFIDENCE": 0.1
+        }
       }
     },
     "balance": {
       "label": "Balancé",
       "builtin": true,
       "values": {
-        "BIRDNET_CONFIDENCE": 0.65,
-        "PERCH_CONFIDENCE": 0.25,
-        "PERCH_MIN_MARGIN": 0.10,
-        "DUAL_CONFIRM_ENABLED": 1,
-        "PERCH_STANDALONE_CONFIDENCE": 0.85,
-        "BIRDNET_ECHO_CONFIDENCE": 0.15,
-        "SENSITIVITY": 1.25,
-        "OVERLAP": 0.5,
-        "SF_THRESH": 0.03
+        "shared": {
+          "SENSITIVITY": 1.25,
+          "SF_THRESH": 0.03
+        },
+        "birdnet": {
+          "BIRDNET_CONFIDENCE": 0.65,
+          "OVERLAP": 0.5
+        },
+        "perch": {
+          "PERCH_CONFIDENCE": 0.55,
+          "PERCH_MIN_MARGIN": 0.1
+        },
+        "dual": {
+          "BIRDNET_CONFIDENCE": 0.65,
+          "PERCH_CONFIDENCE": 0.25,
+          "PERCH_MIN_MARGIN": 0.1,
+          "DUAL_CONFIRM_ENABLED": 1,
+          "PERCH_STANDALONE_CONFIDENCE": 0.85,
+          "BIRDNET_ECHO_CONFIDENCE": 0.15
+        }
       }
     },
     "rigoureux": {
       "label": "Rigoureux",
       "builtin": true,
       "values": {
-        "BIRDNET_CONFIDENCE": 0.80,
-        "PERCH_CONFIDENCE": 0.40,
-        "PERCH_MIN_MARGIN": 0.15,
-        "DUAL_CONFIRM_ENABLED": 1,
-        "PERCH_STANDALONE_CONFIDENCE": 0.95,
-        "BIRDNET_ECHO_CONFIDENCE": 0.25,
-        "SENSITIVITY": 1.0,
-        "OVERLAP": 0.5,
-        "SF_THRESH": 0.05
+        "shared": {
+          "SENSITIVITY": 1,
+          "SF_THRESH": 0.05
+        },
+        "birdnet": {
+          "BIRDNET_CONFIDENCE": 0.8,
+          "OVERLAP": 0.25
+        },
+        "perch": {
+          "PERCH_CONFIDENCE": 0.75,
+          "PERCH_MIN_MARGIN": 0.15
+        },
+        "dual": {
+          "BIRDNET_CONFIDENCE": 0.8,
+          "PERCH_CONFIDENCE": 0.4,
+          "PERCH_MIN_MARGIN": 0.15,
+          "DUAL_CONFIRM_ENABLED": 1,
+          "PERCH_STANDALONE_CONFIDENCE": 0.95,
+          "BIRDNET_ECHO_CONFIDENCE": 0.25
+        }
       }
     }
   }

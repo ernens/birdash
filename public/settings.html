@@ -1513,6 +1513,58 @@ const app = createApp({
       },
     };
 
+    // Per-(language, key) "scope" annotation rendered as a small chip above
+    // the help body. Lives outside HELP so we don't have to edit every
+    // language block for a single field — just this one table. The body
+    // text already explains the per-model details; this is the at-a-glance
+    // summary the user reads first.
+    const HELP_SCOPE = {
+      fr: {
+        birdnet_confidence: 'BirdNET (primaire ou secondaire)',
+        perch_confidence: 'Perch (primaire ou secondaire)',
+        perch_margin: 'Perch (primaire ou secondaire)',
+        sensitivity: 'BirdNET (sigmoid) + Perch (température softmax)',
+        overlap: 'BirdNET uniquement — Perch utilise des chunks fixes de 5 s',
+        sf_thresh: 'Filtre BirdNET MData (ignoré par Perch V2 et BirdNET V1)',
+        dual_confirm: 'Mode dual uniquement (BirdNET + Perch)',
+        perch_standalone: 'Mode dual uniquement (BirdNET + Perch)',
+        birdnet_echo: 'Mode dual uniquement (BirdNET + Perch)',
+      },
+      en: {
+        birdnet_confidence: 'BirdNET (primary or secondary)',
+        perch_confidence: 'Perch (primary or secondary)',
+        perch_margin: 'Perch (primary or secondary)',
+        sensitivity: 'BirdNET (sigmoid) + Perch (softmax temperature)',
+        overlap: 'BirdNET only — Perch uses fixed 5s chunks',
+        sf_thresh: 'BirdNET MData filter (ignored by Perch V2 and BirdNET V1)',
+        dual_confirm: 'Dual mode only (BirdNET + Perch)',
+        perch_standalone: 'Dual mode only (BirdNET + Perch)',
+        birdnet_echo: 'Dual mode only (BirdNET + Perch)',
+      },
+      de: {
+        birdnet_confidence: 'BirdNET (primär oder sekundär)',
+        perch_confidence: 'Perch (primär oder sekundär)',
+        perch_margin: 'Perch (primär oder sekundär)',
+        sensitivity: 'BirdNET (sigmoid) + Perch (softmax-Temperatur)',
+        overlap: 'Nur BirdNET — Perch nutzt feste 5-s-Chunks',
+        sf_thresh: 'BirdNET-MData-Filter (von Perch V2 und BirdNET V1 ignoriert)',
+        dual_confirm: 'Nur Dual-Modus (BirdNET + Perch)',
+        perch_standalone: 'Nur Dual-Modus (BirdNET + Perch)',
+        birdnet_echo: 'Nur Dual-Modus (BirdNET + Perch)',
+      },
+      nl: {
+        birdnet_confidence: 'BirdNET (primair of secundair)',
+        perch_confidence: 'Perch (primair of secundair)',
+        perch_margin: 'Perch (primair of secundair)',
+        sensitivity: 'BirdNET (sigmoid) + Perch (softmax-temperatuur)',
+        overlap: 'Alleen BirdNET — Perch gebruikt vaste chunks van 5 s',
+        sf_thresh: 'BirdNET-MData-filter (genegeerd door Perch V2 en BirdNET V1)',
+        dual_confirm: 'Alleen dual-modus (BirdNET + Perch)',
+        perch_standalone: 'Alleen dual-modus (BirdNET + Perch)',
+        birdnet_echo: 'Alleen dual-modus (BirdNET + Perch)',
+      },
+    };
+
     const helpTitle = computed(() => {
       if (!helpKey.value) return '';
       const h = (HELP[lang.value] || HELP.en)[helpKey.value] || HELP.en[helpKey.value];
@@ -1523,7 +1575,15 @@ const app = createApp({
       if (!helpKey.value) return '';
       const h = (HELP[lang.value] || HELP.en)[helpKey.value] || HELP.en[helpKey.value];
       if (!h) return '';
-      let html = h.body;
+      const scope = (HELP_SCOPE[lang.value] && HELP_SCOPE[lang.value][helpKey.value])
+                  || (HELP_SCOPE.en && HELP_SCOPE.en[helpKey.value])
+                  || null;
+      let html = '';
+      if (scope) {
+        const label = t('set_help_scope') || 'Applies to';
+        html += `<div class="info-scope" style="font-size:.78rem;color:var(--text-muted);margin:0 0 .6rem;padding:.3rem .55rem;border-left:2px solid var(--accent);background:var(--bg-deep);border-radius:0 4px 4px 0;"><strong>${label}</strong> · ${scope}</div>`;
+      }
+      html += h.body;
       if (h.rec) html += `<div class="info-rec"><bird-icon name="lightbulb" :size="14" ></bird-icon> ${h.rec}</div>`;
       return html;
     });
@@ -2186,13 +2246,45 @@ const app = createApp({
 
 
     // ── Detection profiles ─────────────────────────────────────────
-    // The 9 detection-tuning keys covered by a profile. Must mirror
-    // PROFILE_KEYS in server/routes/detection-profiles.js.
-    const DETECTION_PROFILE_KEYS = [
-      'BIRDNET_CONFIDENCE', 'PERCH_CONFIDENCE', 'PERCH_MIN_MARGIN',
-      'DUAL_CONFIRM_ENABLED', 'PERCH_STANDALONE_CONFIDENCE', 'BIRDNET_ECHO_CONFIDENCE',
-      'SENSITIVITY', 'OVERLAP', 'SF_THRESH',
-    ];
+    // Sectioned profile schema (1.55.38+). Must mirror SECTION_KEYS in
+    // server/routes/detection-profiles.js — each section is applied
+    // only when the current model topology matches it. See `applyDetectionProfile`
+    // for the apply rule and the "X applied / Y skipped" UI feedback.
+    const DETECTION_PROFILE_SECTIONS = {
+      shared:  ['SENSITIVITY', 'SF_THRESH'],
+      birdnet: ['BIRDNET_CONFIDENCE', 'OVERLAP'],
+      perch:   ['PERCH_CONFIDENCE', 'PERCH_MIN_MARGIN'],
+      dual:    [
+        'BIRDNET_CONFIDENCE', 'PERCH_CONFIDENCE', 'PERCH_MIN_MARGIN',
+        'DUAL_CONFIRM_ENABLED', 'PERCH_STANDALONE_CONFIDENCE', 'BIRDNET_ECHO_CONFIDENCE',
+      ],
+    };
+    // Flat list of every key any section covers — for the snapshot/modified-check.
+    const DETECTION_PROFILE_KEYS = Array.from(new Set([
+      ...DETECTION_PROFILE_SECTIONS.shared,
+      ...DETECTION_PROFILE_SECTIONS.birdnet,
+      ...DETECTION_PROFILE_SECTIONS.perch,
+      ...DETECTION_PROFILE_SECTIONS.dual,
+    ]));
+
+    // Determine which section a profile should apply right now, from
+    // the current form state. Same definition the engine uses for
+    // _dual_confirm_active(): BirdNET-only, Perch-only, or dual.
+    function detectModelMode() {
+      const primary = String(conf.MODEL || '').toLowerCase();
+      const secondary = String(conf.SECONDARY_MODEL || '').toLowerCase();
+      const dualEnabled = String(conf.DUAL_MODEL_ENABLED) === '1';
+      const primaryIsBirdnet = primary.includes('birdnet');
+      const primaryIsPerch = primary.includes('perch');
+      const secondaryIsBirdnet = secondary.includes('birdnet');
+      const secondaryIsPerch = secondary.includes('perch');
+      const hasBirdnet = primaryIsBirdnet || (dualEnabled && secondaryIsBirdnet);
+      const hasPerch = primaryIsPerch || (dualEnabled && secondaryIsPerch);
+      if (dualEnabled && hasBirdnet && hasPerch) return 'dual';
+      if (hasPerch && !hasBirdnet) return 'perch';
+      // Default for unknown / BirdNET-only / no-secondary configs.
+      return 'birdnet';
+    }
     const detectionProfiles = ref({});
     const activeDetectionProfileId = ref(null);
     const detectionProfileDropdown = ref('');
@@ -2225,15 +2317,43 @@ const app = createApp({
 
     async function applyDetectionProfile(id) {
       const p = detectionProfiles.value[id];
-      if (!p) return;
-      // Fill in-memory form (user must click Save to persist), same
-      // pattern as resetDefaults().
-      for (const k of DETECTION_PROFILE_KEYS) {
-        if (k in p.values) conf[k] = p.values[k];
+      if (!p || !p.values) return;
+      const mode = detectModelMode();
+      // Sections that apply in this mode: `shared` always + the section
+      // matching the current topology. Sections that don't apply still
+      // exist in the profile (they'll kick in when the user switches
+      // mode and re-applies the profile) but their values are not
+      // written to the form right now.
+      const applicableSections = ['shared', mode];
+      const appliedKeys = [];
+      const skippedKeys = [];
+      for (const section of ['shared', 'birdnet', 'perch', 'dual']) {
+        const block = p.values[section];
+        if (!block || typeof block !== 'object') continue;
+        const keys = Object.keys(block);
+        if (applicableSections.includes(section)) {
+          for (const k of keys) {
+            conf[k] = block[k];
+            appliedKeys.push(k);
+          }
+        } else {
+          for (const k of keys) skippedKeys.push(k);
+        }
       }
       activeDetectionProfileId.value = id;
       _profileLoadedSnapshot = _snapshotProfileValues();
-      detectionProfileMsg.value = (t('set_profile_loaded') || 'Profile loaded') + ' — ' + (t('set_click_save_to_persist') || 'click Save to persist');
+      // User feedback: how many keys landed in the form vs were silently
+      // ignored because the profile defines them for a different topology.
+      const modeLabel = t('set_profile_mode_' + mode) || mode;
+      const parts = [
+        (t('set_profile_loaded') || 'Profile loaded'),
+        `${appliedKeys.length} ${t('set_profile_applied') || 'applied'} (${modeLabel})`,
+      ];
+      if (skippedKeys.length) {
+        parts.push(`${skippedKeys.length} ${t('set_profile_skipped') || 'skipped (other modes)'}`);
+      }
+      parts.push(t('set_click_save_to_persist') || 'click Save to persist');
+      detectionProfileMsg.value = parts.join(' — ');
       detectionProfileErr.value = false;
       // Persist "active" marker (informational; doesn't write birdnet.conf).
       try {
@@ -2256,8 +2376,28 @@ const app = createApp({
         detectionProfileErr.value = true;
         return;
       }
-      const values = {};
-      for (const k of DETECTION_PROFILE_KEYS) values[k] = conf[k];
+      // Start from the currently active profile's values (if any) so the
+      // sections we're not editing right now (e.g. saving from dual mode
+      // doesn't blow away the `birdnet`/`perch` blocks the user already
+      // tuned). Then overwrite `shared` + the current mode's section
+      // from the form.
+      const mode = detectModelMode();
+      let values = { shared: {}, birdnet: {}, perch: {}, dual: {} };
+      const baseP = activeDetectionProfileId.value
+        && detectionProfiles.value[activeDetectionProfileId.value];
+      if (baseP && baseP.values && typeof baseP.values === 'object') {
+        for (const s of ['shared', 'birdnet', 'perch', 'dual']) {
+          if (baseP.values[s] && typeof baseP.values[s] === 'object') {
+            values[s] = { ...baseP.values[s] };
+          }
+        }
+      }
+      for (const k of DETECTION_PROFILE_SECTIONS.shared) {
+        if (conf[k] !== undefined && conf[k] !== '') values.shared[k] = conf[k];
+      }
+      for (const k of DETECTION_PROFILE_SECTIONS[mode]) {
+        if (conf[k] !== undefined && conf[k] !== '') values[mode][k] = conf[k];
+      }
       try {
         const r = await fetch(API + '/detection-profiles', {
           method: 'POST',

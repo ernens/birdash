@@ -2,6 +2,83 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.38] — 2026-05-17
+
+### Changed — detection profiles are now model-context aware
+
+The pre-1.55.38 profile shape was a flat 9-key blob applied identically
+regardless of model topology. So loading "Balancé" on a Pi 3 running
+BirdNET-only still wrote `PERCH_CONFIDENCE=0.25` and
+`DUAL_CONFIRM_ENABLED=1` to `birdnet.conf` — settings that did nothing
+on that host but polluted future runs if Perch was ever turned on.
+
+The new shape lives in four sections:
+
+* `shared` — `SENSITIVITY`, `SF_THRESH` (always applied).
+* `birdnet` — `BIRDNET_CONFIDENCE`, `OVERLAP` (applied only in BirdNET-only).
+* `perch` — `PERCH_CONFIDENCE`, `PERCH_MIN_MARGIN` (applied only in Perch-only).
+* `dual` — the same per-model confidences AND the three dual-confirm
+  keys; applied only when both models are loaded with dual enabled.
+
+Keys can legitimately appear in two sections — `BIRDNET_CONFIDENCE` in
+`birdnet` (single-model) and `dual` (cross-confirmed) can have different
+values because the user typically wants a stricter threshold when Perch
+isn't there to catch what BirdNET misses.
+
+#### Apply rule
+
+`applyDetectionProfile(id)` reads the current `MODEL` / `SECONDARY_MODEL`
+/ `DUAL_MODEL_ENABLED` from the form, decides BirdNET-only / Perch-only
+/ dual, then fills `shared` + the matching section. Keys defined for
+other sections are silently skipped — the UI surfaces a status line like
+"Profile loaded — 5 applied (dual mode) — 4 skipped (other modes) —
+click Save to persist".
+
+#### New built-in defaults
+
+| | Permissif | Balancé | Rigoureux |
+|--|--|--|--|
+| `shared.SENSITIVITY` | 1.4 | 1.25 | 1.0 |
+| `shared.SF_THRESH` | 0.01 | 0.03 | 0.05 |
+| `birdnet.BIRDNET_CONFIDENCE` | 0.45 | 0.65 | 0.80 |
+| `birdnet.OVERLAP` | 0.5 | 0.5 | 0.25 |
+| `perch.PERCH_CONFIDENCE` | 0.35 | 0.55 | 0.75 |
+| `perch.PERCH_MIN_MARGIN` | 0.05 | 0.10 | 0.15 |
+| `dual.BIRDNET_CONFIDENCE` | 0.50 | 0.65 | 0.80 |
+| `dual.PERCH_CONFIDENCE` | 0.15 | 0.25 | 0.40 |
+| `dual.PERCH_MIN_MARGIN` | 0.05 | 0.10 | 0.15 |
+| `dual.PERCH_STANDALONE_CONFIDENCE` | 0.75 | 0.85 | 0.95 |
+| `dual.BIRDNET_ECHO_CONFIDENCE` | 0.10 | 0.15 | 0.25 |
+
+Perch-only thresholds are intentionally higher than their `dual`
+counterparts (e.g. 0.55 vs 0.25 in Balancé) because Perch on its own
+lacks the BirdNET safety net.
+
+#### Backward compatibility
+
+The server accepts both shapes on POST: flat-shape clients during the
+rolling upgrade auto-migrate (SENSITIVITY/SF_THRESH → `shared`, OVERLAP
+→ `birdnet`, everything else → `dual`). Existing flat-stored profiles
+on disk migrate in memory on every read so the client always sees the
+sectioned shape. The first explicit save rewrites the file in the new
+shape.
+
+#### Help tooltips
+
+Every detection-tuning slider's help modal now opens with a small
+"Applies to" chip naming which model the parameter affects — e.g.
+"BirdNET only — Perch uses fixed 5 s chunks" for `OVERLAP`,
+"BirdNET (sigmoid) + Perch (softmax temperature)" for `SENSITIVITY`,
+"Dual mode only (BirdNET + Perch)" for the three cross-confirm keys.
+The chip lives in a new `HELP_SCOPE` table (one row per language)
+rather than as a field on every HELP entry, so it doesn't bloat the
+4 × 30-key body texts.
+
+i18n: 6 new keys × 4 languages for the apply message + scope label.
+
+E2E test coverage extended: list shape, sectioned save+apply+delete,
+flat back-compat migration, wrong-section rejection.
+
 ## [1.55.37] — 2026-05-17
 
 ### Added — dual-model cross-confirmation actually applied by the engine

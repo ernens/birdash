@@ -2141,5 +2141,11 @@
   "sudo_modal_cancel": "Annuleren",
   "sudo_modal_wrong_password": "Onjuist wachtwoord",
   "sudo_modal_error": "Fout — controleer serverlogs",
-  "sudo_modal_success": "Configuratie voltooid. Automatische updates zijn nu ingeschakeld."
+  "sudo_modal_success": "Configuratie voltooid. Automatische updates zijn nu ingeschakeld.",
+  "set_profile_mode_birdnet": "BirdNET-only modus",
+  "set_profile_mode_perch": "Perch-only modus",
+  "set_profile_mode_dual": "duale modus",
+  "set_profile_applied": "toegepast",
+  "set_profile_skipped": "overgeslagen (andere modi)",
+  "set_help_scope": "Betrekking op"
 }

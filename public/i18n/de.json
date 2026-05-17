@@ -2141,5 +2141,11 @@
   "sudo_modal_cancel": "Abbrechen",
   "sudo_modal_wrong_password": "Falsches Passwort",
   "sudo_modal_error": "Fehler — Server-Logs prüfen",
-  "sudo_modal_success": "Einrichtung abgeschlossen. Automatische Updates sind jetzt aktiv."
+  "sudo_modal_success": "Einrichtung abgeschlossen. Automatische Updates sind jetzt aktiv.",
+  "set_profile_mode_birdnet": "BirdNET-only-Modus",
+  "set_profile_mode_perch": "Perch-only-Modus",
+  "set_profile_mode_dual": "Dual-Modus",
+  "set_profile_applied": "angewendet",
+  "set_profile_skipped": "übersprungen (andere Modi)",
+  "set_help_scope": "Betrifft"
 }

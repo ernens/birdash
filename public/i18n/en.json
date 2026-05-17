@@ -2141,5 +2141,11 @@
   "sudo_modal_cancel": "Cancel",
   "sudo_modal_wrong_password": "Wrong password",
   "sudo_modal_error": "Error — check server logs",
-  "sudo_modal_success": "Setup complete. Automatic updates are now enabled."
+  "sudo_modal_success": "Setup complete. Automatic updates are now enabled.",
+  "set_profile_mode_birdnet": "BirdNET-only mode",
+  "set_profile_mode_perch": "Perch-only mode",
+  "set_profile_mode_dual": "dual mode",
+  "set_profile_applied": "applied",
+  "set_profile_skipped": "skipped (other modes)",
+  "set_help_scope": "Applies to"
 }
