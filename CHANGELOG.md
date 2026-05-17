@@ -2,6 +2,76 @@
 
 All notable changes to BirdStation are documented here.
 
+## [1.55.37] — 2026-05-17
+
+### Added — dual-model cross-confirmation actually applied by the engine
+
+`DUAL_CONFIRM_ENABLED`, `PERCH_STANDALONE_CONFIDENCE`, and
+`BIRDNET_ECHO_CONFIDENCE` have been in the UI and `birdnet.conf` validator
+for a long time, but the engine never read them. The three sliders did
+nothing. Settings → Detection promised a feature that wasn't implemented.
+
+This ships the engine logic that matches what the README and the
+settings UI describe:
+
+* `_overlay_birdnet_conf` now maps the three keys onto the runtime
+  `[detection]` dict.
+* `_dual_confirm_active()` gates the whole feature on the supported
+  topology — DUAL_CONFIRM_ENABLED=1 AND BirdNET primary AND Perch
+  secondary. Other topologies (Perch primary, no secondary, BirdNET
+  secondary…) silently disable dual-confirm and log a single warning at
+  boot so the user knows their slider has no effect on this host.
+* When active, BirdNET inference runs with an effective threshold of
+  `min(BIRDNET_CONFIDENCE, BIRDNET_ECHO_CONFIDENCE)`. Detections above
+  `BIRDNET_CONFIDENCE` go to the DB as before; the sub-confidence ones
+  are flagged `_echo_only=True` and travel with the WAV through the
+  secondary queue as echo candidates only — never written, never reach
+  post-processing.
+* The secondary queue item gains a 7th element `primary_dets` carrying
+  the full BirdNET list (DB + echo pool) for that exact WAV. The
+  list is per-file: never stored on `self`, no cross-WAV leakage.
+* In `_analyze_with_model` for the Perch secondary run, each candidate
+  with `confidence < PERCH_STANDALONE_CONFIDENCE` is checked against
+  `primary_dets`: same `Sci_Name`, half-open temporal overlap, BirdNET
+  conf ≥ `BIRDNET_ECHO_CONFIDENCE`. Candidates with a matching echo are
+  accepted (`perch_confirmed_by_birdnet`); those without are dropped
+  silently (`perch_rejected_no_echo`). Candidates at or above the
+  standalone threshold pass straight through (`perch_standalone_accept`).
+* Three new quality counters (`perch_standalone_accept`,
+  `perch_confirmed_by_birdnet`, `perch_rejected_no_echo`) flow into
+  the existing `quality_events` table so the feature is auditable.
+* Per-decision INFO log: every Perch candidate now produces one line
+  with the outcome and reason — `ACCEPTED standalone`, `CONFIRMED by
+  BirdNET (echo 0.18, overlap 1.2s)`, `REJECTED no_echo (BirdNET top
+  0.12 < echo 0.15)`, etc.
+
+11 unit tests covering: standalone acceptance, exact/partial overlap
+confirmation, strongest echo wins, rejection on no candidate / below
+echo / no overlap / touching intervals (half-open semantics), strict
+sci-name matching (no com-name fallbacks), low-echo independence from
+BirdNET confidence.
+
+### Operational note
+
+Hosts with `DUAL_CONFIRM_ENABLED=1` and the supported topology will see
+Perch detection counts drop after this update — that's the feature
+working. Low-confidence Perch detections that previously went straight
+to the DB now need a BirdNET echo to be accepted. Tune
+`PERCH_STANDALONE_CONFIDENCE` and `BIRDNET_ECHO_CONFIDENCE` in
+Settings → Detection if the resulting recall is too tight; the per-
+decision logs make tuning auditable.
+
+### Deferred to a follow-up ship
+
+* Profile schema refactor to `{shared, birdnet, perch, dual}` sections
+  so a profile only applies model-relevant keys, with a "X applied /
+  Y skipped (mode-irrelevant)" UI message at load time.
+* Per-(profile, model-mode) default values for the three builtins.
+* Tooltip enrichment naming which model each parameter affects.
+
+These are next-ship items because the priority was making the existing
+promise true before reshaping how profiles deliver it.
+
 ## [1.55.36] — 2026-05-17
 
 ### Fixed — purge remaining `/home/bjorn/...` vestiges across the codebase

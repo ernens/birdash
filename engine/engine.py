@@ -163,6 +163,25 @@ class BirdEngine:
             from queue import Queue
             self._secondary_queue = Queue()
 
+        # Dual-confirm coherence check — the feature is only meaningful with
+        # BirdNET primary + Perch secondary. Any other topology silently
+        # disables it; log a single warning at boot so the user knows their
+        # birdnet.conf toggle has no effect.
+        if int(float(det.get("dual_confirm_enabled", 0))) == 1:
+            primary_is_perch = isinstance(self.primary_model, PerchModel)
+            secondary_is_perch = isinstance(self.secondary_model, PerchModel)
+            if primary_is_perch or not secondary_is_perch:
+                log.warning("[dual-confirm] DUAL_CONFIRM_ENABLED=1 but topology is "
+                            "not BirdNET-primary + Perch-secondary — feature disabled "
+                            "for this run. (primary=%s, secondary=%s)",
+                            self.primary_model.name,
+                            self.secondary_model.name if self.secondary_model else "none")
+            else:
+                log.info("[dual-confirm] active — Perch detections below %.2f "
+                         "must echo on BirdNET ≥ %.2f to be accepted",
+                         float(det.get("perch_standalone_confidence", 0.85)),
+                         float(det.get("birdnet_echo_confidence", 0.15)))
+
         # Load species names — prefer birdnet.conf DATABASE_LANG (source of
         # truth, shared with birdash UI), fallback to config.toml station.language
         lang = (birdnet_settings.get("DATABASE_LANG")
@@ -277,6 +296,21 @@ class BirdEngine:
                 log.warning("[yamnet] init failed: %s — pre-filter disabled", e)
                 self._yamnet = None
 
+    def _dual_confirm_active(self):
+        """True only when DUAL_CONFIRM_ENABLED=1 AND BirdNET is primary AND
+        Perch is secondary. Other topologies disable the feature silently
+        (the boot warning was already logged in __init__).
+        """
+        if int(float(self.config["detection"].get("dual_confirm_enabled", 0))) != 1:
+            return False
+        if not self.secondary_model:
+            return False
+        if isinstance(self.primary_model, PerchModel):
+            return False
+        if not isinstance(self.secondary_model, PerchModel):
+            return False
+        return True
+
     def _source_from_path(self, file_path):
         """Derive the multi-source key from a recording path.
 
@@ -295,11 +329,29 @@ class BirdEngine:
             return None
 
     def _analyze_with_model(self, model, file_path, file_date, week, tag,
-                            raw_sig=None, raw_sr=None, source=None):
+                            raw_sig=None, raw_sr=None, source=None,
+                            echo_threshold=None, primary_dets=None):
         """Run inference on a file with a given model. Returns list of detections.
 
         If raw_sig/raw_sr are provided, skip file read and resample from those.
         `source` is propagated into each detection's `Source` DB column.
+
+        Dual-confirm parameters (both opt-in, only set by callers when
+        _dual_confirm_active() is True):
+          echo_threshold: when set on a BirdNET primary run, the inference
+            filter drops to min(birdnet_confidence, echo_threshold) so the
+            sub-confidence pool is available as cross-confirmation echoes
+            for Perch. Detections in the echo pool are returned with
+            `_echo_only=True` and MUST NOT be written to the DB by the
+            caller (they exist only as in-flight echo material for the
+            secondary worker).
+          primary_dets: when set on a Perch secondary run, the primary
+            model's full detection list (DB + echo pool) for this exact
+            WAV. Perch candidates below perch_standalone_confidence are
+            cross-checked against this list — same Sci_Name + temporal
+            overlap + echo confidence — and dropped silently if no echo
+            is found. Never reuse this across files: it MUST come from
+            the queue item to guarantee per-file isolation.
         """
         lat = self.config["station"]["latitude"]
         lon = self.config["station"]["longitude"]
@@ -338,13 +390,25 @@ class BirdEngine:
                        self.config["detection"].get("confidence", 0.65))
             min_margin = 0  # BirdNET: sigmoid scores are independent, no margin needed
 
+        # Dual-confirm: when this is a BirdNET primary run with echo_threshold
+        # set, lower the inference filter so sub-confidence detections are
+        # available as echoes for Perch. They'll be flagged _echo_only=True
+        # and the caller must not write them to the DB.
+        inference_min_conf = min_conf
+        if echo_threshold is not None and not is_perch:
+            inference_min_conf = min(min_conf, float(echo_threshold))
+        # Dual-confirm thresholds for Perch secondary runs (only meaningful
+        # when primary_dets is provided).
+        dc_standalone = float(self.config["detection"].get("perch_standalone_confidence", 0.85))
+        dc_echo_thresh = float(self.config["detection"].get("birdnet_echo_confidence", 0.15))
+
         pred_start = 0.0
         for chunk in chunks:
             predictions = model.predict(chunk)
             pred_end = pred_start + model.chunk_duration
 
             for rank, (sci_name, confidence) in enumerate(predictions[:10]):
-                if confidence < min_conf:
+                if confidence < inference_min_conf:
                     break
                 # Perch: check margin between top-1 and top-2
                 if is_perch and rank == 0 and min_margin > 0 and len(predictions) > 1:
@@ -369,6 +433,14 @@ class BirdEngine:
                 conf_pct = round(float(confidence) * 100)
                 clip_name = f"{com_name_safe}-{conf_pct}-{basename.replace('.wav', '.mp3')}"
 
+                # Echo-only flag: BirdNET detection below the user-visible
+                # min_conf, kept in-memory only so Perch can use it for
+                # cross-confirmation. Never written to the DB; never
+                # surfaced to downstream post-processing.
+                is_echo_only = (echo_threshold is not None
+                                and not is_perch
+                                and confidence < min_conf)
+
                 det = {
                     "date": det_time.strftime("%Y-%m-%d"),
                     "time": det_time.strftime("%H:%M:%S"),
@@ -387,27 +459,98 @@ class BirdEngine:
                     "_start": pred_start,
                     "_stop": pred_end,
                 }
-                # Noisy-species throttle (opt-in, off by default). When a
-                # species (e.g. a sparrow camped next to the mic) dominates
-                # the audio, we drop its low-confidence repeats within the
-                # cooldown window but always keep high-confidence calls.
-                if self._should_throttle(com_name, confidence):
+                if is_echo_only:
+                    det["_echo_only"] = True
+
+                # Noisy-species throttle (opt-in, off by default). Echo-only
+                # rows skip throttle since they never reach the user.
+                if not is_echo_only and self._should_throttle(com_name, confidence):
                     log.debug("  [%s] %s — %s (%.1f%%) THROTTLED (cooldown)",
                               tag, com_name, sci_name, confidence * 100)
-                    # Don't insert into DB, don't append to detections list;
-                    # downstream post-processing (MP3, spectro, BirdWeather
-                    # upload) is also skipped by consequence.
                     continue
-                with self._db_lock:
-                    write_detection(self.db, det)
+
+                # Dual-confirm: Perch candidates below standalone threshold
+                # need a matching BirdNET echo on this same WAV.
+                if is_perch and primary_dets is not None:
+                    outcome = self._dual_confirm_check(
+                        det, primary_dets, dc_standalone, dc_echo_thresh)
+                    if outcome == "rejected":
+                        continue
+
+                if not is_echo_only:
+                    with self._db_lock:
+                        write_detection(self.db, det)
                 detections.append(det)
-                log.info("  [%s] %s — %s (%.1f%%)", tag, com_name,
-                         sci_name, confidence * 100)
+                if not is_echo_only:
+                    log.info("  [%s] %s — %s (%.1f%%)", tag, com_name,
+                             sci_name, confidence * 100)
 
             pred_start = pred_end - overlap
 
         # Store detections for post-processing by process_file (after file move)
         return detections
+
+    def _dual_confirm_check(self, perch_det, primary_dets, standalone_thresh, echo_thresh):
+        """Decide whether a Perch detection passes dual-confirm.
+
+        Returns 'standalone' (Perch confidence ≥ standalone threshold —
+        accepted on its own), 'confirmed' (BirdNET echoed the same species
+        on an overlapping chunk above the echo threshold), or 'rejected'
+        (no echo found, dropped silently).
+
+        Increments quality counters and emits a diagnostic log line for
+        every outcome so the user can audit dual-confirm behavior after
+        the fact.
+        """
+        conf = perch_det["confidence"]
+        sci = perch_det["sci_name"]
+        com = perch_det["com_name"]
+        p_start = perch_det["_start"]
+        p_stop = perch_det["_stop"]
+
+        if conf >= standalone_thresh:
+            log.info("  [perch] %s — %s (%.2f) ACCEPTED standalone (≥ %.2f)",
+                     com, sci, conf, standalone_thresh)
+            self._quality_inc("perch_standalone_accept")
+            return "standalone"
+
+        # Search primary detections for an echo — same scientific name,
+        # temporal overlap with this Perch chunk, BirdNET confidence
+        # above the (independent) echo threshold. Pick the strongest
+        # match for the diagnostic log; any qualifying echo confirms.
+        best_echo = None
+        for pd in primary_dets:
+            if pd["sci_name"] != sci:
+                continue
+            if pd["confidence"] < echo_thresh:
+                continue
+            # Half-open interval overlap: [a, b) ∩ [c, d) ≠ ∅ iff a < d AND c < b
+            if p_start >= pd["_stop"] or pd["_start"] >= p_stop:
+                continue
+            if best_echo is None or pd["confidence"] > best_echo["confidence"]:
+                best_echo = pd
+
+        if best_echo is not None:
+            overlap_s = min(p_stop, best_echo["_stop"]) - max(p_start, best_echo["_start"])
+            log.info("  [perch] %s — %s (%.2f) CONFIRMED by BirdNET (echo %.2f, overlap %.1fs)",
+                     com, sci, conf, best_echo["confidence"], overlap_s)
+            self._quality_inc("perch_confirmed_by_birdnet")
+            return "confirmed"
+
+        # Diagnose the failure mode so the user can tune thresholds.
+        same_sp = [pd for pd in primary_dets if pd["sci_name"] == sci]
+        if not same_sp:
+            reason = "no BirdNET candidate for this species"
+        else:
+            best_conf = max(pd["confidence"] for pd in same_sp)
+            if best_conf < echo_thresh:
+                reason = f"BirdNET top {best_conf:.2f} < echo {echo_thresh:.2f}"
+            else:
+                reason = "no temporal overlap"
+        log.info("  [perch] %s — %s (%.2f) REJECTED no_echo (%s)",
+                 com, sci, conf, reason)
+        self._quality_inc("perch_rejected_no_echo")
+        return "rejected"
 
     def _secondary_worker(self):
         """Background thread that processes files with the secondary model."""
@@ -415,21 +558,31 @@ class BirdEngine:
             item = self._secondary_queue.get()
             if item is None:
                 break
-            # Older queue items (pre-multi-source) had 5 elements; new ones
-            # have 6 with the source key as the trailing element. Tolerate
-            # both during the rolling restart that ships this change.
+            # Queue item shapes (oldest → newest), all tolerated during a
+            # rolling restart:
+            #   5 elements: pre-multi-source (no source key)
+            #   6 elements: + source key
+            #   7 elements: + primary_dets for dual-confirm cross-check
+            primary_dets = None
             if len(item) == 5:
                 file_path, file_date, week, raw_sig, raw_sr = item
                 source = None
-            else:
+            elif len(item) == 6:
                 file_path, file_date, week, raw_sig, raw_sr, source = item
+            else:
+                file_path, file_date, week, raw_sig, raw_sr, source, primary_dets = item
             basename = os.path.basename(file_path)
+            # Only honor primary_dets when dual-confirm is active for this
+            # boot — protects against stale config or topology mismatch.
+            if not self._dual_confirm_active():
+                primary_dets = None
             try:
                 t0 = time.time()
                 dets = self._analyze_with_model(
                     self.secondary_model, file_path, file_date, week,
                     self.secondary_model.name,
-                    raw_sig=raw_sig, raw_sr=raw_sr, source=source)
+                    raw_sig=raw_sig, raw_sr=raw_sr, source=source,
+                    primary_dets=primary_dets)
                 elapsed = time.time() - t0
                 log.info("[%s] %s: %d detections in %.1fs",
                          self.secondary_model.name, basename,
@@ -596,19 +749,34 @@ class BirdEngine:
             audio_conf = load_audio_config()
             raw_sig = apply_filters(raw_sig, raw_sr, audio_conf)
 
-            # Primary model (fast, synchronous)
-            detections = self._analyze_with_model(
+            # Primary model (fast, synchronous). When dual-confirm is active
+            # we lower the inference filter to the echo threshold so Perch
+            # has a pool of sub-confidence BirdNET candidates to cross-check
+            # against — those will be flagged _echo_only and never reach the
+            # DB.
+            echo_threshold = None
+            if self._dual_confirm_active():
+                echo_threshold = float(self.config["detection"].get(
+                    "birdnet_echo_confidence", 0.15))
+            all_dets = self._analyze_with_model(
                 self.primary_model, file_path, file_date, week,
                 self.primary_model.name,
-                raw_sig=raw_sig, raw_sr=raw_sr, source=source)
+                raw_sig=raw_sig, raw_sr=raw_sr, source=source,
+                echo_threshold=echo_threshold)
+            # Split: db_dets are the user-visible detections that already
+            # went through write_detection; echo_pool stays in-memory only
+            # and travels with the WAV through the queue.
+            detections = [d for d in all_dets if not d.get("_echo_only")]
+            echo_pool = [d for d in all_dets if d.get("_echo_only")]
 
             elapsed = time.time() - start_time
             self.files_processed += 1
             self.detections_total += len(detections)
-            log.info("[%s] Done: %d detections in %.1fs [total: %d files, %d det]%s",
+            log.info("[%s] Done: %d detections in %.1fs [total: %d files, %d det]%s%s",
                      self.primary_model.name, len(detections), elapsed,
                      self.files_processed, self.detections_total,
-                     f" [source: {source}]" if source else "")
+                     f" [source: {source}]" if source else "",
+                     f" [echo pool: {len(echo_pool)}]" if echo_pool else "")
 
             self.processed_files.add(basename)
 
@@ -646,9 +814,13 @@ class BirdEngine:
                     self._post_threads[:] = [pt for pt in self._post_threads if pt.is_alive()]
                     self._post_threads.append(t)
 
-            # Queue for secondary model with raw audio (avoids re-reading file)
+            # Queue for secondary model with raw audio (avoids re-reading file).
+            # The primary's full detection list (DB + echo pool) travels with
+            # the WAV so dual-confirm has per-file isolation — never reuse
+            # this across files.
             if self.secondary_model and self._secondary_queue is not None:
-                self._secondary_queue.put((dest, file_date, week, raw_sig, raw_sr, source))
+                primary_full = detections + echo_pool if echo_pool else detections
+                self._secondary_queue.put((dest, file_date, week, raw_sig, raw_sr, source, primary_full))
 
             # Quality counter — fires only on a fully-processed file (after
             # primary inference + move + post-processing kick-off). Files
@@ -938,12 +1110,18 @@ class BirdEngine:
           SF_THRESH          → sf_thresh
         """
         mapping = {
-            "BIRDNET_CONFIDENCE": "birdnet_confidence",
-            "PERCH_CONFIDENCE":   "perch_confidence",
-            "PERCH_MIN_MARGIN":   "perch_min_margin",
-            "SENSITIVITY":        "sensitivity",
-            "OVERLAP":            "overlap",
-            "SF_THRESH":          "sf_thresh",
+            "BIRDNET_CONFIDENCE":          "birdnet_confidence",
+            "PERCH_CONFIDENCE":            "perch_confidence",
+            "PERCH_MIN_MARGIN":            "perch_min_margin",
+            "SENSITIVITY":                 "sensitivity",
+            "OVERLAP":                     "overlap",
+            "SF_THRESH":                   "sf_thresh",
+            # Dual-model cross-confirmation — only honored when
+            # BirdNET is primary and Perch is secondary (see
+            # _dual_confirm_active). Cast: confidence floats, enabled int.
+            "DUAL_CONFIRM_ENABLED":        "dual_confirm_enabled",
+            "PERCH_STANDALONE_CONFIDENCE": "perch_standalone_confidence",
+            "BIRDNET_ECHO_CONFIDENCE":     "birdnet_echo_confidence",
         }
         for conf_key, det_key in mapping.items():
             if conf_key in conf:
