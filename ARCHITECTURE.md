@@ -17,15 +17,15 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
   USB Mic ──┐             │  ┌──────────────────────────────────────┐   │
             │             │  │        BirdEngine (Python)           │   │
             ▼             │  │                                      │   │
-  ┌──────────────┐        │  │  record.sh (arecord → 45s WAV)      │   │
-  │ ALSA dsnoop  │───WAV──│──│  engine.py:                         │   │
-  │ (shared mic) │        │  │    ├─ Adaptive Gain                 │   │
+  ┌──────────────┐        │  │  record.sh (arecord → 45s WAV)       │   │
+  │ ALSA dsnoop  │───WAV──│──│  engine.py:                          │   │
+  │ (shared mic) │        │  │    ├─ Adaptive Gain                  │   │
   └──────────────┘        │  │    ├─ Highpass / Lowpass filters     │   │
-                          │  │    ├─ Noise Profile / Auto Denoise  │   │
-        ┌─────────────────│──│    ├─ RMS Normalize                 │   │
-        │                 │  │    ├─ BirdNET V2.4  (~1.5s/file)    │   │
-        │                 │  │    ├─ Perch V2 (~0.7s on Pi 5)      │   │
-        │                 │  │    ├─ MP3 extraction + spectrograms │   │
+                          │  │    ├─ Noise Profile / Auto Denoise   │   │
+        ┌─────────────────│──│    ├─ RMS Normalize                  │   │
+        │                 │  │    ├─ BirdNET V2.4  (~1.5s/file)     │   │
+        │                 │  │    ├─ Perch V2 (~0.7s on Pi 5)       │   │
+        │                 │  │    ├─ MP3 extraction + spectrograms  │   │
         │                 │  │    └─ BirdWeather upload             │   │
         │                 │  └──────────────┬───────────────────────┘   │
         │                 │                 │ INSERT INTO detections    │
@@ -39,13 +39,13 @@ Deep technical reference for the BirdStation (birdash) system — a standalone b
         │                 │                 │ better-sqlite3            │
         │                 │                 ▼                           │
         │                 │  ┌──────────────────────────────────────┐   │
-        │  PCM/MP3 stream │  │       Birdash (Node.js :7474)       │   │
-        │  ◄──────────────│──│  HTTP API, SSE, worker threads      │   │
-        │                 │  │  Notification watcher → Apprise     │   │
-        │                 │  │  MQTT publisher → broker (HA-ready) │   │
-        │                 │  │  Prometheus /metrics scrape target  │   │
-        │                 │  │  Cookie auth (off/protected/public) │   │
-        │                 │  │  17 route modules, 15 lib modules   │   │
+        │  PCM/MP3 stream │  │       Birdash (Node.js :7474)        │   │
+        │  ◄──────────────│──│  HTTP API, SSE, worker threads       │   │
+        │                 │  │  Notification watcher → Apprise      │   │
+        │                 │  │  MQTT publisher → broker (HA-ready)  │   │
+        │                 │  │  Prometheus /metrics scrape target   │   │
+        │                 │  │  Cookie auth (off/protected/public)  │   │
+        │                 │  │  17 route modules, 15 lib modules    │   │
         │                 │  └──────────────┬───────────────────────┘   │
         │                 │                 │                           │
         │                 │  ┌──────────────┴───────────────────────┐   │
