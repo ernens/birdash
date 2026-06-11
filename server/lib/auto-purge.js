@@ -30,6 +30,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
+const { localDateOffset } = require('./local-date');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const STATE_FILE   = path.join(PROJECT_ROOT, 'config', 'auto-purge.json');
@@ -112,11 +113,7 @@ function _pathsForRow(row, songsDir) {
 // ─── Date helper (YYYY-MM-DD N days ago, local) ────────────────────────────
 
 function _daysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  // ISO slice gives UTC date; we want local — use offset adjustment.
-  const tzOffsetMs = d.getTimezoneOffset() * 60 * 1000;
-  return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+  return localDateOffset(-n);
 }
 
 // ─── Core purge ────────────────────────────────────────────────────────────
