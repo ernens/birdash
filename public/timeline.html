@@ -22,6 +22,46 @@
   <script src="js/bird-weather-chip.js"></script>
   <script src="js/bird-setup-wizard.js"></script>
   <script src="js/bird-timeline.js"></script>
+  <style>
+    /* Edge pan buttons — float over the frise; rendered only when zoomed
+       (v-if) so they never compete with the ‹ › day buttons above. */
+    .tl-pan-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      z-index: 5; width: 34px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(10, 14, 22, .55); color: #fff;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 1.3rem; line-height: 1; cursor: pointer;
+      opacity: .55; transition: opacity .12s, background .12s;
+    }
+    .tl-pan-btn:hover { opacity: 1; background: rgba(10, 14, 22, .8); }
+    .tl-pan-btn:disabled { opacity: .15; cursor: default; }
+    .tl-pan-left  { left: 6px; }
+    .tl-pan-right { right: 6px; }
+    /* World-layer engine: the viewport clips, the world translates. The
+       60px headroom keeps marker labels that rise above the sky visible. */
+    .tl-viewport {
+      position: relative; overflow: hidden;
+      height: 480px; /* 60 headroom + 420 sky */
+    }
+    .tl-sky {
+      position: absolute; left: 0; top: 60px;
+      width: 100%; height: 420px; pointer-events: none;
+    }
+    .tl-world {
+      position: absolute; left: 0; top: 60px; height: 420px;
+      will-change: transform; cursor: crosshair;
+    }
+    /* Background reloads show a discreet chip instead of unmounting the
+       whole frise (the old behaviour — the block used to blink away). */
+    .tl-loading-chip {
+      position: absolute; top: 66px; right: 10px; z-index: 7;
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(10, 14, 22, .6); color: var(--text-muted);
+      animation: tl-spin 1.2s linear infinite;
+    }
+  </style>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -33,7 +73,7 @@
         <button class="tp-nav-btn" :disabled="!data?.navigation?.prevDate" @click="navigateDay(-1)">‹</button>
         <h1>{{formatDate(selectedDate)}}</h1>
         <button class="tp-nav-btn" :disabled="!data?.navigation?.nextDate" @click="navigateDay(1)">›</button>
-        <input type="date" v-model="selectedDate" @change="load" :max="todayStr" class="tl-date-input" />
+        <input type="date" v-model="selectedDate" @change="onDatePicked" :max="todayStr" class="tl-date-input" />
         <button v-if="viewStart !== 0 || viewEnd !== 24" class="tp-nav-btn tl-reset-btn" @click="resetZoom()">↺ 24h</button>
         <span v-if="viewStart !== 0 || viewEnd !== 24" style="font-size:.8rem;color:var(--text-muted);">
           {{String(Math.floor(viewStart)).padStart(2,'0')}}:{{String(Math.round((viewStart%1)*60)).padStart(2,'0')}}
@@ -113,21 +153,36 @@
     </div>
 
     <!-- Loading -->
-    <div class="tp-loading" v-if="loading">
+    <div class="tp-loading" v-if="loading && !data">
       <span class="tp-spinner">⟳</span> {{t('tl_loading')}}
     </div>
 
-    <template v-if="data && !loading">
-      <!-- Sky timeline — drag to zoom on the frise itself, double-click to reset -->
-      <div class="tp-scroll" ref="scrollRef" style="margin:0 0 .5rem;position:relative;padding-top:60px;"
+    <template v-if="data">
+      <!-- Sky timeline — drag to zoom on the frise itself, double-click to reset.
+           Architecture: the canvas is viewport-sized and repainted by blitting a
+           per-day offscreen sky; #tlWorld lays out the WHOLE day in DOM once and
+           is panned with a pure translateX. Day changes slide a second world
+           layer in — the block is never unmounted. -->
+      <div class="tp-scroll tl-viewport" ref="scrollRef" style="margin:0 0 .5rem;"
            @mousedown.prevent="onZoneMousedown" @dblclick.prevent="resetZoom">
-        <div class="tp-inner" ref="innerRef" style="cursor:crosshair;">
-          <canvas ref="skyRef" class="tp-sky-canvas"></canvas>
-          <canvas ref="starsRef" class="tp-stars-canvas"></canvas>
-          <div class="tp-ground" style="height:64px;"></div>
-        </div>
+        <canvas ref="skyRef" class="tl-sky"></canvas>
+        <div class="tp-inner tl-world" ref="innerRef"></div>
+        <div class="tp-ground" style="height:64px;"></div>
+        <div v-if="loading" class="tl-loading-chip" :title="t('tl_loading')">⟳</div>
         <div v-if="dragSelect" class="tl-drag-select"
              :style="{left: dragSelect.left+'%', width: dragSelect.width+'%', top:0, bottom:0}"></div>
+        <!-- Edge pan — slides the zoomed window inside the day, and crosses
+             to the adjacent day from a day edge or from the full 24h view.
+             Disabled only when there is nowhere left to go. mousedown.stop
+             keeps a click from starting a drag-to-zoom selection below. -->
+        <button class="tl-pan-btn tl-pan-left"
+                :disabled="viewStart <= 0 && !data?.navigation?.prevDate"
+                :aria-label="t('tl_pan_back')" :title="t('tl_pan_back') + ' (←)'"
+                @mousedown.stop @dblclick.stop @click.stop="panView(-1)">‹</button>
+        <button class="tl-pan-btn tl-pan-right"
+                :disabled="viewEnd >= 24 && !data?.navigation?.nextDate"
+                :aria-label="t('tl_pan_fwd')" :title="t('tl_pan_fwd') + ' (→)'"
+                @mousedown.stop @dblclick.stop @click.stop="panView(1)">›</button>
       </div>
 
       <!-- Legend -->
@@ -216,16 +271,16 @@
 
 <script>
 const SKY_H = 420;
-// Dynamic: px-per-hour adapts to fill the scroll container for the visible range
+const OFF_PPH = 128; // offscreen sky resolution (px per hour) — gradient is smooth, upscales cleanly
+// Visible window in hours. These module vars are the canonical values during
+// animations (rAF drives them directly); the Vue refs sync at gesture end.
 let _viewStart = 0, _viewEnd = 24;
-let _scrollW = 900; // updated at render time
-function PX_PER_HOUR() {
-  const span = _viewEnd - _viewStart;
-  if (span <= 0) return 140;
-  // Fill container width, with a minimum of 60 px/h for readability
-  return Math.max(60, _scrollW / span);
-}
-function TOTAL_W() { return (_viewEnd - _viewStart) * PX_PER_HOUR(); }
+let _vw = 900; // viewport width, set at render time
+// One px-per-hour for everything (canvas blit AND world DOM), so the two
+// layers can never drift apart: the window always fills the viewport exactly.
+function pxh() { return _vw / Math.max(0.05, _viewEnd - _viewStart); }
+function wx(h) { return h * pxh(); }                 // world-layer x (whole-day coords)
+function screenX(h) { return (h - _viewStart) * pxh(); } // viewport x
 
 const { createApp, ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 const { useI18n, useTheme, useNav, useSpeciesNames, navigateTo, photoUrl, quickPlaySpecies, localDateStr, birdQuery } = BIRDASH;
@@ -285,13 +340,18 @@ const app = createApp({
     const loadingRaw = ref(false);
 
     async function loadRawDetections(date) {
-      if (!date || rawDetectionsByDate.value[date]) return;
+      // Cache keyed by date AND confidence threshold: a day visited at an
+      // old threshold must refetch after the slider moves, otherwise panning
+      // back to it shows a stale species set.
+      const conf = sliderToConf(confSlider.value);
+      const hit = rawDetectionsByDate.value[date];
+      if (!date || (hit && hit.conf === conf)) return;
       loadingRaw.value = true;
       try {
         const detRows = await birdQuery(
           `SELECT Com_Name, Sci_Name, Confidence, Time, File_Name
            FROM detections WHERE Date=? AND Confidence >= ? ORDER BY Time ASC`,
-          [date, sliderToConf(confSlider.value)]
+          [date, conf]
         );
         const mapped = detRows.map(r => {
           const h = parseInt(r.Time.substr(0,2)), m = parseInt(r.Time.substr(3,2));
@@ -306,7 +366,7 @@ const app = createApp({
             isRaw: true,
           };
         });
-        rawDetectionsByDate.value = { ...rawDetectionsByDate.value, [date]: mapped };
+        rawDetectionsByDate.value = { ...rawDetectionsByDate.value, [date]: { conf, rows: mapped } };
       } catch (e) { console.error('[timeline] loadRawDetections', e); }
       loadingRaw.value = false;
     }
@@ -328,7 +388,7 @@ const app = createApp({
           .filter(e => !e.isAstro && e.time && e.sciName)
           .map(e => e.sciName + '|' + e.time)
       );
-      const raw = rawDetectionsByDate.value[selectedDate.value] || [];
+      const raw = rawDetectionsByDate.value[selectedDate.value]?.rows || [];
       const rawNotEditorial = raw.filter(r => !editorialKeys.has(r.sciName + '|' + r.time));
       return [...data.value.events, ...rawNotEditorial];
     });
@@ -337,6 +397,7 @@ const app = createApp({
     // ou raw arrive) — on ne re-trigger PAS render() complet (sky / stars / density
     // bar restent inchangés). flush:'post' pour attendre que le DOM soit prêt.
     watch(displayedEvents, () => {
+      if (_transitioning) return; // render() rebuilds everything at the end of the swap
       if (innerRef.value && data.value) {
         buildMarkers(innerRef.value, displayedEvents.value);
       }
@@ -360,6 +421,7 @@ const app = createApp({
     }
 
     function onZoneMousedown(e) {
+      if (busy()) return;
       _dragActive = true;
       _dragStartPct = pctFromEvent(e);
       dragSelect.value = { left: _dragStartPct * 100, width: 0 };
@@ -408,10 +470,115 @@ const app = createApp({
       render();
     }
 
+    // ── Pan: slide the window left/right ────────────────────────────
+    // Zoomed inside the day → animated slide of half the visible width:
+    // the world layer is already built for the whole day, so each frame
+    // is one translateX plus one canvas blit — nothing is rebuilt.
+    // At a day edge (or at full 24h view) → cross to the adjacent day via
+    // transitionToDay(). Filters (confidence slider, mode, type pills)
+    // are plain refs and survive the reload.
+    let _panAnimating = false;
+    let _transitioning = false;
+
+    function busy() { return _panAnimating || _transitioning || loading.value; }
+
+    function panView(dir) {
+      if (busy()) return;
+      const span = viewEnd.value - viewStart.value;
+      const atEdge = dir < 0 ? viewStart.value <= 0 : viewEnd.value >= 24;
+      if (span >= 24 || atEdge) {
+        transitionToDay(dir, null, { keepSpan: true });
+        return;
+      }
+      const step = Math.max(0.25, span / 2);
+      const target = Math.max(0, Math.min(viewStart.value + dir * step, 24 - span));
+      animatePan(viewStart.value, target, span);
+    }
+
+    function animatePan(fromS, toS, span) {
+      _panAnimating = true;
+      const t0 = performance.now(), dur = 280;
+      const tick = () => {
+        const t = Math.min((performance.now() - t0) / dur, 1);
+        const e = 1 - Math.pow(1 - t, 3);
+        _viewStart = fromS + (toS - fromS) * e;
+        _viewEnd = _viewStart + span;
+        applyTransform();
+        repaint();
+        if (t < 1) { requestAnimationFrame(tick); return; }
+        _panAnimating = false;
+        viewStart.value = Math.round(toS * 4) / 4;  // same 1/4-hour grid as applyZoom
+        viewEnd.value = viewStart.value + span;
+        _viewStart = viewStart.value;
+        _viewEnd = viewEnd.value;
+        applyTransform();
+        repaint();
+      };
+      requestAnimationFrame(tick);
+    }
+
+    // ── Day change without unmounting ────────────────────────────────
+    // The old frise (a static clone of the world layer + its offscreen
+    // sky) stays on screen while the new day loads in the background,
+    // then both slide together: old out, new in from the travel side.
+    // ‹ from 00:00 lands on the END of the previous day, › from 24:00 on
+    // the START of the next one, same span; from the full 24h view the
+    // window stays full.
+    async function transitionToDay(dir, targetDate, opts = {}) {
+      if (_transitioning || _panAnimating) return;
+      const nav = data.value?.navigation;
+      if (!targetDate) targetDate = dir < 0 ? nav?.prevDate : nav?.nextDate;
+      if (!targetDate || targetDate === _lastDate) return;
+      _transitioning = true;
+      let ghost = null;
+      try {
+        const span = viewEnd.value - viewStart.value;
+        const keepSpan = opts.keepSpan === true && span < 24;
+        // Capture the outgoing visuals BEFORE the data swap.
+        const old = { off: _skyOff, A: _A, vs: _viewStart, ve: _viewEnd,
+                      moonIcon: _moonIcon() };
+        ghost = innerRef.value ? innerRef.value.cloneNode(true) : null;
+        if (ghost) { ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '1'; }
+
+        selectedDate.value = targetDate;
+        const ok = await load({ render: false });
+        if (!ok || !data.value?.meta?.astronomy) return; // fetch failed: old frise stays untouched
+
+        // Anchor the new window, then rebuild the active layer for the new day.
+        const ns = keepSpan ? (dir > 0 ? 0 : 24 - span) : 0;
+        const nspan = keepSpan ? span : 24;
+        viewStart.value = Math.round(ns * 4) / 4;
+        viewEnd.value = Math.min(24, viewStart.value + nspan);
+        render();
+
+        if (!ghost || !scrollRef.value) return;
+        innerRef.value.parentNode.insertBefore(ghost, innerRef.value);
+
+        await new Promise(resolve => {
+          const t0 = performance.now(), dur = 340;
+          const tick = () => {
+            const t = Math.min((performance.now() - t0) / dur, 1);
+            const e = 1 - Math.pow(1 - t, 3);
+            const oOld = -dir * _vw * e;          // old slides out…
+            const oNew = dir * _vw * (1 - e);     // …new slides in from the travel side
+            const oldPxh = _vw / Math.max(0.05, old.ve - old.vs);
+            ghost.style.transform = `translateX(${-old.vs * oldPxh + oOld}px)`;
+            if (innerRef.value) innerRef.value.style.transform = `translateX(${-_viewStart * pxh() + oNew}px)`;
+            repaintDual(old, oOld, oNew);
+            if (t < 1) requestAnimationFrame(tick); else resolve();
+          };
+          requestAnimationFrame(tick);
+        });
+      } finally {
+        if (ghost) ghost.remove();
+        _transitioning = false;
+        if (data.value) { applyTransform(); repaint(); }
+      }
+    }
+
     const scrollRef = ref(null);
     const innerRef = ref(null);
     const skyRef = ref(null);
-    const starsRef = ref(null);
 
     const typeCounts = computed(() => {
       if (!displayedEvents.value.length) return {};
@@ -558,76 +725,117 @@ const app = createApp({
       return ['#010308','#020510'];
     }
 
-    function hourToX(h) { return (h - _viewStart) * PX_PER_HOUR(); }
+    // ── Offscreen sky + viewport repaint ───────────────────────────
+    // The whole-day sky gradient is painted ONCE per day into an offscreen
+    // canvas at fixed resolution; every repaint is then a single scaled
+    // drawImage. Stars and moon are cheap vectors drawn per frame (they
+    // must stay crisp at any zoom, unlike the smooth gradient).
+    let _skyOff = null;     // offscreen canvas for the current day
+    let _skyData = null;    // data object the offscreen was built for
+    let _A = null;          // sanitized astronomy for the current day
 
-    function drawSky(canvas, A) {
-      canvas.width = TOTAL_W(); canvas.height = SKY_H;
-      const ctx = canvas.getContext('2d');
+    function buildSkyOffscreen(A) {
+      const off = document.createElement('canvas');
+      off.width = 24 * OFF_PPH; off.height = SKY_H;
+      const ctx = off.getContext('2d');
       const stops = getSkyStops(A);
-      const STEP = 3;
-      for (let x = 0; x < TOTAL_W(); x += STEP) {
-        const h = _viewStart + x / PX_PER_HOUR();
+      const STEP = 2;
+      for (let x = 0; x < off.width; x += STEP) {
+        const h = x / OFF_PPH;
         const [top, bot] = getSkyColors(h, stops);
         const g = ctx.createLinearGradient(0, 0, 0, SKY_H);
         g.addColorStop(0, top); g.addColorStop(.65, bot); g.addColorStop(1, 'rgba(0,0,0,0.6)');
         ctx.fillStyle = g; ctx.fillRect(x, 0, STEP, SKY_H);
       }
-      [{cx:(A.civilDawn+A.sunrise+.3)/2, color:'rgba(255,130,20,0.22)', rx:PX_PER_HOUR()*1.2},
-       {cx:(A.sunset-.2+A.civilDusk)/2,  color:'rgba(255,90,10,0.22)',  rx:PX_PER_HOUR()*1.2}
-      ].forEach(({cx,color,rx}) => {
-        const px = hourToX(cx);
+      // Dawn / dusk horizon glows, in day coordinates
+      [{cx:(A.civilDawn+A.sunrise+.3)/2, color:'rgba(255,130,20,0.22)'},
+       {cx:(A.sunset-.2+A.civilDusk)/2,  color:'rgba(255,90,10,0.22)'}
+      ].forEach(({cx,color}) => {
+        const px = cx * OFF_PPH, rx = OFF_PPH * 1.2;
         const g = ctx.createRadialGradient(px, SKY_H, 0, px, SKY_H, rx*1.8);
         g.addColorStop(0, color); g.addColorStop(1, 'transparent');
         ctx.fillStyle = g; ctx.fillRect(px-rx*2, 0, rx*4, SKY_H);
       });
+      return off;
     }
 
-    function drawStars(canvas, A) {
-      canvas.width = TOTAL_W(); canvas.height = SKY_H;
-      const ctx = canvas.getContext('2d');
-      const stops = getSkyStops(A);
-      // Generate stars in hour-space (0-24) then convert to px
+    // Deterministic star field, generated once (hour-space 0-24).
+    const _stars = (() => {
       let seed = 137;
       const rng = () => { seed = (seed*1664525+1013904223)>>>0; return seed/0xffffffff; };
-      const stars = Array.from({length:320}, () => ({
+      return Array.from({length:320}, () => ({
         hour: rng()*24, y: rng()*SKY_H*.68, r: .35+rng()*1.15, warm: rng()>.72
       }));
-      stars.forEach(s => {
-        if (s.hour < _viewStart || s.hour > _viewEnd) return;
-        const x = hourToX(s.hour);
-        const h = s.hour;
-        let alpha = 0;
-        if (h < A.astroDawn || h > A.astroDusk) alpha = .6 + (s.r/1.5)*.35;
-        else if (h < A.nautDawn) alpha = (.6+(s.r/1.5)*.35)*(1-(h-A.astroDawn)/(A.nautDawn-A.astroDawn)*.75);
-        else if (h < A.civilDawn) alpha = .18*(1-(h-A.nautDawn)/(A.civilDawn-A.nautDawn));
-        else if (h > A.nautDusk) alpha = .18*(h-A.nautDusk)/(A.astroDusk-A.nautDusk)*.8;
-        else if (h > A.civilDusk) alpha = .18*(h-A.civilDusk)/(A.nautDusk-A.civilDusk)*.5;
-        if (alpha < .008) return;
-        const col = s.warm ? `rgba(255,240,210,${alpha})` : `rgba(210,225,255,${alpha})`;
+    })();
+
+    function starAlpha(h, A, r) {
+      if (h < A.astroDawn || h > A.astroDusk) return .6 + (r/1.5)*.35;
+      if (h < A.nautDawn)  return (.6+(r/1.5)*.35)*(1-(h-A.astroDawn)/Math.max(.01,A.nautDawn-A.astroDawn)*.75);
+      if (h < A.civilDawn) return .18*(1-(h-A.nautDawn)/Math.max(.01,A.civilDawn-A.nautDawn));
+      if (h > A.nautDusk)  return .18*(h-A.nautDusk)/Math.max(.01,A.astroDusk-A.nautDusk)*.8;
+      if (h > A.civilDusk) return .18*(h-A.civilDusk)/Math.max(.01,A.nautDusk-A.civilDusk)*.5;
+      return 0;
+    }
+
+    function _moonIcon() {
+      if (data.value?.meta?.moonPhase == null) return null;
+      return data.value.meta.moonIcon || moonEmoji(data.value.meta.moonPhaseName);
+    }
+
+    // Draw one day layer (sky blit + stars + moon) at a horizontal screen
+    // offset — offset 0 in normal life, ±vw fractions during a day swap.
+    function paintLayer(ctx, off, A, vs, ve, offset, moonIcon) {
+      if (!off || !A) return;
+      const span = Math.max(0.05, ve - vs);
+      const sxOff = vs * OFF_PPH, swOff = span * OFF_PPH;
+      ctx.drawImage(off, sxOff, 0, swOff, SKY_H, offset, 0, _vw, SKY_H);
+      const ppx = _vw / span;
+      for (const s of _stars) {
+        if (s.hour < vs || s.hour > ve) continue;
+        const alpha = starAlpha(s.hour, A, s.r);
+        if (alpha < .008) continue;
+        const x = (s.hour - vs) * ppx + offset;
         ctx.beginPath(); ctx.arc(x, s.y, s.r, 0, Math.PI*2);
-        ctx.fillStyle = col; ctx.fill();
+        ctx.fillStyle = s.warm ? `rgba(255,240,210,${alpha})` : `rgba(210,225,255,${alpha})`;
+        ctx.fill();
         if (s.r > 1 && alpha > .35) {
           const g = ctx.createRadialGradient(x, s.y, 0, x, s.y, s.r*3.5);
           g.addColorStop(0, `rgba(200,215,255,${alpha*.28})`); g.addColorStop(1, 'transparent');
           ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, s.y, s.r*3.5, 0, Math.PI*2); ctx.fill();
         }
-      });
-      // Moon — render the standard Unicode emoji on the canvas.
-      // Much cleaner than the old arc+shadow approach and consistent
-      // with the emoji shown in the header badge.
-      if (data.value?.meta?.moonPhase != null && 22.5 >= _viewStart && 22.5 <= _viewEnd) {
-        const mx = hourToX(22.5), my = SKY_H * .25;
-        const icon = data.value.meta.moonIcon || moonEmoji(data.value.meta.moonPhaseName);
+      }
+      if (moonIcon && 22.5 >= vs && 22.5 <= ve) {
+        const mx = (22.5 - vs) * ppx + offset, my = SKY_H * .25;
         ctx.save();
-        ctx.font = '20px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Subtle glow behind the emoji for visibility on dark sky
-        ctx.shadowColor = 'rgba(255,250,180,.6)';
-        ctx.shadowBlur = 12;
-        ctx.fillText(icon, mx, my);
+        ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(255,250,180,.6)'; ctx.shadowBlur = 12;
+        ctx.fillText(moonIcon, mx, my);
         ctx.restore();
       }
+    }
+
+    function repaint() {
+      const cv = skyRef.value;
+      if (!cv || !_skyOff) return;
+      if (cv.width !== _vw) cv.width = _vw;
+      if (cv.height !== SKY_H) cv.height = SKY_H;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, _vw, SKY_H);
+      paintLayer(ctx, _skyOff, _A, _viewStart, _viewEnd, 0, _moonIcon());
+    }
+
+    // Transition frame: old day sliding out, new day sliding in.
+    function repaintDual(old, oOld, oNew) {
+      const cv = skyRef.value;
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, _vw, SKY_H);
+      paintLayer(ctx, old.off, old.A, old.vs, old.ve, oOld, old.moonIcon);
+      paintLayer(ctx, _skyOff, _A, _viewStart, _viewEnd, oNew, _moonIcon());
+    }
+
+    function applyTransform() {
+      if (innerRef.value) innerRef.value.style.transform = `translateX(${-_viewStart * pxh()}px)`;
     }
 
     // Phase 1 timeline : la couche densité raconte la vérité chronologique
@@ -640,26 +848,24 @@ const app = createApp({
       if (!data.value || !inner) return;
       const slots = new Array(48).fill(0);
       (data.value.density || []).forEach(s => { if (s.slot >= 0 && s.slot < 48) slots[s.slot] = s.count; });
-      const slotStart = Math.max(0, Math.floor(_viewStart * 2));
-      const slotEnd = Math.min(48, Math.ceil(_viewEnd * 2));
-      let visibleMax = 0;
-      for (let i = slotStart; i < slotEnd; i++) if (slots[i] > visibleMax) visibleMax = slots[i];
-      if (visibleMax === 0) return;
-      const slotWidth = PX_PER_HOUR() / 2;
+      // Normalize against the whole day (not the visible window): bar heights
+      // stay stable while panning, so the layer never "jumps" mid-slide.
+      let dayMax = 0;
+      for (let i = 0; i < 48; i++) if (slots[i] > dayMax) dayMax = slots[i];
+      if (dayMax === 0) return;
+      const slotWidth = pxh() / 2;
       const MAX_BAR_H = 70;
-      for (let i = slotStart; i < slotEnd; i++) {
+      for (let i = 0; i < 48; i++) {
         const count = slots[i];
         if (count === 0) continue;
-        const norm = count / visibleMax;
+        const norm = count / dayMax;
         const bar = document.createElement('div');
         bar.className = 'tl-density-slot';
-        bar.style.left = hourToX(i / 2) + 'px';
+        bar.style.left = wx(i / 2) + 'px';
         bar.style.width = Math.max(1, slotWidth - 1) + 'px';
         // Plancher 8px : une tranche avec activité faible mais réelle ne doit
         // jamais ressembler à "rien". Hiérarchie linéaire préservée au-dessus.
         bar.style.height = Math.max(8, Math.round(norm * MAX_BAR_H)) + 'px';
-        // Opacité .20 → .40 — plafonnée pour que la couche reste fond, mais
-        // floor relevé pour que les petits volumes soient lisibles sans effort.
         const alpha = (0.20 + norm * 0.20).toFixed(2);
         bar.style.backgroundColor = `rgba(255,255,255,${alpha})`;
         const hh = String(Math.floor(i / 2)).padStart(2, '0');
@@ -710,13 +916,14 @@ const app = createApp({
       const isZoomed = span < 22;
       const isDeepZoom = span <= 6;
 
-      // Adaptive tick interval: 1h for 24h, 30min for <12h, 15min for <4h
+      // Adaptive tick interval: 1h for 24h, 30min for <12h, 15min for <4h.
+      // Ticks cover the WHOLE day — the world layer is panned, not rebuilt,
+      // so everything outside the window must already exist.
       const tickStep = span <= 4 ? 0.25 : span <= 12 ? 0.5 : 1;
-      const startH = Math.ceil(_viewStart / tickStep) * tickStep;
-      for (let h = startH; h <= _viewEnd; h += tickStep) {
+      for (let h = 0; h <= 24; h += tickStep) {
         const tick = document.createElement('div');
         tick.className = 'tl-hour-tick';
-        const x = hourToX(h);
+        const x = wx(h);
         tick.style.left = x + 'px';
         tick.style.bottom = '60px';
         const mins = Math.round((h % 1) * 60);
@@ -730,10 +937,10 @@ const app = createApp({
       if (data.value?.meta?.isToday) {
         const now = new Date();
         const nowH = now.getHours() + now.getMinutes() / 60;
-        if (nowH >= _viewStart && nowH <= _viewEnd) {
+        {
           const cursor = document.createElement('div');
           cursor.className = 'tl-now-cursor';
-          cursor.style.left = hourToX(nowH) + 'px';
+          cursor.style.left = wx(nowH) + 'px';
           cursor.style.bottom = '56px'; cursor.style.height = (SKY_H - 50) + 'px';
           cursor.setAttribute('data-label', t('tl_now'));
           inner.appendChild(cursor);
@@ -746,14 +953,10 @@ const app = createApp({
         species_return:'#a78bfa', activity_spike:'#fb923c', top_species:'#8b949e',
       };
 
-      // When deep-zoomed, expand clusters into individual events
-      const visibleEvents = (events || []).filter(ev => {
-        const t = ev.timeDecimal;
-        return t >= _viewStart && t <= _viewEnd;
-      });
-
-      visibleEvents.forEach(ev => {
-        const x = hourToX(ev.timeDecimal);
+      // Build the FULL day: panning is a transform, so off-window markers
+      // must exist (they are simply clipped by the viewport).
+      (events || []).forEach(ev => {
+        const x = wx(ev.timeDecimal);
 
         // Astro markers
         if (ev.isAstro) {
@@ -779,7 +982,7 @@ const app = createApp({
         if (ev.type === 'cluster' && ev.species) {
           ev.species.forEach((sp, idx) => {
             const offsetH = idx * 0.08;
-            const sx = hourToX(ev.timeDecimal + offsetH);
+            const sx = wx(ev.timeDecimal + offsetH);
             const sel = document.createElement('div');
             const scolor = typeColors[sp.type] || '#8b949e';
             const spConf = sp.confidence || 0.5;
@@ -814,7 +1017,7 @@ const app = createApp({
           // les détections individuelles qu'à partir d'un zoom partiel — c'est
           // le même seuil que le basculement de la liste vers "Détections dans
           // la fenêtre", donc frise et liste passent ensemble en mode inspection.
-          if (_viewStart === 0 && _viewEnd === 24) return;
+          if (span >= 24) return;
           const dot = document.createElement('div');
           dot.className = 'tl-raw-dot';
           dot.style.left = x + 'px';
@@ -865,35 +1068,28 @@ const app = createApp({
 
     // 4 déclencheurs concurrents de load() : slider, navigation jour, polling
     // 3 min, mount. Epoch monotone : seule la dernière demande pose son résultat.
+    // Le fetch tourne EN ARRIÈRE-PLAN : la frise courante reste affichée
+    // (petit chip ⟳), plus aucun démontage du bloc. La fenêtre de zoom n'est
+    // plus réinitialisée ici — c'est transitionToDay() qui ancre la nouvelle
+    // fenêtre lors d'un changement de jour.
     let _lastDate = null;
     let _loadEpoch = 0;
-    async function load() {
+    async function load(opts = {}) {
       const epoch = ++_loadEpoch;
-      const dateChanged = _lastDate !== selectedDate.value;
-      if (dateChanged) loading.value = true;
-      // Reset zoom only on date change
-      if (dateChanged) {
-        viewStart.value = 0; viewEnd.value = 24;
-        _viewStart = 0; _viewEnd = 24;
-        _lastDate = selectedDate.value;
-      }
+      loading.value = true;
+      let ok = false;
       try {
         const mc = sliderToConf(confSlider.value);
         const ml = sliderToMax(confSlider.value);
         const r = await fetch(`${BIRD_CONFIG.apiUrl}/timeline?date=${selectedDate.value}&minConf=${mc}&maxEvents=${ml}`);
-        if (epoch !== _loadEpoch) return;
-        if (!r.ok) return;
+        if (epoch !== _loadEpoch) return false;
+        if (!r.ok) return false;
         const json = await r.json();
-        if (epoch !== _loadEpoch) return;
-        if (!json || json.error) return;
+        if (epoch !== _loadEpoch) return false;
+        if (!json || json.error) return false;
         data.value = json;
-        // Le seuil de confiance a pu changer : invalider le cache raw pour ce jour.
-        // Si on est en mode 'all', recharger les détections raw avec le nouveau seuil.
-        if (selectedDate.value && rawDetectionsByDate.value[selectedDate.value]) {
-          const next = { ...rawDetectionsByDate.value };
-          delete next[selectedDate.value];
-          rawDetectionsByDate.value = next;
-        }
+        _lastDate = selectedDate.value;
+        ok = true;
         if (viewMode.value === 'all' && selectedDate.value) {
           loadRawDetections(selectedDate.value);
         }
@@ -903,20 +1099,17 @@ const app = createApp({
       } finally {
         if (epoch === _loadEpoch) {
           loading.value = false;
-          // Wait for DOM to update after loading=false, then render canvas
-          await nextTick();
-          try { render(); } catch(e) { console.error('[timeline render]', e); }
+          if (ok && opts.render !== false) {
+            await nextTick();
+            try { render(); } catch(e) { console.error('[timeline render]', e); }
+          }
         }
       }
+      return ok;
     }
 
-    function render() {
-      if (!data.value?.meta?.astronomy) return;
-      // Measure scroll container width for px-per-hour calculation
-      if (scrollRef.value) _scrollW = scrollRef.value.clientWidth;
-      _viewStart = viewStart.value;
-      _viewEnd = viewEnd.value;
-
+    function getAstro() {
+      if (!data.value?.meta?.astronomy) return null;
       const A = {
         astroDawn: data.value.meta.astronomy.astronomicalDawn,
         nautDawn:  data.value.meta.astronomy.nauticalDawn,
@@ -929,29 +1122,46 @@ const app = createApp({
       };
       // Around the summer solstice at our latitude the sun never reaches
       // -18° (or even -12°): the API reports those twilights as null. Fall
-      // back to the day edges so drawSky/drawStars still render — the night
+      // back to the day edges so the sky and stars still render — the night
       // then simply never reaches its darkest band, which matches reality.
       if (A.astroDawn == null) A.astroDawn = 0;
       if (A.nautDawn  == null) A.nautDawn  = A.astroDawn;
       if (A.astroDusk == null) A.astroDusk = 24;
       if (A.nautDusk  == null) A.nautDusk  = A.astroDusk;
-      if (skyRef.value) drawSky(skyRef.value, A);
-      if (starsRef.value) drawStars(starsRef.value, A);
+      return A;
+    }
+
+    // Full (re)build: world DOM + offscreen sky + transform + repaint.
+    // Called on: data swap, zoom change, resize, language switch, mode
+    // switch. NOT called while panning — that path is transform+blit only.
+    function render() {
+      const A = getAstro();
+      if (!A || !scrollRef.value) return;
+      _A = A;
+      _vw = scrollRef.value.clientWidth;
+      _viewStart = viewStart.value;
+      _viewEnd = viewEnd.value;
+      if (_skyData !== data.value || !_skyOff) {
+        _skyOff = buildSkyOffscreen(A);
+        _skyData = data.value;
+      }
       if (innerRef.value) {
-        innerRef.value.style.width = TOTAL_W() + 'px';
+        innerRef.value.style.width = (24 * pxh()) + 'px';
         innerRef.value.style.height = SKY_H + 'px';
         buildMarkers(innerRef.value, displayedEvents.value);
       }
-      // No auto-scroll when zoomed — user selected the range
-      if (scrollRef.value) {
-        scrollRef.value.scrollLeft = 0;
-      }
+      applyTransform();
+      repaint();
     }
 
     function navigateDay(dir) {
-      const nav = data.value?.navigation;
-      const target = dir < 0 ? nav?.prevDate : nav?.nextDate;
-      if (target) { selectedDate.value = target; load(); }
+      transitionToDay(dir, null, { keepSpan: false });
+    }
+
+    // Date picker: arbitrary jump — direction inferred for the slide.
+    function onDatePicked() {
+      const dir = (!_lastDate || selectedDate.value > _lastDate) ? 1 : -1;
+      transitionToDay(dir, selectedDate.value, { keepSpan: false });
     }
 
     function openPopup(ev) { popupEvent.value = ev; }
@@ -974,11 +1184,25 @@ const app = createApp({
       if (_resizeTimer) clearTimeout(_resizeTimer);
       _resizeTimer = setTimeout(() => { _resizeTimer = null; if (data.value) render(); }, 150);
     }
+    // ←/→ pan like the edge buttons (slide inside the day when zoomed,
+    // adjacent day otherwise). Skipped while typing in a field (date input,
+    // confidence slider) or when a popup is open.
+    function onPanKeydown(e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (popupEvent.value) return;
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+      e.preventDefault();
+      panView(e.key === 'ArrowLeft' ? -1 : 1);
+    }
+    onMounted(() => window.addEventListener('keydown', onPanKeydown));
+
     onMounted(() => window.addEventListener('resize', onWindowResize));
     onUnmounted(() => {
       if (_timer) clearInterval(_timer);
       if (_resizeTimer) clearTimeout(_resizeTimer);
       window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('keydown', onPanKeydown);
     });
 
     return {
@@ -987,9 +1211,9 @@ const app = createApp({
       remarkableCount, totalDetectionsCount,
       viewMode, setViewMode, loadingRaw, displayedEvents, isZoomed,
       formatDate, moonEmoji, navigateDay, load,
-      viewStart, viewEnd, resetZoom, onZoneMousedown, dragSelect,
+      viewStart, viewEnd, resetZoom, panView, onDatePicked, onZoneMousedown, dragSelect,
       confSlider, sliderLabel, sliderToConf, onSliderChange,
-      scrollRef, innerRef, skyRef, starsRef,
+      scrollRef, innerRef, skyRef,
       navigateTo,
       quickPlay(comName) { quickPlaySpecies(comName); },
     };
