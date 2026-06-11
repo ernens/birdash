@@ -428,10 +428,10 @@ BIRDASH.ready.then(() => {
       // ── Recent species ─────────────────────────────────────
       const recentSpecies=ref([]);
       async function fetchRecentSpecies(){
-        try{const today=new Date().toISOString().slice(0,10);
+        try{const today=U.localDateStr();
         const rows=await U.birdQuery(...Q.speciesByDate(today,8));
         recentSpecies.value=rows.map(r=>({comName:r.Com_Name,sciName:r.Sci_Name,count:r.n,lastTime:r.last_time}));
-        }catch(e){}
+        }catch(e){console.warn('[dashboard] fetchRecentSpecies failed:',e);}
       }
 
       // ── KPIs ───────────────────────────────────────────────
@@ -457,12 +457,14 @@ BIRDASH.ready.then(() => {
         requestAnimationFrame(tick);
       }
       async function fetchKpis(){
-        try{const today=new Date().toISOString().slice(0,10);
+        try{const today=U.localDateStr();
         const[statsR,reviewR]=await Promise.all([
           fetch(API+'/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sql:'SELECT COUNT(*)as total,COUNT(DISTINCT Com_Name)as species FROM detections WHERE Date=? AND Confidence>=?',params:[today,BIRD_CONFIG.defaultConfidence]})}),
           fetch(API+'/flagged-detections?dateFrom='+BIRDASH_UTILS.daysAgo(6)+'&dateTo='+today+'&limit=2000'),
         ]);
-        const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value;
+        // status.value may not be loaded yet on the first tick — fall back to
+        // {} so a missing analysis-status doesn't throw and zero out the KPIs.
+        const stats=await statsR.json(),review=await reviewR.json(),anlys=status.value||{};
         const nT=stats.rows?.[0]?.[0]||0,nS=stats.rows?.[0]?.[1]||0;
         if(prevTotal>=0&&nT>prevTotal){kpiBump.value.total=true;setTimeout(()=>{kpiBump.value.total=false;},800);}
         if(prevTotal>=0&&nS>kpi.value.species){kpiBump.value.species=true;setTimeout(()=>{kpiBump.value.species=false;},800);}
@@ -476,7 +478,7 @@ BIRDASH.ready.then(() => {
         else{hL=t('dash_health_ok');hS='color:#4caf50';hD=anlys.backlog>0?(anlys.backlog+' '+t('dash_backlog')):'';}
         const reviewUnreviewed = (review.flagged||[]).filter(d=>d.validation==='unreviewed').length;
         kpi.value={total:nT,species:nS,review:reviewUnreviewed,healthLabel:hL,healthStyle:hS,healthDetail:hD};
-        }catch(e){}
+        }catch(e){console.warn('[dashboard] fetchKpis failed:',e);}
       }
       function fmtLag(s){if(!s||s<=0)return'0s';if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'min';return Math.floor(s/3600)+'h';}
 
