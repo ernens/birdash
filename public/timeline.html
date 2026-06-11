@@ -546,7 +546,12 @@ const app = createApp({
     function getSkyColors(h, stops) {
       for (let i = 1; i < stops.length; i++) {
         if (h <= stops[i].h) {
-          const t = (h - stops[i-1].h) / (stops[i].h - stops[i-1].h);
+          // Zero-width segment (two stops at the same hour, e.g. missing
+          // astronomical twilight collapsed onto the day edge): 0/0 would
+          // give NaN → '#NaNNaNNaN' → addColorStop throws. Snap to the
+          // segment's end color instead.
+          const span = stops[i].h - stops[i-1].h;
+          const t = span > 0 ? (h - stops[i-1].h) / span : 1;
           return [hexLerp(stops[i-1].top, stops[i].top, t), hexLerp(stops[i-1].bot, stops[i].bot, t)];
         }
       }
@@ -922,6 +927,14 @@ const app = createApp({
         nautDusk:  data.value.meta.astronomy.nauticalDusk,
         astroDusk: data.value.meta.astronomy.astronomicalDusk,
       };
+      // Around the summer solstice at our latitude the sun never reaches
+      // -18° (or even -12°): the API reports those twilights as null. Fall
+      // back to the day edges so drawSky/drawStars still render — the night
+      // then simply never reaches its darkest band, which matches reality.
+      if (A.astroDawn == null) A.astroDawn = 0;
+      if (A.nautDawn  == null) A.nautDawn  = A.astroDawn;
+      if (A.astroDusk == null) A.astroDusk = 24;
+      if (A.nautDusk  == null) A.nautDusk  = A.astroDusk;
       if (skyRef.value) drawSky(skyRef.value, A);
       if (starsRef.value) drawStars(starsRef.value, A);
       if (innerRef.value) {
