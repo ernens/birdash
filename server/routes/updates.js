@@ -28,7 +28,7 @@
 const path = require('path');
 const fs   = require('fs');
 const fsp  = fs.promises;
-const { spawn, execSync } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const https = require('https');
 const safeConfig = require('../lib/safe-config');
 
@@ -49,14 +49,17 @@ let _statusCache = null;
 let _statusCacheTs = 0;
 const CACHE_TTL = 60 * 1000;
 
-// Shell-injection contract: every call site MUST hand only sanitized
-// values into `args`. Current callers pass either static strings
-// ('rev-parse HEAD', 'ls-remote origin <const BRANCH>') or a SHA that
-// has already been regex-checked at the request handler boundary
-// (`/^[0-9a-f]{7,40}$/`). Don't relax that without re-checking each
-// call site — execSync runs through a shell.
+// Async on purpose: `ls-remote` is a network round-trip that can take
+// seconds (15s worst case with a flaky DNS). The previous execSync version
+// froze the whole event loop for that long on every cache miss — every
+// page header polls this route, so one slow GitHub check 502'd unrelated
+// requests. execFile (no shell) also removes the shell-injection surface;
+// args are split on single spaces, so callers pass simple token lists only.
 function _git(args) {
-  return execSync('git ' + args, { cwd: PROJECT_ROOT, encoding: 'utf8', timeout: 15000 }).trim();
+  return new Promise((resolve, reject) => {
+    execFile('git', args.split(' '), { cwd: PROJECT_ROOT, encoding: 'utf8', timeout: 15000 },
+      (err, stdout) => err ? reject(err) : resolve(stdout.trim()));
+  });
 }
 
 // Read version from package.json on every call (not cached at startup)
@@ -106,13 +109,13 @@ function _parseCommit(msg) {
 }
 
 async function _computeStatus() {
-  const currentCommit = _git('rev-parse HEAD');
+  const currentCommit = await _git('rev-parse HEAD');
   const currentShort = currentCommit.slice(0, 7);
   const currentVersion = _currentVersion();
 
   let latestCommit, latestShort;
   try {
-    const lsRemote = _git(`ls-remote origin ${BRANCH}`);
+    const lsRemote = await _git(`ls-remote origin ${BRANCH}`);
     latestCommit = lsRemote.split(/\s+/)[0];
     latestShort = latestCommit.slice(0, 7);
   } catch (e) {
@@ -387,7 +390,7 @@ function handle(req, res, pathname, ctx) {
         }
 
         // Verify commit exists locally
-        try { _git(`cat-file -e ${commit}`); }
+        try { await _git(`cat-file -e ${commit}`); }
         catch { throw new Error('Commit not found locally — cannot rollback'); }
 
         if (!(await _isProgressStale())) {
