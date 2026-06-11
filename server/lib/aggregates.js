@@ -139,7 +139,11 @@ function rebuildAll(dbWrite) {
     dbWrite.exec(SPECIES_REBUILD_SQL);
     dbWrite.exec(HOURLY_REBUILD_SQL);
   });
-  tx();
+  // BEGIN IMMEDIATE: take the write lock up front (honoring busy_timeout)
+  // instead of upgrading mid-transaction, where SQLite can return
+  // "database is locked" immediately when the Python engine writes
+  // concurrently.
+  tx.immediate();
   const elapsed = Date.now() - t0;
   const daily = dbWrite.prepare('SELECT COUNT(*) as n FROM daily_stats').get().n;
   const monthly = dbWrite.prepare('SELECT COUNT(*) as n FROM monthly_stats').get().n;
@@ -174,7 +178,10 @@ function refreshToday(dbWrite, dateStr) {
       GROUP BY Sci_Name
     `).run(dateStr);
 
-    // Refresh current month's monthly_stats
+    // Refresh current month's monthly_stats. Range predicate on Date
+    // instead of SUBSTR(Date,1,7)=? — SUBSTR defeats the (Date, …) indexes
+    // and forced a full table scan of the whole detections table every
+    // 5-minute tick. '-99' sorts after any valid 'DD' suffix.
     dbWrite.prepare('DELETE FROM monthly_stats WHERE year_month = ?').run(ym);
     dbWrite.prepare(`
       INSERT INTO monthly_stats (year_month, sci_name, com_name, count, count_07, avg_conf, day_count)
@@ -182,9 +189,9 @@ function refreshToday(dbWrite, dateStr) {
              COUNT(*),
              SUM(CASE WHEN Confidence >= 0.7 THEN 1 ELSE 0 END),
              ROUND(AVG(Confidence),4), COUNT(DISTINCT Date)
-      FROM active_detections WHERE SUBSTR(Date,1,7) = ? AND Confidence >= 0.5
+      FROM active_detections WHERE Date >= ? || '-01' AND Date <= ? || '-99' AND Confidence >= 0.5
       GROUP BY Sci_Name
-    `).run(ym);
+    `).run(ym, ym);
 
     // Refresh species_stats for species seen today
     const todaySpecies = dbWrite.prepare(
@@ -215,7 +222,10 @@ function refreshToday(dbWrite, dateStr) {
       GROUP BY CAST(SUBSTR(Time,1,2) AS INTEGER), Sci_Name
     `).run(dateStr);
   });
-  tx();
+  // IMMEDIATE for the same reason as rebuildAll: the first statement is a
+  // DELETE, so grab the write lock up front under busy_timeout rather than
+  // racing the engine's inserts mid-transaction.
+  tx.immediate();
   _lastRefreshDate = dateStr;
 }
 
