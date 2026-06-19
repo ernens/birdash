@@ -165,6 +165,9 @@ function handle(req, res, pathname, ctx) {
     proc.stdout.on('data', (chunk) => { try { res.write(chunk); } catch {} });
     proc.stderr.on('data', () => {});
     proc.on('close', () => { try { res.end(); } catch {} });
+    // Without an 'error' listener a failed exec (e.g. ffmpeg missing) emits an
+    // unhandled 'error' that crashes the whole server process.
+    proc.on('error', () => { try { res.end(); } catch {} });
     req.on('close', () => { proc.kill(); });
     return true;
   }
@@ -189,6 +192,8 @@ function handle(req, res, pathname, ctx) {
     proc.stdout.on('data', (chunk) => { try { res.write(chunk); } catch {} });
     proc.stderr.on('data', () => {});
     proc.on('close', () => { try { res.end(); } catch {} });
+    // See live-stream above — a missing 'error' listener crashes the process.
+    proc.on('error', () => { try { res.end(); } catch {} });
     req.on('close', () => { proc.kill(); });
     return true;
   }
