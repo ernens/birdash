@@ -1421,8 +1421,8 @@ const app = createApp({
       const labels=[];
       for (let i=29;i>=0;i--) {
         const date=daysAgo(i);
-        const mo=t('months_short')[new Date(date).getMonth()];
-        labels.push(`${new Date(date).getDate()} ${mo}`);
+        const mo=t('months_short')[new Date(date).getUTCMonth()];
+        labels.push(`${new Date(date).getUTCDate()} ${mo}`);
       }
       const base=chartDefaults();
       mountAct(canvasActivity, ()=>({
@@ -1588,8 +1588,8 @@ const app = createApp({
         const base = chartDefaults();
         const labels = mod.value.dailyTrend.map(r => {
           const d = new Date(r.Date);
-          const mo = t('months_short')[d.getMonth()];
-          return `${d.getDate()} ${mo}`;
+          const mo = t('months_short')[d.getUTCMonth()];
+          return `${d.getUTCDate()} ${mo}`;
         });
         mountModT(canvasModTrend, () => ({
           type: 'bar',

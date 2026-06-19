@@ -692,7 +692,7 @@ const app = createApp({
         const chartDates = dates.slice(0, chartEnd);
         const labels = chartDates.map(d => {
           const dt = new Date(d);
-          return dt.getDate() + ' ' + (t('months_short')||[])[dt.getMonth()];
+          return dt.getUTCDate() + ' ' + (t('months_short')||[])[dt.getUTCMonth()];
         });
         const detData = chartDates.map(d => detMap[d] || 0);
         const tempData = chartDates.map((_,i) => {

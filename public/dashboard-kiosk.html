@@ -411,11 +411,14 @@ const app = createApp({
     // Vue can't :style bind on <body> since #app isn't mounted there.
     watch(pulseDuration, (v) => { document.body.style.setProperty('--pulse-duration', v + 's'); }, { immediate: true });
     async function loadPulse() {
-      const today = localDateStr();
       try {
+        // Compare the full Date+Time against now-10min so the window is correct
+        // across midnight (a lexical Time>=... compare read 0 from 00:00–00:10,
+        // since today's rows can't have a Time >= "23:55:00"). The Date floor
+        // keeps the scan index-friendly (last 2 local days).
         const [row] = await birdQuery(
-          "SELECT COUNT(*) as n FROM active_detections WHERE Date=? AND Confidence>=? AND Time>=time('now','-10 minutes','localtime')",
-          [today, CONF]
+          "SELECT COUNT(*) as n FROM active_detections WHERE Confidence>=? AND Date>=date('now','-1 day','localtime') AND (Date || ' ' || Time) >= datetime('now','-10 minutes','localtime')",
+          [CONF]
         );
         // Per-minute rate over the 10-min window
         pulseRate.value = row ? Math.round(row.n / 10 * 10) / 10 : 0;

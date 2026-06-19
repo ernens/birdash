@@ -192,7 +192,7 @@ BIRDASH.ready.then(() => {
       const p2Live = ref({ species: '', conf: 0, detections: 0, time: null });
 
       const micDb = ref('-\u221E'), micActive = ref(false), micBars = ref(Array(18).fill(2));
-      let micSource = null, micTimeout = null;
+      let micSource = null, micTimeout = null, logTimeout = null, _destroyed = false;
       function connectMic() {
         micSource = new EventSource(API + '/audio/monitor');
         micSource.onmessage = (e) => {
@@ -206,7 +206,7 @@ BIRDASH.ready.then(() => {
             micTimeout = setTimeout(()=>{micActive.value=false;},3000);
           } catch(e){}
         };
-        micSource.onerror = () => { micActive.value=false; micSource.close(); setTimeout(connectMic,10000); };
+        micSource.onerror = () => { micActive.value=false; micSource.close(); if(!_destroyed) micTimeout=setTimeout(connectMic,10000); };
       }
 
       // ── Connectors ─────────────────────────────────────────
@@ -400,7 +400,7 @@ BIRDASH.ready.then(() => {
             }
           }catch(e){}
         };
-        logSource.onerror=()=>{logSource.close();setTimeout(connectLogs,10000);};
+        logSource.onerror=()=>{logSource.close(); if(!_destroyed) logTimeout=setTimeout(connectLogs,10000);};
       }
 
       // ── Status ─────────────────────────────────────────────
@@ -491,7 +491,7 @@ BIRDASH.ready.then(() => {
         sIv=setInterval(fetchStatus,60000);kIv=setInterval(fetchKpis,30000);
         dIv=setInterval(fetchLatestDetection,30000);spIv=setInterval(fetchRecentSpecies,45000);
       });
-      onUnmounted(()=>{if(micSource)micSource.close();if(logSource)logSource.close();clearInterval(sIv);clearInterval(kIv);clearInterval(dIv);clearInterval(spIv);});
+      onUnmounted(()=>{_destroyed=true;clearTimeout(micTimeout);clearTimeout(logTimeout);if(micSource)micSource.close();if(logSource)logSource.close();clearInterval(sIv);clearInterval(kIv);clearInterval(dIv);clearInterval(spIv);});
 
       return {
         t,spName,micDb,micActive,micBars,

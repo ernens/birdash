@@ -834,7 +834,7 @@ const app = createApp({
             if (!byMonth) {
               const rows = await birdQuery(...Q.analysesDailyByGroup(fam.sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
               const map = {}; rows.forEach(r => { map[r.Date] = r.n; });
-              if (idx === 0) { labels = []; let cur=new Date(fp.dateFrom.value), end=new Date(fp.dateTo.value); while(cur<=end){ labels.push(cur.getDate()+' '+t('months_short')[cur.getMonth()]+' '+cur.getFullYear().toString().slice(2)); cur.setDate(cur.getDate()+1); } }
+              if (idx === 0) { labels = []; let cur=new Date(fp.dateFrom.value), end=new Date(fp.dateTo.value); while(cur<=end){ labels.push(cur.getUTCDate()+' '+t('months_short')[cur.getUTCMonth()]+' '+cur.getUTCFullYear().toString().slice(2)); cur.setUTCDate(cur.getUTCDate()+1); } }
               data = []; let cur2=new Date(fp.dateFrom.value), end2=new Date(fp.dateTo.value); while(cur2<=end2){ data.push(map[cur2.toISOString().slice(0,10)]||0); cur2.setDate(cur2.getDate()+1); }
             } else {
               const rows = await birdQuery(...Q.analysesMonthlyByGroup(fam.sciNames, fp.dateFrom.value, fp.dateTo.value, conf));
@@ -852,7 +852,7 @@ const app = createApp({
             if (!byMonth) {
               const rows = await birdQuery(...Q.analysesDailySingle(sp, fp.dateFrom.value, fp.dateTo.value, conf));
               const map = {}; rows.forEach(r => { map[r.Date] = r.n; });
-              if (idx === 0) { labels = []; let cur=new Date(fp.dateFrom.value), end=new Date(fp.dateTo.value); while(cur<=end){ labels.push(cur.getDate()+' '+t('months_short')[cur.getMonth()]+' '+cur.getFullYear().toString().slice(2)); cur.setDate(cur.getDate()+1); } }
+              if (idx === 0) { labels = []; let cur=new Date(fp.dateFrom.value), end=new Date(fp.dateTo.value); while(cur<=end){ labels.push(cur.getUTCDate()+' '+t('months_short')[cur.getUTCMonth()]+' '+cur.getUTCFullYear().toString().slice(2)); cur.setUTCDate(cur.getUTCDate()+1); } }
               data = []; let cur2=new Date(fp.dateFrom.value), end2=new Date(fp.dateTo.value); while(cur2<=end2){ data.push(map[cur2.toISOString().slice(0,10)]||0); cur2.setDate(cur2.getDate()+1); }
             } else {
               const rows = await birdQuery(...Q.analysesMonthlySingle(sp, fp.dateFrom.value, fp.dateTo.value, conf));
