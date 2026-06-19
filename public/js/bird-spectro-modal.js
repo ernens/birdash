@@ -193,7 +193,7 @@
             try {
               fetch('/birds/api/recordings/clear-orphan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...BIRDASH.authHeaders() },
                 body: JSON.stringify({ fileName: modal.fileName }),
               }).catch(() => {});
             } catch {}

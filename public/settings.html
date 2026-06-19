@@ -2595,6 +2595,12 @@ const app = createApp({
 
     onMounted(() => {
       reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles(); loadAutoPurge();
+      // Guard against losing unsaved edits: the global Save bar is the single
+      // persistence point for the detection / audio / notifications / station
+      // forms, so warn if the user navigates away while isDirty.
+      window.addEventListener('beforeunload', (e) => {
+        if (isDirty.value) { e.preventDefault(); e.returnValue = ''; }
+      });
       // Species summary feeds both the picker AND the textarea-preview
       // counter + com_name resolution under each list — load eagerly so
       // navigating to Settings → Species shows resolved names immediately.
@@ -2617,7 +2623,7 @@ const app = createApp({
       telemetryJoining.value = true;
       try {
         const res = await fetch(`${API}/telemetry/register`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ stationName: telemetryName.value.trim() })
         });
         const d = await res.json();
@@ -2630,7 +2636,7 @@ const app = createApp({
       telemetryJoining.value = false;
     }
     async function disableTelemetry() {
-      await fetch(`${API}/telemetry/disable`, { method: 'POST' });
+      await fetch(`${API}/telemetry/disable`, { method: 'POST', headers: authHeaders() });
       telemetryStatus.enabled = false;
     }
 
@@ -2644,7 +2650,7 @@ const app = createApp({
       anonPingsEnabled.value = enabled;
       try {
         await fetch(`${API}/telemetry/anonymous-pings`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ enabled })
         });
       } catch(e) { console.error(e); }

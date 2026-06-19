@@ -5,7 +5,7 @@
 const telemetry = require('../lib/telemetry');
 
 function handle(req, res, pathname, ctx) {
-  const { db, parseBirdnetConf, JSON_CT } = ctx;
+  const { db, parseBirdnetConf, JSON_CT, requireAuth } = ctx;
 
   // ── GET /api/telemetry/status ─────────────────────────────────────────────
   if (req.method === 'GET' && pathname === '/api/telemetry/status') {
@@ -16,6 +16,7 @@ function handle(req, res, pathname, ctx) {
 
   // ── POST /api/telemetry/register ──────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/telemetry/register') {
+    if (requireAuth && !requireAuth(req, res)) return true;
     let body = '';
     req.on('data', c => body += c);
     req.on('end', () => {
@@ -46,6 +47,7 @@ function handle(req, res, pathname, ctx) {
 
   // ── POST /api/telemetry/disable ───────────────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/telemetry/disable') {
+    if (requireAuth && !requireAuth(req, res)) return true;
     telemetry.disable();
     res.writeHead(200, JSON_CT);
     res.end(JSON.stringify({ ok: true }));
@@ -61,6 +63,7 @@ function handle(req, res, pathname, ctx) {
 
   // ── POST /api/telemetry/anonymous-pings ───────────────────────────────────
   if (req.method === 'POST' && pathname === '/api/telemetry/anonymous-pings') {
+    if (requireAuth && !requireAuth(req, res)) return true;
     let body = '';
     req.on('data', c => body += c);
     req.on('end', () => {

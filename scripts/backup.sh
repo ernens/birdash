@@ -27,6 +27,13 @@ if ! touch "$LOG_FILE" 2>/dev/null; then
 fi
 HISTORY_FILE="${CONFIG_FILE%/*}/backup-history.json"
 
+# Cap log growth. A previous version leaked rsync --info=progress2 lines into
+# the log (it ballooned to 300 MB / 3M lines). Keep the last 1000 lines if the
+# file exceeds 5 MB.
+if [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 5242880 ]; then
+  tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" 2>/dev/null && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+fi
+
 # Write directly to LOG_FILE — using tee -a here would double each line
 # because nohup redirects stdout via `>> $LOG_FILE 2>&1` when this script
 # is launched from backup-window-start.sh. Fallback to plain echo if the
@@ -330,6 +337,14 @@ if should_backup "db"; then
     exit 1
   fi
 
+  # Stage SQLite dumps on FAST LOCAL disk first, then copy to the (possibly
+  # slow / NFS) destination. Dumping a live, continuously-written DB *directly*
+  # over NFS makes the SQLite online-backup API restart endlessly and wedge in
+  # uninterruptible IO — it never converges (this is what kept the nightly
+  # backup stuck for weeks). A local .backup converges in ~2 s; the copy to the
+  # destination is then a plain sequential write that survives pause/resume.
+  mkdir -p "$HOME/.cache"
+  DB_STAGE=$(mktemp -d "$HOME/.cache/birdash-stage-XXXXXX" 2>/dev/null || mktemp -d)
   DB_TOTAL=${#DB_LIST[@]}
   DB_IDX=0
   for db in "${DB_LIST[@]}"; do
@@ -337,9 +352,19 @@ if should_backup "db"; then
     DB_IDX=$((DB_IDX+1))
     sub_pct=$(( PCT_START + (PCT_END - PCT_START) * DB_IDX / (DB_TOTAL + 1) ))
     progress "running" "$sub_pct" "db" "Dump $dbname ($DB_IDX/$DB_TOTAL)"
-    log "  Dumping $dbname..."
-    sqlite3 "$db" ".backup '$BACKUP_BASE/db/$dbname'" 2>> "$LOG_FILE" || log "  WARN: Could not dump $dbname"
+    log "  Dumping $dbname (local stage)..."
+    if sqlite3 "$db" ".backup '$DB_STAGE/$dbname'" 2>> "$LOG_FILE"; then
+      cp -f "$DB_STAGE/$dbname" "$BACKUP_BASE/db/$dbname" 2>> "$LOG_FILE" \
+        || log "  WARN: Could not copy $dbname to destination"
+      # The .backup output is a standalone DB — drop any stale WAL/SHM sidecars
+      # left next to it on the destination so a restore can't replay old WAL.
+      rm -f "$BACKUP_BASE/db/${dbname}-wal" "$BACKUP_BASE/db/${dbname}-shm" 2>/dev/null || true
+      rm -f "$DB_STAGE/$dbname"
+    else
+      log "  WARN: Could not dump $dbname"
+    fi
   done
+  rm -rf "$DB_STAGE"
 
   # InfluxDB backup (Docker) — if available
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q influxdb; then

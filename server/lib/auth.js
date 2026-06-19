@@ -247,7 +247,13 @@ function gate(req, res, pathname) {
   if (!req.user) {
     const apiToken = process.env.BIRDASH_API_TOKEN || '';
     const auth = req.headers['authorization'] || '';
-    if (apiToken && auth === `Bearer ${apiToken}`) req.user = '__bearer__';
+    const expected = `Bearer ${apiToken}`;
+    // Constant-time compare to avoid a remote timing oracle on the privileged
+    // token. Length pre-check first (timingSafeEqual throws on length mismatch).
+    if (apiToken && auth.length === expected.length
+        && crypto.timingSafeEqual(Buffer.from(auth), Buffer.from(expected))) {
+      req.user = '__bearer__';
+    }
   }
 
   // Fail-safe: if auth is enabled but no credentials are configured,
