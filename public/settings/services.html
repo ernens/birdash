@@ -113,7 +113,7 @@
           <hr style="border:none;border-top:1px solid var(--border, #2a2a2a);margin:.75rem 0;">
           <div class="set-row">
             <span class="set-label">{{t('auto_purge_enable')}}</span>
-            <input type="checkbox" :checked="autoPurge.config.enabled" @change="toggleAutoPurge($event.target.checked)" style="cursor:pointer;">
+            <input type="checkbox" v-model="autoPurge.config.enabled" style="cursor:pointer;" data-testid="settings-autopurge-enable">
           </div>
           <div class="set-row" style="font-size:.9em;color:var(--text-secondary, #888);">
             <span class="set-label">{{t('auto_purge_last_run')}}</span>
