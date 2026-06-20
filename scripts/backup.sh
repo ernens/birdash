@@ -62,7 +62,9 @@ append_history() {
   local ended_at
   ended_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
   local size
-  size=$(du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "?")
+  # Reuse the size computed in the summary if available; otherwise (e.g. failure
+  # path) do a bounded du so a slow/degraded NFS target can't hang the trap.
+  size="${_BACKUP_SIZE_HR:-$(timeout 60 du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "?")}"
   local steps_done
   steps_done=$(IFS=,; echo "${STEP_LIST[*]}")
   local entry="{\"startedAt\":\"${STARTED_AT}\",\"endedAt\":\"${ended_at}\",\"status\":\"${status}\",\"detail\":\"${detail}\",\"destination\":\"${DEST}\",\"size\":\"${size}\",\"steps\":\"${steps_done}\"}"
@@ -497,17 +499,25 @@ fi
 # ── Upload for remote-only destinations ──────────────────────────────────────
 case "$DEST" in sftp|s3|gdrive|webdav) upload_staging ;; esac
 
-# ── Retention cleanup ─────────────────────────────────────────────────────────
-if [ "${RETENTION:-0}" -gt 0 ] 2>/dev/null; then
-  log "Retention cleanup: removing files older than ${RETENTION} days..."
-  find "$BACKUP_BASE" -type f -mtime +"$RETENTION" -delete 2>/dev/null || true
-  find "$BACKUP_BASE" -type d -empty -delete 2>/dev/null || true
-  log "  Retention cleanup done"
-fi
+# ── Retention ─────────────────────────────────────────────────────────────────
+# The destination is a MIRROR kept in sync by rsync --delete, and the sqlite
+# dumps / configs are overwritten every run — there are no dated snapshots to
+# age out. The old `find -mtime +N -delete` deleted current backups of any
+# source file whose mtime was older than N days (BirdSongs recordings keep their
+# original capture time!), so every run deleted then re-synced months of audio —
+# churning the mirror, never converging, and the full-tree scan stalled badly on
+# slow/NFS targets. Removed. We still prune empty dirs left behind by --delete.
+# (config.retention is kept for a possible future dated-snapshot mode.)
+timeout 120 find "$BACKUP_BASE" -type d -empty -delete 2>/dev/null || true
 
 # ── Summary ──────────────────────────────────────────────────────────────────
-USED=$(du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "N/A")
-USED_BYTES=$(du -sb "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "0")
+# One bounded du pass (was two full traversals). `timeout` keeps a degraded /
+# slow NFS target from hanging the backup at the very end; the size is only a
+# cosmetic report. Cache the human-readable value so append_history (EXIT trap)
+# doesn't traverse the whole tree a third time.
+USED_BYTES=$(timeout 120 du -sb "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "0")
+USED=$(numfmt --to=iec "${USED_BYTES:-0}" 2>/dev/null || echo "${USED_BYTES:-0}B")
+_BACKUP_SIZE_HR="$USED"
 log "========================================="
 log "Backup terminé ! Total: $USED"
 log "========================================="
