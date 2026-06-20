@@ -61,9 +61,6 @@
           </div>
         </div>
       </div>
-      <select v-if="availableYears.length" v-model="selectedYear" @change="reloadData" class="ph-year-select">
-        <option v-for="y in availableYears" :key="y" :value="y">{{y}}</option>
-      </select>
       <div v-if="currentSpecies" class="ph-mode-group">
         <button class="ph-mode-btn" :class="{active: viewMode==='presence'}" @click="viewMode='presence'">{{t('pheno_view_presence')}}</button>
         <button class="ph-mode-btn" :class="{active: viewMode==='abundance'}" @click="viewMode='abundance'">{{t('pheno_view_abundance')}}</button>
@@ -101,21 +98,28 @@
         </div>
       </div>
 
-      <!-- ── Weekly ribbon ────────────────────────────────────── -->
+      <!-- ── Weekly ribbon — one row per year (stacked) ───────── -->
       <div class="ph-ribbon-wrap">
-        <div class="ph-ribbon-title">{{t('pheno_weekly_ribbon')}} — {{selectedYear}}</div>
-        <div class="ph-months">
-          <span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span>
-          <span>Mai</span><span>Juin</span><span>Juil</span><span>Août</span>
-          <span>Sep</span><span>Oct</span><span>Nov</span><span>Déc</span>
+        <div class="ph-ribbon-title">{{t('pheno_weekly_ribbon')}}</div>
+        <!-- Month header, offset by the year-label column width -->
+        <div class="ph-months-row">
+          <span class="ph-year-label"></span>
+          <div class="ph-months">
+            <span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span>
+            <span>Mai</span><span>Juin</span><span>Juil</span><span>Août</span>
+            <span>Sep</span><span>Oct</span><span>Nov</span><span>Déc</span>
+          </div>
         </div>
-        <div class="ph-ribbon" ref="ribbonEl">
-          <div v-for="cell in ribbonCells" :key="cell.week"
-               class="ph-cell"
-               :class="{future: cell.future, now: cell.isCurrent, 'has-data': cell.n > 0, selected: selectedWeek === cell.week}"
-               :style="{background: cell.color}"
-               :title="cell.tooltip"
-               @click="selectWeek(cell)"></div>
+        <div v-for="row in ribbonRows" :key="row.year" class="ph-year-row">
+          <span class="ph-year-label">{{row.year}}</span>
+          <div class="ph-ribbon">
+            <div v-for="cell in row.cells" :key="cell.week"
+                 class="ph-cell"
+                 :class="{future: cell.future, now: cell.isCurrent, 'has-data': cell.n > 0, selected: selectedYear === row.year && selectedWeek === cell.week}"
+                 :style="{background: cell.color}"
+                 :title="cell.tooltip"
+                 @click="selectCell(row.year, cell)"></div>
+          </div>
         </div>
         <div class="ph-ribbon-hint">{{t('pheno_week_zoom_hint')}}</div>
         <div class="ph-legend">
@@ -144,7 +148,7 @@
       <div v-if="selectedWeek !== null" class="ph-week-zoom" ref="zoomEl">
         <div class="ph-zoom-head">
           <div>
-            <div class="ph-zoom-title">{{t('pheno_week_title')}} {{selectedWeek}}</div>
+            <div class="ph-zoom-title">{{t('pheno_week_title')}} {{selectedWeek}} · {{selectedYear}}</div>
             <div v-if="weekDetails?.date_from" class="ph-zoom-dates">
               {{fmtDate(weekDetails.date_from)}}
               <span v-if="weekDetails.date_to !== weekDetails.date_from"> → {{fmtDate(weekDetails.date_to)}}</span>
@@ -269,8 +273,28 @@ BIRDASH.ready.then(() => {
       const viewMode       = ref('presence');
       const loaded         = ref(false);
 
-      const weeklyData = ref([]);
-      const hourlyData = ref([]);
+      // Raw per-(year,week) data for the multi-year stacked ribbon.
+      const weeklyAllData = ref([]);  // [{year, week, n}]
+      const hourlyAllData = ref([]);  // [{year, week, avg_hour, dawn_n, n}]
+      // Aggregated across all years — feeds the inferred-phases panel (typical
+      // phenology) and the hero "active weeks" count.
+      const weeklyData = computed(() => {
+        const m = {};
+        for (const r of weeklyAllData.value) m[r.week] = (m[r.week] || 0) + r.n;
+        return Object.keys(m).map(w => ({ week: +w, n: m[w] })).sort((a, b) => a.week - b.week);
+      });
+      const hourlyData = computed(() => {
+        const acc = {};
+        for (const r of hourlyAllData.value) {
+          const a = acc[r.week] || (acc[r.week] = { week: r.week, sumHourN: 0, n: 0, dawn_n: 0 });
+          if (r.avg_hour != null) a.sumHourN += r.avg_hour * r.n;
+          a.n += r.n; a.dawn_n += r.dawn_n || 0;
+        }
+        return Object.values(acc).map(a => ({
+          week: a.week, n: a.n, dawn_n: a.dawn_n,
+          avg_hour: a.n ? Math.round((a.sumHourN / a.n) * 10) / 10 : null,
+        })).sort((x, y) => x.week - y.week);
+      });
       const stats      = ref({ total: 0, first_date: null, last_date: null, activeWeeks: 0 });
 
       // ── Week zoom state ──────────────────────────────────────
@@ -375,20 +399,22 @@ BIRDASH.ready.then(() => {
         if (!currentSpecies.value) return;
         const epoch = ++_reloadEpoch;
         try {
+          // Load every year at once (one grouped query each) so the stacked
+          // ribbon can show all years together — and all-time hero stats.
           const [weekly, hourly, statsRow] = await Promise.all([
-            birdQuery(...Q.phenologyWeekly(currentSpecies.value, selectedYear.value)),
-            birdQuery(...Q.phenologyHourlyByWeek(currentSpecies.value, selectedYear.value)),
-            birdQuery(...Q.phenologyFirstLast(currentSpecies.value, selectedYear.value)),
+            birdQuery(...Q.phenologyWeeklyAllYears(currentSpecies.value)),
+            birdQuery(...Q.phenologyHourlyAllYears(currentSpecies.value)),
+            birdQuery(...Q.phenologyFirstLastAllTime(currentSpecies.value)),
           ]);
           if (epoch !== _reloadEpoch) return;
-          weeklyData.value = weekly;
-          hourlyData.value = hourly;
+          weeklyAllData.value = weekly;
+          hourlyAllData.value = hourly;
           const s = statsRow[0] || {};
           stats.value = {
             total: s.total || 0,
             first_date: s.first_date,
             last_date: s.last_date,
-            activeWeeks: weekly.length,
+            activeWeeks: new Set(weekly.map(w => w.week)).size,
           };
           loaded.value = true;
         } catch(e) { console.error('reloadData:', e); if (epoch === _reloadEpoch) loaded.value = true; }
@@ -412,46 +438,60 @@ BIRDASH.ready.then(() => {
         return 'var(--data-night)';
       }
 
-      // ── Build ribbon cells (53 weeks) ────────────────────────
-      const ribbonCells = computed(() => {
-        const weekMap = {};
-        for (const w of weeklyData.value) weekMap[w.week] = w.n;
-        const hourMap = {};
-        for (const h of hourlyData.value) hourMap[h.week] = h.avg_hour;
-
+      // ── Build one ribbon row per year (stacked multi-year view) ──
+      // The colour scales (presence / abundance thresholds / hour-of-day) are
+      // ABSOLUTE, so cells are directly comparable from one year-row to the next
+      // — arrival/departure shifts show up as the coloured band moving left or
+      // right between rows.
+      function cellColor(n, avgHour) {
+        if (viewMode.value === 'presence') return n > 0 ? '#4caf50' : 'var(--border)';
+        if (viewMode.value === 'abundance') return phenoColor(n);
+        if (viewMode.value === 'hourly') return n > 0 ? hourColor(avgHour) : 'var(--border)';
+        return 'var(--border)';
+      }
+      const ribbonRows = computed(() => {
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentWeek = isoWeekOfYear(now);
-        const isCurrentYear = parseInt(selectedYear.value) === currentYear;
+        // Index raw data by year → week.
+        const byYear = {}, hByYear = {};
+        for (const r of weeklyAllData.value) (byYear[r.year] || (byYear[r.year] = {}))[r.week] = r.n;
+        for (const r of hourlyAllData.value) (hByYear[r.year] || (hByYear[r.year] = {}))[r.week] = r.avg_hour;
 
-        const cells = [];
-        for (let w = 0; w <= 52; w++) {
-          const n = weekMap[w] || 0;
-          const avgHour = hourMap[w];
-          let color = 'var(--border)';
-          if (viewMode.value === 'presence') {
-            color = n > 0 ? '#4caf50' : 'var(--border)';
-          } else if (viewMode.value === 'abundance') {
-            color = phenoColor(n);
-          } else if (viewMode.value === 'hourly') {
-            color = n > 0 ? hourColor(avgHour) : 'var(--border)';
+        return availableYears.value.map(year => {
+          const wm = byYear[year] || {}, hm = hByYear[year] || {};
+          const isCurrentYear = parseInt(year) === currentYear;
+          const cells = [];
+          for (let w = 0; w <= 52; w++) {
+            const n = wm[w] || 0;
+            const avgHour = hm[w];
+            const future = (year > currentYear) || (isCurrentYear && w > currentWeek);
+            const isCurrent = isCurrentYear && w === currentWeek;
+            let tooltip = year + ' · Sem. ' + w;
+            if (n > 0) tooltip += ' — ' + n + ' détection' + (n > 1 ? 's' : '');
+            if (avgHour != null && viewMode.value === 'hourly') tooltip += ' · ~' + avgHour + 'h';
+            cells.push({ week: w, n, color: cellColor(n, avgHour), future, isCurrent, tooltip });
           }
-
-          const future = isCurrentYear && w > currentWeek;
-          const isCurrent = isCurrentYear && w === currentWeek;
-
-          let tooltip = 'Sem. ' + w;
-          if (n > 0) tooltip += ' — ' + n + ' détection' + (n>1?'s':'');
-          if (avgHour != null && viewMode.value === 'hourly') tooltip += ' · ~' + avgHour + 'h';
-
-          cells.push({ week: w, n, color, future, isCurrent, tooltip });
-        }
-        return cells;
+          return { year, cells };
+        });
       });
 
       // ── Week zoom: select / close / fetch ────────────────────
       // Same epoch pattern as reloadData — clicking ribbon cells fast can have
       // an older week's details land after the user moved to another week.
+      // Click a cell in any year-row: focus that year (so the zoom queries hit
+      // the right year) then open the week zoom. Re-clicking the same cell toggles.
+      function selectCell(year, cell) {
+        if (cell.future || !cell.n) return;
+        if (selectedYear.value === year && selectedWeek.value === cell.week) {
+          closeWeek();
+          return;
+        }
+        selectedYear.value = year;
+        selectedWeek.value = null; // avoid selectWeek's same-week early return
+        selectWeek(cell);
+      }
+
       let _weekEpoch = 0;
       async function selectWeek(cell) {
         if (cell.future || !cell.n) return;
@@ -505,8 +545,9 @@ BIRDASH.ready.then(() => {
         return n > 0 ? Math.max(4, (n / max) * 100) : 0;
       }
 
-      // Reset zoom whenever the context changes
-      watch([currentSpecies, selectedYear], closeWeek);
+      // Reset zoom when the species changes (year now changes on cell click,
+      // which must NOT close the zoom we're about to open).
+      watch(currentSpecies, closeWeek);
 
       function isoWeekOfYear(d) {
         const onejan = new Date(d.getFullYear(), 0, 1);
@@ -612,10 +653,10 @@ BIRDASH.ready.then(() => {
         speciesDropdownOpen, speciesFilter, speciesSearchInput, filteredSpeciesList,
         toggleSpeciesDropdown, closeSpeciesDropdown, pickSpeciesFromDropdown, pickFirstFiltered,
         currentSpecies, sciName, availableYears, selectedYear,
-        viewMode, loaded, stats, ribbonCells, phases,
+        viewMode, loaded, stats, ribbonRows, phases,
         reloadData,
         selectedWeek, weekDetails, weekPrevYearCount, zoomEl,
-        selectWeek, closeWeek, hourCount, hourBarPct,
+        selectWeek, selectCell, closeWeek, hourCount, hourBarPct,
       };
     }
   });

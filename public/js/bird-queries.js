@@ -366,6 +366,31 @@
       ];
     },
 
+    /** Weekly counts grouped by year AND week — phenology multi-year stacked ribbon.
+     *  One query for the whole page (all years) instead of one per year. */
+    phenologyWeeklyAllYears(comName, c) {
+      return [
+        "SELECT CAST(strftime('%Y', Date) AS INTEGER) as year, MIN(CAST(strftime('%W', Date) AS INTEGER), 52) as week, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY year, week ORDER BY year, week",
+        [comName, (c != null ? c : C())]
+      ];
+    },
+
+    /** Avg hour + dawn share grouped by year AND week — multi-year hourly mode + phases */
+    phenologyHourlyAllYears(comName, c) {
+      return [
+        "SELECT CAST(strftime('%Y', Date) AS INTEGER) as year, MIN(CAST(strftime('%W', Date) AS INTEGER), 52) as week, ROUND(AVG(CAST(SUBSTR(Time,1,2) AS REAL)),1) as avg_hour, SUM(CASE WHEN CAST(SUBSTR(Time,1,2) AS INTEGER) BETWEEN 4 AND 8 THEN 1 ELSE 0 END) as dawn_n, COUNT(*) as n FROM active_detections WHERE Com_Name=? AND Confidence>=? GROUP BY year, week ORDER BY year, week",
+        [comName, (c != null ? c : C())]
+      ];
+    },
+
+    /** All-time first/last/total — phenology multi-year hero */
+    phenologyFirstLastAllTime(comName, c) {
+      return [
+        "SELECT MIN(Date) as first_date, MAX(Date) as last_date, COUNT(*) as total FROM active_detections WHERE Com_Name=? AND Confidence>=?",
+        [comName, (c != null ? c : C())]
+      ];
+    },
+
     /** First and last observation dates for a year — phenology arrival/departure */
     phenologyFirstLast(comName, year, c) {
       const y = parseInt(year);
