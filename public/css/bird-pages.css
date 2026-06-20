@@ -2809,6 +2809,16 @@
       font-size: .68rem; color: var(--text-muted);
       margin-top: .35rem; font-style: italic;
     }
+    /* ── Multi-year stacked ribbon: a year label column + the 53-week ribbon.
+       The month header uses the same grid so months line up over the cells. ── */
+    .ph-year-row, .ph-months-row {
+      display: grid; grid-template-columns: 2.6rem 1fr; gap: .5rem; align-items: center;
+    }
+    .ph-year-row { margin-bottom: 3px; }
+    .ph-year-label {
+      font-size: .72rem; color: var(--text-muted); text-align: right;
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
 
     /* ── Week zoom panel ───────────────────────────────────────── */
     .ph-week-zoom {
