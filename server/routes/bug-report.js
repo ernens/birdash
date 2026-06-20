@@ -11,19 +11,17 @@ const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const FALLBACK_FILE = path.join(PROJECT_ROOT, 'config', 'bug-reports.json');
 const GITHUB_REPO = 'ernens/birdash';
 
-// Fine-grained PAT with Issues:Write only on ernens/birdash (public repo).
-// Minimal permissions — can only create/comment on issues, nothing else.
+// GitHub PAT (fine-grained, Issues:Write only on ernens/birdash) read from a
+// file that is gitignored — never hardcode the token in source. If the file is
+// absent, GitHub reporting is disabled and reports fall back to the local file.
 const TOKEN_FILE = path.join(PROJECT_ROOT, 'config', 'github-token.txt');
 let githubToken = null;
 try {
   githubToken = fs.readFileSync(TOKEN_FILE, 'utf8').trim() || null;
 } catch (_) {}
-// Fallback: built-in token (Issues:Write only, ernens/birdash)
-if (!githubToken) {
-  githubToken = ['github_pat_11AWGUUGA0rRozwwP02r8D_f5TtO9eIkVxLjbBBq',
-                  'k0FBS03y4on24nBd1CS3SD41qs2QZ7CK7Qq9w3i9uq'].join('');
-}
-console.log('[bug-report] GitHub issue reporting ready');
+console.log(githubToken
+  ? '[bug-report] GitHub issue reporting ready'
+  : '[bug-report] No github-token.txt — using local fallback file for reports');
 
 /**
  * Create a GitHub issue via the API.

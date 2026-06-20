@@ -18,28 +18,40 @@ let _activeBackupProc = null;
 let _backupSizeCache = 0, _backupSizeRefreshing = false;
 
 async function updateBackupCron(config) {
-  const cronTag = '# BIRDASH_BACKUP';
-  const scriptPath = path.join(PROJECT_ROOT, 'scripts', 'backup.sh');
-  const cfgPath = path.join(PROJECT_ROOT, 'config', 'backup.json');
+  // Single source of truth for backup scheduling. We install a *night window*
+  // (a start + a stop entry) rather than a one-shot run: the full backup —
+  // notably the ~340 GB BirdSongs sync — can span several nights, so
+  // window-start launches or resumes the backup every evening and window-stop
+  // pauses it every morning, keeping heavy IO off the daytime detection engine.
+  //
+  // Historically there were TWO competing mechanisms: this function used to
+  // install a one-shot `# BIRDASH_BACKUP` line while a separately hand-installed
+  // `# BIRDASH_BACKUP_WINDOW` pair ran the real backups — setting a schedule in
+  // the UI could launch a second, conflicting backup. We now manage the window
+  // pair here and strip BOTH tags first so they can never run concurrently.
+  // (WIN_TAG contains OLD_TAG as a substring, so matching OLD_TAG removes both.)
+  const WIN_TAG = '# BIRDASH_BACKUP_WINDOW';
+  const OLD_TAG = '# BIRDASH_BACKUP';
+  const startScript = path.join(PROJECT_ROOT, 'scripts', 'backup-window-start.sh');
+  const stopScript  = path.join(PROJECT_ROOT, 'scripts', 'backup-window-stop.sh');
+  const logPath = path.join(require('os').homedir(), '.local', 'share', 'birdash-backup.log');
   try {
     // Read current crontab
     let crontab = '';
     try { crontab = await execCmd('crontab', ['-l']); } catch(e) {}
-    const lines = crontab.split('\n');
     const result = [];
-    for (const line of lines) {
-      // Remove old BIRDASH_BACKUP lines
-      if (line.includes(cronTag)) continue;
+    for (const line of crontab.split('\n')) {
+      if (line.includes(OLD_TAG)) continue; // strips both # BIRDASH_BACKUP and # BIRDASH_BACKUP_WINDOW
       result.push(line);
     }
     if (config.schedule && config.schedule !== 'manual') {
-      const [hour, min] = (config.scheduleTime || '02:00').split(':').map(Number);
-      let cronExpr;
-      if (config.schedule === 'daily') cronExpr = `${min} ${hour} * * *`;
-      else if (config.schedule === 'weekly') cronExpr = `${min} ${hour} * * 0`;
-      else return;
-      const logPath = path.join(require('os').homedir(), '.local', 'share', 'birdash-backup.log');
-      result.push(`${cronExpr} BACKUP_CONFIG=${cfgPath} bash ${scriptPath} >> ${logPath} 2>&1 ${cronTag}`);
+      const [sh, sm] = (config.scheduleTime || '19:00').split(':').map(Number);
+      const [eh, em] = (config.windowEnd  || '05:00').split(':').map(Number);
+      const dow = config.schedule === 'weekly' ? '0' : '*';
+      // Start the window on the scheduled day(s); always stop in the morning so
+      // a multi-night run is paused every day regardless of when it began.
+      result.push(`${sm} ${sh} * * ${dow} ${startScript} >> ${logPath} 2>&1 ${WIN_TAG}`);
+      result.push(`${em} ${eh} * * * ${stopScript}  >> ${logPath} 2>&1 ${WIN_TAG}`);
     }
     const tmpCron = '/tmp/birdash-crontab.tmp';
     await fsp.writeFile(tmpCron, result.filter(l => l.trim() !== '').join('\n') + '\n');

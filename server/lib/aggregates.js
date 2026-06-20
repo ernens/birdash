@@ -67,6 +67,7 @@ const HOURLY_REBUILD_SQL = `
 
 let _lastRefreshDate = '';
 let _refreshTimer = null;
+let _rolloverTimer = null;
 
 /**
  * Create aggregate tables if they don't exist.
@@ -238,8 +239,11 @@ function startPeriodicRefresh(dbWrite, intervalMs = 5 * 60 * 1000) {
     try { refreshToday(dbWrite); }
     catch (e) { console.error('[BIRDASH] Aggregate refresh error:', e.message); }
   }, intervalMs);
-  // Also do a midnight full rebuild check (using local date)
-  setInterval(() => {
+  // Also do a midnight full rebuild check (using local date). Stored in its
+  // own handle so stopPeriodicRefresh clears it too — otherwise re-init would
+  // leak a duplicate hourly timer and run concurrent rebuilds.
+  if (_rolloverTimer) clearInterval(_rolloverTimer);
+  _rolloverTimer = setInterval(() => {
     const today = localDateStr();
     if (_lastRefreshDate && _lastRefreshDate !== today) {
       console.log('[BIRDASH] New day detected, full aggregate rebuild');
@@ -250,6 +254,7 @@ function startPeriodicRefresh(dbWrite, intervalMs = 5 * 60 * 1000) {
 
 function stopPeriodicRefresh() {
   if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+  if (_rolloverTimer) { clearInterval(_rolloverTimer); _rolloverTimer = null; }
 }
 
 module.exports = { createTables, rebuildAll, refreshToday, startPeriodicRefresh, stopPeriodicRefresh };

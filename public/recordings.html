@@ -474,7 +474,7 @@ const app = createApp({
           // Pre-compute external links once per row (Wikipedia/iNat/eBird)
           // — recomputing in the v-for ran the helper for every render of
           // every card, churning new object refs and re-rendering the <a>s.
-          links:       buildSpeciesLinks(r.Sci_Name, r.Com_Name),
+          links:       buildSpeciesLinks(r.Com_Name, r.Sci_Name),
         }));
         // Charger les données dans allRecs
         allRecs.value = enriched;

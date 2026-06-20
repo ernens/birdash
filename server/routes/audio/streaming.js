@@ -29,13 +29,19 @@ function handle(req, res, pathname, ctx) {
     if (!fileName) {
       res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"missing file param"}'); return true;
     }
+    // Reject path separators / parent refs before they reach path.join — the
+    // species group below is `.+?` which would otherwise let "../" escape SONGS_DIR.
+    if (/[\/\\]/.test(fileName) || fileName.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"invalid filename"}'); return true;
+    }
     const m = fileName.match(/^(.+?)-\d+-(\d{4}-\d{2}-\d{2})-/);
     if (!m) {
       res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"invalid filename format"}'); return true;
     }
     const species = m[1], date = m[2];
-    const filePath = path.join(SONGS_DIR, date, species, fileName);
-    if (!filePath.startsWith(SONGS_DIR)) {
+    const filePath = path.resolve(SONGS_DIR, date, species, fileName);
+    // Boundary check with trailing separator so e.g. /songs-secret can't match /songs.
+    if (filePath !== SONGS_DIR && !filePath.startsWith(SONGS_DIR + path.sep)) {
       res.writeHead(400, { 'Content-Type': 'application/json' }); res.end('{"error":"invalid path"}'); return true;
     }
     (async () => {
@@ -159,6 +165,9 @@ function handle(req, res, pathname, ctx) {
     proc.stdout.on('data', (chunk) => { try { res.write(chunk); } catch {} });
     proc.stderr.on('data', () => {});
     proc.on('close', () => { try { res.end(); } catch {} });
+    // Without an 'error' listener a failed exec (e.g. ffmpeg missing) emits an
+    // unhandled 'error' that crashes the whole server process.
+    proc.on('error', () => { try { res.end(); } catch {} });
     req.on('close', () => { proc.kill(); });
     return true;
   }
@@ -183,6 +192,8 @@ function handle(req, res, pathname, ctx) {
     proc.stdout.on('data', (chunk) => { try { res.write(chunk); } catch {} });
     proc.stderr.on('data', () => {});
     proc.on('close', () => { try { res.end(); } catch {} });
+    // See live-stream above — a missing 'error' listener crashes the process.
+    proc.on('error', () => { try { res.end(); } catch {} });
     req.on('close', () => { proc.kill(); });
     return true;
   }

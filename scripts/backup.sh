@@ -27,6 +27,13 @@ if ! touch "$LOG_FILE" 2>/dev/null; then
 fi
 HISTORY_FILE="${CONFIG_FILE%/*}/backup-history.json"
 
+# Cap log growth. A previous version leaked rsync --info=progress2 lines into
+# the log (it ballooned to 300 MB / 3M lines). Keep the last 1000 lines if the
+# file exceeds 5 MB.
+if [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 5242880 ]; then
+  tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" 2>/dev/null && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+fi
+
 # Write directly to LOG_FILE — using tee -a here would double each line
 # because nohup redirects stdout via `>> $LOG_FILE 2>&1` when this script
 # is launched from backup-window-start.sh. Fallback to plain echo if the
@@ -55,7 +62,9 @@ append_history() {
   local ended_at
   ended_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
   local size
-  size=$(du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "?")
+  # Reuse the size computed in the summary if available; otherwise (e.g. failure
+  # path) do a bounded du so a slow/degraded NFS target can't hang the trap.
+  size="${_BACKUP_SIZE_HR:-$(timeout 60 du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "?")}"
   local steps_done
   steps_done=$(IFS=,; echo "${STEP_LIST[*]}")
   local entry="{\"startedAt\":\"${STARTED_AT}\",\"endedAt\":\"${ended_at}\",\"status\":\"${status}\",\"detail\":\"${detail}\",\"destination\":\"${DEST}\",\"size\":\"${size}\",\"steps\":\"${steps_done}\"}"
@@ -330,6 +339,14 @@ if should_backup "db"; then
     exit 1
   fi
 
+  # Stage SQLite dumps on FAST LOCAL disk first, then copy to the (possibly
+  # slow / NFS) destination. Dumping a live, continuously-written DB *directly*
+  # over NFS makes the SQLite online-backup API restart endlessly and wedge in
+  # uninterruptible IO — it never converges (this is what kept the nightly
+  # backup stuck for weeks). A local .backup converges in ~2 s; the copy to the
+  # destination is then a plain sequential write that survives pause/resume.
+  mkdir -p "$HOME/.cache"
+  DB_STAGE=$(mktemp -d "$HOME/.cache/birdash-stage-XXXXXX" 2>/dev/null || mktemp -d)
   DB_TOTAL=${#DB_LIST[@]}
   DB_IDX=0
   for db in "${DB_LIST[@]}"; do
@@ -337,9 +354,19 @@ if should_backup "db"; then
     DB_IDX=$((DB_IDX+1))
     sub_pct=$(( PCT_START + (PCT_END - PCT_START) * DB_IDX / (DB_TOTAL + 1) ))
     progress "running" "$sub_pct" "db" "Dump $dbname ($DB_IDX/$DB_TOTAL)"
-    log "  Dumping $dbname..."
-    sqlite3 "$db" ".backup '$BACKUP_BASE/db/$dbname'" 2>> "$LOG_FILE" || log "  WARN: Could not dump $dbname"
+    log "  Dumping $dbname (local stage)..."
+    if sqlite3 "$db" ".backup '$DB_STAGE/$dbname'" 2>> "$LOG_FILE"; then
+      cp -f "$DB_STAGE/$dbname" "$BACKUP_BASE/db/$dbname" 2>> "$LOG_FILE" \
+        || log "  WARN: Could not copy $dbname to destination"
+      # The .backup output is a standalone DB — drop any stale WAL/SHM sidecars
+      # left next to it on the destination so a restore can't replay old WAL.
+      rm -f "$BACKUP_BASE/db/${dbname}-wal" "$BACKUP_BASE/db/${dbname}-shm" 2>/dev/null || true
+      rm -f "$DB_STAGE/$dbname"
+    else
+      log "  WARN: Could not dump $dbname"
+    fi
   done
+  rm -rf "$DB_STAGE"
 
   # InfluxDB backup (Docker) — if available
   if docker ps --format '{{.Names}}' 2>/dev/null | grep -q influxdb; then
@@ -472,17 +499,25 @@ fi
 # ── Upload for remote-only destinations ──────────────────────────────────────
 case "$DEST" in sftp|s3|gdrive|webdav) upload_staging ;; esac
 
-# ── Retention cleanup ─────────────────────────────────────────────────────────
-if [ "${RETENTION:-0}" -gt 0 ] 2>/dev/null; then
-  log "Retention cleanup: removing files older than ${RETENTION} days..."
-  find "$BACKUP_BASE" -type f -mtime +"$RETENTION" -delete 2>/dev/null || true
-  find "$BACKUP_BASE" -type d -empty -delete 2>/dev/null || true
-  log "  Retention cleanup done"
-fi
+# ── Retention ─────────────────────────────────────────────────────────────────
+# The destination is a MIRROR kept in sync by rsync --delete, and the sqlite
+# dumps / configs are overwritten every run — there are no dated snapshots to
+# age out. The old `find -mtime +N -delete` deleted current backups of any
+# source file whose mtime was older than N days (BirdSongs recordings keep their
+# original capture time!), so every run deleted then re-synced months of audio —
+# churning the mirror, never converging, and the full-tree scan stalled badly on
+# slow/NFS targets. Removed. We still prune empty dirs left behind by --delete.
+# (config.retention is kept for a possible future dated-snapshot mode.)
+timeout 120 find "$BACKUP_BASE" -type d -empty -delete 2>/dev/null || true
 
 # ── Summary ──────────────────────────────────────────────────────────────────
-USED=$(du -sh "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "N/A")
-USED_BYTES=$(du -sb "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "0")
+# One bounded du pass (was two full traversals). `timeout` keeps a degraded /
+# slow NFS target from hanging the backup at the very end; the size is only a
+# cosmetic report. Cache the human-readable value so append_history (EXIT trap)
+# doesn't traverse the whole tree a third time.
+USED_BYTES=$(timeout 120 du -sb "$BACKUP_BASE" 2>/dev/null | cut -f1 || echo "0")
+USED=$(numfmt --to=iec "${USED_BYTES:-0}" 2>/dev/null || echo "${USED_BYTES:-0}B")
+_BACKUP_SIZE_HR="$USED"
 log "========================================="
 log "Backup terminé ! Total: $USED"
 log "========================================="

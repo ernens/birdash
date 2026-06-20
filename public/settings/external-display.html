@@ -95,13 +95,13 @@
     <div class="set-row" style="align-items:center;">
       <span class="set-label">{{t('tft_enable')}}</span>
       <label class="set-toggle">
-        <input type="checkbox" v-model="tftStatus.config.enabled" @change="saveTftConfig" data-testid="settings-external-display-config-enabled">
+        <input type="checkbox" v-model="tftStatus.config.enabled" data-testid="settings-external-display-config-enabled">
         <span class="set-toggle-slider"></span>
       </label>
     </div>
     <div class="set-row">
       <span class="set-label">{{t('tft_rotation')}}</span>
-      <select v-model.number="tftStatus.config.rotation" @change="saveTftConfig" class="set-select" data-testid="settings-external-display-config-rotation">
+      <select v-model.number="tftStatus.config.rotation" class="set-select" data-testid="settings-external-display-config-rotation">
         <option :value="0">0°</option>
         <option :value="90">90°</option>
         <option :value="180">180°</option>
@@ -111,11 +111,11 @@
     <div class="set-row">
       <span class="set-label">{{t('tft_refresh_sec')}}</span>
       <input type="number" min="1" max="60" v-model.number="tftStatus.config.refreshSec"
-             @change="saveTftConfig" class="set-input" style="width:80px;" data-testid="settings-external-display-config-refreshsec"> s
+             class="set-input" style="width:80px;" data-testid="settings-external-display-config-refreshsec"> s
     </div>
     <div class="set-row">
       <span class="set-label">{{t('tft_mode')}}</span>
-      <select v-model="tftStatus.config.mode" @change="saveTftConfig" class="set-select" data-testid="settings-external-display-config-mode">
+      <select v-model="tftStatus.config.mode" class="set-select" data-testid="settings-external-display-config-mode">
         <option value="pulse">{{t('tft_mode_pulse')}}</option>
         <option value="headline">{{t('tft_mode_headline')}}</option>
         <option value="leaderboard">{{t('tft_mode_leaderboard')}}</option>
@@ -126,7 +126,12 @@
     <div class="set-row" v-if="tftStatus.config.mode === 'cycle'">
       <span class="set-label">{{t('tft_cycle_sec')}}</span>
       <input type="number" min="10" max="600" step="5" v-model.number="tftStatus.config.cycleSec"
-             @change="saveTftConfig" class="set-input" style="width:80px;" data-testid="settings-external-display-config-cyclesec"> s
+             class="set-input" style="width:80px;" data-testid="settings-external-display-config-cyclesec"> s
+    </div>
+    <div class="set-row" style="justify-content:flex-end;margin-top:.5rem;">
+      <button class="btn-outline" @click="saveTftConfig" :disabled="tftSaving" data-testid="settings-external-display-save">
+        {{tftSaving ? '…' : t('set_save')}}
+      </button>
     </div>
     <div v-if="tftSaving" style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem;">{{t('tft_saving')}}</div>
   </div>

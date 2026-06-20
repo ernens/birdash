@@ -334,6 +334,7 @@ function handle(req, res, pathname, ctx) {
   // File_Name column is cleared so the row drops out of File_Name != ''
   // queries. No auth required: it's a constrained, self-validating op.
   if (req.method === 'POST' && pathname === '/api/recordings/clear-orphan') {
+    if (!requireAuth(req, res)) return true;
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
@@ -373,6 +374,10 @@ function handle(req, res, pathname, ctx) {
   }
 
   // Route : POST /api/query
+  // NOTE: intentionally NOT gated by requireAuth — this is the read-only data
+  // path used by birdQuery() on every page (validateQuery blocks non-SELECT).
+  // Gating it would break the whole frontend the moment BIRDASH_API_TOKEN is
+  // set. Abuse protection belongs in validateQuery + a statement watchdog.
   if (req.method === 'POST' && pathname === '/api/query') {
     let body = '';
     req.on('data', chunk => { body += chunk; });

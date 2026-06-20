@@ -49,6 +49,9 @@ function handle(req, res, pathname, ctx) {
               const m = output.match(/RMS level dB:\s*([-\d.]+)/);
               resolve(m ? parseFloat(m[1]) : -60);
             });
+            // Without this, a failed ffmpeg exec emits an unhandled 'error'
+            // (crashing the process) and the Promise would never settle.
+            ff.on('error', () => resolve(-60));
           });
         };
         const rms0 = await analyzeChannel(0);

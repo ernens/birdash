@@ -15,7 +15,7 @@ mkdir -p "$(dirname "$LOG_FILE")"
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [window-stop] $*" >> "$LOG_FILE"; }
 
 BASH_PIDS=$(pgrep -f "scripts/backup\.sh" 2>/dev/null || true)
-RSYNC_PIDS=$(pgrep -f "rsync.*birdash-backup\|rsync.*BirdSongs" 2>/dev/null || true)
+RSYNC_PIDS=$(pgrep -f "rsync.*(birdash-backup|BirdSongs)" 2>/dev/null || true)
 ALL_PIDS="$BASH_PIDS $RSYNC_PIDS"
 
 if [ -z "${ALL_PIDS// /}" ]; then

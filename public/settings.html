@@ -846,6 +846,7 @@ const app = createApp({
           ['species-exclude', () => _postJson(API + '/species-lists',
               { list: 'exclude', species: excludeList.value.split('\n').map(s => s.trim()).filter(Boolean) })],
           ['alerts',   () => saveAlertThresholds()],
+          ['auto-purge', () => _postJson(API + '/settings/auto-purge', { enabled: !!autoPurge.config.enabled })],
         ];
 
         const results = await Promise.allSettled(ops.map(([, fn]) => fn()));
@@ -917,6 +918,7 @@ const app = createApp({
     let _savedExcludeListSnapshot = null;
     let _savedAppriseSnapshot = null;
     let _savedAlertsSnapshot = null;
+    let _savedAutoPurgeEnabled = null;
     function _snapshotSavedState() {
       try { _savedSnapshot = JSON.stringify(conf); } catch { _savedSnapshot = null; }
       try { _savedAudioSnapshot = JSON.stringify(audioConf); } catch { _savedAudioSnapshot = null; }
@@ -925,6 +927,7 @@ const app = createApp({
       try { _savedExcludeListSnapshot = excludeList.value; } catch { _savedExcludeListSnapshot = null; }
       try { _savedAppriseSnapshot = appriseUrls.value; } catch { _savedAppriseSnapshot = null; }
       try { _savedAlertsSnapshot = JSON.stringify(alertThresholds); } catch { _savedAlertsSnapshot = null; }
+      try { _savedAutoPurgeEnabled = autoPurge.config.enabled; } catch { _savedAutoPurgeEnabled = null; }
       _savedModel = conf.MODEL;
       _savedSecondary = conf.SECONDARY_MODEL;
       _savedDual = String(conf.DUAL_MODEL_ENABLED);
@@ -939,6 +942,7 @@ const app = createApp({
         if (_savedExcludeListSnapshot !== null && excludeList.value !== _savedExcludeListSnapshot) return true;
         if (_savedAppriseSnapshot !== null && appriseUrls.value !== _savedAppriseSnapshot) return true;
         if (_savedAlertsSnapshot !== null && JSON.stringify(alertThresholds) !== _savedAlertsSnapshot) return true;
+        if (_savedAutoPurgeEnabled !== null && autoPurge.config.enabled !== _savedAutoPurgeEnabled) return true;
         return false;
       } catch { return false; }
     });
@@ -2595,6 +2599,12 @@ const app = createApp({
 
     onMounted(() => {
       reload(); loadApprise(); loadAlertThresholds(); loadAudioConfig(); loadAudioDevices(); loadAudioProfiles(); loadBoost(); dbLoadTables(); loadAgConf(); loadAgState(); loadDetectionProfiles(); loadAutoPurge();
+      // Guard against losing unsaved edits: the global Save bar is the single
+      // persistence point for the detection / audio / notifications / station
+      // forms, so warn if the user navigates away while isDirty.
+      window.addEventListener('beforeunload', (e) => {
+        if (isDirty.value) { e.preventDefault(); e.returnValue = ''; }
+      });
       // Species summary feeds both the picker AND the textarea-preview
       // counter + com_name resolution under each list — load eagerly so
       // navigating to Settings → Species shows resolved names immediately.
@@ -2617,7 +2627,7 @@ const app = createApp({
       telemetryJoining.value = true;
       try {
         const res = await fetch(`${API}/telemetry/register`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ stationName: telemetryName.value.trim() })
         });
         const d = await res.json();
@@ -2630,7 +2640,7 @@ const app = createApp({
       telemetryJoining.value = false;
     }
     async function disableTelemetry() {
-      await fetch(`${API}/telemetry/disable`, { method: 'POST' });
+      await fetch(`${API}/telemetry/disable`, { method: 'POST', headers: authHeaders() });
       telemetryStatus.enabled = false;
     }
 
@@ -2644,7 +2654,7 @@ const app = createApp({
       anonPingsEnabled.value = enabled;
       try {
         await fetch(`${API}/telemetry/anonymous-pings`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ enabled })
         });
       } catch(e) { console.error(e); }
@@ -2979,6 +2989,10 @@ const app = createApp({
         autoPurge.config = d.config || autoPurge.config;
         autoPurge.status = d.status || {};
         autoPurge.loaded = true;
+        // Re-baseline the dirty snapshot after this async load so the global
+        // Save button isn't stuck "dirty" just because auto-purge loaded
+        // after reload()'s _snapshotSavedState() ran.
+        _savedAutoPurgeEnabled = autoPurge.config.enabled;
       } catch(e) { autoPurge.msg = e.message; autoPurge.err = true; }
       autoPurge.loading = false;
     }

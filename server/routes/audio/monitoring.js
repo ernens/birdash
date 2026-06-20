@@ -78,6 +78,9 @@ function handle(req, res, pathname, ctx) {
     });
     proc.stderr.on('data', () => {});
     proc.on('close', () => { try { res.end(); } catch {} });
+    // A failed arecord exec (device busy / missing) would otherwise emit an
+    // unhandled 'error' that crashes the whole server process.
+    proc.on('error', () => { try { res.end(); } catch {} });
     req.on('close', () => { proc.kill(); });
     return true;
   }

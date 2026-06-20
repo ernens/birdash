@@ -1146,8 +1146,8 @@ const app = createApp({
       if (!data30d.value || !canvas30d.value) return;
       const base = chartDefaults();
       const labels = data30d.value.map(d => {
-        const mo = t('months_short')[new Date(d.date).getMonth()];
-        return `${new Date(d.date).getDate()} ${mo}`;
+        const mo = t('months_short')[new Date(d.date).getUTCMonth()];
+        return `${new Date(d.date).getUTCDate()} ${mo}`;
       });
       mount30d(canvas30d, () => ({
         type: 'bar',
