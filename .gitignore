@@ -49,3 +49,5 @@ data/weather-cache.json
 # Auto-screenshot hook artifacts
 screenshots/.auto-capture.log
 screenshots/.auto-capture.lock
+config/deadman.json
+config/deadman.log
