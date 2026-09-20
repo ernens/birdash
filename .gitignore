@@ -51,3 +51,6 @@ screenshots/.auto-capture.log
 screenshots/.auto-capture.lock
 config/deadman.json
 config/deadman.log
+config/audio-watchdog.json
+config/audio-watchdog.state.json
+config/audio-watchdog.log
