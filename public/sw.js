@@ -1,10 +1,13 @@
 /**
  * BIRDASH — Service Worker
  * Cache les assets statiques (JS, CSS, SVG, polices) pour un chargement instantané.
- * Stratégie : cache-first pour les assets, network-first pour l'API.
+ * Stratégie : network-first pour les assets locaux et les pages, cache-first
+ * pour les CDN versionnés et les photos, network-only pour l'API live.
+ *
+ * Rien de vide n'est jamais mis en cache : voir isUsable() plus bas.
  */
 
-const CACHE_NAME = 'birdash-v285';
+const CACHE_NAME = 'birdash-v286';
 
 // Assets statiques à pré-cacher à l'installation
 const PRECACHE = [
@@ -34,7 +37,17 @@ const CACHEABLE_CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fon
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE))
+      // Pas d'addAll : il accepte les corps vides et annule tout le pré-cache
+      // dès qu'un seul asset échoue. On valide chaque réponse, et un asset
+      // manquant n'empêche plus l'installation.
+      .then(async cache => {
+        await Promise.all(PRECACHE.map(async path => {
+          try {
+            const response = await fetch(path, { cache: 'reload' });
+            if (await isUsable(response)) await cache.put(path, response);
+          } catch (e) { /* asset ignoré, il sera repris au premier fetch */ }
+        }));
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -121,12 +134,29 @@ self.addEventListener('fetch', (event) => {
 
 // ── Stratégies de cache ────────────────────────────────────────────────────
 
+// Un HTTP 200 au corps vide est `ok`. Le mettre en cache transforme une
+// réponse tronquée passagère — un premier contact qui échoue à moitié — en
+// repli hors-ligne permanent. Un bird-config.js vide servi de cette façon
+// laisse BIRD_CONFIG indéfini, Vue ne monte pas, et la page affiche ses
+// moustaches {{ }} brutes. On refuse donc de cacher un corps vide.
+async function isUsable(response) {
+  if (!response || !response.ok) return false;
+  const len = response.headers.get('content-length');
+  if (len !== null) return Number(len) > 0;
+  // Pas de Content-Length (réponse chunked) : mesurer le corps réel.
+  try {
+    return (await response.clone().arrayBuffer()).byteLength > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (await isUsable(response)) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
     }
@@ -139,11 +169,15 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (await isUsable(response)) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
+      return response;
     }
-    return response;
+    // Réponse vide ou en erreur : préférer une copie saine déjà en cache
+    // plutôt que de livrer un asset tronqué qui cassera le montage de Vue.
+    const cached = await caches.match(request);
+    return cached || response;
   } catch (e) {
     const cached = await caches.match(request);
     return cached || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
@@ -158,8 +192,8 @@ async function networkFirst(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
-  const network = fetch(request).then(response => {
-    if (response && response.ok) cache.put(request, response.clone());
+  const network = fetch(request).then(async response => {
+    if (await isUsable(response)) cache.put(request, response.clone());
     return response;
   }).catch(() => null);
   return cached || network || new Response('Offline', { status: 503 });
